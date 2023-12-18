@@ -19,7 +19,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloud-bulldozer/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +42,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), MetricsProfileMap[cmd.Name()])
+			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))

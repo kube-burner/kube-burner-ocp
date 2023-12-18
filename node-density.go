@@ -19,7 +19,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloud-bulldozer/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -37,7 +37,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			wh.Metadata.Benchmark = cmd.Name()
 			totalPods := wh.Metadata.WorkerNodesCount * podsPerNode
-			podCount, err := wh.OcpMetaAgent.GetCurrentPodCount()
+			podCount, err := wh.MetadataAgent.GetCurrentPodCount()
 			if err != nil {
 				log.Fatal(err.Error())
 			}
@@ -46,7 +46,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("CONTAINER_IMAGE", containerImage)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), MetricsProfileMap[cmd.Name()])
+			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
 		},
 	}
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")

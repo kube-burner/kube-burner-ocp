@@ -19,7 +19,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloud-bulldozer/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -38,7 +38,7 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			wh.Metadata.Benchmark = cmd.Name()
 			totalPods := wh.Metadata.WorkerNodesCount * podsPerNode
-			podCount, err := wh.OcpMetaAgent.GetCurrentPodCount()
+			podCount, err := wh.MetadataAgent.GetCurrentPodCount()
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -48,7 +48,7 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), MetricsProfileMap[cmd.Name()])
+			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")

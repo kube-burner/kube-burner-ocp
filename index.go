@@ -20,9 +20,10 @@ import (
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
-	"github.com/cloud-bulldozer/kube-burner/pkg/config"
-	"github.com/cloud-bulldozer/kube-burner/pkg/prometheus"
-	"github.com/cloud-bulldozer/kube-burner/pkg/util/metrics"
+	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/kube-burner/kube-burner/pkg/prometheus"
+	"github.com/kube-burner/kube-burner/pkg/util/metrics"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -54,9 +55,9 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			}
 			esServer, _ := cmd.Flags().GetString("es-server")
 			esIndex, _ := cmd.Flags().GetString("es-index")
-			configSpec.GlobalConfig.UUID = uuid
+			workloads.ConfigSpec.GlobalConfig.UUID = uuid
 			if esServer != "" && esIndex != "" {
-				configSpec.GlobalConfig.IndexerConfig = indexers.IndexerConfig{
+				workloads.ConfigSpec.GlobalConfig.IndexerConfig = indexers.IndexerConfig{
 					Type:    indexers.ElasticIndexer,
 					Servers: []string{esServer},
 					Index:   esIndex,
@@ -65,7 +66,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				if metricsDirectory == "collected-metrics" {
 					metricsDirectory = metricsDirectory + "-" + uuid
 				}
-				configSpec.GlobalConfig.IndexerConfig = indexers.IndexerConfig{
+				workloads.ConfigSpec.GlobalConfig.IndexerConfig = indexers.IndexerConfig{
 					Type:             indexers.LocalIndexer,
 					MetricsDirectory: metricsDirectory,
 				}
@@ -86,7 +87,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				"sdnType":         clusterMetadata.SDNType,
 			}
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
-				ConfigSpec:      configSpec,
+				ConfigSpec:      workloads.ConfigSpec,
 				PrometheusStep:  prometheusStep,
 				MetricsEndpoint: *metricsEndpoint,
 				MetricsProfile:  metricsProfile,
@@ -96,6 +97,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				UserMetaData:    userMetadata,
 				RawMetadata:     metadata,
 			})
+			docsToIndex := make(map[string][]interface{})
 			for _, prometheusClients := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
 					Start: time.Unix(start, 0),
@@ -105,12 +107,14 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 					},
 				}
 				prometheusClients.JobList = append(prometheusClients.JobList, prometheusJob)
-				if prometheusClients.ScrapeJobsMetrics(metricsScraper.Indexer) != nil {
+				if prometheusClients.ScrapeJobsMetrics(docsToIndex) != nil {
 					rc = 1
 				}
 			}
-			if configSpec.GlobalConfig.IndexerConfig.Type == indexers.LocalIndexer && tarballName != "" {
-				if err := metrics.CreateTarball(configSpec.GlobalConfig.IndexerConfig, tarballName); err != nil {
+			log.Infof("Indexing metrics with UUID %s", uuid)
+			metrics.IndexDatapoints(docsToIndex, metricsScraper.Indexer)
+			if workloads.ConfigSpec.GlobalConfig.IndexerConfig.Type == indexers.LocalIndexer && tarballName != "" {
+				if err := metrics.CreateTarball(workloads.ConfigSpec.GlobalConfig.IndexerConfig, tarballName); err != nil {
 					log.Fatal(err)
 				}
 			}

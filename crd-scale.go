@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cloud-bulldozer/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +35,7 @@ func NewCrdScale(wh *workloads.WorkloadHelper) *cobra.Command {
 
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), MetricsProfileMap[cmd.Name()])
+			wh.Run(cmd.Name(), getMetrics(cmd, "metrics-aggregated.yml"), alertsProfiles)
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of CRDs to create")

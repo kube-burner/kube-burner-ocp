@@ -1,9 +1,23 @@
 #!/bin/bash
 # vi: ft=bash
-# shellcheck disable=SC2086
+# shellcheck disable=SC2086,SC2068
 
 KIND_VERSION=${KIND_VERSION:-v0.19.0}
 K8S_VERSION=${K8S_VERSION:-v1.27.0}
+
+setup-kind() {
+  KIND_FOLDER=$(mktemp -d)
+  echo "Downloading kind"
+  curl -LsS https://github.com/kubernetes-sigs/kind/releases/download/"${KIND_VERSION}"/kind-linux-amd64 -o ${KIND_FOLDER}/kind-linux-amd64
+  chmod +x ${KIND_FOLDER}/kind-linux-amd64
+  echo "Deploying cluster"
+  ${KIND_FOLDER}/kind-linux-amd64 create cluster --config kind.yml --image kindest/node:"${K8S_VERSION}" --name kind --wait 300s -v=1
+}
+
+destroy-kind() {
+  echo "Destroying kind server"
+  "${KIND_FOLDER}"/kind-linux-amd64 delete cluster
+}
 
 setup-prometheus() {
   echo "Setting up prometheus instance"
@@ -11,46 +25,44 @@ setup-prometheus() {
   sleep 10
 }
 
-
-check_running_pods() {
-  local running_pods=0
-  local pods=0
-  namespaces=$(kubectl get ns -l "${1}" --no-headers | awk '{print $1}')
-  for ns in ${namespaces}; do
-    pods=$(kubectl get pod -n "${ns}" | grep -c Running)
-    running_pods=$((running_pods + pods))
-  done
-  if [[ "${running_pods}" != "${2}" ]]; then
-    echo "Running pods in namespaces labeled with \"${1}\" different from expected"
+check_ns() {
+  echo "Checking the number of namespaces labeled with \"${1}\" is \"${2}\""
+  if [[ $(kubectl get ns -l "${1}" -o name | wc -l) != "${2}" ]]; then
+    echo "Number of namespaces labeled with ${1} less than expected"
     return 1
   fi
 }
 
-check_files() {
-  rc=0
-  file_list="${TEMP_FOLDER}/top2PrometheusCPU.json ${TEMP_FOLDER}/prometheusRSS.json ${TEMP_FOLDER}/podLatencyMeasurement-namespaced.json ${TEMP_FOLDER}/podLatencyQuantilesMeasurement-namespaced.json"
-  if [[ $LATENCY == "true" ]]; then
-    file_list="${TEMP_FOLDER}/podLatencyMeasurement-namespaced.json ${TEMP_FOLDER}/podLatencyQuantilesMeasurement-namespaced.json"
+check_destroyed_ns() {
+  echo "Checking namespace \"${1}\" has been destroyed"
+  if [[ $(kubectl get ns -l "${1}" -o name | wc -l) != 0 ]]; then
+    echo "Namespaces labeled with \"${1}\" not destroyed"
+    return 1
   fi
-  if [[ $ALERTING == "true" ]]; then
-    file_list=" ${TEMP_FOLDER}/alert.json"
+}
+
+check_destroyed_pods() {
+  echo "Checking pods have been destroyed in namespace ${1}"
+  if [[ $(kubectl get pod -n "${1}" -l "${2}" -o name | wc -l) != 0 ]]; then
+    echo "Pods in namespace ${1} not destroyed"
+    return 1
   fi
-  for f in ${file_list}; do
-    echo "Checking file ${f}"
-    if [[ ! -f $f ]]; then
-      echo "File ${f} not present"
-      rc=$((rc + 1))
-      continue
+}
+
+check_running_pods() {
+  running_pods=$(kubectl get pod -A -l ${1} --field-selector=status.phase==Running --no-headers | wc -l)
+  if [[ "${running_pods}" != "${2}" ]]; then
+    echo "Running pods in cluster labeled with ${1} different from expected: Expected=${2}, observed=${running_pods}"
+    return 1
+  fi
+}
+
+check_running_pods_in_ns() {
+    running_pods=$(kubectl get pod -n "${1}" -l kube-burner-job=namespaced | grep -c Running)
+    if [[ "${running_pods}" != "${2}" ]]; then
+      echo "Running pods in namespace $1 different from expected. Expected=${2}, observed=${running_pods}"
+      return 1
     fi
-    if [[ $(jq .[0].metricName ${f}) == "" ]]; then
-      echo "Incorrect format in ${f}"
-      cat "${f}"
-    fi
-  done
-  if [[ ${rc} != 0 ]]; then
-    echo "Content of ${TEMP_FOLDER}:"
-    ls -l ${TEMP_FOLDER}
-  fi
 }
 
 check_file_list() {
@@ -70,32 +82,12 @@ check_file_list() {
   return 0
 }
 
-test_init_checks() {
-  rc=0
-  if [[ ${INDEXING_TYPE} == "local" ]]; then
-    check_files
-  fi
-  check_ns kube-burner-job=namespaced,kube-burner-uuid="${UUID}" 6
-  rc=$((rc + $?))
-  check_running_pods kube-burner-job=namespaced,kube-burner-uuid="${UUID}" 6
-  rc=$((rc + $?))
-  timeout 500 kube-burner init -c kube-burner-delete.yml --uuid "${UUID}" --log-level=debug
-  check_destroyed_ns kube-burner-job=not-namespaced,kube-burner-uuid="${UUID}"
-  rc=$((rc + $?))
-  echo "Running kube-burner destroy"
-  kube-burner destroy --uuid "${UUID}"
-  check_destroyed_ns kube-burner-job=namespaced,kube-burner-uuid="${UUID}"
-  rc=$((rc + $?))
-  echo "Evaluating alerts"
-  kube-burner check-alerts -u http://localhost:9090 -a alert-profile.yaml --start "$(date -d '-2 minutes' +%s)"
-  return ${rc}
-}
-
 print_events() {
   kubectl get events --sort-by='.lastTimestamp' -A
 }
 
 check_metric_value() {
+  sleep 3s # There's some delay on the documents to show up in OpenSearch
   for metric in "${@}"; do
     endpoint="${ES_SERVER}/${ES_INDEX}/_search?q=uuid.keyword:${UUID}+AND+metricName.keyword:${metric}"
     RESULT=$(curl -sS ${endpoint} | jq '.hits.total.value // error')
@@ -110,4 +102,9 @@ check_metric_value() {
       return 0
     fi
   done
+}
+
+run_cmd(){
+  echo "$@" 
+  ${@}
 }

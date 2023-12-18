@@ -1,0 +1,23 @@
+run:
+  timeout: 5m
+linters-settings:
+  misspell:
+    locale: US
+linters:
+  disable-all: true
+  enable:
+    - nakedret
+    - unused
+    - misspell
+    - ineffassign
+    - goconst
+    - goimports
+    - dupl
+    - unparam
+    - revive
+    - staticcheck
+    - gosimple
+    - unconvert
+    - gocyclo
+    - gofmt
+    - govet

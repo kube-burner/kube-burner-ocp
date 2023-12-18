@@ -1,0 +1,27 @@
+# gorelease.yml
+name: Create a new release of project
+on:
+  workflow_call:
+jobs:
+  release-go:
+    name: GoReleaser build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # See: https://goreleaser.com/ci/actions/
+          persist-credentials: false
+
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.19
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@master
+        with:
+          version: 1.19.0
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

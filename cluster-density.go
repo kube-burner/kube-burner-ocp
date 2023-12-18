@@ -19,7 +19,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloud-bulldozer/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRun: func(cmd *cobra.Command, args []string) {
-			if verifyContainerRegistry(wh.RestConfig) {
+			if !verifyContainerRegistry(wh.RestConfig) {
 				os.Exit(1)
 			}
 			wh.Metadata.Benchmark = cmd.Name()
@@ -45,9 +46,14 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
 			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
+			ingressDomain, err := wh.MetadataAgent.GetDefaultIngressDomain()
+			if err != nil {
+				log.Fatal("Error obtaining default ingress domain: ", err.Error())
+			}
+			os.Setenv("INGRESS_DOMAIN", ingressDomain)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), MetricsProfileMap[cmd.Name()])
+			wh.Run(cmd.Name(), getMetrics(cmd, "metrics-aggregated.yml"), alertsProfiles)
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")

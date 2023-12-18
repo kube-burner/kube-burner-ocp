@@ -17,13 +17,15 @@ package main
 import (
 	"embed"
 	_ "embed"
+	"fmt"
+	"log"
 	"os"
 	"time"
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
-	"github.com/cloud-bulldozer/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/pkg/util"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	uid "github.com/satori/go.uuid"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"kube-burner.io/ocp"
 )
@@ -32,49 +34,60 @@ import (
 var ocpConfig embed.FS
 
 func openShiftCmd() *cobra.Command {
-	ocpCmd := &cobra.Command{
-		Use:   "ocp",
-		Short: "OpenShift wrapper",
-		Long:  `This subcommand is meant to be used against OpenShift clusters and serve as a shortcut to trigger well-known workloads`,
-	}
 	var workloadConfig workloads.Config
 	var wh workloads.WorkloadHelper
-	ocpCmd.PersistentFlags().StringVar(&workloadConfig.EsServer, "es-server", "", "Elastic Search endpoint")
-	ocpCmd.PersistentFlags().StringVar(&workloadConfig.Esindex, "es-index", "", "Elastic Search index")
+	var metricsProfileType string
+	var esServer, esIndex string
+	var QPS, burst int
+	var gc, gcMetrics bool
+	ocpCmd := &cobra.Command{
+		Use:  "kube-burner-ocp",
+		Long: `kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads`,
+	}
+	ocpCmd.PersistentFlags().StringVar(&esServer, "es-server", "", "Elastic Search endpoint")
+	ocpCmd.PersistentFlags().StringVar(&esIndex, "es-index", "", "Elastic Search index")
 	localIndexing := ocpCmd.PersistentFlags().Bool("local-indexing", false, "Enable local indexing")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints")
 	ocpCmd.PersistentFlags().BoolVar(&workloadConfig.Alerting, "alerting", true, "Enable alerting")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UUID, "uuid", uid.NewV4().String(), "Benchmark UUID")
 	ocpCmd.PersistentFlags().DurationVar(&workloadConfig.Timeout, "timeout", 4*time.Hour, "Benchmark timeout")
-	ocpCmd.PersistentFlags().IntVar(&workloadConfig.QPS, "qps", 20, "QPS")
-	ocpCmd.PersistentFlags().IntVar(&workloadConfig.Burst, "burst", 20, "Burst")
-	ocpCmd.PersistentFlags().BoolVar(&workloadConfig.Gc, "gc", true, "Garbage collect created namespaces")
-	ocpCmd.PersistentFlags().BoolVar(&workloadConfig.GcMetrics, "gc-metrics", false, "Collect metrics during garbage collection")
-	userMetadata := ocpCmd.PersistentFlags().String("user-metadata", "", "User provided metadata file, in YAML format")
+	ocpCmd.PersistentFlags().IntVar(&QPS, "qps", 20, "QPS")
+	ocpCmd.PersistentFlags().IntVar(&burst, "burst", 20, "Burst")
+	ocpCmd.PersistentFlags().BoolVar(&gc, "gc", true, "Garbage collect created namespaces")
+	ocpCmd.PersistentFlags().BoolVar(&gcMetrics, "gc-metrics", false, "Collect metrics during garbage collection")
+	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UserMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	extract := ocpCmd.PersistentFlags().Bool("extract", false, "Extract workload in the current directory")
-	ocpCmd.PersistentFlags().StringVar(&workloadConfig.ProfileType, "profile-type", "both", "Metrics profile to use, supported options are: regular, reporting or both")
+	ocpCmd.PersistentFlags().StringVar(&metricsProfileType, "profile-type", "both", "Metrics profile to use, supported options are: regular, reporting or both")
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
 	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "local-indexing")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		if workloadConfig.EsServer != "" || *localIndexing {
-			if workloadConfig.EsServer != "" {
+		util.ConfigureLogging(cmd)
+		if *extract {
+			if err := workloads.ExtractWorkload(ocpConfig, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
+				log.Fatal(err.Error())
+			}
+			os.Exit(0)
+		}
+		if esServer != "" || *localIndexing {
+			if esServer != "" {
 				workloadConfig.Indexer = indexers.ElasticIndexer
 			} else {
 				workloadConfig.Indexer = indexers.LocalIndexer
 			}
 		}
-		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig)
-		if *extract {
-			if err := wh.ExtractWorkload(cmd.Name(), ocp.MetricsProfileMap[cmd.Name()]); err != nil {
-				log.Fatal(err)
-			}
-			os.Exit(0)
+		wh = workloads.NewWorkloadHelper(workloadConfig, workloads.OCP, ocpConfig)
+		envVars := map[string]string{
+			"ES_SERVER":     esServer,
+			"ES_INDEX":      esIndex,
+			"QPS":           fmt.Sprintf("%d", QPS),
+			"BURST":         fmt.Sprintf("%d", burst),
+			"GC":            fmt.Sprintf("%v", gc),
+			"GC_METRICS":    fmt.Sprintf("%v", gcMetrics),
+			"INDEXING_TYPE": string(wh.Indexer),
 		}
-		err := wh.GatherMetadata(*userMetadata)
-		if err != nil {
-			log.Fatal(err.Error())
+		for k, v := range envVars {
+			os.Setenv(k, v)
 		}
-		wh.SetKubeBurnerFlags()
 	}
 	ocpCmd.AddCommand(
 		ocp.NewClusterDensity(&wh, "cluster-density-v2"),
@@ -86,9 +99,13 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewNodeDensity(&wh),
 		ocp.NewNodeDensityHeavy(&wh),
 		ocp.NewNodeDensityCNI(&wh),
-		ocp.NewIndex(&wh.MetricsEndpoint, &wh.OcpMetaAgent),
+		ocp.NewIndex(&wh.MetricsEndpoint, &wh.MetadataAgent),
 		ocp.NewPVCDensity(&wh),
+		ocp.NewWebBurner(&wh, "web-burner-init"),
+		ocp.NewWebBurner(&wh, "web-burner-node-density"),
+		ocp.NewWebBurner(&wh, "web-burner-cluster-density"),
 	)
+	util.SetupCmd(ocpCmd)
 	return ocpCmd
 }
 
