@@ -1,0 +1,42 @@
+# This is an example goreleaser.yaml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+before:
+  hooks:
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - ppc64le
+      - s390x
+    dir: ./cmd/
+    ldflags:
+      - -X github.com/cloud-bulldozer/go-commons/version.GitCommit={{.Commit}} -X github.com/cloud-bulldozer/go-commons/version.BuildDate={{.Date}} -X github.com/cloud-bulldozer/go-commons/version.Version={{.Version}}
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}-
+      {{- title .Tag }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+    - goos: windows
+      format: zip
+    files:
+      - LICENSE
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+checksum:
+  name_template: "kube-burner-ocp-checksums.txt"
