@@ -16,7 +16,6 @@ package main
 
 import (
 	"embed"
-	_ "embed"
 	"fmt"
 	"os"
 	"time"

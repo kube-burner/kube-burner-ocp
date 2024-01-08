@@ -350,6 +350,14 @@ github.com/kube-burner/kube-burner v1.8.1-0.20240104203720-8b4abad59300 h1:LaxSz
 github.com/kube-burner/kube-burner v1.8.1-0.20240104203720-8b4abad59300/go.mod h1:eII/kkP1XAQozIt/GG/C0YnMecZNmFC5vAy3y2GxDJw=
 github.com/kube-burner/kube-burner v1.8.1-0.20240104210211-e9bd5f6456f2 h1:M+Kum4XSEsG6UYBNpHA9x6zVKdX9taQgnTOsh81Bmzg=
 github.com/kube-burner/kube-burner v1.8.1-0.20240104210211-e9bd5f6456f2/go.mod h1:WVAnSpwELypAH7sJo/uTOdhBCmENySe6vF1L6aoA8fA=
+github.com/kube-burner/kube-burner v1.8.1-0.20240107152953-5db9dbc879ea h1:oubS3TM4NjdzLQmzgNc8QDjh7w/GlBPeFm6IUYuWO0E=
+github.com/kube-burner/kube-burner v1.8.1-0.20240107152953-5db9dbc879ea/go.mod h1:WVAnSpwELypAH7sJo/uTOdhBCmENySe6vF1L6aoA8fA=
+github.com/kube-burner/kube-burner v1.8.1-0.20240108105714-55349dd643bb h1:Xs/owD0Tl3LXBsPdLqZLSG+1BvXd/e/ZEHfXvGFPatA=
+github.com/kube-burner/kube-burner v1.8.1-0.20240108105714-55349dd643bb/go.mod h1:WVAnSpwELypAH7sJo/uTOdhBCmENySe6vF1L6aoA8fA=
+github.com/kube-burner/kube-burner v1.8.1-0.20240108111001-5dccbea7c41a h1:C+PIoyDB0FRASeSYirbu6K+GW1WTKYoDVUNy7NpvVPw=
+github.com/kube-burner/kube-burner v1.8.1-0.20240108111001-5dccbea7c41a/go.mod h1:WVAnSpwELypAH7sJo/uTOdhBCmENySe6vF1L6aoA8fA=
+github.com/kube-burner/kube-burner v1.8.1-0.20240108124038-96d4614c6546 h1:iqHR5TtcU4+IhmYxQexmTonhThwVEiBVViCFlSmsN1I=
+github.com/kube-burner/kube-burner v1.8.1-0.20240108124038-96d4614c6546/go.mod h1:WVAnSpwELypAH7sJo/uTOdhBCmENySe6vF1L6aoA8fA=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.5/go.mod h1:y3VJvCyxH9uVvJTWEGAELF3aiYNyPKd5NZ3oSwXrF60=
 github.com/mailru/easyjson v0.0.0-20190614124828-94de47d64c63/go.mod h1:C1wdFJiN94OJF2b5HbByQZoLdCWB1Yqtg26g4irojpc=

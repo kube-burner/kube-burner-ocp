@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/cloud-bulldozer/go-commons v1.0.13
-	github.com/kube-burner/kube-burner v1.8.1-0.20240104210211-e9bd5f6456f2
+	github.com/kube-burner/kube-burner v1.8.1-0.20240108124038-96d4614c6546
 	github.com/openshift/client-go v0.0.0-20230718165156-6014fb98e86a
 	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.9.0
