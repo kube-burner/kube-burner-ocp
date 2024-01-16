@@ -15,5 +15,5 @@ jobs:
 
   tests:
     needs: build
-    uses: ./.github/workflows/test-k8s.yml
+    uses: ./.github/workflows/test-ocp.yml
     secrets: inherit

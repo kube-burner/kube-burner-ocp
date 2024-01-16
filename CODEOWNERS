@@ -1,0 +1,6 @@
+# Default owners
+*                                                       @rsevilla87 @vishnuchalla @smalleni
+*                                                       @kube-burner/maintainers @kube-burner/ocp-perfscale 
+# web-burner owners
+/cmd/config/web-burner                                  @kube-burner/ocp-perfscale-telco
+/web-burner.go                                          @kube-burner/ocp-perfscale-telco

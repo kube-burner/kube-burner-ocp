@@ -14,7 +14,7 @@ builds:
       - arm64
       - ppc64le
       - s390x
-    dir: ./cmd/kube-burner/
+    dir: ./cmd/
     ldflags:
       - -X github.com/cloud-bulldozer/go-commons/version.GitCommit={{.Commit}} -X github.com/cloud-bulldozer/go-commons/version.BuildDate={{.Date}} -X github.com/cloud-bulldozer/go-commons/version.Version={{.Version}}
 archives:
@@ -39,4 +39,4 @@ changelog:
       - '^docs:'
       - '^test:'
 checksum:
-  name_template: "kube-burner-checksums.txt"
+  name_template: "kube-burner-ocp-checksums.txt"

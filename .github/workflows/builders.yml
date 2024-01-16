@@ -1,4 +1,4 @@
-name: Build Binary and Images
+name: Build kube-burner-ocp
 on:
   workflow_call:
 jobs:
@@ -20,11 +20,6 @@ jobs:
     - name: Build code
       run: make build
 
-    - name: Build container images
-      run: make images
-      env:
-        VERSION: snapshot
-
     - name: Install mkdocs dependencies
       run: pip install mkdocs-material mkdocs-include-markdown-plugin mike
 
@@ -36,5 +31,5 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: kube-burner
-        path: /usr/bin/kube-burner
+        name: kube-burner-ocp
+        path: /usr/bin/kube-burner-ocp
