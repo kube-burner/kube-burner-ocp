@@ -80,10 +80,10 @@ jobs:
         replicas: 1
       - objectTemplate: np-deny-all.yml
         replicas: 1
-      - objectTemplate: np-allow-from-clients.yml
+      - objectTemplate: np-allow.yml
         replicas: 1
-      - objectTemplate: np-allow-from-ingress.yml
-        replicas: 1
+      - objectTemplate: secret.yml
+        replicas: 3
 
   - name: remove-max-namespaces
     qps: 5
@@ -126,9 +126,7 @@ jobs:
         replicas: 1
       - objectTemplate: np-deny-all.yml
         replicas: 1
-      - objectTemplate: np-allow-from-clients.yml
-        replicas: 1
-      - objectTemplate: np-allow-from-ingress.yml
+      - objectTemplate: np-allow.yml
         replicas: 1
 
   - name: remove-max-backends
