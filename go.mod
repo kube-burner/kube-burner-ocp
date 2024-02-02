@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/cloud-bulldozer/go-commons v1.0.13
 	github.com/google/uuid v1.5.0
-	github.com/kube-burner/kube-burner v1.9.0
+	github.com/kube-burner/kube-burner v1.9.1
 	github.com/openshift/client-go v0.0.0-20230718165156-6014fb98e86a
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
@@ -69,7 +69,7 @@ require (
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
 	k8s.io/kubectl v0.27.2 // indirect
-	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
+	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
 	kubevirt.io/api v0.58.0 // indirect
 	kubevirt.io/containerized-data-importer-api v1.50.0 // indirect
 	kubevirt.io/controller-lifecycle-operator-sdk/api v0.0.0-20220329064328-f3cc58c6ed90 // indirect
