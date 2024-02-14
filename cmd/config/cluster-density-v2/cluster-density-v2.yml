@@ -13,6 +13,10 @@ global:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
+{{ if eq .SVC_LATENCY "true" }}
+    - name: serviceLatency
+      svcTimeout: 10s
+{{ end }}
 jobs:
   - name: cluster-density-v2
     namespace: cluster-density-v2

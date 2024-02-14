@@ -17,6 +17,7 @@ package ocp
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -27,7 +28,7 @@ import (
 // NewClusterDensity holds cluster-density workload
 func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, churnPercent int
-	var churn bool
+	var churn, svcLatency bool
 	var churnDelay, churnDuration time.Duration
 	var churnDeletionStrategy string
 	var podReadyThreshold time.Duration
@@ -46,6 +47,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
 			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
+			os.Setenv("SVC_LATENCY", strconv.FormatBool(svcLatency))
 			ingressDomain, err := wh.MetadataAgent.GetDefaultIngressDomain()
 			if err != nil {
 				log.Fatal("Error obtaining default ingress domain: ", err.Error())
@@ -63,6 +65,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
+	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }

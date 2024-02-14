@@ -17,6 +17,7 @@ package ocp
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -28,7 +29,7 @@ import (
 // NewNodeDensity holds node-density-cni workload
 func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 	var podsPerNode int
-	var namespacedIterations bool
+	var namespacedIterations, svcLatency bool
 	var podReadyThreshold time.Duration
 	var iterationsPerNamespace int
 	cmd := &cobra.Command{
@@ -46,6 +47,7 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("NAMESPACED_ITERATIONS", fmt.Sprint(namespacedIterations))
 			os.Setenv("ITERATIONS_PER_NAMESPACE", fmt.Sprint(iterationsPerNamespace))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
+			os.Setenv("SVC_LATENCY", strconv.FormatBool(svcLatency))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
@@ -55,5 +57,6 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1000, "Iterations per namespace")
+	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	return cmd
 }
