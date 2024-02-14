@@ -23,7 +23,7 @@ jobs:
         persist-credentials: false
 
     - name: Download kube-burner-ocp binary
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: kube-burner-ocp
         path: /tmp/
@@ -32,6 +32,10 @@ jobs:
       uses: bats-core/bats-action@1.5.4
       with:
         bats-version: 1.10.0
+        support-install: false
+        assert-install: false
+        detik-install: false
+        file-install: false
 
     - name: Install oc
       uses: redhat-actions/oc-installer@v1
