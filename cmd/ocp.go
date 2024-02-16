@@ -64,6 +64,9 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "local-indexing")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		var indexer string
+		if cmd.Name() == "version" {
+			return
+		}
 		util.ConfigureLogging(cmd)
 		if *extract {
 			if err := workloads.ExtractWorkload(ocpConfig, configDir, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
