@@ -25,6 +25,7 @@ jobs:
     preLoadImages: true
     preLoadPeriod: 10s
     churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
     churnDuration: {{.CHURN_DURATION}}
     churnPercent: {{.CHURN_PERCENT}}
     churnDelay: {{.CHURN_DELAY}}
