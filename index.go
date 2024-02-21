@@ -105,8 +105,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 						Name: jobName,
 					},
 				}
-				prometheusClients.JobList = append(prometheusClients.JobList, prometheusJob)
-				if prometheusClients.ScrapeJobsMetrics() != nil {
+				if prometheusClients.ScrapeJobsMetrics(prometheusJob) != nil {
 					rc = 1
 				}
 			}
