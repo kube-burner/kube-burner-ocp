@@ -63,6 +63,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
 	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "local-indexing")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		var indexer string
 		if cmd.Name() == "version" {
 			return
 		}
@@ -75,9 +76,9 @@ func openShiftCmd() *cobra.Command {
 		}
 		if esServer != "" || *localIndexing {
 			if esServer != "" {
-				workloadConfig.Indexer = indexers.ElasticIndexer
+				indexer = string(indexers.ElasticIndexer)
 			} else {
-				workloadConfig.Indexer = indexers.LocalIndexer
+				indexer = string(indexers.LocalIndexer)
 			}
 		}
 		workloadConfig.ConfigDir = configDir
@@ -89,7 +90,7 @@ func openShiftCmd() *cobra.Command {
 			"BURST":         fmt.Sprintf("%d", burst),
 			"GC":            fmt.Sprintf("%v", gc),
 			"GC_METRICS":    fmt.Sprintf("%v", gcMetrics),
-			"INDEXING_TYPE": string(wh.Indexer),
+			"INDEXING_TYPE": indexer,
 		}
 		for k, v := range envVars {
 			os.Setenv(k, v)
