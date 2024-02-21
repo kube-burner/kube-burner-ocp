@@ -30,7 +30,7 @@ import (
 )
 
 // cluster health check
-func OcpClusterHealth(wh *workloads.WorkloadHelper) *cobra.Command {
+func ClusterHealth(wh *workloads.WorkloadHelper) *cobra.Command {
 	var rosa bool
 	cmd := &cobra.Command{
 		Use:    "cluster-health",
@@ -73,7 +73,7 @@ func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *vers
 	for _, operator := range operators.Items {
 		// Check availability conditions
 		for _, condition := range operator.Status.Conditions {
-			if condition.Type == "Available" && condition.Status != "True" {
+			if condition.Type == "Available" && condition.Status != "True" { //nolint:goconst
 				isHealthy = false
 				log.Errorf("Cluster Operator: %s, Condition: %s, Status: %v, Reason: %s\n", operator.Name, condition.Type, condition.Status, condition.Reason)
 			}
@@ -88,7 +88,7 @@ func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *vers
 		}
 
 		for _, condition := range job.Status.Conditions {
-			if condition.Type == "Complete" && condition.Status != "True" {
+			if condition.Type == "Complete" && condition.Status != "True" { //nolint:goconst
 				isHealthy = false
 				log.Errorf("job: %s, Condition: %s, Status: %s, Reason: %s", job.Name, condition.Type, condition.Status, condition.Reason)
 			}
