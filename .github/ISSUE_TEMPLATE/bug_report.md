@@ -8,7 +8,7 @@ assignees: ''
 
 # Bug Description
 
-## **Output of `kube-burner` version**
+## **Output of `kube-burner-ocp` version**
 
 ## **Describe the bug**
 
