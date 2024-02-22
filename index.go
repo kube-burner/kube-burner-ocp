@@ -97,7 +97,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				UserMetaData:    userMetadata,
 				RawMetadata:     metadata,
 			})
-			for _, prometheusClients := range metricsScraper.PrometheusClients {
+			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
 					Start: time.Unix(start, 0),
 					End:   time.Unix(end, 0),
@@ -105,7 +105,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 						Name: jobName,
 					},
 				}
-				if prometheusClients.ScrapeJobsMetrics(prometheusJob) != nil {
+				if prometheusClient.ScrapeJobsMetrics(prometheusJob) != nil {
 					rc = 1
 				}
 			}

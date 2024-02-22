@@ -73,7 +73,7 @@ The flag `--metrics-endpoint` can be used to interact with multiple Prometheus e
 For example:
 
 ```console
-kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --es-index kube-burner --es-server https://www.esurl.com:443 --metrics-endpoint metrics-endpoints.yaml
+kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-cycles=2 --es-index kube-burner --es-server https://www.esurl.com:443 --metrics-endpoint metrics-endpoints.yaml
 ```
 
 ## Cluster density workloads

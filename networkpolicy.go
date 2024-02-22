@@ -25,7 +25,7 @@ import (
 
 // NewNetworkPolicy holds network-policy workload
 func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
-	var iterations, churnPercent int
+	var iterations, churnPercent, churnCycles int
 	var churn bool
 	var churnDelay, churnDuration time.Duration
 	var churnDeletionStrategy string
@@ -36,6 +36,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			wh.Metadata.Benchmark = cmd.Name()
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
 			os.Setenv("CHURN", fmt.Sprint(churn))
+			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
 			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
 			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
 			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
@@ -47,6 +48,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
+	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
