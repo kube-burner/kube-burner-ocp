@@ -1,0 +1,70 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: client-{{.Replica}}-{{.Iteration}}
+spec:
+  replicas: {{.podReplicas}}
+  selector:
+    matchLabels:
+      name: client-{{.Replica}}-{{.Iteration}}
+  template:
+    metadata:
+      labels:
+        name: client-{{.Replica}}-{{.Iteration}}
+        app: client
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1 
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway 
+        labelSelector: 
+          matchLabels:
+            app: client
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - name: client-app
+        image: quay.io/cloud-bulldozer/curl:latest
+        command: ["sleep", "inf"]
+        resources:
+          requests:
+            memory: "5Mi"
+            cpu: "10m"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: false
+        readinessProbe:
+          exec:
+            command:
+            - "/bin/sh"
+            - "-c"
+            - "curl --fail -sS ${SERVICE_ENDPOINT} -o /dev/null && curl --fail -sSk https://{{.JobName}}-{{.Replica}}-{{.Iteration}}-${NAMESPACE}.{{.ingressDomain}}/256.html -o /dev/null"
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 6
+        env:
+        - name: ENVVAR1
+          value: "{{randAlphaNum 250}}"
+        - name: ENVVAR2
+          value: "{{randAlphaNum 250}}"
+        - name: ENVVAR3
+          value: "{{randAlphaNum 250}}"
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVICE_ENDPOINT
+          value: "http://{{.JobName}}-{{.Replica}}-{{.Iteration}}/256.html"
+      restartPolicy: Always
+  strategy:
+    type: RollingUpdate
+

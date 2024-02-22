@@ -1,0 +1,56 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: server-{{.Replica}}-{{.Iteration}}
+spec:
+  replicas: {{.podReplicas}}
+  selector:
+    matchLabels:
+      name: server-{{.Replica}}-{{.Iteration}}
+  template:
+    metadata:
+      labels:
+        name: server-{{.Replica}}-{{.Iteration}}
+        app: nginx
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1 
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway 
+        labelSelector: 
+          matchLabels:
+            app: nginx
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - image: quay.io/cloud-bulldozer/nginx:latest
+        resources:
+          requests:
+            memory: "10Mi"
+            cpu: "5m"
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8443
+          protocol: TCP
+        name: server
+        env:
+        - name: ENVVAR1
+          value: "{{randAlphaNum 250}}"
+        - name: ENVVAR2
+          value: "{{randAlphaNum 250}}"
+        - name: ENVVAR3
+          value: "{{randAlphaNum 250}}"
+        - name: ENVVAR4
+          value: "{{randAlphaNum 250}}"
