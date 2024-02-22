@@ -1,4 +1,4 @@
-// Copyright 2022 The Kube-burner Authors.
+// Copyright 2024 The Kube-burner Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,12 +16,10 @@ package ocp
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/util"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/openshift/client-go/config/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -30,12 +28,11 @@ import (
 )
 
 // cluster health check
-func ClusterHealth(wh *workloads.WorkloadHelper) *cobra.Command {
+func ClusterHealth() *cobra.Command {
 	var rosa bool
 	cmd := &cobra.Command{
-		Use:    "cluster-health",
-		Short:  "Checks for ocp cluster health",
-		PreRun: func(cmd *cobra.Command, args []string) {},
+		Use:   "cluster-health",
+		Short: "Checks for ocp cluster health",
 		Run: func(cmd *cobra.Command, args []string) {
 			ClusterHealthCheck(rosa)
 		},
@@ -45,14 +42,14 @@ func ClusterHealth(wh *workloads.WorkloadHelper) *cobra.Command {
 }
 
 func ClusterHealthCheck(rosa bool) {
-	log.Infof("🏥 Checking for Cluster Health")
+	log.Infof("\u2764\uFE0F Checking for Cluster Health")
 	clientSet, restConfig, err := config.GetClientSet(0, 0)
 	if err != nil {
 		log.Fatalf("Error creating clientSet: %s", err)
 	}
 	openshiftClientset, err := versioned.NewForConfig(restConfig)
 	if err != nil {
-		fmt.Printf("Error creating OpenShift clientset: %v\n", err)
+		log.Fatalf("Error creating OpenShift clientset: %v", err)
 		os.Exit(1)
 	}
 	if util.ClusterHealthyVanillaK8s(clientSet) && ClusterHealthyOcp(clientSet, openshiftClientset, rosa) {
@@ -66,7 +63,7 @@ func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *vers
 	var isHealthy = true
 	operators, err := openshiftClientset.ConfigV1().ClusterOperators().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		log.Errorf("Error retrieving Cluster Operators: %v\n", err)
+		log.Errorf("Error retrieving Cluster Operators: %v", err)
 		os.Exit(1)
 	}
 
@@ -75,7 +72,7 @@ func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *vers
 		for _, condition := range operator.Status.Conditions {
 			if condition.Type == "Available" && condition.Status != "True" { //nolint:goconst
 				isHealthy = false
-				log.Errorf("Cluster Operator: %s, Condition: %s, Status: %v, Reason: %s\n", operator.Name, condition.Type, condition.Status, condition.Reason)
+				log.Errorf("Cluster Operator: %s, Condition: %s, Status: %v, Reason: %s", operator.Name, condition.Type, condition.Status, condition.Reason)
 			}
 		}
 	}
@@ -84,7 +81,7 @@ func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *vers
 	if rosa {
 		job, err := clientset.BatchV1().Jobs("openshift-monitoring").Get(context.TODO(), "osd-cluster-ready", metav1.GetOptions{})
 		if err != nil {
-			log.Errorf("Error getting job")
+			log.Errorf("Error getting job/osd-cluster-ready in namespace openshift-monitoring: %v", err)
 		}
 
 		for _, condition := range job.Status.Conditions {
