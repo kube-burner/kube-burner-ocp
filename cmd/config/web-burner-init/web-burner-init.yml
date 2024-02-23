@@ -191,7 +191,7 @@ jobs:
     jobPause: 0s
     preLoadImages: false
     objects:
-      - objectTemplate: objectTemplates/pod_serving.yml
+      - objectTemplate: pod_serving.yml
         replicas: 4
         inputVars:
           bfd: "{{ $.BFD }}"
