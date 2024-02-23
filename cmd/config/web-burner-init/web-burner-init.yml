@@ -170,6 +170,9 @@ jobs:
     objects:
       - objectTemplate: adminPolicyBasedExternalRoute.yml
         replicas: 1
+        inputVars:
+          bfd: "{{ $.BFD }}"
+          icni: "{{ $.ICNI }}"
 {{ end }}
 
   - name: serving-job
@@ -188,7 +191,9 @@ jobs:
     jobPause: 0s
     preLoadImages: false
     objects:
-      - objectTemplate: {{ if contains .BFD "true" }} pod_serving.yml {{ else }} pod_serving_no_bfd.yml {{ end }}
+      - objectTemplate: objectTemplates/pod_serving.yml
         replicas: 4
         inputVars:
+          bfd: "{{ $.BFD }}"
           crd: "{{ $.CRD }}"
+          icni: "{{ $.ICNI }}"

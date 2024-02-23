@@ -1,7 +1,7 @@
 ---
 kind: Deployment
 apiVersion: apps/v1
-metadata:    
+metadata:
   name: dep-serving-{{ .Iteration }}-{{ .Replica }}-{{.JobName }}
   namespace: serving-ns-{{ .Iteration }}
 spec:
@@ -12,9 +12,16 @@ spec:
       annotations:
         {{ if contains .crd "false" }}
         gateway-ip: "192.168.{{ add 218 .Replica }}.{{ add 1 .Iteration }}"
+        {{ if contains .icni "true" }}
         k8s.ovn.org/routing-namespaces: served-ns-{{ .Iteration }}
         k8s.ovn.org/routing-network: serving-ns-{{ .Iteration }}/sriov-net-{{ .Iteration }}
+        {{ else }}
+        k8s.ovn.org/routing-namespaces: nonexisting-ns-{{ .Iteration }}
+        k8s.ovn.org/routing-network: nonexisting-ns-{{ .Iteration }}/sriov-net-{{ .Iteration }}
+        {{ end }}
+        {{ if contains .bfd "true" }}
         k8s.ovn.org/bfd-enabled: ""
+        {{ end }}
         {{ end }}
         k8s.v1.cni.cncf.io/networks: |-
           [{
@@ -42,7 +49,7 @@ spec:
           - >-
              sysctl -w net.ipv4.ip_forward=1 &&
              cp /config/* /etc/frr/ &&
-             for i in $(kubectl get node --selector='!node-role.kubernetes.io/worker-spk'  -o jsonpath='{.items[*].status.addresses[0].address}'); do echo " peer $i" >> /etc/frr/frr.conf; done &&
+             for i in $(kubectl get node --selector='!node-role.kubernetes.io/worker-spk' -o jsonpath='{.items[*].status.addresses[0].address}'); do echo " peer $i" >> /etc/frr/frr.conf; done &&
              echo "  no shutdown" >> /etc/frr/frr.conf &&
              echo " !" >> /etc/frr/frr.conf &&
              echo "! subnets for each node" >> /etc/frr/frr.conf &&
@@ -57,6 +64,7 @@ spec:
         - name: stats
           containerPort: 9000
           protocol: TCP
+        {{ if contains .bfd "true" }}
         readinessProbe:
           exec:
             command:
@@ -64,9 +72,11 @@ spec:
               - -c
               - >-
                 vtysh -c 'show bfd peers brief' |
+                grep $(ifconfig net1 | awk -F ' *|:' '/inet /{print $3}') |
                 grep up
           initialDelaySeconds: 5
           periodSeconds: 5
+        {{ end }}
         securityContext:
           privileged: true
         volumeMounts:
@@ -95,5 +105,5 @@ spec:
     matchLabels:
      serving: true-{{ .Replica }}
   strategy:
-    type: RollingUpdate  
+    type: RollingUpdate
 
