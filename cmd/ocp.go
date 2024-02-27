@@ -83,7 +83,7 @@ func openShiftCmd() *cobra.Command {
 			}
 		}
 		if checkHealth {
-			ocp.ClusterHealthCheck(false)
+			ocp.ClusterHealthCheck()
 		}
 		workloadConfig.ConfigDir = configDir
 		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig)

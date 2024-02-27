@@ -47,7 +47,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				log.Fatalf("Error creating OpenShift clientset: %v", err)
 				os.Exit(1)
 			}
-			if !ClusterHealthyOcp(clientSet, openshiftClientset, false) {
+			if !ClusterHealthyOcp(clientSet, openshiftClientset) {
 				os.Exit(1)
 			}
 			wh.Metadata.Benchmark = cmd.Name()

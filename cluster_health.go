@@ -23,26 +23,25 @@ import (
 	"github.com/openshift/client-go/config/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 // cluster health check
 func ClusterHealth() *cobra.Command {
-	var rosa bool
 	cmd := &cobra.Command{
 		Use:   "cluster-health",
 		Short: "Checks for ocp cluster health",
 		Run: func(cmd *cobra.Command, args []string) {
-			ClusterHealthCheck(rosa)
+			ClusterHealthCheck()
 		},
 	}
-	cmd.Flags().BoolVar(&rosa, "rosa", false, "ROSA cluster")
 	return cmd
 }
 
-func ClusterHealthCheck(rosa bool) {
-	log.Infof("\u2764\uFE0F Checking for Cluster Health")
+func ClusterHealthCheck() {
+	log.Infof("❤️  Checking for Cluster Health")
 	clientSet, restConfig, err := config.GetClientSet(0, 0)
 	if err != nil {
 		log.Fatalf("Error creating clientSet: %s", err)
@@ -52,14 +51,14 @@ func ClusterHealthCheck(rosa bool) {
 		log.Fatalf("Error creating OpenShift clientset: %v", err)
 		os.Exit(1)
 	}
-	if util.ClusterHealthyVanillaK8s(clientSet) && ClusterHealthyOcp(clientSet, openshiftClientset, rosa) {
+	if util.ClusterHealthyVanillaK8s(clientSet) && ClusterHealthyOcp(clientSet, openshiftClientset) {
 		log.Infof("Cluster is Healthy")
 	} else {
 		log.Fatalf("Cluster is Unhealthy")
 	}
 }
 
-func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *versioned.Clientset, rosa bool) bool {
+func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *versioned.Clientset) bool {
 	var isHealthy = true
 	operators, err := openshiftClientset.ConfigV1().ClusterOperators().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -78,19 +77,22 @@ func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *vers
 	}
 
 	// Rosa osd-cluster-ready check
-	if rosa {
-		job, err := clientset.BatchV1().Jobs("openshift-monitoring").Get(context.TODO(), "osd-cluster-ready", metav1.GetOptions{})
-		if err != nil {
+	job, err := clientset.BatchV1().Jobs("openshift-monitoring").Get(context.TODO(), "osd-cluster-ready", metav1.GetOptions{})
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			return isHealthy
+		} else {
 			log.Errorf("Error getting job/osd-cluster-ready in namespace openshift-monitoring: %v", err)
+			isHealthy = false
 		}
-
+	} else {
+		log.Infof("Checking for status of rosa job/osd-cluster-ready in namespace openshift-monitoring")
 		for _, condition := range job.Status.Conditions {
 			if condition.Type == "Complete" && condition.Status != "True" { //nolint:goconst
 				isHealthy = false
 				log.Errorf("job: %s, Condition: %s, Status: %s, Reason: %s", job.Name, condition.Type, condition.Status, condition.Reason)
 			}
 		}
-
 	}
 
 	return isHealthy
