@@ -26,7 +26,7 @@ import (
 // NewClusterDensity holds cluster-density workload
 func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var limitcount, scale int
-	var bfd, crd, probe, sriov bool
+	var bfd, crd, icni, probe, sriov bool
 	var bridge string
 	var podReadyThreshold time.Duration
 	cmd := &cobra.Command{
@@ -37,6 +37,7 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			os.Setenv("BFD", fmt.Sprint(bfd))
 			os.Setenv("BRIDGE", fmt.Sprint(bridge))
 			os.Setenv("CRD", fmt.Sprintf("%v", crd))
+			os.Setenv("ICNI", fmt.Sprint(icni))
 			os.Setenv("LIMITCOUNT", fmt.Sprint(limitcount))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
 			os.Setenv("PROBE", fmt.Sprint(probe))
@@ -52,6 +53,7 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&scale, "scale", 1, "Scale")
 	cmd.Flags().BoolVar(&bfd, "bfd", true, "Enable BFD")
 	cmd.Flags().BoolVar(&crd, "crd", true, "Enable AdminPolicyBasedExternalRoute CR")
+	cmd.Flags().BoolVar(&bfd, "icni", true, "Enable ICNI functionality")
 	cmd.Flags().BoolVar(&probe, "probe", false, "Enable readiness probes")
 	cmd.Flags().BoolVar(&sriov, "sriov", true, "Enable SRIOV")
 	cmd.Flags().StringVar(&bridge, "bridge", "br-ex", "Data-plane bridge")

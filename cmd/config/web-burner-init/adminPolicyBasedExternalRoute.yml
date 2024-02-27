@@ -7,7 +7,11 @@ spec:
   from:
     namespaceSelector:
       matchLabels:
-          kubernetes.io/metadata.name: served-ns-{{ .Iteration }}
+        {{ if contains .icni "true" }}
+        kubernetes.io/metadata.name: served-ns-{{ .Iteration }}
+        {{ else }}
+        kubernetes.io/metadata.name: nonexisting-ns-{{ .Iteration }}
+        {{ end }}
   nextHops:
     # static:
     #   - ip: "192.168.{{ add 218 .Replica }}.{{ add 1 .Iteration }}"
@@ -15,9 +19,19 @@ spec:
     dynamic:
       - podSelector:
           matchLabels:
+            {{ if contains .icni "true" }}
             lb: lb-{{ .Iteration }}
+            {{ else }}
+            lb: nonexisting-lb-{{ .Iteration }}
+            {{ end }}
+        {{ if contains .bfd "true" }}
         bfdEnabled: true
+        {{ end }}
         namespaceSelector:
           matchLabels:
+            {{ if contains .icni "true" }}
             kubernetes.io/metadata.name: serving-ns-{{ .Iteration }}
+            {{ else }}
+            kubernetes.io/metadata.name: nonexisting-ns-{{ .Iteration }}
+            {{ end }}
         networkAttachmentName: serving-ns-{{ .Iteration }}/sriov-net-{{ .Iteration }}
