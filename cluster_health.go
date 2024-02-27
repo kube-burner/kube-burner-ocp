@@ -81,10 +81,9 @@ func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *vers
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			return isHealthy
-		} else {
-			log.Errorf("Error getting job/osd-cluster-ready in namespace openshift-monitoring: %v", err)
-			isHealthy = false
 		}
+		log.Errorf("Error getting job/osd-cluster-ready in namespace openshift-monitoring: %v", err)
+		isHealthy = false
 	} else {
 		log.Infof("Checking for status of rosa job/osd-cluster-ready in namespace openshift-monitoring")
 		for _, condition := range job.Status.Conditions {
