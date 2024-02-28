@@ -45,7 +45,6 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			openshiftClientset, err := versioned.NewForConfig(restConfig)
 			if err != nil {
 				log.Fatalf("Error creating OpenShift clientset: %v", err)
-				os.Exit(1)
 			}
 			if !ClusterHealthyOcp(clientSet, openshiftClientset) {
 				os.Exit(1)
