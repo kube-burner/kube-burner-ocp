@@ -20,7 +20,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/openshift/client-go/config/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +38,15 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRun: func(cmd *cobra.Command, args []string) {
-			if !verifyContainerRegistry(wh.RestConfig) {
+			clientSet, restConfig, err := config.GetClientSet(0, 0)
+			if err != nil {
+				log.Fatalf("Error creating clientSet: %s", err)
+			}
+			openshiftClientset, err := versioned.NewForConfig(restConfig)
+			if err != nil {
+				log.Fatalf("Error creating OpenShift clientset: %v", err)
+			}
+			if !ClusterHealthyOcp(clientSet, openshiftClientset) {
 				os.Exit(1)
 			}
 			wh.Metadata.Benchmark = cmd.Name()
