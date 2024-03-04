@@ -2,9 +2,11 @@
 # API server
 - query: avg_over_time(histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", verb=~"LIST|GET", subresource!~"log|exec|portforward|attach|proxy"}[2m])) by (le, resource, verb, scope))[{{.elapsed}}:]) > 0
   metricName: avg-ro-apicalls-latency
+  instant: true
 
 - query: avg_over_time(histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", verb=~"POST|PUT|DELETE|PATCH", subresource!~"log|exec|portforward|attach|proxy"}[2m])) by (le, resource, verb, scope))[{{.elapsed}}:]) > 0
   metricName: avg-mutating-apicalls-latency
+  instant: true
 
   # Kubelet & CRI-O
 
