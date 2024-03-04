@@ -97,3 +97,7 @@ teardown_file() {
   check_running_pods kube-burner-job=serving-job 4
   check_running_pods kube-burner-job=normal-job-1 60
 }
+
+@test "cluster-health" {
+  run_cmd kube-burner-ocp cluster-health
+}

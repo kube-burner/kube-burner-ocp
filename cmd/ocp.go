@@ -41,7 +41,7 @@ func openShiftCmd() *cobra.Command {
 	var metricsProfileType string
 	var esServer, esIndex string
 	var QPS, burst int
-	var gc, gcMetrics, alerting bool
+	var gc, gcMetrics, alerting, checkHealth bool
 	ocpCmd := &cobra.Command{
 		Use:  "kube-burner-ocp",
 		Long: `kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads`,
@@ -51,6 +51,7 @@ func openShiftCmd() *cobra.Command {
 	localIndexing := ocpCmd.PersistentFlags().Bool("local-indexing", false, "Enable local indexing")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints")
 	ocpCmd.PersistentFlags().BoolVar(&alerting, "alerting", true, "Enable alerting")
+	ocpCmd.PersistentFlags().BoolVar(&checkHealth, "check-health", false, "Check cluster health before job")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UUID, "uuid", uid.NewString(), "Benchmark UUID")
 	ocpCmd.PersistentFlags().DurationVar(&workloadConfig.Timeout, "timeout", 4*time.Hour, "Benchmark timeout")
 	ocpCmd.PersistentFlags().IntVar(&QPS, "qps", 20, "QPS")
@@ -80,6 +81,9 @@ func openShiftCmd() *cobra.Command {
 			} else {
 				indexer = string(indexers.LocalIndexer)
 			}
+		}
+		if checkHealth {
+			ocp.ClusterHealthCheck()
 		}
 		workloadConfig.ConfigDir = configDir
 		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig)
@@ -114,6 +118,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewWebBurner(&wh, "web-burner-init"),
 		ocp.NewWebBurner(&wh, "web-burner-node-density"),
 		ocp.NewWebBurner(&wh, "web-burner-cluster-density"),
+		ocp.ClusterHealth(),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
