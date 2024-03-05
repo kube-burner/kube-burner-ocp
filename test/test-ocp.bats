@@ -29,6 +29,11 @@ teardown_file() {
   $OCI_BIN rm -f prometheus
 }
 
+@test "custom-workload as node-density" {
+  run_cmd kube-burner-ocp init --config=custom-workload.yml ${COMMON_FLAGS}
+  check_metric_value etcdVersion clusterMetadata jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+}
+
 @test "node-density: es-indexing=true" {
   run_cmd kube-burner-ocp node-density --pods-per-node=75 --pod-ready-threshold=10s ${COMMON_FLAGS}
   check_metric_value etcdVersion clusterMetadata jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
@@ -101,3 +106,5 @@ teardown_file() {
 @test "cluster-health" {
   run_cmd kube-burner-ocp cluster-health
 }
+
+
