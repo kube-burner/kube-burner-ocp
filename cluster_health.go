@@ -17,6 +17,8 @@ package ocp
 import (
 	"context"
 	"os"
+	"encoding/json"
+	"fmt"
 
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/util"
@@ -95,4 +97,30 @@ func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *vers
 	}
 
 	return isHealthy
+}
+
+// note: This might be temporary till we move it to ocp-metadata.go
+func ClusterEgressIPInfo(clientset *kubernetes.Clientset, openshiftClientset *versioned.Clientset) ([]string, string) {
+	workers, err := clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		log.Errorf("Error retrieving workers: %v", err)
+		os.Exit(1)
+	}
+
+	nodeIPs := []string{}
+	egressIP := ""
+	for _, worker := range workers.Items {
+		nodeIPs = append(nodeIPs, worker.Status.Addresses[0].Address)
+		if  egressIP == "" {
+			for annotation, value := range worker.ObjectMeta.Annotations {
+				if  annotation == "cloud.network.openshift.io/egress-ipconfig" {
+					var items []map[string]interface{}
+					json.Unmarshal([]byte(value), &items)
+					ifaddr := items[0]["ifaddr"].(map[string]interface{})
+					egressIP = ifaddr["ipv4"].(string)
+				}
+			}
+		}
+	}
+	return nodeIPs, egressIP
 }
