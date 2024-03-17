@@ -53,7 +53,7 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&scale, "scale", 1, "Scale")
 	cmd.Flags().BoolVar(&bfd, "bfd", true, "Enable BFD")
 	cmd.Flags().BoolVar(&crd, "crd", true, "Enable AdminPolicyBasedExternalRoute CR")
-	cmd.Flags().BoolVar(&bfd, "icni", true, "Enable ICNI functionality")
+	cmd.Flags().BoolVar(&icni, "icni", true, "Enable ICNI functionality")
 	cmd.Flags().BoolVar(&probe, "probe", false, "Enable readiness probes")
 	cmd.Flags().BoolVar(&sriov, "sriov", true, "Enable SRIOV")
 	cmd.Flags().StringVar(&bridge, "bridge", "br-ex", "Data-plane bridge")
