@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
+	"github.com/vishnuchalla/kube-burner/pkg/workloads"
 )
 
 // NewCrdScale holds the crd-scale workload

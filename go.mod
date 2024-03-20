@@ -5,10 +5,10 @@ go 1.19
 require (
 	github.com/cloud-bulldozer/go-commons v1.0.14
 	github.com/google/uuid v1.5.0
-	github.com/kube-burner/kube-burner v1.9.3
 	github.com/openshift/client-go v0.0.0-20230718165156-6014fb98e86a
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
+	github.com/vishnuchalla/kube-burner v0.0.7
 	k8s.io/apimachinery v0.27.2
 	k8s.io/client-go v0.27.2
 )
@@ -60,7 +60,7 @@ require (
 	golang.org/x/time v0.1.0 // indirect
 	gonum.org/v1/gonum v0.13.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
