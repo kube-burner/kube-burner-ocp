@@ -46,6 +46,7 @@ require (
 	github.com/openshift/api v0.0.0-20230718161610-2a3e8b481cec // indirect
 	github.com/openshift/custom-resource-status v1.1.2 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
+	github.com/praserx/ipconv v1.2.1 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect

@@ -1,0 +1,58 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  indexerConfig:
+    esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: true
+    defaultIndex: {{.ES_INDEX}}
+    type: {{.INDEXING_TYPE}}
+  measurements:
+    - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ if eq .SVC_LATENCY "true" }}
+    - name: serviceLatency
+      svcTimeout: 10s
+{{ end }}
+jobs:
+  - name: egressip
+    namespace: egressip
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: false
+    preLoadPeriod: 15s
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+
+      - objectTemplate: egressip-obj.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 2
+          eipAddresses: {{.EIP_ADDRESSES}}
+          addrPerIteration: 2
+          
+      - objectTemplate: deployment-client.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          eipAddresses: {{.EIP_ADDRESSES}}
+          addrPerIteration: {{.ADDRESSES_PER_ITERATION}}
+
+
