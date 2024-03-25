@@ -1,8 +1,5 @@
-ocp/alerts.yml
 ocp/build.yml
-ocp/metrics.yml
 ocp/metrics-aggregated.yml
-ocp/metrics-report.yml
 ocp/node-density.yml
 ocp/pod.yml
 ocp/app-deployment.yml

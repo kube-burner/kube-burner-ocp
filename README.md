@@ -14,10 +14,12 @@ Usage:
 Available Commands:
   cluster-density-ms             Runs cluster-density-ms workload
   cluster-density-v2             Runs cluster-density-v2 workload
+  cluster-health                 Checks for ocp cluster health
   completion                     Generate the autocompletion script for the specified shell
   crd-scale                      Runs crd-scale workload
   help                           Help about any command
   index                          Runs index sub-command
+  init                           Runs custom workload
   networkpolicy-matchexpressions Runs networkpolicy-matchexpressions workload
   networkpolicy-matchlabels      Runs networkpolicy-matchlabels workload
   networkpolicy-multitenant      Runs networkpolicy-multitenant workload
@@ -192,6 +194,61 @@ Pre-requisites:
 	- 6 service(15 ports each) with 12 pod endpoints, 6 service(15 ports each) with 10 pod endpoints, 6 service(15 ports each) with 9 pod endpoints
 	- 12 service(15 ports each) with 8 pod endpoints, 12 service(15 ports each) with 6 pod endpoints, 12 service(15 ports each) with 5 pod endpoints
 	- 29 service(15 ports each) with 4 pod endpoints, 29 service(15 ports each) with 6 pod endpoints
+
+## Custom Workload: Bring your own workload
+To kickstart kube-burner-ocp with a custom workload, `init` becomes your go-to command. This command is equipped with flags that enable to seamlessly integrate and run your personalized workloads. Here's a breakdown of the flags accepted by the init command:
+```
+$ kube-burner-ocp init --help
+Runs custom workload
+
+Usage:
+  kube-burner-ocp init [flags]
+
+Flags:
+  -b, --benchmark string   Name of the benchmark (default "custom-workload")
+  -c, --config string      Config file path or URL
+  -h, --help               help for init
+```
+
+Creating a custom workload for kube-burner-ocp is a seamless process, and you have the flexibility to craft it according to your specific needs. Below is a template to guide you through the customization of your workload:
+```
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  indexerConfig:
+    esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: <bool>
+    defaultIndex: {{.ES_INDEX}}
+    type: {{.INDEXING_TYPE}}
+  measurements:
+    - name: <metric_name>
+      thresholds:
+        - <threshold_key>: <threshold_value>
+          
+jobs:
+  - name: <job_name>
+    namespace: <namespace_name>
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: <bool>
+    podWait: <bool>
+    waitWhenFinished: <bool>
+    preLoadImages: <bool>
+    preLoadPeriod: <preLoadPeriod_in_seconds>
+    namespaceLabels:
+      <namespaceLabels_key>: <namespaceLabels_value>
+    objects:
+
+      - objectTemplate: <template_config>
+        replicas: <replica_int>
+        inputVars:
+          <inputVar1>:<inputVar1_value>
+
+```
+You can start from scratch or explore pre-built workloads in the /config folder, offering a variety of examples used by kube-burner-ocp. Dive into the details of each section in the template to tailor the workload precisely to your requirements. Experiment, iterate, and discover the optimal configuration for your workload to seamlessly integrate with kube-burner-ocp.
+
 
 ## Index
 
