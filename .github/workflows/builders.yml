@@ -32,4 +32,4 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: kube-burner-ocp
-        path: /usr/bin/kube-burner-ocp
+        path: /usr/local/bin/kube-burner-ocp

@@ -47,7 +47,7 @@ clean:
 	test ! -e $(BIN_DIR) || rm -Rf $(BIN_PATH)
 
 install:
-	cp $(BIN_PATH) /usr/bin/$(BIN_NAME)
+	cp $(BIN_PATH) /usr/local/bin/$(BIN_NAME)
 
 replace-imports:
 	find . -type f -name "*.go" -exec $(SED_COMMAND) {} +
