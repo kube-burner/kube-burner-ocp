@@ -8,6 +8,30 @@
   metricName: avg-mutating-apicalls-latency
   instant: true
 
+- query: sum(rate(apiserver_flowcontrol_dispatched_requests_total{}[5m])) by(priority_level)
+  metricName: apf-dispatch-rate
+  instant: true
+
+- query: sum(rate(apiserver_flowcontrol_rejected_requests_total{}[5m])) by(priority_level)
+  metricName: apf-reject-rate
+  instant: true
+
+- query: sum(apiserver_flowcontrol_current_executing_requests{}) by(priority_level)
+  metricName: apf-current-executing-requests
+  instant: true
+
+- query: sum(apiserver_flowcontrol_current_inqueue_requests{}) by(priority_level)
+  metricName: apf-current-in-queue-requests
+  instant: true
+
+- query: histogram_quantile(0.90, sum by(priority_level, le) (rate(apiserver_flowcontrol_request_wait_duration_seconds_bucket{execute="true"}[5m])))
+  metricName: apf-request-queue-wait-seconds
+  instant: true
+
+- query: histogram_quantile(0.90, sum by(priority_level, type, le) (rate(apiserver_flowcontrol_request_execution_seconds_bucket{type="regular"}[5m])))
+  metricName: apf-request-execution-seconds
+  instant: true
+
   # Kubelet & CRI-O
 
 # Average of the CPU usage from all worker's kubelet

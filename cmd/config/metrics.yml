@@ -12,6 +12,24 @@
 - query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb!="WATCH"}[2m])) by (verb,resource,code) > 0
   metricName: APIRequestRate
 
+- query: sum(rate(apiserver_flowcontrol_dispatched_requests_total{}[5m])) by(priority_level)
+  metricName: APFDispatchRate
+
+- query: sum(rate(apiserver_flowcontrol_rejected_requests_total{}[5m])) by(priority_level)
+  metricName: APFRejectRate
+
+- query: sum(apiserver_flowcontrol_current_executing_requests{}) by(priority_level)
+  metricName: APFCurrentExecutingRequests
+
+- query: sum(apiserver_flowcontrol_current_inqueue_requests{}) by(priority_level)
+  metricName: APFCurrentInQueueRequests
+
+- query: histogram_quantile(0.90, sum by(priority_level, le) (rate(apiserver_flowcontrol_request_wait_duration_seconds_bucket{execute="true"}[5m])))
+  metricName: APFRequestQueueWaitSeconds
+
+- query: histogram_quantile(0.90, sum by(priority_level, type, le) (rate(apiserver_flowcontrol_request_execution_seconds_bucket{type="regular"}[5m])))
+  metricName: APFRequestExecutionSeconds
+
 # Kubeproxy and OVN service sync latency
 
 - query: histogram_quantile(0.99, sum(rate(kubeproxy_network_programming_duration_seconds_bucket[2m])) by (le)) > 0
