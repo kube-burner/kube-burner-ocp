@@ -78,6 +78,18 @@ For example:
 kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-cycles=2 --es-index kube-burner --es-server https://www.esurl.com:443 --metrics-endpoint metrics-endpoints.yaml
 ```
 
+metrics-endpoints.yaml
+```
+- endpoint: prometheus-k8s-openshift-monitoring.apps.rook.devshift.org 
+  profile: metrics-profiles/metrics.yml
+  alertProfile: alerts-profiles/alerts.yml
+- endpoint: thanos-querier-openshift-monitoring.apps.rook.devshift.org 
+  token: {{ .TOKEN }} 
+  profile: metrics-profiles/thanos-metrics.yml
+```
+
+`.TOKEN` can be captured by running `TOKEN=$(oc sa new-token -n openshift-monitoring prometheus-k8s)`
+
 ## Cluster density workloads
 
 This workload family is a control-plane density focused workload that that creates different objects across the cluster. There are 2 different variants [cluster-density-v2](#cluster-density-v2) and [cluster-density-ms](#cluster-density-ms).
