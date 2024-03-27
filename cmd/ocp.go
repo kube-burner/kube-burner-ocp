@@ -20,13 +20,13 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/cloud-bulldozer/go-commons/indexers"
 	uid "github.com/google/uuid"
-	"github.com/kube-burner/kube-burner/pkg/util"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/vishnuchalla/kube-burner/pkg/config"
+	"github.com/vishnuchalla/kube-burner/pkg/util"
+	"github.com/vishnuchalla/kube-burner/pkg/workloads"
 	"kube-burner.io/ocp"
 )
 
@@ -86,7 +86,8 @@ func openShiftCmd() *cobra.Command {
 			ocp.ClusterHealthCheck()
 		}
 		workloadConfig.ConfigDir = configDir
-		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig)
+		kubeClientProvider := config.NewKubeClientProvider("", "")
+		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig, kubeClientProvider)
 		envVars := map[string]string{
 			"ES_SERVER":     esServer,
 			"ES_INDEX":      esIndex,

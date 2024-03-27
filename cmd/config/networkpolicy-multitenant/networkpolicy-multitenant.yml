@@ -2,13 +2,13 @@
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
-  indexerConfig:
-    esServers: ["{{.ES_SERVER}}"]
+  measurements:
+    - name: podLatency
+indexers:
+  - esServers: ["{{.ES_SERVER}}"]
     insecureSkipVerify: true
     defaultIndex: {{.ES_INDEX}}
     type: {{.INDEXING_TYPE}}
-  measurements:
-    - name: podLatency
 jobs:
   - name: create-bindings
     namespace: networkpolicy-multitenant

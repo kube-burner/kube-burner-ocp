@@ -20,9 +20,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/vishnuchalla/kube-burner/pkg/workloads"
 )
 
 var dynamicStorageProvisioners = map[string]string{

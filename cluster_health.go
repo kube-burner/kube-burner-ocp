@@ -18,11 +18,11 @@ import (
 	"context"
 	"os"
 
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/openshift/client-go/config/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/vishnuchalla/kube-burner/pkg/config"
+	"github.com/vishnuchalla/kube-burner/pkg/util"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -42,14 +42,11 @@ func ClusterHealth() *cobra.Command {
 
 func ClusterHealthCheck() {
 	log.Infof("❤️  Checking for Cluster Health")
-	clientSet, restConfig, err := config.GetClientSet(0, 0)
-	if err != nil {
-		log.Fatalf("Error creating clientSet: %s", err)
-	}
+	kubeClientProvider := config.NewKubeClientProvider("", "")
+	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
 	openshiftClientset, err := versioned.NewForConfig(restConfig)
 	if err != nil {
 		log.Fatalf("Error creating OpenShift clientset: %v", err)
-		os.Exit(1)
 	}
 	if util.ClusterHealthyVanillaK8s(clientSet) && ClusterHealthyOcp(clientSet, openshiftClientset) {
 		log.Infof("Cluster is Healthy")
@@ -58,7 +55,7 @@ func ClusterHealthCheck() {
 	}
 }
 
-func ClusterHealthyOcp(clientset *kubernetes.Clientset, openshiftClientset *versioned.Clientset) bool {
+func ClusterHealthyOcp(clientset kubernetes.Interface, openshiftClientset *versioned.Clientset) bool {
 	var isHealthy = true
 	operators, err := openshiftClientset.ConfigV1().ClusterOperators().List(context.Background(), metav1.ListOptions{})
 	if err != nil {

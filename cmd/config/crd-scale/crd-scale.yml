@@ -2,8 +2,8 @@
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
-  indexerConfig:
-    esServers: ["{{.ES_SERVER}}"]
+indexers:
+  - esServers: ["{{.ES_SERVER}}"]
     insecureSkipVerify: true
     defaultIndex: {{.ES_INDEX}}
     type: {{.INDEXING_TYPE}}
