@@ -19,8 +19,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
-	"github.com/vishnuchalla/kube-burner/pkg/workloads"
 )
 
 // NewClusterDensity holds cluster-density workload

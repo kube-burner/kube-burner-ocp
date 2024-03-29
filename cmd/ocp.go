@@ -22,11 +22,11 @@ import (
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
 	uid "github.com/google/uuid"
+	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/kube-burner/kube-burner/pkg/util"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/vishnuchalla/kube-burner/pkg/config"
-	"github.com/vishnuchalla/kube-burner/pkg/util"
-	"github.com/vishnuchalla/kube-burner/pkg/workloads"
 	"kube-burner.io/ocp"
 )
 

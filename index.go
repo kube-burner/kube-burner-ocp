@@ -20,12 +20,12 @@ import (
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
+	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/kube-burner/kube-burner/pkg/prometheus"
+	"github.com/kube-burner/kube-burner/pkg/util/metrics"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/vishnuchalla/kube-burner/pkg/config"
-	"github.com/vishnuchalla/kube-burner/pkg/prometheus"
-	"github.com/vishnuchalla/kube-burner/pkg/util/metrics"
-	"github.com/vishnuchalla/kube-burner/pkg/workloads"
 )
 
 // NewIndex orchestrates indexing for ocp wrapper

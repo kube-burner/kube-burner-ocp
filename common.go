@@ -19,9 +19,9 @@ import (
 	"time"
 
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
+	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
-	"github.com/vishnuchalla/kube-burner/pkg/config"
-	"github.com/vishnuchalla/kube-burner/pkg/workloads"
 )
 
 const clusterMetadataMetric = "clusterMetadata"

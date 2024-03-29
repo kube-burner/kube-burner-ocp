@@ -20,11 +20,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/openshift/client-go/config/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/vishnuchalla/kube-burner/pkg/config"
-	"github.com/vishnuchalla/kube-burner/pkg/workloads"
 )
 
 // NewClusterDensity holds cluster-density workload
