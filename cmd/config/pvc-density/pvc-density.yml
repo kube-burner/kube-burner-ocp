@@ -1,13 +1,13 @@
 ---
 global:
   gc: {{.GC}}
-  indexerConfig:
-    esServers: ["{{.ES_SERVER}}"]
+  measurements:
+    - name: podLatency
+indexers:
+  - esServers: ["{{.ES_SERVER}}"]
     insecureSkipVerify: true
     defaultIndex: {{.ES_INDEX}}
     type: {{.INDEXING_TYPE}}
-  measurements:
-    - name: podLatency
 
 jobs:
   - name: add-default-storage
