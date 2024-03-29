@@ -57,19 +57,26 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			esIndex, _ := cmd.Flags().GetString("es-index")
 			workloads.ConfigSpec.GlobalConfig.UUID = uuid
 			if esServer != "" && esIndex != "" {
-				workloads.ConfigSpec.GlobalConfig.IndexerConfig = indexers.IndexerConfig{
-					Type:    indexers.ElasticIndexer,
-					Servers: []string{esServer},
-					Index:   esIndex,
-				}
+				workloads.ConfigSpec.Indexers = append(workloads.ConfigSpec.Indexers,
+					config.Indexer{
+						IndexerConfig: indexers.IndexerConfig{
+							Type:    indexers.ElasticIndexer,
+							Servers: []string{esServer},
+							Index:   esIndex,
+						},
+					})
 			} else {
 				if metricsDirectory == "collected-metrics" {
 					metricsDirectory = metricsDirectory + "-" + uuid
 				}
-				workloads.ConfigSpec.GlobalConfig.IndexerConfig = indexers.IndexerConfig{
-					Type:             indexers.LocalIndexer,
-					MetricsDirectory: metricsDirectory,
-				}
+				workloads.ConfigSpec.Indexers = append(workloads.ConfigSpec.Indexers,
+					config.Indexer{
+						IndexerConfig: indexers.IndexerConfig{
+							Type:             indexers.LocalIndexer,
+							MetricsDirectory: metricsDirectory,
+							TarballName:      tarballName,
+						},
+					})
 			}
 			// When metricsEndpoint is specified, don't fetch any prometheus token
 			if *metricsEndpoint == "" {
@@ -90,7 +97,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				ConfigSpec:      workloads.ConfigSpec,
 				PrometheusStep:  prometheusStep,
 				MetricsEndpoint: *metricsEndpoint,
-				MetricsProfile:  metricsProfile,
+				MetricsProfiles: []string{metricsProfile},
 				SkipTLSVerify:   true,
 				URL:             prometheusURL,
 				Token:           prometheusToken,
@@ -109,8 +116,8 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 					rc = 1
 				}
 			}
-			if workloads.ConfigSpec.GlobalConfig.IndexerConfig.Type == indexers.LocalIndexer && tarballName != "" {
-				if err := metrics.CreateTarball(workloads.ConfigSpec.GlobalConfig.IndexerConfig, tarballName); err != nil {
+			if workloads.ConfigSpec.Indexers[0].Type == indexers.LocalIndexer && tarballName != "" {
+				if err := metrics.CreateTarball(workloads.ConfigSpec.Indexers[0].IndexerConfig); err != nil {
 					log.Fatal(err)
 				}
 			}

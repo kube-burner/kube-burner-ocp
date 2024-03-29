@@ -38,10 +38,8 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRun: func(cmd *cobra.Command, args []string) {
-			clientSet, restConfig, err := config.GetClientSet(0, 0)
-			if err != nil {
-				log.Fatalf("Error creating clientSet: %s", err)
-			}
+			kubeClientProvider := config.NewKubeClientProvider("", "")
+			clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
 			openshiftClientset, err := versioned.NewForConfig(restConfig)
 			if err != nil {
 				log.Fatalf("Error creating OpenShift clientset: %v", err)

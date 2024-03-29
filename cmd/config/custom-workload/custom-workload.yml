@@ -2,17 +2,18 @@
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
-  indexerConfig:
-    esServers: ["{{.ES_SERVER}}"]
-    insecureSkipVerify: true
-    defaultIndex: {{.ES_INDEX}}
-    type: {{.INDEXING_TYPE}}
   measurements:
     - name: podLatency
       thresholds:
         - conditionType: Ready
           metric: P99
           threshold: 15s
+indexers:
+  - esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: true
+    defaultIndex: {{.ES_INDEX}}
+    type: {{.INDEXING_TYPE}}
+
 jobs:
   - name: node-density
     namespace: node-density

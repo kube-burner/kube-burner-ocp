@@ -19,6 +19,7 @@ import (
 	"time"
 
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
+	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +43,9 @@ func getMetrics(cmd *cobra.Command, metricsProfile string) []string {
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner
 func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
 	var err error
-	wh.MetadataAgent, err = ocpmetadata.NewMetadata(wh.RestConfig)
+	kubeClientProvider := config.NewKubeClientProvider("", "")
+	_, restConfig := kubeClientProvider.DefaultClientSet()
+	wh.MetadataAgent, err = ocpmetadata.NewMetadata(restConfig)
 	if err != nil {
 		return err
 	}
