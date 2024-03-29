@@ -1,5 +1,5 @@
 
-.PHONY: build lint clean replace-imports test help all
+.PHONY: build lint clean test help all
 
 
 ARCH ?= amd64
@@ -8,16 +8,11 @@ BIN_DIR = bin
 BIN_PATH = $(BIN_DIR)/$(ARCH)/$(BIN_NAME)
 CGO = 0
 
-GITHUB_USERNAME := $(shell git remote get-url origin | sed -n 's#.*/\([^.]*\)/[^/]*\.git#\1#p' 2>/dev/null)
 GIT_COMMIT = $(shell git rev-parse HEAD)
 VERSION ?= $(shell hack/tag_name.sh)
 SOURCES := $(shell find . -type f -name "*.go")
 BUILD_DATE = $(shell date '+%Y-%m-%d-%H:%M:%S')
 VERSION_PKG=github.com/cloud-bulldozer/go-commons/version
-ifeq ($(strip $(GITHUB_USERNAME)),)
-    GITHUB_USERNAME := kube-burner
-endif
-SED_COMMAND := sed -i 's/github.com\/kube-burner\/kube-burner/github.com\/$(GITHUB_USERNAME)\/kube-burner/g'
 
 all: lint build
 
@@ -48,10 +43,6 @@ clean:
 
 install:
 	cp $(BIN_PATH) /usr/bin/$(BIN_NAME)
-
-replace-imports:
-	find . -type f -name "*.go" -exec $(SED_COMMAND) {} +
-	find . -type f -name "go.mod" -exec $(SED_COMMAND) {} +
 
 test: test-ocp
 
