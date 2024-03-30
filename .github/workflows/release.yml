@@ -11,7 +11,3 @@ jobs:
   release-build:
     uses: ./.github/workflows/gorelease.yml
     needs: ci-tests
-
-  deploy-docs:
-    uses: ./.github/workflows/docs.yml
-    needs: ci-tests
