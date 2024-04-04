@@ -20,6 +20,7 @@ import (
 
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/util"
+	v1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/client-go/config/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -41,21 +42,21 @@ func ClusterHealth() *cobra.Command {
 }
 
 func ClusterHealthCheck() {
-	log.Infof("❤️  Checking for Cluster Health")
+	log.Infof("❤️ Checking for Cluster Health")
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
 	openshiftClientset, err := versioned.NewForConfig(restConfig)
 	if err != nil {
 		log.Fatalf("Error creating OpenShift clientset: %v", err)
 	}
-	if util.ClusterHealthyVanillaK8s(clientSet) && ClusterHealthyOcp(clientSet, openshiftClientset) {
+	if util.ClusterHealthyVanillaK8s(clientSet) && isClusterHealthy(clientSet, openshiftClientset) {
 		log.Infof("Cluster is Healthy")
 	} else {
 		log.Fatalf("Cluster is Unhealthy")
 	}
 }
 
-func ClusterHealthyOcp(clientset kubernetes.Interface, openshiftClientset *versioned.Clientset) bool {
+func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versioned.Clientset) bool {
 	var isHealthy = true
 	operators, err := openshiftClientset.ConfigV1().ClusterOperators().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
@@ -66,13 +67,12 @@ func ClusterHealthyOcp(clientset kubernetes.Interface, openshiftClientset *versi
 	for _, operator := range operators.Items {
 		// Check availability conditions
 		for _, condition := range operator.Status.Conditions {
-			if condition.Type == "Available" && condition.Status != "True" { //nolint:goconst
+			if condition.Type == v1.OperatorAvailable && condition.Status != v1.ConditionTrue {
 				isHealthy = false
 				log.Errorf("Cluster Operator: %s, Condition: %s, Status: %v, Reason: %s", operator.Name, condition.Type, condition.Status, condition.Reason)
 			}
 		}
 	}
-
 	// Rosa osd-cluster-ready check
 	job, err := clientset.BatchV1().Jobs("openshift-monitoring").Get(context.TODO(), "osd-cluster-ready", metav1.GetOptions{})
 	if err != nil {
@@ -90,6 +90,5 @@ func ClusterHealthyOcp(clientset kubernetes.Interface, openshiftClientset *versi
 			}
 		}
 	}
-
 	return isHealthy
 }
