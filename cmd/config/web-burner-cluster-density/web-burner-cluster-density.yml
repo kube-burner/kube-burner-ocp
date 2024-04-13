@@ -18,8 +18,8 @@ jobs:
   - name: cluster-density
     jobType: create
     jobIterations: {{ mul .LIMITCOUNT .SCALE }}
-    qps: {{ $.QPS }}
-    burst: {{ $.BURST }}
+    qps: {{ .QPS }}
+    burst: {{ .BURST }}
     namespacedIterations: true
     cleanup: false
     namespace: served-ns
