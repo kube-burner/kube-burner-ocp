@@ -20,8 +20,8 @@ jobs:
   - name: normal-service-job-{{ $val }}
     jobType: create
     jobIterations: 1
-    qps: {{ .QPS }}
-    burst: {{ .BURST }}
+    qps: {{ $.QPS }}
+    burst: {{ $.BURST }}
     namespacedIterations: false
     cleanup: false
     namespace: served-ns-{{ (sub $val 1|int) }}
@@ -41,8 +41,8 @@ jobs:
   - name: normal-job-{{ $val }}
     jobType: create
     jobIterations: 1
-    qps: {{ .QPS }}
-    burst: {{ .BURST }}
+    qps: {{ $.QPS }}
+    burst: {{ $.BURST }}
     namespacedIterations: false
     cleanup: false
     namespace: served-ns-{{ (sub $val 1|int) }}
@@ -67,8 +67,8 @@ jobs:
   - name: served-service-job-{{ $val }}
     jobType: create
     jobIterations: 1
-    qps: {{ .QPS }}
-    burst: {{ .BURST }}
+    qps: {{ $.QPS }}
+    burst: {{ $.BURST }}
     namespacedIterations: false
     cleanup: false
     namespace: served-ns-{{ (sub $val 1|int) }}
@@ -89,8 +89,8 @@ jobs:
   - name: served-job-{{ $val }}
     jobType: create
     jobIterations: 1
-    qps: {{ .QPS }}
-    burst: {{ .BURST }}
+    qps: {{ $.QPS }}
+    burst: {{ $.BURST }}
     namespacedIterations: false
     cleanup: false
     namespace: served-ns-{{ (sub $val 1|int) }}
