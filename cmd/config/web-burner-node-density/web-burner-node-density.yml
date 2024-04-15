@@ -41,7 +41,7 @@ jobs:
   - name: normal-job-{{ $val }}
     jobType: create
     jobIterations: 1
-    qps:  {{ $.QPS }}
+    qps: {{ $.QPS }}
     burst: {{ $.BURST }}
     namespacedIterations: false
     cleanup: false
