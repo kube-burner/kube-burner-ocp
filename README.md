@@ -223,16 +223,17 @@ Flags:
 ```
 
 Creating a custom workload for kube-burner-ocp is a seamless process, and you have the flexibility to craft it according to your specific needs. Below is a template to guide you through the customization of your workload:
-```
+
+```yaml
 ---
+indexers:
+  - esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: true
+    defaultIndex: {{.ES_INDEX}}
+    type: {{.INDEXING_TYPE}}
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
-  indexerConfig:
-    esServers: ["{{.ES_SERVER}}"]
-    insecureSkipVerify: <bool>
-    defaultIndex: {{.ES_INDEX}}
-    type: {{.INDEXING_TYPE}}
   measurements:
     - name: <metric_name>
       thresholds:
@@ -241,8 +242,8 @@ global:
 jobs:
   - name: <job_name>
     namespace: <namespace_name>
-    jobIterations: {{.JOB_ITERATIONS}}
-    qps: {{.QPS}}
+    jobIterations: <number of iterations>
+    qps: {{.QPS}}     # Both QPS and BURST can be specified through the CLI
     burst: {{.BURST}}
     namespacedIterations: <bool>
     podWait: <bool>
