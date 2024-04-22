@@ -6,6 +6,7 @@ require (
 	github.com/cloud-bulldozer/go-commons v1.0.14
 	github.com/google/uuid v1.5.0
 	github.com/kube-burner/kube-burner v1.9.5
+	github.com/openshift/api v0.0.0-20230718161610-2a3e8b481cec
 	github.com/openshift/client-go v0.0.0-20230718165156-6014fb98e86a
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
@@ -43,7 +44,6 @@ require (
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/opensearch-project/opensearch-go v1.1.0 // indirect
-	github.com/openshift/api v0.0.0-20230718161610-2a3e8b481cec // indirect
 	github.com/openshift/custom-resource-status v1.1.2 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
@@ -51,11 +51,11 @@ require (
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/crypto v0.21.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
-	golang.org/x/term v0.15.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/term v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.1.0 // indirect
 	gonum.org/v1/gonum v0.13.0 // indirect
