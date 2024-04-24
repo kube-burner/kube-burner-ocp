@@ -1,6 +1,6 @@
 module kube-burner.io/ocp
 
-go 1.20
+go 1.21
 
 require (
 	github.com/cloud-bulldozer/go-commons v1.0.15

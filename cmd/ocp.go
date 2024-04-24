@@ -89,7 +89,6 @@ func openShiftCmd() *cobra.Command {
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig, kubeClientProvider)
 		envVars := map[string]string{
-			"ALERTS":        "alerts.yml",
 			"ES_SERVER":     esServer,
 			"ES_INDEX":      esIndex,
 			"QPS":           fmt.Sprintf("%d", QPS),
@@ -97,6 +96,9 @@ func openShiftCmd() *cobra.Command {
 			"GC":            fmt.Sprintf("%v", gc),
 			"GC_METRICS":    fmt.Sprintf("%v", gcMetrics),
 			"INDEXING_TYPE": indexer,
+		}
+		if alerting {
+			envVars["ALERTS"] = "alerts.yml"
 		}
 		for k, v := range envVars {
 			os.Setenv(k, v)
