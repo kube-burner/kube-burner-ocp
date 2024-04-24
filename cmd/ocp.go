@@ -89,6 +89,7 @@ func openShiftCmd() *cobra.Command {
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig, kubeClientProvider)
 		envVars := map[string]string{
+			"ALERTS":        "alerts.yml",
 			"ES_SERVER":     esServer,
 			"ES_INDEX":      esIndex,
 			"QPS":           fmt.Sprintf("%d", QPS),

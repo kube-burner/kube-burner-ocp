@@ -21,5 +21,3 @@ const (
 	Reporting ProfileType = "reporting"
 	Both      ProfileType = "both"
 )
-
-var alertsProfiles = []string{"alerts.yml"}

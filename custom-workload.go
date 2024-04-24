@@ -36,7 +36,10 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatalf("Error reading custom configuration file: %v", err.Error())
 			}
 			configFileName := strings.Split(configFile, ".")[0]
-			wh.Run(configFileName, nil, nil)
+			os.Unsetenv("ALERTS")
+			os.Unsetenv("METRICS")
+			os.Unsetenv("TS_METRICS")
+			wh.Run(configFileName)
 		},
 	}
 	cmd.Flags().StringVarP(&configFile, "config", "c", "", "Config file path or URL")

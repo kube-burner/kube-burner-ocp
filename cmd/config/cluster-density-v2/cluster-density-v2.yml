@@ -12,11 +12,26 @@ global:
     - name: serviceLatency
       svcTimeout: 10s
 {{ end }}
-indexers:
-  - esServers: ["{{.ES_SERVER}}"]
-    insecureSkipVerify: true
-    defaultIndex: {{.ES_INDEX}}
-    type: {{.INDEXING_TYPE}}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: {{.INDEXING_TYPE}}
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.TS_METRICS}}]
+    indexer:
+      type: local
+      metricsDirectory: reporting-metrics
+  - metrics: [metrics-report.yml]
+    indexer:
+      type: local
+      metricsDirectory: reporting-metrics
+{{ end }}
 
 jobs:
   - name: cluster-density-v2

@@ -38,6 +38,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 	var rc int
 	var prometheusURL, prometheusToken string
 	var tarballName string
+	var indexer config.MetricsEndpoint
 	cmd := &cobra.Command{
 		Use:          "index",
 		Short:        "Runs index sub-command",
@@ -56,28 +57,6 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			esServer, _ := cmd.Flags().GetString("es-server")
 			esIndex, _ := cmd.Flags().GetString("es-index")
 			workloads.ConfigSpec.GlobalConfig.UUID = uuid
-			if esServer != "" && esIndex != "" {
-				workloads.ConfigSpec.Indexers = append(workloads.ConfigSpec.Indexers,
-					config.Indexer{
-						IndexerConfig: indexers.IndexerConfig{
-							Type:    indexers.ElasticIndexer,
-							Servers: []string{esServer},
-							Index:   esIndex,
-						},
-					})
-			} else {
-				if metricsDirectory == "collected-metrics" {
-					metricsDirectory = metricsDirectory + "-" + uuid
-				}
-				workloads.ConfigSpec.Indexers = append(workloads.ConfigSpec.Indexers,
-					config.Indexer{
-						IndexerConfig: indexers.IndexerConfig{
-							Type:             indexers.LocalIndexer,
-							MetricsDirectory: metricsDirectory,
-							TarballName:      tarballName,
-						},
-					})
-			}
 			// When metricsEndpoint is specified, don't fetch any prometheus token
 			if *metricsEndpoint == "" {
 				prometheusURL, prometheusToken, err = ocpMetaAgent.GetPrometheus()
@@ -85,6 +64,30 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 					log.Fatal("Error obtaining prometheus information from cluster: ", err.Error())
 				}
 			}
+			indexer = config.MetricsEndpoint{
+				Endpoint:      prometheusURL,
+				Token:         prometheusToken,
+				Step:          prometheusStep,
+				Metrics:       []string{metricsProfile},
+				SkipTLSVerify: true,
+			}
+			if esServer != "" && esIndex != "" {
+				indexer.IndexerConfig = indexers.IndexerConfig{
+					Type:    indexers.ElasticIndexer,
+					Servers: []string{esServer},
+					Index:   esIndex,
+				}
+			} else {
+				if metricsDirectory == "collected-metrics" {
+					metricsDirectory = metricsDirectory + "-" + uuid
+				}
+				indexer.IndexerConfig = indexers.IndexerConfig{
+					Type:             indexers.LocalIndexer,
+					MetricsDirectory: metricsDirectory,
+					TarballName:      tarballName,
+				}
+			}
+
 			metadata := map[string]interface{}{
 				"platform":        clusterMetadata.Platform,
 				"ocpVersion":      clusterMetadata.OCPVersion,
@@ -93,14 +96,10 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				"totalNodes":      clusterMetadata.TotalNodes,
 				"sdnType":         clusterMetadata.SDNType,
 			}
+			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
-				ConfigSpec:      workloads.ConfigSpec,
-				PrometheusStep:  prometheusStep,
+				ConfigSpec:      &workloads.ConfigSpec,
 				MetricsEndpoint: *metricsEndpoint,
-				MetricsProfiles: []string{metricsProfile},
-				SkipTLSVerify:   true,
-				URL:             prometheusURL,
-				Token:           prometheusToken,
 				UserMetaData:    userMetadata,
 				RawMetadata:     metadata,
 			})
@@ -116,8 +115,8 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 					rc = 1
 				}
 			}
-			if workloads.ConfigSpec.Indexers[0].Type == indexers.LocalIndexer && tarballName != "" {
-				if err := metrics.CreateTarball(workloads.ConfigSpec.Indexers[0].IndexerConfig); err != nil {
+			if workloads.ConfigSpec.MetricsEndpoints[0].Type == indexers.LocalIndexer && tarballName != "" {
+				if err := metrics.CreateTarball(workloads.ConfigSpec.MetricsEndpoints[0].IndexerConfig); err != nil {
 					log.Fatal(err)
 				}
 			}

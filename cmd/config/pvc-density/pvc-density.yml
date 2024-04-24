@@ -3,11 +3,26 @@ global:
   gc: {{.GC}}
   measurements:
     - name: podLatency
-indexers:
-  - esServers: ["{{.ES_SERVER}}"]
-    insecureSkipVerify: true
-    defaultIndex: {{.ES_INDEX}}
-    type: {{.INDEXING_TYPE}}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: {{.INDEXING_TYPE}}
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.TS_METRICS}}]
+    indexer:
+      type: local
+      metricsDirectory: reporting-metrics
+  - metrics: [metrics-report.yml]
+    indexer:
+      type: local
+      metricsDirectory: reporting-metrics
+{{ end }}
 
 jobs:
   - name: add-default-storage

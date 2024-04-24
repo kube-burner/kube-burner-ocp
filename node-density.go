@@ -46,7 +46,8 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("CONTAINER_IMAGE", containerImage)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
+			setMetrics(cmd, "metrics.yml")
+			wh.Run(cmd.Name())
 		},
 	}
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")

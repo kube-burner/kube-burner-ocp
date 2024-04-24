@@ -45,7 +45,8 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			os.Setenv("SRIOV", fmt.Sprint(sriov))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
+			setMetrics(cmd, "metrics.yml")
+			wh.Run(cmd.Name())
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
