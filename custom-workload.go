@@ -36,9 +36,6 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatalf("Error reading custom configuration file: %v", err.Error())
 			}
 			configFileName := strings.Split(configFile, ".")[0]
-			if _, exists := os.LookupEnv("ALERTS"); exists {
-				os.Unsetenv("ALERTS")
-			}
 			wh.Run(configFileName)
 		},
 	}

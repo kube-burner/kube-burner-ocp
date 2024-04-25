@@ -32,7 +32,6 @@ func NewCrdScale(wh *workloads.WorkloadHelper) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			wh.Metadata.Benchmark = cmd.Name()
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, "metrics-aggregated.yml")

@@ -10,24 +10,18 @@ global:
           threshold: 15s
 metricsEndpoints:
 {{ if .ES_SERVER }}
-  - metrics: [{{.METRICS}}]
-    alerts: [{{.ALERTS}}]
-    indexer:
+  - indexer:
       esServers: ["{{.ES_SERVER}}"]
       insecureSkipVerify: true
       defaultIndex: {{.ES_INDEX}}
-      type: {{.INDEXING_TYPE}}
+      type: opensearch
 {{ end }}
-{{ if .LOCAL_INDEXING }}
-  - metrics: [{{.TS_METRICS}}]
-    indexer:
+{{ if eq .LOCAL_INDEXING "true" }}
+  - indexer:
       type: local
-      metricsDirectory: reporting-metrics
-  - metrics: [metrics-report.yml]
-    indexer:
-      type: local
-      metricsDirectory: reporting-metrics
+      metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
+
 jobs:
   - name: node-density
     namespace: node-density

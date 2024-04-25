@@ -39,7 +39,6 @@ func setMetrics(cmd *cobra.Command, metricsProfile string) {
 	case Both:
 		metricsProfiles = []string{"metrics-report.yml", metricsProfile}
 	}
-	os.Setenv("TS_METRICS", metricsProfile)
 	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 }
 

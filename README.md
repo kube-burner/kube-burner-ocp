@@ -78,17 +78,30 @@ For example:
 kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-cycles=2 --es-index kube-burner --es-server https://www.esurl.com:443 --metrics-endpoint metrics-endpoints.yaml
 ```
 
-metrics-endpoints.yaml
+### metrics-endpoints.yaml
 ```
 - endpoint: prometheus-k8s-openshift-monitoring.apps.rook.devshift.org 
-  profile: metrics-profiles/metrics.yml
-  alertProfile: alerts-profiles/alerts.yml
-- endpoint: thanos-querier-openshift-monitoring.apps.rook.devshift.org 
+  metrics:
+    - metrics.yml
+  alerts:
+    - alerts.yml
+  indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+- endpoint: prometheus-k8s-openshift-monitoring.apps.rook.devshift.org
   token: {{ .TOKEN }} 
-  profile: metrics-profiles/thanos-metrics.yml
+  metrics:
+    - metrics.yml
+  indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
 ```
 
-`.TOKEN` can be captured by running `TOKEN=$(oc sa new-token -n openshift-monitoring prometheus-k8s)`
+`.TOKEN` can be captured by running `TOKEN=$(oc create token -n openshift-monitoring prometheus-k8s)`
 
 ## Cluster density workloads
 
@@ -230,7 +243,7 @@ indexers:
   - esServers: ["{{.ES_SERVER}}"]
     insecureSkipVerify: true
     defaultIndex: {{.ES_INDEX}}
-    type: {{.INDEXING_TYPE}}
+    type: opensearch
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
