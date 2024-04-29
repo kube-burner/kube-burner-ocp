@@ -53,7 +53,8 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			os.Setenv("INGRESS_DOMAIN", ingressDomain)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), getMetrics(cmd, "metrics-aggregated.yml"), alertsProfiles)
+			setMetrics(cmd, "metrics-aggregated.yml")
+			wh.Run(cmd.Name())
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")

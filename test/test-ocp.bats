@@ -76,11 +76,11 @@ teardown_file() {
 }
 
 @test "index: local-indexing=true" {
-  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-profile metrics-profile.yaml
+  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-profile metrics.yml
 }
 
 @test "index: metrics-endpoints=true; es-indexing=true" {
-  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --metrics-profile metrics-profile.yaml --es-server=https://search-perfscale-dev-chmf5l4sh66lvxbnadi4bznl3a.us-west-2.es.amazonaws.com:443 --es-index=ripsaw-kube-burner
+  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --metrics-profile metrics.yml --es-server=https://search-perfscale-dev-chmf5l4sh66lvxbnadi4bznl3a.us-west-2.es.amazonaws.com:443 --es-index=ripsaw-kube-burner
 }
 
 @test "networkpolicy-multitenant" {

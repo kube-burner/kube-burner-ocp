@@ -1,5 +1,18 @@
 - endpoint: http://localhost:9090
-  profile: metrics-profile.yaml
-  alertProfile: alert-profile.yaml
+  metrics:
+    - metrics.yml
+  alerts:
+    - alerts.yml
+  indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
 - endpoint: http://localhost:9090
-  profile: metrics-profile.yaml
+  metrics:
+    - metrics.yml
+  indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch

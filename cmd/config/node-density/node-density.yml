@@ -8,11 +8,24 @@ global:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
-indexers:
-  - esServers: ["{{.ES_SERVER}}"]
-    insecureSkipVerify: true
-    defaultIndex: {{.ES_INDEX}}
-    type: {{.INDEXING_TYPE}}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if eq .LOCAL_INDEXING "true" }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
 jobs:
   - name: node-density
     namespace: node-density

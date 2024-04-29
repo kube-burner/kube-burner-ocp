@@ -43,7 +43,8 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
+			setMetrics(cmd, "metrics.yml")
+			wh.Run(cmd.Name())
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))

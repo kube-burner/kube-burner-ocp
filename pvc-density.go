@@ -65,7 +65,8 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("STORAGE_PROVISIONER", fmt.Sprint(dynamicStorageProvisioners[provisioner]))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
+			setMetrics(cmd, "metrics.yml")
+			wh.Run(cmd.Name())
 		},
 	}
 

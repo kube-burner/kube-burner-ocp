@@ -50,7 +50,8 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("SVC_LATENCY", strconv.FormatBool(svcLatency))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			wh.Run(cmd.Name(), getMetrics(cmd, "metrics.yml"), alertsProfiles)
+			setMetrics(cmd, "metrics.yml")
+			wh.Run(cmd.Name())
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")

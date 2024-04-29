@@ -16,6 +16,8 @@ package ocp
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
@@ -26,7 +28,7 @@ import (
 
 const clusterMetadataMetric = "clusterMetadata"
 
-func getMetrics(cmd *cobra.Command, metricsProfile string) []string {
+func setMetrics(cmd *cobra.Command, metricsProfile string) {
 	var metricsProfiles []string
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
 	switch ProfileType(profileType) {
@@ -37,7 +39,7 @@ func getMetrics(cmd *cobra.Command, metricsProfile string) []string {
 	case Both:
 		metricsProfiles = []string{"metrics-report.yml", metricsProfile}
 	}
-	return metricsProfiles
+	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 }
 
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner
