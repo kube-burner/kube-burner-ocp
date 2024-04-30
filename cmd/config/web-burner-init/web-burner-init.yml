@@ -159,6 +159,11 @@ jobs:
     jobIterationDelay: 0s
     jobPause: 0s
     preLoadImages: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
     objects:
       - objectTemplate: pod_served.yml
         replicas: 1
