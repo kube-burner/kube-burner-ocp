@@ -16,6 +16,7 @@ package ocp
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
@@ -64,11 +65,14 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 					log.Fatal("Error obtaining prometheus information from cluster: ", err.Error())
 				}
 			}
+			metricsProfiles := strings.FieldsFunc(metricsProfile, func(r rune) bool {
+				return r == ',' || r == ' '
+			})
 			indexer = config.MetricsEndpoint{
 				Endpoint:      prometheusURL,
 				Token:         prometheusToken,
 				Step:          prometheusStep,
-				Metrics:       []string{metricsProfile},
+				Metrics:       metricsProfiles,
 				SkipTLSVerify: true,
 			}
 			if esServer != "" && esIndex != "" {
@@ -122,7 +126,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			}
 		},
 	}
-	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "Metrics profile file")
+	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "comma-separated list of metric profiles")
 	cmd.Flags().StringVar(&metricsDirectory, "metrics-directory", "collected-metrics", "Directory to dump the metrics files in, when using default local indexing")
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
 	cmd.Flags().Int64Var(&start, "start", time.Now().Unix()-3600, "Epoch start time")
