@@ -1,17 +1,19 @@
 module kube-burner.io/ocp
 
-go 1.21
+go 1.22.0
+
+toolchain go1.22.3
 
 require (
 	github.com/cloud-bulldozer/go-commons v1.0.15
-	github.com/google/uuid v1.5.0
-	github.com/kube-burner/kube-burner v1.9.6
-	github.com/openshift/api v0.0.0-20230718161610-2a3e8b481cec
-	github.com/openshift/client-go v0.0.0-20230718165156-6014fb98e86a
-	github.com/sirupsen/logrus v1.9.0
-	github.com/spf13/cobra v1.6.1
-	k8s.io/apimachinery v0.29.4
-	k8s.io/client-go v0.29.4
+	github.com/google/uuid v1.6.0
+	github.com/kube-burner/kube-burner v1.9.7
+	github.com/openshift/api v0.0.0-20240516090725-a20192e21ba6
+	github.com/openshift/client-go v0.0.0-20240510131258-f646d5f29250
+	github.com/sirupsen/logrus v1.9.3
+	github.com/spf13/cobra v1.8.0
+	k8s.io/apimachinery v0.30.1
+	k8s.io/client-go v0.30.1
 )
 
 require (
@@ -21,7 +23,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.13.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/go-logr/logr v1.3.0 // indirect
+	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
@@ -67,10 +69,10 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.29.4 // indirect
+	k8s.io/api v0.30.1 // indirect
 	k8s.io/apiextensions-apiserver v0.23.5 // indirect
-	k8s.io/klog/v2 v2.110.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
+	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	k8s.io/kubectl v0.27.2 // indirect
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
 	kubevirt.io/api v0.58.0 // indirect

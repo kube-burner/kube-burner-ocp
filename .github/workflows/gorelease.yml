@@ -13,15 +13,18 @@ jobs:
           fetch-depth: 0 # See: https://goreleaser.com/ci/actions/
           persist-credentials: false
 
-      - name: Set up Go 1.21
+      - name: Set up Go 1.21.1
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.21.1
+
+      - name: Set up Go environment
+        run: go env -w GOPROXY=direct
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@master
         with:
-          version: 1.21.0
+          version: 1.21.1
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
