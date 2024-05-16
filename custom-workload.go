@@ -39,7 +39,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 			wh.Run(configFileName)
 		},
 	}
-	cmd.Flags().StringVarP(&configFile, "config", "c", "", "Config file path or URL")
+	cmd.Flags().StringVarP(&configFile, "config", "c", "", "Config file path or url")
 	cmd.Flags().StringVarP(&benchmarkName, "benchmark", "b", "custom-workload", "Name of the benchmark")
 	cmd.MarkFlagRequired("config")
 	return cmd
