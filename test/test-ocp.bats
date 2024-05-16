@@ -76,7 +76,7 @@ teardown_file() {
 }
 
 @test "index: local-indexing=true" {
-  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-profile metrics.yml
+  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-profile "metrics.yml,metrics.yml"
 }
 
 @test "index: metrics-endpoints=true; es-indexing=true" {
