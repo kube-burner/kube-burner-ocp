@@ -7,8 +7,8 @@ toolchain go1.22.3
 require (
 	github.com/cloud-bulldozer/go-commons v1.0.15
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner v1.9.6
-	github.com/openshift/api v0.0.0-20240515141918-0f9dbca23dbd
+	github.com/kube-burner/kube-burner v1.9.7
+	github.com/openshift/api v0.0.0-20240516090725-a20192e21ba6
 	github.com/openshift/client-go v0.0.0-20240510131258-f646d5f29250
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
