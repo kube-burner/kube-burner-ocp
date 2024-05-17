@@ -1,7 +1,7 @@
 ---
 kind: Deployment
 apiVersion: apps/v1
-metadata:    
+metadata:
   name: dep-served-{{ .ns }}-{{ .Replica }}
 spec:
   template:
@@ -16,7 +16,7 @@ spec:
         image: gcr.io/google_containers/pause-amd64:3.0
       - name: app-served-{{ .ns }}
         imagePullPolicy: IfNotPresent
-        image: rhscl/httpd-24-rhel7:latest
+        image: quay.io/cloud-bulldozer/sampleapp:latest
         ports:
         - containerPort: 8080
           protocol: TCP
