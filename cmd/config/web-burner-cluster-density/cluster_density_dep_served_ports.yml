@@ -13,7 +13,7 @@ spec:
       containers:
       - name: sleep-1
         imagePullPolicy: IfNotPresent
-        image: gcr.io/google_containers/pause-amd64:3.0
+        image: k8s.gcr.io/pause:3.1
       - name: app-served-{{ .ns }}
         imagePullPolicy: IfNotPresent
         image: quay.io/cloud-bulldozer/sampleapp:latest
