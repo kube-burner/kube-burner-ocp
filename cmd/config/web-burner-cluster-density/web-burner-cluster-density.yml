@@ -1,4 +1,3 @@
----
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
@@ -44,18 +43,23 @@ jobs:
         replicas: 30
       - objectTemplate: cluster_density_secret.yml
         replicas: 38
-      - objectTemplate: node_density_pod_served.yml
+      - objectTemplate: ../web-burner-node-density/node_density_pod_served.yml
         replicas: 25
         inputVars:
           probe: "{{ $.PROBE }}"
-      - objectTemplate: node_density_pod_service.yml
+      - objectTemplate: cluster_density_pod_service2.yml
         replicas: 25
       - objectTemplate: cluster_density_dep_served.yml
         replicas: 5
 
+# In local/CI only app-job-1 will be executed
   - name: app-job-1
     jobType: create
+{{ if eq "1" .LIMITCOUNT }}
+    jobIterations: 1
+{{ else }}
     jobIterations: {{ mul 2 .SCALE }}
+{{ end }}
     qps: {{ .QPS }}
     burst: {{ .BURST }}
     namespacedIterations: true
@@ -67,7 +71,11 @@ jobs:
     preLoadImages: false
     objects:
       - objectTemplate: cluster_density_dep_served_ports.yml
+{{ if eq "1" .LIMITCOUNT }}
+        replicas: 1
+{{ else }}
         replicas: 84
+{{ end }}
         inputVars:
           ns: group-a-1
       - objectTemplate: cluster_density_pod_service_ports.yml
@@ -76,7 +84,11 @@ jobs:
           ns: group-a-1
 
       - objectTemplate: cluster_density_dep_served_ports.yml
+{{ if eq "1" .LIMITCOUNT }}
+        replicas: 1
+{{ else }}
         replicas: 56
+{{ end }}
         inputVars:
           ns: group-b-1
       - objectTemplate: cluster_density_pod_service_ports.yml
@@ -85,7 +97,11 @@ jobs:
           ns: group-b-1
 
       - objectTemplate: cluster_density_dep_served_ports.yml
+{{ if eq "1" .LIMITCOUNT }}
+        replicas: 1
+{{ else }}
         replicas: 25
+{{ end }}
         inputVars:
           ns: group-c-1
       - objectTemplate: cluster_density_pod_service_ports.yml
@@ -93,6 +109,7 @@ jobs:
         inputVars:
           ns: group-c-1
 
+{{ if ne "1" .LIMITCOUNT }}
   - name: app-job-2
     jobType: create
     jobIterations: {{ mul 2 .SCALE }}
@@ -128,6 +145,7 @@ jobs:
 
   - name: app-job-3
     jobType: create
+    jobIterations: 1
     jobIterations: {{ mul 2 .SCALE }}
     qps: {{ .QPS }}
     burst: {{ .BURST }}
@@ -233,4 +251,4 @@ jobs:
         inputVars:
           ns: group-l-{{ $val }}
 {{ end }}
-
+{{ end }}
