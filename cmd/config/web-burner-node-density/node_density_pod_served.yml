@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
   - name: perfapp-1
-    image: quay.io/openshift-scale/nginx
+    image: quay.io/cloud-bulldozer/nginx
     imagePullPolicy: IfNotPresent
     livenessProbe:
       httpGet:
