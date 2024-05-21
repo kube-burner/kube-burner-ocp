@@ -41,7 +41,7 @@ spec:
       serviceAccountName: internal-kubectl
       containers:
       - name: bfd
-        image: quay.io/wcaban/frr
+        image: quay.io/cloud-bulldozer/frr
         command:
           - sh
           - -c
