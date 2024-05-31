@@ -48,7 +48,7 @@ spec:
           - >-
              sysctl -w net.ipv4.ip_forward=1 &&
              cp /config/* /etc/frr/ &&
-             for i in $(kubectl get node --selector='!node-role.kubernetes.io/worker-spk' -o jsonpath='{.items[*].status.addresses[0].address}'); do echo " peer $i" >> /etc/frr/frr.conf; done &&
+             for i in $(kubectl get node --selector='!node-role.kubernetes.io/worker-spk' -o jsonpath='{.items[*].status.addresses[0].address}'); do echo " peer $i local-address $(ifconfig net1 | awk -F ' *|:' '/inet /{print $3}')" >> /etc/frr/frr.conf; done &&
              echo "  no shutdown" >> /etc/frr/frr.conf &&
              echo " !" >> /etc/frr/frr.conf &&
              echo "! subnets for each node" >> /etc/frr/frr.conf &&
