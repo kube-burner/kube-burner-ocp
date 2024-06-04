@@ -64,5 +64,11 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().BoolVar(&probe, "probe", false, "Enable readiness probes")
 	cmd.Flags().BoolVar(&sriov, "sriov", true, "Enable SRIOV")
 	cmd.Flags().StringVar(&bridge, "bridge", "br-ex", "Data-plane bridge")
+	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
+	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
+	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
+	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
+	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
+	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	return cmd
 }
