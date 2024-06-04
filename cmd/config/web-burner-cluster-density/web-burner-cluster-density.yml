@@ -38,6 +38,12 @@ jobs:
     verifyObjects: true
     errorOnVerify: true
     preLoadImages: false
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
     objects:
       - objectTemplate: cluster_density_configmap.yml
         replicas: 30
