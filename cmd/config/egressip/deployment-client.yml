@@ -1,0 +1,63 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: client-{{.Replica}}-{{.Iteration}}
+spec:
+  replicas: {{.podReplicas}}
+  selector:
+    matchLabels:
+      name: client-{{.Replica}}-{{.Iteration}}
+  template:
+    metadata:
+      labels:
+        name: client-{{.Replica}}-{{.Iteration}}
+        app: client
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1 
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway 
+        labelSelector: 
+          matchLabels:
+            app: client
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - name: client-app
+        image: quay.io/cloud-bulldozer/eipvalidator:latest
+        resources:
+          requests:
+            memory: "10Mi"
+            cpu: "10m"
+        ports:
+        - containerPort: 8080
+          name: metrics
+        env:
+        - name: EXT_SERVER_HOST
+          value: "{{.extServerHost}}"
+        - name: EXT_SERVER_PORT
+          value: "{{ add 9002 (mod .Iteration 60) }}"
+        - name: EGRESS_IPS
+            {{- $eips := (splitList " " (GetIPAddress .eipAddresses .Iteration .addrPerIteration) | join ",") }}
+          value: "{{$eips}}"
+        - name: DELAY_BETWEEN_REQ_SEC
+          value: "1"
+        - name: REQ_TIMEOUT_SEC
+          value: "3"
+        imagePullPolicy: Always
+        securityContext:
+          privileged: false
+        volumeMounts:
+      restartPolicy: Always
+  strategy:
+    type: RollingUpdate
+
