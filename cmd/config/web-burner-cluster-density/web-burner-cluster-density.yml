@@ -145,8 +145,11 @@ jobs:
 
   - name: app-job-3
     jobType: create
+{{ if eq "1" .LIMITCOUNT }}
     jobIterations: 1
+{{ else }}
     jobIterations: {{ mul 2 .SCALE }}
+{{ end }}
     qps: {{ .QPS }}
     burst: {{ .BURST }}
     namespacedIterations: true
