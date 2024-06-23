@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
 	"github.com/kube-burner/kube-burner/pkg/config"
@@ -26,7 +25,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const clusterMetadataMetric = "clusterMetadata"
 
 func setMetrics(cmd *cobra.Command, metricsProfile string) {
 	var metricsProfiles []string
@@ -52,26 +50,24 @@ func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
 		return err
 	}
 	// When either indexing or alerting are enabled
-	if alerting && wh.MetricsEndpoint == "" {
-		wh.PrometheusURL, wh.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
+	if alerting && wh.Config.MetricsEndpoint == "" {
+		wh.Config.PrometheusURL, wh.Config.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
 		if err != nil {
 			return fmt.Errorf("error obtaining Prometheus information: %v", err)
 		}
 	}
-	wh.Metadata.ClusterMetadata, err = wh.MetadataAgent.GetClusterMetadata()
+	wh.ClusterMetadata, err = wh.MetadataAgent.GetClusterMetadata()
 	if err != nil {
 		return err
 	}
-	wh.Metadata.UUID = wh.UUID
-	wh.Metadata.Timestamp = time.Now().UTC()
-	wh.Metadata.MetricName = clusterMetadataMetric
+	wh.Config.UUID = wh.UUID
 	wh.MetricsMetadata = map[string]interface{}{
-		"platform":        wh.Metadata.Platform,
-		"ocpVersion":      wh.Metadata.OCPVersion,
-		"ocpMajorVersion": wh.Metadata.OCPMajorVersion,
-		"k8sVersion":      wh.Metadata.K8SVersion,
-		"totalNodes":      wh.Metadata.TotalNodes,
-		"sdnType":         wh.Metadata.SDNType,
+		"platform":        wh.ClusterMetadata.Platform,
+		"ocpVersion":      wh.ClusterMetadata.OCPVersion,
+		"ocpMajorVersion": wh.ClusterMetadata.OCPMajorVersion,
+		"k8sVersion":      wh.ClusterMetadata.K8SVersion,
+		"totalNodes":      wh.ClusterMetadata.TotalNodes,
+		"sdnType":         wh.ClusterMetadata.SDNType,
 	}
 	return nil
 }
