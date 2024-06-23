@@ -5,11 +5,12 @@ go 1.22.0
 toolchain go1.22.3
 
 require (
-	github.com/cloud-bulldozer/go-commons v1.0.15
+	github.com/cloud-bulldozer/go-commons v1.0.16
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner v1.9.8
+	github.com/kube-burner/kube-burner v1.10.3
 	github.com/openshift/api v0.0.0-20240516090725-a20192e21ba6
 	github.com/openshift/client-go v0.0.0-20240510131258-f646d5f29250
+	github.com/praserx/ipconv v1.2.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
 	k8s.io/apimachinery v0.30.1
@@ -50,7 +51,6 @@ require (
 	github.com/opensearch-project/opensearch-go v1.1.0 // indirect
 	github.com/openshift/custom-resource-status v1.1.2 // indirect
 	github.com/pborman/uuid v1.2.0 // indirect
-	github.com/praserx/ipconv v1.2.1 // indirect
 	github.com/prometheus/client_golang v1.19.0 // indirect
 	github.com/prometheus/client_model v0.6.0 // indirect
 	github.com/prometheus/common v0.52.3 // indirect

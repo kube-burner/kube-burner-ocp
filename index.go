@@ -17,11 +17,15 @@ package ocp
 import (
 	"os"
 	"strings"
+	"encoding/json"
 	"time"
+	"fmt"
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
+	"github.com/cloud-bulldozer/go-commons/version"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
 	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/kube-burner/kube-burner/pkg/burner"
 	"github.com/kube-burner/kube-burner/pkg/prometheus"
 	"github.com/kube-burner/kube-burner/pkg/util/metrics"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -40,6 +44,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 	var prometheusURL, prometheusToken string
 	var tarballName string
 	var indexer config.MetricsEndpoint
+	var clusterMetadataMap map[string]interface{}
 	cmd := &cobra.Command{
 		Use:          "index",
 		Short:        "Runs index sub-command",
@@ -92,13 +97,11 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				}
 			}
 
-			metadata := map[string]interface{}{
-				"platform":        clusterMetadata.Platform,
-				"ocpVersion":      clusterMetadata.OCPVersion,
-				"ocpMajorVersion": clusterMetadata.OCPMajorVersion,
-				"k8sVersion":      clusterMetadata.K8SVersion,
-				"totalNodes":      clusterMetadata.TotalNodes,
-				"sdnType":         clusterMetadata.SDNType,
+			metadata := make(map[string]interface{})
+			jsonData, _ := json.Marshal(clusterMetadata)
+			json.Unmarshal(jsonData, &clusterMetadataMap)
+			for k, v := range clusterMetadataMap {
+				metadata[k] = v
 			}
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
@@ -124,6 +127,25 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 					log.Fatal(err)
 				}
 			}
+			var indexerValue indexers.Indexer
+			for _, value := range metricsScraper.IndexerList {
+				indexerValue = value
+				break
+			}
+			jobSummary := burner.JobSummary{
+				Timestamp: time.Unix(start, 0).UTC(),
+				EndTimestamp: time.Unix(end, 0).UTC(),
+				ElapsedTime: time.Unix(end, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
+				UUID: uuid,
+				JobConfig: config.Job{
+					Name: jobName,
+				},
+				Metadata: metricsScraper.Metadata,
+				MetricName: "jobSummary",
+				Version: fmt.Sprintf("%v@%v", version.Version, version.GitCommit),
+				Passed: rc == 0,
+			}
+			burner.IndexJobSummary([]burner.JobSummary{jobSummary}, indexerValue)
 		},
 	}
 	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "comma-separated list of metric profiles")

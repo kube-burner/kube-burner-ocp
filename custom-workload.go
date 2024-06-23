@@ -28,9 +28,6 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Runs custom workload",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			wh.Metadata.Benchmark = benchmarkName
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if _, err := os.Stat(configFile); err != nil {
 				log.Fatalf("Error reading custom configuration file: %v", err.Error())
