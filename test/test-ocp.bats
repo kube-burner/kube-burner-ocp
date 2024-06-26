@@ -108,7 +108,7 @@ teardown_file() {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
   run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
   run_cmd kube-burner-ocp web-burner-init --gc=false --sriov=false --bridge=br-ex --bfd=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} --qps=5 --burst=5
-  run_cmd kube-burner-ocp web-burner-cluster-density --gc=false --probe=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} --qps=5 --burst=5
+  run_cmd kube-burner-ocp web-burner-cluster-density --gc=false --probe=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} --qps=5 --burst=5 --churn-duration=2m
   check_running_pods kube-burner-job=init-served-job 1
   check_running_pods kube-burner-job=serving-job 4
   check_running_pods kube-burner-job=cluster-density 35
