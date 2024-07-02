@@ -50,7 +50,7 @@ func openShiftCmd() *cobra.Command {
 	localIndexing := ocpCmd.PersistentFlags().Bool("local-indexing", false, "Enable local indexing")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints")
 	ocpCmd.PersistentFlags().BoolVar(&alerting, "alerting", true, "Enable alerting")
-	ocpCmd.PersistentFlags().BoolVar(&checkHealth, "check-health", false, "Check cluster health before job")
+	ocpCmd.PersistentFlags().BoolVar(&checkHealth, "check-health", true, "Check cluster health before job")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UUID, "uuid", uid.NewString(), "Benchmark UUID")
 	ocpCmd.PersistentFlags().DurationVar(&workloadConfig.Timeout, "timeout", 4*time.Hour, "Benchmark timeout")
 	ocpCmd.PersistentFlags().IntVar(&QPS, "qps", 20, "QPS")
