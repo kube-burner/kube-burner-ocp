@@ -63,6 +63,12 @@ func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versio
 		log.Errorf("Error retrieving Cluster Operators: %v", err)
 		os.Exit(1)
 	}
+	imageRegistryisPresent := clusterImageRegistryCheck(openshiftClientset)
+
+	if !imageRegistryisPresent {
+		log.Errorf("image-registry is not installed")
+		isHealthy = false
+	}
 
 	for _, operator := range operators.Items {
 		// Check availability conditions
@@ -91,4 +97,20 @@ func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versio
 		}
 	}
 	return isHealthy
+}
+
+func clusterImageRegistryCheck(openshiftClientset *versioned.Clientset) bool {
+	log.Infof("Checking for image-registry")
+	clusterOperator, err := openshiftClientset.ConfigV1().ClusterOperators().Get(context.TODO(), "image-registry", metav1.GetOptions{})
+	if err != nil {
+		log.Errorf("Failed to get ClusterOperator image-registry: %v", err)
+		return false
+	}
+
+	if clusterOperator.Status.Conditions == nil {
+		log.Errorf("ClusterOperator image-registry status conditions are nil")
+		return false
+	}
+	//check for operator availability status is done in isClusterHealthy
+	return true
 }
