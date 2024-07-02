@@ -33,7 +33,6 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRun: func(cmd *cobra.Command, args []string) {
-			wh.Metadata.Benchmark = cmd.Name()
 			os.Setenv("BFD", fmt.Sprint(bfd))
 			os.Setenv("BRIDGE", fmt.Sprint(bridge))
 			os.Setenv("CRD", fmt.Sprintf("%v", crd))
