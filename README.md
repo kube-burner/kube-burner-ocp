@@ -60,7 +60,7 @@ Documentation is [available here](https://kube-burner.github.io/kube-burner-ocp/
 Some of the benefits the OCP wrapper provides are:
 
 - Simplified execution of the supported workloads. (Only some flags are required)
-- Indexes OpenShift metadata along with the Benchmark result. This document can be found with the following query: `uuid: <benchmkark-uuid> AND metricName.keyword: "clusterMetadata"`
+- Adds OpenShift metadata to the generated documents.
 - Prevents modifying configuration files to tweak some of the parameters of the workloads.
 - Discovers the Prometheus URL and authentication token, so the user does not have to perform those operations before using them.
 - Workloads configuration is directly embedded in the binary.
@@ -83,7 +83,8 @@ kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-
 ```
 
 ### metrics-endpoints.yaml
-```
+
+```yaml
 - endpoint: prometheus-k8s-openshift-monitoring.apps.rook.devshift.org 
   metrics:
     - metrics.yml
@@ -211,11 +212,13 @@ kube-burner-ocp egressip --addresses-per-iteration=1 --iterations=1 --external-s
 With the command above, each namespace has one pod with a dedicated egress IP. OVN will use this dedicated egress IP for the http requests from client pod's to 10.0.34.43.
 
 ## Web-burner workloads
+
 This workload is meant to emulate some telco specific workloads. Before running *web-burner-node-density* or *web-burner-cluster-density* load the environment with *web-burner-init* first (without the garbage collection flag: `--gc=false`).
 
 Pre-requisites:
- - At least two worker nodes
- - At least one of the worker nodes must have the `node-role.kubernetes.io/worker-spk` label
+
+- At least two worker nodes
+- At least one of the worker nodes must have the `node-role.kubernetes.io/worker-spk` label
 
 ### web-burner-init
 
@@ -226,12 +229,14 @@ Pre-requisites:
 	- 1 emulated lb pod on each namespace for bfd session
 
 ### web-burner-node-density
+
 - 35 app-ns
   - 3 app pods and services on each namespace
 - 35 normal-ns
 	- 1 service with 60 normal pod endpoints on each namespace
 
 ### web-burner-cluster-density
+
 - 20 normal-ns
 	- 30 configmaps, 38 secrets, 38 normal pods and services, 5 deployments with 2 replica pods on each namespace
 - 35 served-ns
@@ -244,8 +249,10 @@ Pre-requisites:
 	- 29 service(15 ports each) with 4 pod endpoints, 29 service(15 ports each) with 6 pod endpoints
 
 ## Custom Workload: Bring your own workload
+
 To kickstart kube-burner-ocp with a custom workload, `init` becomes your go-to command. This command is equipped with flags that enable to seamlessly integrate and run your personalized workloads. Here's a breakdown of the flags accepted by the init command:
-```
+
+```console
 $ kube-burner-ocp init --help
 Runs custom workload
 
@@ -294,10 +301,9 @@ jobs:
         replicas: <replica_int>
         inputVars:
           <inputVar1>:<inputVar1_value>
-
 ```
-You can start from scratch or explore pre-built workloads in the /config folder, offering a variety of examples used by kube-burner-ocp. Dive into the details of each section in the template to tailor the workload precisely to your requirements. Experiment, iterate, and discover the optimal configuration for your workload to seamlessly integrate with kube-burner-ocp.
 
+You can start from scratch or explore pre-built workloads in the /config folder, offering a variety of examples used by kube-burner-ocp. Dive into the details of each section in the template to tailor the workload precisely to your requirements. Experiment, iterate, and discover the optimal configuration for your workload to seamlessly integrate with kube-burner-ocp.
 
 ## Index
 

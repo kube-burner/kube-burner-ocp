@@ -25,7 +25,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
 func setMetrics(cmd *cobra.Command, metricsProfile string) {
 	var metricsProfiles []string
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
@@ -59,15 +58,6 @@ func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
 	wh.ClusterMetadata, err = wh.MetadataAgent.GetClusterMetadata()
 	if err != nil {
 		return err
-	}
-	wh.Config.UUID = wh.UUID
-	wh.MetricsMetadata = map[string]interface{}{
-		"platform":        wh.ClusterMetadata.Platform,
-		"ocpVersion":      wh.ClusterMetadata.OCPVersion,
-		"ocpMajorVersion": wh.ClusterMetadata.OCPMajorVersion,
-		"k8sVersion":      wh.ClusterMetadata.K8SVersion,
-		"totalNodes":      wh.ClusterMetadata.TotalNodes,
-		"sdnType":         wh.ClusterMetadata.SDNType,
 	}
 	return nil
 }

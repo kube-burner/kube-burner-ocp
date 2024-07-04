@@ -15,11 +15,11 @@
 package ocp
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net"
-	"context"
 	"os"
-	"encoding/json"
 	"strings"
 	"time"
 
@@ -34,7 +34,7 @@ import (
 // get egress IP cidr, node IPs from worker node annotations
 func getEgressIPCidrNodeIPs() ([]string, string) {
 	kubeClientProvider := config.NewKubeClientProvider("", "")
-	clientSet, _:= kubeClientProvider.ClientSet(0, 0)
+	clientSet, _ := kubeClientProvider.ClientSet(0, 0)
 	workers, err := clientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		log.Errorf("Error retrieving workers: %v", err)
@@ -55,7 +55,7 @@ func getEgressIPCidrNodeIPs() ([]string, string) {
 		}
 		// For cloud based OCP deployedments, egress IP cidr is added as part of cloud.network.openshift.io/egress-ipconfig annotation
 		// For baremetal, read the cidr from k8s.ovn.org/node-primary-ifaddr
-		if  egressIPCidr == "" {
+		if egressIPCidr == "" {
 			eipconfig, exist := worker.ObjectMeta.Annotations["cloud.network.openshift.io/egress-ipconfig"]
 			if exist {
 				var items []map[string]interface{}
@@ -93,21 +93,21 @@ func getFirstUsableAddr(cidr string) uint32 {
 	}
 
 	// Calculate the first usable IP address by skipping first 4 addresses.
-    // For example, OVN didn't assign eip to node when eip was in between 10.0.0.0 and 10.0.0.3 for cidr 10.0.0.0/19
+	// For example, OVN didn't assign eip to node when eip was in between 10.0.0.0 and 10.0.0.3 for cidr 10.0.0.0/19
 	firstUsableIP := make(net.IP, len(networkBytes))
 	copy(firstUsableIP, networkBytes)
 	firstUsableIP[3] += 4 // Increment the last byte by 1 for the first usable IP address
 
 	// Output the network address and the first usable IP address in CIDR notation
-        baseAddrInt, err := ipconv.IPv4ToInt(firstUsableIP)
+	baseAddrInt, err := ipconv.IPv4ToInt(firstUsableIP)
 	if err != nil {
 		log.Fatal("Error converting IP to int: ", err)
 		os.Exit(1)
-	 }
-	return  baseAddrInt
+	}
+	return baseAddrInt
 }
 
-// egress IPs and node IPs will be in same cidr. So we need to exclude node IPs from CIDR to generate list of avaialble egress IPs. 
+// egress IPs and node IPs will be in same cidr. So we need to exclude node IPs from CIDR to generate list of avaialble egress IPs.
 func generateEgressIPs(numJobIterations int, addressesPerIteration int, externalServerIP string) {
 
 	nodeIPs, egressIPCidr := getEgressIPCidrNodeIPs()
@@ -122,16 +122,16 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 	for _, nodeip := range nodeIPs {
 		nodeipuint32, err := ipconv.IPv4ToInt(net.ParseIP(nodeip))
 		if err != nil {
-                        log.Fatal("Error: ", err)
+			log.Fatal("Error: ", err)
 			os.Exit(1)
-	        }
+		}
 		nodeMap[nodeipuint32] = true
 	}
 
 	// Generate ip addresses from CIDR by excluding nodeIPs
 	// Extra iterations needed in for loop if we come across node IPs while generating egress IP list
 	var newAddr uint32
-	for i := 0; i < ((numJobIterations * addressesPerIteration) + len(nodeIPs) ); i++ {
+	for i := 0; i < ((numJobIterations * addressesPerIteration) + len(nodeIPs)); i++ {
 		newAddr = baseAddrInt + uint32(i)
 		if !nodeMap[newAddr] {
 			addrSlice = append(addrSlice, ipconv.IntToIPv4(newAddr).String())
@@ -146,11 +146,10 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 	os.Setenv("EIP_ADDRESSES", strings.Join(addrSlice, " "))
 }
 
-
 // NewClusterDensity holds cluster-density workload
 func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, addressesPerIteration int
-    var externalServerIP string
+	var externalServerIP string
 	var podReadyThreshold time.Duration
 	cmd := &cobra.Command{
 		Use:   variant,
