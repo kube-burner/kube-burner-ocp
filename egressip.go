@@ -156,7 +156,6 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRun: func(cmd *cobra.Command, args []string) {
-			wh.Metadata.Benchmark = cmd.Name()
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
 			os.Setenv("ADDRESSES_PER_ITERATION", fmt.Sprint(addressesPerIteration))

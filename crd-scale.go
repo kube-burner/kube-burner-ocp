@@ -30,7 +30,6 @@ func NewCrdScale(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs crd-scale workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			wh.Metadata.Benchmark = cmd.Name()
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
 		},
 		Run: func(cmd *cobra.Command, args []string) {

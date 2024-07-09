@@ -49,7 +49,6 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs pvc-density workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			wh.Metadata.Benchmark = cmd.Name()
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
 			os.Setenv("CONTAINER_IMAGE", containerImage)
 			os.Setenv("CLAIM_SIZE", fmt.Sprint(claimSize))

@@ -31,32 +31,32 @@ teardown_file() {
 
 @test "custom-workload as node-density" {
   run_cmd kube-burner-ocp init --config=custom-workload.yml ${COMMON_FLAGS} --metrics-endpoint metrics-endpoints.yaml
-  check_metric_value clusterMetadata jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+  check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "node-density: es-indexing=true" {
   run_cmd kube-burner-ocp node-density --pods-per-node=75 --pod-ready-threshold=10s ${COMMON_FLAGS}
-  check_metric_value etcdVersion clusterMetadata jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+  check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "node-density-heavy: gc-metrics=true; local-indexing=true" {
   run_cmd kube-burner-ocp node-density-heavy --pods-per-node=75 --uuid=abcd --local-indexing --gc-metrics=true
-  check_file_list collected-metrics-abcd/etcdVersion.json collected-metrics-abcd/clusterMetadata.json collected-metrics-abcd/jobSummary-node-density-heavy.json collected-metrics-abcd/jobSummary-garbage-collection.json collected-metrics-abcd/podLatencyMeasurement-node-density-heavy.json collected-metrics-abcd/podLatencyQuantilesMeasurement-node-density-heavy.json
+  check_file_list collected-metrics-abcd/etcdVersion.json collected-metrics-abcd/jobSummary.json collected-metrics-abcd/podLatencyMeasurement-node-density-heavy.json collected-metrics-abcd/podLatencyQuantilesMeasurement-node-density-heavy.json
 }
 
 @test "cluster-density-ms: metrics-endpoint=true; es-indexing=true" {
   run_cmd kube-burner-ocp cluster-density-ms --iterations=1 --churn=false --metrics-endpoint metrics-endpoints.yaml ${COMMON_FLAGS}
-  check_metric_value clusterMetadata jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+  check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
   run_cmd kube-burner-ocp cluster-density-v2 --iterations=5 --churn-duration=1m --churn-delay=5s --profile-type=both ${COMMON_FLAGS} --user-metadata=user-metadata.yml --service-latency
-  check_metric_value cpu-kubelet clusterMetadata jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion 
+  check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion 
 }
 
 @test "cluster-density-v2: churn-deletion-strategy=gvr" {
   run_cmd kube-burner-ocp cluster-density-v2 --iterations=2 --churn=true --churn-duration=1m --churn-delay=10s --churn-deletion-strategy=gvr ${COMMON_FLAGS}
-  check_metric_value etcdVersion clusterMetadata jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+  check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "cluster-density-v2: indexing=false; churning=false" {
@@ -90,7 +90,7 @@ teardown_file() {
 @test "pvc-density" {
   # Since 'aws' is the chosen storage provisioner, this will only execute successfully if the ocp environment is aws
   run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner=aws ${COMMON_FLAGS}
-  check_metric_value clusterMetadata jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+  check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "web-burner-node-density" {
