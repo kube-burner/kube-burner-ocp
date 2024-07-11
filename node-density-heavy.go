@@ -36,7 +36,7 @@ func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs node-density-heavy workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			totalPods := wh.ClusterMetadata.WorkerNodesCount * podsPerNode
+			totalPods := clusterMetadata.WorkerNodesCount * podsPerNode
 			podCount, err := wh.MetadataAgent.GetCurrentPodCount()
 			if err != nil {
 				log.Fatal(err)
