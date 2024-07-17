@@ -29,7 +29,7 @@ import (
 func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churn, namespacedIterations, svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var configFile, benchmarkName, churnDeletionStrategy string
+	var configFile, churnDeletionStrategy string
 	var iterations, churnPercent, churnCycles, iterationsPerNamespace, podsPerNode int
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -71,7 +71,6 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&configFile, "config", "c", "", "Config file path or url")
-	cmd.Flags().StringVarP(&benchmarkName, "benchmark", "b", "custom-workload", "Name of the benchmark")
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
