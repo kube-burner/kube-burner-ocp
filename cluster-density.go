@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -52,6 +53,11 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			os.Setenv("INGRESS_DOMAIN", ingressDomain)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			kubeClientProvider := config.NewKubeClientProvider("", "")
+			clientset, _ := kubeClientProvider.ClientSet(0, 0)
+			if !clusterImageRegistryCheck(clientset) {
+				log.Errorf("image-registry deployment is not deployed")
+			}
 			setMetrics(cmd, "metrics-aggregated.yml")
 			wh.Run(cmd.Name())
 		},
