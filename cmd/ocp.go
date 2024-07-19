@@ -81,17 +81,22 @@ func openShiftCmd() *cobra.Command {
 		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig, kubeClientProvider)
 		wh.MetricsMetadata = make(map[string]interface{})
 		envVars := map[string]string{
-			"UUID":           workloadConfig.UUID,
-			"ES_SERVER":      esServer,
-			"ES_INDEX":       esIndex,
-			"LOCAL_INDEXING": fmt.Sprintf("%v", *localIndexing),
-			"QPS":            fmt.Sprintf("%d", QPS),
-			"BURST":          fmt.Sprintf("%d", burst),
-			"GC":             fmt.Sprintf("%v", gc),
-			"GC_METRICS":     fmt.Sprintf("%v", gcMetrics),
+			"UUID":       workloadConfig.UUID,
+			"QPS":        fmt.Sprintf("%d", QPS),
+			"BURST":      fmt.Sprintf("%d", burst),
+			"GC":         fmt.Sprintf("%v", gc),
+			"GC_METRICS": fmt.Sprintf("%v", gcMetrics),
 		}
+		envVars["LOCAL_INDEXING"] = fmt.Sprintf("%v", *localIndexing)
 		if alerting {
 			envVars["ALERTS"] = "alerts.yml"
+		} else {
+			envVars["ALERTS"] = ""
+		}
+		// If metricsEndpoint is not set, use values from flags
+		if workloadConfig.MetricsEndpoint == "" {
+			envVars["ES_SERVER"] = esServer
+			envVars["ES_INDEX"] = esIndex
 		}
 		for k, v := range envVars {
 			os.Setenv(k, v)
