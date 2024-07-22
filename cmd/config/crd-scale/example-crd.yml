@@ -19,7 +19,7 @@ spec:
                   type: string
                 iterations:
                   type: integer
-  scope: Cluster
+  scope: Namespaced
   names:
     plural: kubeburners{{.Iteration}}
     singular: kubeburner{{.Iteration}}
