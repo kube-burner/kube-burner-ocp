@@ -27,10 +27,10 @@ import (
 
 // NewNodeDensity holds node-density workload
 func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
-	var podsPerNode, churnCycles, churnPercent int
+	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent int
 	var podReadyThreshold, churnDuration, churnDelay time.Duration
 	var containerImage, churnDeletionStrategy string
-	var churn bool
+	var namespacedIterations, churn bool
 	cmd := &cobra.Command{
 		Use:          "node-density",
 		Short:        "Runs node-density workload",
@@ -62,10 +62,12 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
-	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "gvr", "Churn deletion strategy to use")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
+	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", false, "Namespaced iterations")
+	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1000, "Iterations per namespace")
 	return cmd
 }
