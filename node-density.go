@@ -54,6 +54,8 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
 			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(totalPods-podCount))
+			os.Setenv("NAMESPACED_ITERATIONS", fmt.Sprint(namespacedIterations))
+			os.Setenv("ITERATIONS_PER_NAMESPACE", fmt.Sprint(iterationsPerNamespace))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
 			os.Setenv("CONTAINER_IMAGE", containerImage)
 		},
