@@ -27,9 +27,10 @@ jobs:
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: false
-    waitWhenFinished: false
+    waitWhenFinished: true
     objects:
-
       - objectTemplate: example-crd.yml
         replicas: 1
+        waitOptions:
+          forCondition: Established        
 

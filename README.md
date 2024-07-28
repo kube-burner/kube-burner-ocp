@@ -108,6 +108,9 @@ kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-
 
 `.TOKEN` can be captured by running `TOKEN=$(oc create token -n openshift-monitoring prometheus-k8s)`
 
+!!! Note 
+    Metric profile names specified against `metrics` key should be unique and shouldn't overlap with the existing ones. A metric profile will be looked up in this directory [config](https://github.com/kube-burner/kube-burner-ocp/tree/main/cmd/config) first for the sake of simplicity and if it doesn't exist, will fallback to our specified path. So in order for our own metric profile to get picked up, we will need to specify its absolute path or name differently whenever there is an overlap with the existing ones.
+
 ## Cluster density workloads
 
 This workload family is a control-plane density focused workload that that creates different objects across the cluster. There are 2 different variants [cluster-density-v2](#cluster-density-v2) and [cluster-density-ms](#cluster-density-ms).
@@ -260,9 +263,19 @@ Usage:
   kube-burner-ocp init [flags]
 
 Flags:
-  -b, --benchmark string   Name of the benchmark (default "custom-workload")
-  -c, --config string      Config file path or URL
-  -h, --help               help for init
+    --churn                            Enable churning (default true)
+    --churn-cycles int                 Churn cycles to execute
+    --churn-delay duration             Time to wait between each churn (default 2m0s)
+    --churn-deletion-strategy string   Churn deletion strategy to use (default "default")
+    --churn-duration duration          Churn duration (default 5m0s)
+    --churn-percent int                Percentage of job iterations that kube-burner will churn each round (default 10)
+    -c, --config string                    Config file path or url
+    -h, --help                             help for init
+    --iterations int                   Job iterations. Mutually exclusive with '--pods-per-node' (default 1)
+    --iterations-per-namespace int     Iterations per namespace (default 1)
+    --namespaced-iterations            Namespaced iterations (default true)
+    --pods-per-node int                Pods per node. Mutually exclusive with '--iterations' (default 50)
+    --service-latency                  Enable service latency measurement
 ```
 
 Creating a custom workload for kube-burner-ocp is a seamless process, and you have the flexibility to craft it according to your specific needs. Below is a template to guide you through the customization of your workload:
