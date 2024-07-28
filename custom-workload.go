@@ -51,7 +51,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
 			}
 			if podsPerNode > 0 {
-				totalPods := wh.ClusterMetadata.WorkerNodesCount * podsPerNode
+				totalPods := clusterMetadata.WorkerNodesCount * podsPerNode
 				podCount, err := wh.MetadataAgent.GetCurrentPodCount()
 				if err != nil {
 					log.Fatal(err)

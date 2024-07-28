@@ -15,6 +15,7 @@
 package ocp
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -24,6 +25,8 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
 )
+
+var clusterMetadata ocpmetadata.ClusterMetadata
 
 func setMetrics(cmd *cobra.Command, metricsProfile string) {
 	var metricsProfiles []string
@@ -55,9 +58,14 @@ func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
 			return fmt.Errorf("error obtaining Prometheus information: %v", err)
 		}
 	}
-	wh.ClusterMetadata, err = wh.MetadataAgent.GetClusterMetadata()
+	clusterMetadata, err = wh.MetadataAgent.GetClusterMetadata()
 	if err != nil {
 		return err
 	}
+	jsonData, err := json.Marshal(clusterMetadata)
+	if err != nil {
+		return err
+	}
+	json.Unmarshal(jsonData, &wh.Metadata)
 	return nil
 }
