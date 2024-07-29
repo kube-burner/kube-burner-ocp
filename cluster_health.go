@@ -100,7 +100,7 @@ func clusterImageRegistryCheck(clientset kubernetes.Interface) bool {
 		return false
 	}
 	if deployment.Status.AvailableReplicas > 0 {
-		log.Infof("Deployment image-regsitry in namespace openshift-image-registry is available with %d replicas", deployment.Status.AvailableReplicas)
+		log.Debugf("Deployment image-regsitry in namespace openshift-image-registry is available with %d replicas", deployment.Status.AvailableReplicas)
 		return true
 	}
 	return false
