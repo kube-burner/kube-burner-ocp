@@ -40,15 +40,15 @@ func openShiftCmd() *cobra.Command {
 	var metricsProfileType string
 	var esServer, esIndex string
 	var QPS, burst int
-	var gc, gcMetrics, alerting, checkHealth bool
+	var gc, gcMetrics, alerting, checkHealth, localIndexing, extract bool
 	ocpCmd := &cobra.Command{
 		Use:  "kube-burner-ocp",
 		Long: `kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads`,
 	}
 	ocpCmd.PersistentFlags().StringVar(&esServer, "es-server", "", "Elastic Search endpoint")
 	ocpCmd.PersistentFlags().StringVar(&esIndex, "es-index", "", "Elastic Search index")
-	localIndexing := ocpCmd.PersistentFlags().Bool("local-indexing", false, "Enable local indexing")
-	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints")
+	ocpCmd.PersistentFlags().BoolVar(&localIndexing, "local-indexing", false, "Enable local indexing")
+	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints, overrides the es-server and es-index flags")
 	ocpCmd.PersistentFlags().BoolVar(&alerting, "alerting", true, "Enable alerting")
 	ocpCmd.PersistentFlags().BoolVar(&checkHealth, "check-health", true, "Check cluster health before job")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UUID, "uuid", uid.NewString(), "Benchmark UUID")
@@ -58,7 +58,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().BoolVar(&gc, "gc", true, "Garbage collect created namespaces")
 	ocpCmd.PersistentFlags().BoolVar(&gcMetrics, "gc-metrics", false, "Collect metrics during garbage collection")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UserMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
-	extract := ocpCmd.PersistentFlags().Bool("extract", false, "Extract workload in the current directory")
+	ocpCmd.PersistentFlags().BoolVar(&extract, "extract", false, "Extract workload in the current directory")
 	ocpCmd.PersistentFlags().StringVar(&metricsProfileType, "profile-type", "both", "Metrics profile to use, supported options are: regular, reporting or both")
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
@@ -66,8 +66,7 @@ func openShiftCmd() *cobra.Command {
 			return
 		}
 		util.ConfigureLogging(cmd)
-		util.SetupLogging(workloadConfig.UUID)
-		if *extract {
+		if extract {
 			if err := workloads.ExtractWorkload(ocpConfig, configDir, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
 				log.Fatal(err.Error())
 			}
@@ -87,7 +86,7 @@ func openShiftCmd() *cobra.Command {
 			"GC":         fmt.Sprintf("%v", gc),
 			"GC_METRICS": fmt.Sprintf("%v", gcMetrics),
 		}
-		envVars["LOCAL_INDEXING"] = fmt.Sprintf("%v", *localIndexing)
+		envVars["LOCAL_INDEXING"] = fmt.Sprintf("%v", localIndexing)
 		if alerting {
 			envVars["ALERTS"] = "alerts.yml"
 		} else {
