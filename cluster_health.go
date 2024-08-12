@@ -92,3 +92,16 @@ func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versio
 	}
 	return isHealthy
 }
+
+func clusterImageRegistryCheck(clientset kubernetes.Interface) bool {
+	deployment, err := clientset.AppsV1().Deployments("openshift-image-registry").Get(context.TODO(), "image-registry", metav1.GetOptions{})
+	if err != nil {
+		log.Errorf("Error getting deployment: %v", err)
+		return false
+	}
+	if deployment.Status.AvailableReplicas > 0 {
+		log.Debugf("Deployment image-regsitry in namespace openshift-image-registry is available with %d replicas", deployment.Status.AvailableReplicas)
+		return true
+	}
+	return false
+}
