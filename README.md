@@ -95,7 +95,7 @@ kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-
       insecureSkipVerify: true
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
-- endpoint: prometheus-k8s-openshift-monitoring.apps.rook.devshift.org
+- endpoint: https://prometheus-k8s-openshift-monitoring.apps.rook.devshift.org
   token: {{ .TOKEN }} 
   metrics:
     - metrics.yml
@@ -108,7 +108,10 @@ kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-
 
 `.TOKEN` can be captured by running `TOKEN=$(oc create token -n openshift-monitoring prometheus-k8s)`
 
-!!! Note 
+!!! Note
+
+    Avoid passing absolute path of the file with --metrics-endpoint option
+
     Metric profile names specified against `metrics` key should be unique and shouldn't overlap with the existing ones. A metric profile will be looked up in this directory [config](https://github.com/kube-burner/kube-burner-ocp/tree/main/cmd/config) first for the sake of simplicity and if it doesn't exist, will fallback to our specified path. So in order for our own metric profile to get picked up, we will need to specify its absolute path or name differently whenever there is an overlap with the existing ones.
 
 ## Cluster density workloads
