@@ -78,7 +78,6 @@ func openShiftCmd() *cobra.Command {
 		workloadConfig.ConfigDir = configDir
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig, kubeClientProvider)
-		wh.MetricsMetadata = make(map[string]interface{})
 		envVars := map[string]string{
 			"UUID":       workloadConfig.UUID,
 			"QPS":        fmt.Sprintf("%d", QPS),
