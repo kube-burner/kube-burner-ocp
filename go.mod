@@ -8,14 +8,17 @@ require (
 	github.com/cloud-bulldozer/go-commons v1.0.16
 	github.com/google/uuid v1.6.0
 	github.com/kube-burner/kube-burner v1.10.6
-	github.com/openshift/api v0.0.0-20240516090725-a20192e21ba6
-	github.com/openshift/client-go v0.0.0-20240510131258-f646d5f29250
+	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
+	github.com/openshift/client-go v0.0.0-20240821135114-75c118605d5f
 	github.com/praserx/ipconv v1.2.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.0
+	k8s.io/api v0.30.1
 	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.1
 )
+
+replace github.com/kube-burner/kube-burner => /home/vchalla/myforks/kube-burner
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
@@ -70,7 +73,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.30.1 // indirect
 	k8s.io/apiextensions-apiserver v0.23.5 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
