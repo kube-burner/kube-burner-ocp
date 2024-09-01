@@ -19,6 +19,7 @@ require (
 )
 
 replace github.com/kube-burner/kube-burner => /home/vchalla/myforks/kube-burner
+replace kube-burner.io/ocp/pkg/workers_scale => ./pkg/workers_scale
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect

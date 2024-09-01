@@ -16,53 +16,30 @@ package ocp
 
 import (
 	"os"
-	"sort"
 	"strings"
 	"encoding/json"
 	"time"
-	"context"
 	"fmt"
-	"sync"
+	
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
 	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/measurements"
-	mtypes "github.com/kube-burner/kube-burner/pkg/measurements/types"
 	"github.com/kube-burner/kube-burner/pkg/util/metrics"
+	"github.com/cloud-bulldozer/go-commons/version"
+	"github.com/kube-burner/kube-burner/pkg/burner"
+	"github.com/kube-burner/kube-burner/pkg/prometheus"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
+	wscale "kube-burner.io/ocp/pkg/workers_scale"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/kubernetes"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
-
 )
 
 
-type AWSProviderSpec struct {
-	AMI struct {
-		ID string `json:"id"`
-	} `json:"ami"`
-}
-
-type MachineInfo struct {
-	nodeUID string
-	creationTimestamp time.Time
-}
-
-type MachineSetInfo struct {
-	lastUpdatedTime time.Time
-	prevReplicas int
-	currentReplicas int
-}
-
 // NewWorkersScale orchestrates scaling workers in ocp wrapper
 func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobra.Command {
-	var metricsProfile, jobName string
+	var enableAutoscaler bool
+	var metricsProfile string
 	var userMetadata, metricsDirectory string
 	var prometheusStep time.Duration
 	var uuid string
@@ -82,6 +59,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			os.Exit(rc)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now().Unix()
 			uuid, _ = cmd.Flags().GetString("uuid")
 			esServer, _ := cmd.Flags().GetString("es-server")
 			esIndex, _ := cmd.Flags().GetString("es-index")
@@ -120,6 +98,10 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				}
 			}
 
+			clusterMetadata, err = ocpMetaAgent.GetClusterMetadata()
+			if err != nil {
+				log.Fatal("Error obtaining clusterMetadata: ", err.Error())
+			}
 			metadata := make(map[string]interface{})
 			jsonData, _ := json.Marshal(clusterMetadata)
 			json.Unmarshal(jsonData, &clusterMetadataMap)
@@ -133,255 +115,59 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				UserMetaData:    userMetadata,
 				RawMetadata:     metadata,
 			})
-			clusterMetadata, err = ocpMetaAgent.GetClusterMetadata()
-			if err != nil {
-				log.Fatal("Error obtaining clusterMetadata: ", err.Error())
+			var indexerValue indexers.Indexer
+			for _, value := range metricsScraper.IndexerList {
+				indexerValue = value
+				break
 			}
-			kubeClientProvider := config.NewKubeClientProvider("", "")
-			clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
-			machineClient := getMachineClient(restConfig)
-			const namespace = "openshift-machine-api"
-			MachineSetDetails := getWorkerMachineSets(machineClient, namespace)
-			prevMachineDetails, amiID := getMachines(machineClient, namespace)
-			log.Infof("%v %v", prevMachineDetails, amiID)
-			configSpec := config.Spec{
-				GlobalConfig: config.GlobalConfig {
-					Measurements: []mtypes.Measurement {
-						{
-							Name: "nodeLatency",
-						},
+			scenario := fetchScenario()
+			scenario.OrchestrateWorkload(uuid, additionalWorkerNodes, metricsScraper.Metadata, indexerValue)
+			end := time.Now().Unix()
+			for _, prometheusClient := range metricsScraper.PrometheusClients {
+				prometheusJob := prometheus.Job{
+					Start: time.Unix(start, 0),
+					End:   time.Unix(end, 0),
+					JobConfig: config.Job{
+						Name: wscale.JobName,
 					},
+				}
+				if prometheusClient.ScrapeJobsMetrics(prometheusJob) != nil {
+					rc = 1
+				}
+			}
+			if workloads.ConfigSpec.MetricsEndpoints[0].Type == indexers.LocalIndexer && tarballName != "" {
+				if err := metrics.CreateTarball(workloads.ConfigSpec.MetricsEndpoints[0].IndexerConfig); err != nil {
+					log.Fatal(err)
+				}
+			}
+			jobSummary := burner.JobSummary{
+				Timestamp: time.Unix(start, 0).UTC(),
+				EndTimestamp: time.Unix(end, 0).UTC(),
+				ElapsedTime: time.Unix(end, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
+				UUID: uuid,
+				JobConfig: config.Job{
+					Name: wscale.JobName,
 				},
+				Metadata: metricsScraper.Metadata,
+				MetricName: "jobSummary",
+				Version: fmt.Sprintf("%v@%v", version.Version, version.GitCommit),
+				Passed: rc == 0,
 			}
-			measurements.NewMeasurementFactory(configSpec, metricsScraper.Metadata)
-			measurements.SetJobConfig(
-				&config.Job{
-					Name:                 jobName,
-				},
-				kubeClientProvider,
-			)
-			measurements.Start()
-			machineSetsToEdit := scaleMachineSets(machineClient, namespace, MachineSetDetails, additionalWorkerNodes)
-			if err = waitForNodes(clientSet, 4*time.Hour); err != nil {
-				log.Infof("Error waiting for nodes: %v", err)
-			} else {
-				log.Infof("All nodes are ready")
-			}
-			if err = measurements.Stop(); err != nil {
-				log.Error(err.Error())
-			}
-			nodeMetrics := measurements.GetMetrics()
-			log.Infof("%v", nodeMetrics)
-			log.Infof("Restoring machine sets to previous state")
-			editMachineSets(machineClient, namespace, machineSetsToEdit, false)
+			burner.IndexJobSummary([]burner.JobSummary{jobSummary}, indexerValue)
 		},
 	}
-	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "comma-separated list of metric profiles")
+	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "Comma-separated list of metric profiles")
 	cmd.Flags().StringVar(&metricsDirectory, "metrics-directory", "collected-metrics", "Directory to dump the metrics files in, when using default local indexing")
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
-	cmd.Flags().IntVar(&additionalWorkerNodes, "additional-worker-nodes", 3, "additional workers to scale")
-	cmd.Flags().StringVar(&jobName, "job-name", "workers-scale", "Indexing job name")
+	cmd.Flags().IntVar(&additionalWorkerNodes, "additional-worker-nodes", 3, "Additional workers to scale")
+	cmd.Flags().BoolVar(&enableAutoscaler, "enable-autoscaler", false, "Enables autoscaler while scaling the cluster")
 	cmd.Flags().StringVar(&userMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	cmd.Flags().StringVar(&tarballName, "tarball-name", "", "Dump collected metrics into a tarball with the given name, requires local indexing")
 	cmd.Flags().SortFlags = false
 	return cmd
 }
 
-// waitForNodes waits for all the nodes to be ready
-func waitForNodes(clientset kubernetes.Interface, timeout time.Duration) error {
-	return wait.PollImmediate(10*time.Second, timeout, func() (bool, error) {
-		nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		for _, node := range nodes.Items {
-			if !isNodeReady(&node) {
-				log.Debugf("Node %s is not ready\n", node.Name)
-				return false, nil
-			}
-		}
-		log.Infof("All nodes are ready")
-		return true, nil
-	})
-}
-
-// isNodeReady checks if a node is ready
-func isNodeReady(node *v1.Node) bool {
-	for _, condition := range node.Status.Conditions {
-		if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
-// scaleMachineSets triggers scale operation on the machinesets
-func scaleMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, namespace string, machineSetReplicas map[int][]string, desiredWorkerCount int) (map[string]MachineSetInfo){
-	var lastIndex int
-	machineSetsToEdit := make(map[string]MachineSetInfo)
-	keys := make([]int, 0, len(machineSetReplicas))
-	for key := range machineSetReplicas {
-		keys = append(keys, key)
-	}
-	sort.Ints(keys)
-	for _, value := range keys {
-		if machineSets, exists := machineSetReplicas[value]; exists {
-			for index, machineSet := range machineSets {
-				if desiredWorkerCount > 0 {
-					if _, exists := machineSetsToEdit[machineSet]; !exists {
-						machineSetsToEdit[machineSet] = MachineSetInfo{
-							prevReplicas: value,
-							currentReplicas: value + 1,
-						}
-					}
-					msInfo := machineSetsToEdit[machineSet]
-					msInfo.currentReplicas = value + 1
-					machineSetsToEdit[machineSet] = msInfo
-					machineSetReplicas[value + 1] = append(machineSetReplicas[value + 1], machineSet)
-					lastIndex = index
-					desiredWorkerCount--
-				} else {
-					break
-				}
-			}
-			if lastIndex == len(machineSets) - 1 {
-				delete(machineSetReplicas, value)
-			} else {
-				machineSetReplicas[value] = machineSets[lastIndex + 1:]
-			}
-		} else if desiredWorkerCount > 0 {
-			break
-		}
-	}
-	editMachineSets(machineClient, namespace, machineSetsToEdit, true)
-	return machineSetsToEdit
-}
-
-// editMachineSets edits machinesets parallely
-func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, namespace string, machineSetsToEdit map[string]MachineSetInfo, isScaleUp bool) {
-	var wg sync.WaitGroup
-	maxWaitTimeout := 4 * time.Hour
-	for machineSet, msInfo := range machineSetsToEdit {
-		var replica int
-		if isScaleUp {
-			replica = msInfo.currentReplicas
-		} else {
-			replica = msInfo.prevReplicas
-		}
-		wg.Add(1)
-		go func(ms string, r int) {
-			defer wg.Done()
-			err := updateMachineSetReplicas(machineClient, ms, namespace, int32(r), maxWaitTimeout, machineSetsToEdit)
-            if err != nil {
-                log.Errorf("Failed to edit MachineSet %s: %v", ms, err)
-            }
-		}(machineSet, replica)
-	}
-	wg.Wait()
-	log.Infof("All the machinesets have been editted")
-}
-
-// updateMachineSetsReplicas updates machines replicas
-func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client, name string, namespace string, newReplicaCount int32, maxWaitTimeout time.Duration, machineSetsToEdit map[string]MachineSetInfo) error {
-    machineSet, err := machineClient.MachineSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-    if err != nil {
-        return fmt.Errorf("error getting machineset: %s", err)
-    }
-
-    machineSet.Spec.Replicas = &newReplicaCount
-	updateTimestamp := time.Now().UTC()
-    _, err = machineClient.MachineSets(namespace).Update(context.TODO(), machineSet, metav1.UpdateOptions{})
-    if err != nil {
-        return fmt.Errorf("error updating machineset: %s", err)
-    }
-	msInfo := machineSetsToEdit[name]
-	msInfo.lastUpdatedTime = updateTimestamp
-	machineSetsToEdit[name] = msInfo
-
-	err = waitForMachineSet(machineClient, name, namespace, newReplicaCount, maxWaitTimeout)
-	if err != nil {
-        return fmt.Errorf("timeout waiting for MachineSet %s to be ready: %v", name, err)
-    }
-
-    log.Infof("MachineSet %s updated to %d replicas", name, newReplicaCount)
-	return nil
-}
-
-// waitForMachineSet waits for machinesets to be ready with new replica count
-func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name, namespace string, newReplicaCount int32, maxWaitTimeout time.Duration) error {
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
-        ms, err := machineClient.MachineSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-        if err != nil {
-            return false, err
-        }
-        if ms.Status.Replicas == ms.Status.ReadyReplicas && ms.Status.ReadyReplicas == newReplicaCount {
-            return true, nil
-        }
-        log.Debugf("Waiting for MachineSet %s to reach %d replicas, currently %d ready", name, newReplicaCount, ms.Status.ReadyReplicas)
-        return false, nil
-    })
-}
-
-// getMachineClient creates a reusable machine client
-func getMachineClient(restConfig *rest.Config) (*machinev1beta1.MachineV1beta1Client) {
-	machineClient, err := machinev1beta1.NewForConfig(restConfig)
-	if err != nil {
-		log.Fatalf("error creating machine API client: %s", err)
-	}
-
-	return machineClient
-}
-
-// getWorkerMachineSets lists all machinesets
-func getWorkerMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, namespace string) (map[int][]string) {
-	machineSetReplicas := make(map[int][]string)
-	machineSets, err := machineClient.MachineSets(namespace).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		log.Fatalf("error listing machinesets: %s", err)
-	}
-
-	for _, ms := range machineSets.Items {
-		if ms.Labels["machine.openshift.io/cluster-api-machine-role"] != "infra" &&
-		ms.Labels["machine.openshift.io/cluster-api-machine-role"] != "workload" {
-			replicas := int(*ms.Spec.Replicas)
-			machineSetReplicas[replicas] = append(machineSetReplicas[replicas], ms.Name)
-		}
-	}
-	log.Debugf("MachineSets with replica count: %v", machineSetReplicas)
-	return machineSetReplicas
-}
-
-// listMachines lists all worker machines in the cluster
-func getMachines(machineClient *machinev1beta1.MachineV1beta1Client, namespace string) (map[string]MachineInfo, string) {
-	var amiID string
-	machineDetails := make(map[string]MachineInfo)
-	machines, err := machineClient.Machines(namespace).List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		log.Fatalf("error listing machines: %s", err)
-	}
-
-	for _, machine := range machines.Items {
-		if _, ok := machine.Labels["machine.openshift.io/cluster-api-machine-role"]; ok && 
-		machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "infra" &&
-		machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "workload" &&
-		machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "master" &&
-		machine.Labels["machine.openshift.io/cluster-api-machine-role"] == "worker" {
-			if machine.Status.Phase != nil && *machine.Status.Phase == "Running" {
-				if (amiID == "") {
-					var awsSpec AWSProviderSpec
-					if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &awsSpec); err != nil {
-						log.Errorf("error unmarshaling providerSpec: %w", err)
-					}
-					amiID = awsSpec.AMI.ID
-				}
-				machineDetails[machine.Name] = MachineInfo{
-					nodeUID: string(machine.Status.NodeRef.UID),
-					creationTimestamp: machine.CreationTimestamp.Time.UTC(),
-				}
-			}
-		}
-	}
-	log.Debugf("Machines: %v with amiID: %v", machineDetails, amiID)
-	return machineDetails, amiID
+// FetchScenario helps us to fetch relevant class
+func fetchScenario() wscale.Scenario {
+	return &wscale.AWSScenario{}
 }
