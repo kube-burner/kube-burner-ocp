@@ -35,10 +35,10 @@ import (
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 )
 
-type AWSAutoScalerScenario struct {}
+type AutoScalerScenario struct {}
 
 // Returns a new scenario object
-func (awsAutoScalerScenario *AWSAutoScalerScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
+func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
@@ -61,7 +61,7 @@ func (awsAutoScalerScenario *AWSAutoScalerScenario) OrchestrateWorkload(scaleCon
 	}
 	scaledMachineDetails, amiID := getMachines(machineClient)
 	discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
-	finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID)
+	finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID, 0)
 	deleteAutoScaler(dynamicClient)
 	deleteMachineAutoscalers(dynamicClient, machineSetsToEdit)
 	deleteBatchJob(clientSet, triggerJob)
@@ -116,8 +116,10 @@ func createBatchJob(clientset kubernetes.Interface) (string, time.Time){
 // deletes our batch job that creates load
 func deleteBatchJob(clientset kubernetes.Interface, jobName string) {
 	jobsClient := clientset.BatchV1().Jobs(defaultNamespace)
-
-	err := jobsClient.Delete(context.TODO(), jobName, metav1.DeleteOptions{})
+	deletePolicy := metav1.DeletePropagationForeground
+	err := jobsClient.Delete(context.TODO(), jobName, metav1.DeleteOptions{
+        PropagationPolicy: &deletePolicy,
+    })
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Infof("Job %s not found in namespace %s", jobName, defaultNamespace)

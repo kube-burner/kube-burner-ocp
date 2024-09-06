@@ -17,6 +17,7 @@ package workers_scale
 
 import (
 	"sync"
+	"time"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -49,9 +50,9 @@ func setupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvid
 }
 
 // finalizeMetrics performs and indexes required metrics
-func finalizeMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[string]MachineInfo, indexerValue indexers.Indexer, amiID string) {
+func finalizeMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[string]MachineInfo, indexerValue indexers.Indexer, amiID string, scaleEventEpoch int64) {
 	nodeMetrics := measurements.GetMetrics()
-	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, nodeMetrics[0], amiID)
+	normLatencies, latencyQuantiles := calculateMetrics(&machineSetsToEdit, scaledMachineDetails, nodeMetrics[0], amiID, scaleEventEpoch)
 	for _, q := range latencyQuantiles {
 		nq := q.(mmetrics.LatencyQuantiles)
 		log.Infof("%s: %s 50th: %v 99th: %v max: %v avg: %v", JobName, nq.QuantileName, nq.P50, nq.P99, nq.Max, nq.Avg)
@@ -66,7 +67,8 @@ func finalizeMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[string
 }
 
 // calculateMetrics calculates the metrics for node bootup times
-func calculateMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[string]MachineInfo, nodeMetrics sync.Map, amiID string) ([]interface{}, []interface{}){
+func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, nodeMetrics *sync.Map, amiID string, scaleEventEpoch int64) ([]interface{}, []interface{}) {
+	var scaleEventTimestamp time.Time
 	var uuid, machineSetName string
 	var normLatencies, latencyQuantiles []interface{}
 	for machine, info := range scaledMachineDetails {
@@ -77,9 +79,13 @@ func calculateMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[strin
 		if _, exists := nodeMetrics.Load(info.nodeUID); !exists {
 			continue
 		}
-		msValue, _ := machineSetsToEdit.Load(machineSetName)
-		msInfo := msValue.(MachineSetInfo)
-		scaleEventTimestamp := msInfo.lastUpdatedTime
+		if scaleEventEpoch == 0 {
+			msValue, _ := machineSetsToEdit.Load(machineSetName)
+			msInfo := msValue.(MachineSetInfo)
+			scaleEventTimestamp = msInfo.lastUpdatedTime
+		} else {
+			scaleEventTimestamp = time.Unix(scaleEventEpoch, 0).UTC()
+		}
 		machineCreationTimeStamp := info.creationTimestamp
 		machineReadyTimeStamp := info.readyTimestamp
 		nmValue, _ := nodeMetrics.Load(info.nodeUID)

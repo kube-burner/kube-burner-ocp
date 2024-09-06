@@ -26,30 +26,44 @@ import (
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 )
 
-type AWSScenario struct {}
+type BaseScenario struct {}
 
 // Returns a new scenario object
-func (awsScenario *AWSScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
+func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
 	machineClient := getMachineClient(restConfig)
-	machineSetDetails := getMachineSets(machineClient)
-	prevMachineDetails, _ := getMachines(machineClient)
-	setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
-	measurements.Start()
-	machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, scaleConfig.AdditionalWorkerNodes)
-	log.Info("Updating machinessets evenly to reach desired count")
-	editMachineSets(machineClient, clientSet, machineSetsToEdit, true)
-	if err = measurements.Stop(); err != nil {
-		log.Error(err.Error())
-	}
-	scaledMachineDetails, amiID := getMachines(machineClient)
-	discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
-	finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID)
-	if scaleConfig.GC {
-		log.Info("Restoring machine sets to previous state")
-		editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
+	if scaleConfig.ScaleEventEpoch != 0 {
+		log.Info("Scale event epoch time specified. Hence calculating node latencies without any scaling")
+		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
+		measurements.Start()
+		if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
+			log.Infof("Error waiting for nodes: %v", err)
+		}
+		if err = measurements.Stop(); err != nil {
+			log.Error(err.Error())
+		}
+		scaledMachineDetails, amiID := getMachines(machineClient)
+		finalizeMetrics(sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+	} else {
+		machineSetDetails := getMachineSets(machineClient)
+		prevMachineDetails, _ := getMachines(machineClient)
+		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
+		measurements.Start()
+		machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, scaleConfig.AdditionalWorkerNodes)
+		log.Info("Updating machinessets evenly to reach desired count")
+		editMachineSets(machineClient, clientSet, machineSetsToEdit, true)
+		if err = measurements.Stop(); err != nil {
+			log.Error(err.Error())
+		}
+		scaledMachineDetails, amiID := getMachines(machineClient)
+		discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
+		finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		if scaleConfig.GC {
+			log.Info("Restoring machine sets to previous state")
+			editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
+		}
 	}
 }
 
