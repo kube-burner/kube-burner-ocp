@@ -17,19 +17,15 @@ package workers_scale
 
 import (
 	"sort"
-	"context"
 	"sync"
-	"time"
-	"fmt"
 
-	"k8s.io/apimachinery/pkg/util/wait"
+	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/cloud-bulldozer/go-commons/indexers"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
 	mtypes "github.com/kube-burner/kube-burner/pkg/measurements/types"
 	mmetrics "github.com/kube-burner/kube-burner/pkg/measurements/metrics"
 	log "github.com/sirupsen/logrus"
-	"github.com/kube-burner/kube-burner/pkg/config"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 )
 
@@ -41,7 +37,7 @@ func (awsScenario *AWSScenario) OrchestrateWorkload(uuid string, additionalWorke
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
 	machineClient := getMachineClient(restConfig)
-	machineSetDetails := getWorkerMachineSets(machineClient)
+	machineSetDetails := getMachineSets(machineClient)
 	prevMachineDetails, _ := getMachines(machineClient)
 	configSpec := config.Spec{
 		GlobalConfig: config.GlobalConfig {
@@ -61,12 +57,8 @@ func (awsScenario *AWSScenario) OrchestrateWorkload(uuid string, additionalWorke
 		kubeClientProvider,
 	)
 	measurements.Start()
-	machineSetsToEdit := scaleMachineSets(machineClient, machineSetDetails, additionalWorkerNodes)
-	if err = waitForNodes(clientSet, maxWaitTimeout); err != nil {
-		log.Infof("Error waiting for nodes: %v", err)
-	} else {
-		log.Infof("All nodes are ready")
-	}
+	machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, additionalWorkerNodes)
+	editMachineSets(machineClient, clientSet, machineSetsToEdit, true)
 	if err = measurements.Stop(); err != nil {
 		log.Error(err.Error())
 	}
@@ -90,11 +82,11 @@ func (awsScenario *AWSScenario) OrchestrateWorkload(uuid string, additionalWorke
 		"": indexerValue,
 	})
 	log.Infof("Restoring machine sets to previous state")
-	editMachineSets(machineClient, machineSetsToEdit, false)
+	editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
 }
 
-// scaleMachineSets triggers scale operation on the machinesets
-func scaleMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machineSetReplicas map[int][]string, desiredWorkerCount int) (sync.Map){
+// adjustMachineSets equally spreads requested number of machines across machinesets
+func adjustMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machineSetReplicas map[int][]string, desiredWorkerCount int) (sync.Map){
 	var lastIndex int
 	machineSetsToEdit := sync.Map{}
 	var keys []int
@@ -141,75 +133,5 @@ func scaleMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machin
 		}
 		index++
 	}
-	editMachineSets(machineClient, machineSetsToEdit, true)
 	return machineSetsToEdit
 }
-
-// editMachineSets edits machinesets parallely
-func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machineSetsToEdit sync.Map, isScaleUp bool) {
-	var wg sync.WaitGroup
-	machineSetsToEdit.Range(func(key, value interface{}) bool {
-		machineSet := key.(string)
-		msInfo := value.(MachineSetInfo)
-		var replica int
-		if isScaleUp {
-			replica = msInfo.currentReplicas
-		} else {
-			replica = msInfo.prevReplicas
-		}
-		wg.Add(1)
-		go func(ms string, r int) {
-			defer wg.Done()
-			err := updateMachineSetReplicas(machineClient, ms, int32(r), maxWaitTimeout, machineSetsToEdit)
-            if err != nil {
-                log.Errorf("Failed to edit MachineSet %s: %v", ms, err)
-            }
-		}(machineSet, replica)
-		return true
-	})
-	wg.Wait()
-	log.Infof("All the machinesets have been editted")
-}
-
-// updateMachineSetsReplicas updates machines replicas
-func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, maxWaitTimeout time.Duration, machineSetsToEdit sync.Map) error {
-    machineSet, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
-    if err != nil {
-        return fmt.Errorf("error getting machineset: %s", err)
-    }
-
-    machineSet.Spec.Replicas = &newReplicaCount
-	updateTimestamp := time.Now().UTC().Truncate(time.Second)
-    _, err = machineClient.MachineSets(machineNamespace).Update(context.TODO(), machineSet, metav1.UpdateOptions{})
-    if err != nil {
-        return fmt.Errorf("error updating machineset: %s", err)
-    }
-	msValue, _ := machineSetsToEdit.Load(name)
-	msInfo := msValue.(MachineSetInfo)
-	msInfo.lastUpdatedTime = updateTimestamp
-	machineSetsToEdit.Store(name, msInfo)
-
-	err = waitForMachineSet(machineClient, name, newReplicaCount, maxWaitTimeout)
-	if err != nil {
-        return fmt.Errorf("timeout waiting for MachineSet %s to be ready: %v", name, err)
-    }
-
-    log.Infof("MachineSet %s updated to %d replicas", name, newReplicaCount)
-	return nil
-}
-
-// waitForMachineSet waits for machinesets to be ready with new replica count
-func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, maxWaitTimeout time.Duration) error {
-	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
-        ms, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
-        if err != nil {
-            return false, err
-        }
-        if ms.Status.Replicas == ms.Status.ReadyReplicas && ms.Status.ReadyReplicas == newReplicaCount {
-            return true, nil
-        }
-        log.Debugf("Waiting for MachineSet %s to reach %d replicas, currently %d ready", name, newReplicaCount, ms.Status.ReadyReplicas)
-        return false, nil
-    })
-}
-

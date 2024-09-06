@@ -169,5 +169,5 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 
 // FetchScenario helps us to fetch relevant class
 func fetchScenario() wscale.Scenario {
-	return &wscale.AWSScenario{}
+	return &wscale.AWSAutoScalerScenario{}
 }
