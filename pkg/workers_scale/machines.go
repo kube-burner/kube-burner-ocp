@@ -30,7 +30,7 @@ import (
 )
 
 // listMachines lists all worker machines in the cluster
-func getMachines(machineClient *machinev1beta1.MachineV1beta1Client) (map[string]MachineInfo, string) {
+func getMachines(machineClient *machinev1beta1.MachineV1beta1Client, scaleEventEpoch int64) (map[string]MachineInfo, string) {
 	var amiID string
 	var machineReadyTimestamp time.Time
 	machineDetails := make(map[string]MachineInfo)
@@ -45,7 +45,7 @@ func getMachines(machineClient *machinev1beta1.MachineV1beta1Client) (map[string
 		machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "workload" &&
 		machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "master" &&
 		machine.Labels["machine.openshift.io/cluster-api-machine-role"] == "worker" {
-			if machine.Status.Phase != nil && *machine.Status.Phase == "Running" {
+			if machine.Status.Phase != nil && *machine.Status.Phase == "Running" && machine.CreationTimestamp.Time.UTC().Unix() > scaleEventEpoch {
 				if (amiID == "") {
 					var awsSpec AWSProviderSpec
 					if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &awsSpec); err != nil {

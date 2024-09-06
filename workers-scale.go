@@ -50,6 +50,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 	var tarballName string
 	var indexer config.MetricsEndpoint
 	var clusterMetadataMap map[string]interface{}
+	const autoScaled = "autoScaled"
 	cmd := &cobra.Command{
 		Use:          "workers-scale",
 		Short:        "Runs workers-scale sub-command",
@@ -109,6 +110,11 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			json.Unmarshal(jsonData, &clusterMetadataMap)
 			for k, v := range clusterMetadataMap {
 				metadata[k] = v
+			}
+			if enableAutoscaler {
+				metadata[autoScaled] = true
+			} else {
+				metadata[autoScaled] = false
 			}
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
@@ -180,8 +186,8 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 // FetchScenario helps us to fetch relevant class
 func fetchScenario(enableAutoscaler bool) wscale.Scenario {
 	if enableAutoscaler {
-		return &wscale.AWSAutoScalerScenario{}
+		return &wscale.AutoScalerScenario{}
 	} else {
-		return &wscale.AWSScenario{}
+		return &wscale.BaseScenario{}
 	}
 }
