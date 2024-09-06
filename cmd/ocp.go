@@ -55,7 +55,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().DurationVar(&workloadConfig.Timeout, "timeout", 4*time.Hour, "Benchmark timeout")
 	ocpCmd.PersistentFlags().IntVar(&QPS, "qps", 20, "QPS")
 	ocpCmd.PersistentFlags().IntVar(&burst, "burst", 20, "Burst")
-	ocpCmd.PersistentFlags().BoolVar(&gc, "gc", true, "Garbage collect created namespaces")
+	ocpCmd.PersistentFlags().BoolVar(&gc, "gc", true, "Garbage collect created resources")
 	ocpCmd.PersistentFlags().BoolVar(&gcMetrics, "gc-metrics", false, "Collect metrics during garbage collection")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UserMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	ocpCmd.PersistentFlags().BoolVar(&extract, "extract", false, "Extract workload in the current directory")

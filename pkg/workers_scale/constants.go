@@ -14,13 +14,19 @@
 
 package workers_scale
 
+
 import "time"
 
+// Resource constants
+const JobName = "workers-scale"
+const machineNamespace = "openshift-machine-api"
+const defaultNamespace = "default"
+const defaultClusterAutoScaler = "default"
 
-const (
-	JobName = "workers-scale"
-	maxWaitTimeout = 4 * time.Hour
-	machineNamespace = "openshift-machine-api"
-	nodeReadyLatencyMeasurement          = "nodeReadyLatencyMeasurement"
-	nodeReadyLatencyQuantilesMeasurement = "nodeReadyLatencyQuantilesMeasurement"
-)
+// Measurement constants
+const measurementName = "nodeLatency"
+const nodeReadyLatencyMeasurement          = "nodeReadyLatencyMeasurement"
+const nodeReadyLatencyQuantilesMeasurement = "nodeReadyLatencyQuantilesMeasurement"
+
+// Misc constants
+const maxWaitTimeout = 4 * time.Hour

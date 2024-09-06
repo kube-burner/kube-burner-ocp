@@ -44,6 +44,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 	var prometheusStep time.Duration
 	var uuid string
 	var err error
+	var scaleEventEpoch int64
 	var rc, additionalWorkerNodes int
 	var prometheusURL, prometheusToken string
 	var tarballName string
@@ -63,6 +64,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			uuid, _ = cmd.Flags().GetString("uuid")
 			esServer, _ := cmd.Flags().GetString("es-server")
 			esIndex, _ := cmd.Flags().GetString("es-index")
+			gc, _ := cmd.Flags().GetBool("gc")
 			workloads.ConfigSpec.GlobalConfig.UUID = uuid
 			// When metricsEndpoint is specified, don't fetch any prometheus token
 			if *metricsEndpoint == "" {
@@ -120,8 +122,15 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				indexerValue = value
 				break
 			}
-			scenario := fetchScenario()
-			scenario.OrchestrateWorkload(uuid, additionalWorkerNodes, metricsScraper.Metadata, indexerValue)
+			scenario := fetchScenario(enableAutoscaler)
+			scenario.OrchestrateWorkload(wscale.ScaleConfig{
+				UUID: uuid, 
+				AdditionalWorkerNodes: additionalWorkerNodes, 
+				Metadata: metricsScraper.Metadata, 
+				Indexer: indexerValue,
+				GC: gc,
+				ScaleEventEpoch: scaleEventEpoch,
+			})
 			end := time.Now().Unix()
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
@@ -161,6 +170,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
 	cmd.Flags().IntVar(&additionalWorkerNodes, "additional-worker-nodes", 3, "Additional workers to scale")
 	cmd.Flags().BoolVar(&enableAutoscaler, "enable-autoscaler", false, "Enables autoscaler while scaling the cluster")
+	cmd.Flags().Int64Var(&scaleEventEpoch, "scale-event-epoch", 0, "Scale event epoch time")
 	cmd.Flags().StringVar(&userMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	cmd.Flags().StringVar(&tarballName, "tarball-name", "", "Dump collected metrics into a tarball with the given name, requires local indexing")
 	cmd.Flags().SortFlags = false
@@ -168,6 +178,10 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 }
 
 // FetchScenario helps us to fetch relevant class
-func fetchScenario() wscale.Scenario {
-	return &wscale.AWSAutoScalerScenario{}
+func fetchScenario(enableAutoscaler bool) wscale.Scenario {
+	if enableAutoscaler {
+		return &wscale.AWSAutoScalerScenario{}
+	} else {
+		return &wscale.AWSScenario{}
+	}
 }

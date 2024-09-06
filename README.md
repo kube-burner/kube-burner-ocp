@@ -38,7 +38,7 @@ Flags:
       --es-index string           Elastic Search index
       --es-server string          Elastic Search endpoint
       --extract                   Extract workload in the current directory
-      --gc                        Garbage collect created namespaces (default true)
+      --gc                        Garbage collect created resources (default true)
       --gc-metrics                Collect metrics during garbage collection
       --local-indexing            Enable local indexing
       --metrics-endpoint string   YAML file with a list of metric endpoints

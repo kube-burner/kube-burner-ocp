@@ -24,7 +24,17 @@ import (
 
 // Interface for our scenarios
 type Scenario interface {
-	OrchestrateWorkload(string, int, map[string]interface{}, indexers.Indexer)
+	OrchestrateWorkload(ScaleConfig)
+}
+
+// ScaleConfig contains configuration for scaling
+type ScaleConfig struct {
+	UUID string
+	AdditionalWorkerNodes int
+	Metadata map[string]interface{}
+	Indexer indexers.Indexer
+	GC bool
+	ScaleEventEpoch int64
 }
 
 // Struct to extract AMIID from aws provider spec

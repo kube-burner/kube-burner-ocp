@@ -29,9 +29,18 @@ import (
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 )
 
-// Helper function to create a pointer to an int32
+// helper function to create a pointer to an int32
 func int32Ptr(i int32) *int32 {
     return &i
+}
+
+// discardPreviousMachines updates the current machines details discarding the previous ones
+func discardPreviousMachines(prevMachineDetails map[string]MachineInfo, currentMachineDetails map[string]MachineInfo) {
+	for key := range currentMachineDetails {
+		if _, exists := prevMachineDetails[key]; exists {
+			delete(currentMachineDetails, key)
+		}
+	}
 }
 
 // getMachineClient creates a reusable machine client

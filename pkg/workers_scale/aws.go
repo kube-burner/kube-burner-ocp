@@ -20,10 +20,7 @@ import (
 	"sync"
 
 	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/cloud-bulldozer/go-commons/indexers"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
-	mtypes "github.com/kube-burner/kube-burner/pkg/measurements/types"
-	mmetrics "github.com/kube-burner/kube-burner/pkg/measurements/metrics"
 	log "github.com/sirupsen/logrus"
 	
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
@@ -32,57 +29,28 @@ import (
 type AWSScenario struct {}
 
 // Returns a new scenario object
-func (awsScenario *AWSScenario) OrchestrateWorkload(uuid string, additionalWorkerNodes int, metadata map[string]interface{}, indexerValue indexers.Indexer) {
+func (awsScenario *AWSScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
 	machineClient := getMachineClient(restConfig)
 	machineSetDetails := getMachineSets(machineClient)
 	prevMachineDetails, _ := getMachines(machineClient)
-	configSpec := config.Spec{
-		GlobalConfig: config.GlobalConfig {
-			UUID: uuid,
-			Measurements: []mtypes.Measurement {
-				{
-					Name: "nodeLatency",
-				},
-			},
-		},
-	}
-	measurements.NewMeasurementFactory(configSpec, metadata)
-	measurements.SetJobConfig(
-		&config.Job{
-			Name: JobName,
-		},
-		kubeClientProvider,
-	)
+	setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 	measurements.Start()
-	machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, additionalWorkerNodes)
+	machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, scaleConfig.AdditionalWorkerNodes)
+	log.Info("Updating machinessets evenly to reach desired count")
 	editMachineSets(machineClient, clientSet, machineSetsToEdit, true)
 	if err = measurements.Stop(); err != nil {
 		log.Error(err.Error())
 	}
 	scaledMachineDetails, amiID := getMachines(machineClient)
-	for key := range scaledMachineDetails {
-		if _, exists := prevMachineDetails[key]; exists {
-			delete(scaledMachineDetails, key)
-		}
+	discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
+	finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID)
+	if scaleConfig.GC {
+		log.Info("Restoring machine sets to previous state")
+		editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
 	}
-	nodeMetrics := measurements.GetMetrics()
-	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, nodeMetrics[0], amiID)
-	for _, q := range latencyQuantiles {
-		nq := q.(mmetrics.LatencyQuantiles)
-		log.Infof("%s: %s 50th: %v 99th: %v max: %v avg: %v", JobName, nq.QuantileName, nq.P50, nq.P99, nq.Max, nq.Avg)
-	}
-	metricMap := map[string][]interface{}{
-		nodeReadyLatencyMeasurement: normLatencies,
-		nodeReadyLatencyQuantilesMeasurement: latencyQuantiles,
-	}
-	measurements.IndexLatencyMeasurement(configSpec.GlobalConfig.Measurements[0], JobName, metricMap, map[string]indexers.Indexer{
-		"": indexerValue,
-	})
-	log.Infof("Restoring machine sets to previous state")
-	editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
 }
 
 // adjustMachineSets equally spreads requested number of machines across machinesets

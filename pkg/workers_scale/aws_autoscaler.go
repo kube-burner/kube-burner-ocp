@@ -31,17 +31,14 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured" 
-	"github.com/cloud-bulldozer/go-commons/indexers"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
-	mtypes "github.com/kube-burner/kube-burner/pkg/measurements/types"
-	mmetrics "github.com/kube-burner/kube-burner/pkg/measurements/metrics"
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 )
 
 type AWSAutoScalerScenario struct {}
 
 // Returns a new scenario object
-func (awsAutoScalerScenario *AWSAutoScalerScenario) OrchestrateWorkload(uuid string, additionalWorkerNodes int, metadata map[string]interface{}, indexerValue indexers.Indexer) {
+func (awsAutoScalerScenario *AWSAutoScalerScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
@@ -50,58 +47,28 @@ func (awsAutoScalerScenario *AWSAutoScalerScenario) OrchestrateWorkload(uuid str
 	machineClient := getMachineClient(restConfig)
 	machineSetDetails := getMachineSets(machineClient)
 	prevMachineDetails, _ := getMachines(machineClient)
-	machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, additionalWorkerNodes)
-	configSpec := config.Spec{
-		GlobalConfig: config.GlobalConfig {
-			UUID: uuid,
-			Measurements: []mtypes.Measurement {
-				{
-					Name: "nodeLatency",
-				},
-			},
-		},
-	}
-	measurements.NewMeasurementFactory(configSpec, metadata)
-	measurements.SetJobConfig(
-		&config.Job{
-			Name: JobName,
-		},
-		kubeClientProvider,
-	)
+	machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, scaleConfig.AdditionalWorkerNodes)
+	setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 	measurements.Start()
 	createMachineAutoscalers(dynamicClient, machineSetsToEdit)
-	createAutoScaler(dynamicClient, nodeCount + additionalWorkerNodes)
+	createAutoScaler(dynamicClient, nodeCount + scaleConfig.AdditionalWorkerNodes)
 	triggerJob, triggerTime := createBatchJob(clientSet)
+	// Delay for the clusterautoscaler resources to come up
 	time.Sleep(5 * time.Minute)
 	waitForMachineSets(machineClient, clientSet, machineSetsToEdit, triggerTime)
-
 	if err = measurements.Stop(); err != nil {
 		log.Error(err.Error())
 	}
 	scaledMachineDetails, amiID := getMachines(machineClient)
-	for key := range scaledMachineDetails {
-		if _, exists := prevMachineDetails[key]; exists {
-			delete(scaledMachineDetails, key)
-		}
-	}
-	nodeMetrics := measurements.GetMetrics()
-	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, nodeMetrics[0], amiID)
-	for _, q := range latencyQuantiles {
-		nq := q.(mmetrics.LatencyQuantiles)
-		log.Infof("%s: %s 50th: %v 99th: %v max: %v avg: %v", JobName, nq.QuantileName, nq.P50, nq.P99, nq.Max, nq.Avg)
-	}
-	metricMap := map[string][]interface{}{
-		nodeReadyLatencyMeasurement: normLatencies,
-		nodeReadyLatencyQuantilesMeasurement: latencyQuantiles,
-	}
-	measurements.IndexLatencyMeasurement(configSpec.GlobalConfig.Measurements[0], JobName, metricMap, map[string]indexers.Indexer{
-		"": indexerValue,
-	})
-	log.Infof("Restoring machine sets to previous state")
-	editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
+	discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
+	finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID)
 	deleteAutoScaler(dynamicClient)
 	deleteMachineAutoscalers(dynamicClient, machineSetsToEdit)
 	deleteBatchJob(clientSet, triggerJob)
+	if scaleConfig.GC {
+		log.Info("Restoring machine sets to previous state")
+		editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
+	}
 }
 
 // createBatchJob creates a job to load the cluster
@@ -135,7 +102,7 @@ func createBatchJob(clientset kubernetes.Interface) (string, time.Time){
 		},
 	}
 
-	jobsClient := clientset.BatchV1().Jobs("default")
+	jobsClient := clientset.BatchV1().Jobs(defaultNamespace)
 	triggerTime := time.Now().UTC().Truncate(time.Second)
 	createdJob, err := jobsClient.Create(context.TODO(), job, metav1.CreateOptions{})
 	if err != nil {
@@ -148,20 +115,18 @@ func createBatchJob(clientset kubernetes.Interface) (string, time.Time){
 
 // deletes our batch job that creates load
 func deleteBatchJob(clientset kubernetes.Interface, jobName string) {
-	// Get the Jobs client for the specified namespace
-	jobsClient := clientset.BatchV1().Jobs("default")
+	jobsClient := clientset.BatchV1().Jobs(defaultNamespace)
 
-	// Attempt to delete the Job by its name
 	err := jobsClient.Delete(context.TODO(), jobName, metav1.DeleteOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Infof("Job %s not found in namespace %s", jobName, "default")
+			log.Infof("Job %s not found in namespace %s", jobName, defaultNamespace)
 			return
 		}
 		log.Fatalf("Error deleting Job %s: %v", jobName, err)
 	}
 
-	log.Infof("Job %s deleted successfully in namespace %s", jobName, "default")
+	log.Infof("Job %s deleted successfully in namespace %s", jobName, defaultNamespace)
 }
 
 // createMachineAutoscalers will create the autoscalers at machine level
@@ -184,7 +149,7 @@ func createMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit
 					"namespace": machineNamespace,
 				},
 				"spec": map[string]interface{}{
-					"minReplicas": 1,
+					"minReplicas": 0,
 					"maxReplicas": msInfo.currentReplicas,
 					"scaleTargetRef": map[string]interface{}{
 						"apiVersion": "machine.openshift.io/v1beta1",
@@ -239,7 +204,6 @@ func deleteMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit
 
 // createAutoScaler creates the autoscaler resource on the cluster
 func createAutoScaler(dynamicClient dynamic.Interface, maxNodesTotal int) {
-	autoScalerName := "default"
 	gvr := schema.GroupVersionResource{
 		Group:    "autoscaling.openshift.io",
 		Version:  "v1",
@@ -251,7 +215,7 @@ func createAutoScaler(dynamicClient dynamic.Interface, maxNodesTotal int) {
 			"apiVersion": "autoscaling.openshift.io/v1",
 			"kind":       "ClusterAutoscaler",
 			"metadata": map[string]interface{}{
-				"name": autoScalerName,
+				"name": defaultClusterAutoScaler,
 			},
 			"spec": map[string]interface{}{
 				"podPriorityThreshold": -100,
@@ -268,19 +232,18 @@ func createAutoScaler(dynamicClient dynamic.Interface, maxNodesTotal int) {
     _, err := dynamicClient.Resource(gvr).Namespace("").Create(context.TODO(), clusterAutoscaler, metav1.CreateOptions{})
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
-			log.Infof("cluster autoscaler resource %s already exists", autoScalerName)
+			log.Infof("cluster autoscaler resource %s already exists", defaultClusterAutoScaler)
 			return
 		} else {
 			log.Fatalf("failed to create ClusterAutoscaler: %v", err)
 		}
 	}
 
-    log.Infof("Cluster Autoscaler created: %v", autoScalerName)
+    log.Infof("Cluster Autoscaler created: %v", defaultClusterAutoScaler)
 }
 
 // deleteAutoScaler deletes the ClusterAutoscaler resource on the cluster by its name
 func deleteAutoScaler(dynamicClient dynamic.Interface) {
-	autoScalerName := "default"
 	gvr := schema.GroupVersionResource{
 		Group:    "autoscaling.openshift.io",
 		Version:  "v1",
@@ -288,17 +251,17 @@ func deleteAutoScaler(dynamicClient dynamic.Interface) {
 	}
 
 	// Delete the ClusterAutoscaler
-	err := dynamicClient.Resource(gvr).Namespace("").Delete(context.TODO(), autoScalerName, metav1.DeleteOptions{})
+	err := dynamicClient.Resource(gvr).Namespace("").Delete(context.TODO(), defaultClusterAutoScaler, metav1.DeleteOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Infof("Cluster Autoscaler %s not found", autoScalerName)
+			log.Infof("Cluster Autoscaler %s not found", defaultClusterAutoScaler)
 			return
 		} else {
 			log.Fatalf("failed to delete ClusterAutoscaler: %v", err)
 		}
 	}
 
-	log.Infof("Cluster Autoscaler %s deleted successfully", autoScalerName)
+	log.Infof("Cluster Autoscaler %s deleted successfully", defaultClusterAutoScaler)
 }
 
 // Wait for machinesets to get ready

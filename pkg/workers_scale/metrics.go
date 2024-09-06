@@ -19,9 +19,51 @@ import (
 	"sync"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/cloud-bulldozer/go-commons/indexers"
+	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
+	mtypes "github.com/kube-burner/kube-burner/pkg/measurements/types"
 	mmetrics "github.com/kube-burner/kube-burner/pkg/measurements/metrics"
 )
+
+// setupMetrics sets up the measurment factory for us
+func setupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvider *config.KubeClientProvider) {
+	configSpec := config.Spec{
+		GlobalConfig: config.GlobalConfig {
+			UUID: uuid,
+			Measurements: []mtypes.Measurement {
+				{
+					Name: measurementName,
+				},
+			},
+		},
+	}
+	measurements.NewMeasurementFactory(configSpec, metadata)
+	measurements.SetJobConfig(
+		&config.Job{
+			Name: JobName,
+		},
+		kubeClientProvider,
+	)
+}
+
+// finalizeMetrics performs and indexes required metrics
+func finalizeMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[string]MachineInfo, indexerValue indexers.Indexer, amiID string) {
+	nodeMetrics := measurements.GetMetrics()
+	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, nodeMetrics[0], amiID)
+	for _, q := range latencyQuantiles {
+		nq := q.(mmetrics.LatencyQuantiles)
+		log.Infof("%s: %s 50th: %v 99th: %v max: %v avg: %v", JobName, nq.QuantileName, nq.P50, nq.P99, nq.Max, nq.Avg)
+	}
+	metricMap := map[string][]interface{}{
+		nodeReadyLatencyMeasurement: normLatencies,
+		nodeReadyLatencyQuantilesMeasurement: latencyQuantiles,
+	}
+	measurements.IndexLatencyMeasurement(mtypes.Measurement{ Name: measurementName }, JobName, metricMap, map[string]indexers.Indexer{
+		"": indexerValue,
+	})
+}
 
 // calculateMetrics calculates the metrics for node bootup times
 func calculateMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[string]MachineInfo, nodeMetrics sync.Map, amiID string) ([]interface{}, []interface{}){
