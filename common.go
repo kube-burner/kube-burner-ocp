@@ -23,6 +23,7 @@ import (
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -40,6 +41,7 @@ func setMetrics(cmd *cobra.Command, metricsProfile string) {
 		metricsProfiles = []string{"metrics-report.yml", metricsProfile}
 	}
 	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
+	log.Info("setEnv METRICS=", uuid)
 }
 
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner

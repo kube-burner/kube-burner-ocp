@@ -51,6 +51,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				log.Fatal("Error obtaining default ingress domain: ", err.Error())
 			}
 			os.Setenv("INGRESS_DOMAIN", ingressDomain)
+			log.Info("prerun args", args)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if cmd.Name() == "cluster-density-v2" {
