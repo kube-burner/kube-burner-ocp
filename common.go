@@ -41,7 +41,7 @@ func setMetrics(cmd *cobra.Command, metricsProfile string) {
 		metricsProfiles = []string{"metrics-report.yml", metricsProfile}
 	}
 	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
-	log.Info("setEnv METRICS=", uuid)
+	log.Info("setEnv METRICS=", strings.Join(metricsProfiles, ","))
 }
 
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner
