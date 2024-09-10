@@ -40,8 +40,13 @@ func setMetrics(cmd *cobra.Command, metricsProfile string) {
 	case Both:
 		metricsProfiles = []string{"metrics-report.yml", metricsProfile}
 	}
+	val, ok := os.LookupEnv("EXTRA_METRICS")
+	if ok {
+		log.Info("Found env variable EXTRA_METRICS=", val)
+		metricsProfiles = append(metricsProfiles, val)
+	}
+	log.Info("Setting env variable METRICS=", strings.Join(metricsProfiles, ","))
 	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
-	log.Info("setEnv METRICS=", strings.Join(metricsProfiles, ","))
 }
 
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner
