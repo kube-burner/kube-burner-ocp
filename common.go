@@ -44,8 +44,8 @@ func setMetrics(cmd *cobra.Command, metricsProfile string) {
 	if ok {
 		log.Info("Found EXTRA_METRICS=", val)
 		metricsProfiles = append(metricsProfiles, val)
+		log.Info("Appended EXTRA_METRICS to metrics list: ", strings.Join(metricsProfiles, ","))
 	}
-	log.Info("Setting METRICS=", strings.Join(metricsProfiles, ","))
 	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 }
 
