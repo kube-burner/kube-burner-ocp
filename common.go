@@ -42,10 +42,10 @@ func setMetrics(cmd *cobra.Command, metricsProfile string) {
 	}
 	val, ok := os.LookupEnv("EXTRA_METRICS")
 	if ok {
-		log.Info("Found env variable EXTRA_METRICS=", val)
+		log.Info("Found EXTRA_METRICS=", val)
 		metricsProfiles = append(metricsProfiles, val)
 	}
-	log.Info("Setting env variable METRICS=", strings.Join(metricsProfiles, ","))
+	log.Info("Setting METRICS=", strings.Join(metricsProfiles, ","))
 	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 }
 
