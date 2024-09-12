@@ -77,11 +77,11 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 5*time.Minute, "Churn duration")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().IntVar(&iterations, "iterations", 1, "Job iterations. Mutually exclusive with '--pods-per-node'")
+	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations. Mutually exclusive with '--pods-per-node'")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1, "Iterations per namespace")
 	// Adding a super set of flags from other commands so users can decide if they want to use them
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")
-	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 50, "Pods per node. Mutually exclusive with '--iterations'")
+	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 0, "Pods per node. Mutually exclusive with '--iterations'")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	// pods-per-node calculates iterations, thus the two are mutually exclusive.
 	cmd.MarkFlagsMutuallyExclusive("iterations", "pods-per-node")
