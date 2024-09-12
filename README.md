@@ -38,7 +38,7 @@ Flags:
       --es-index string           Elastic Search index
       --es-server string          Elastic Search endpoint
       --extract                   Extract workload in the current directory
-      --gc                        Garbage collect created namespaces (default true)
+      --gc                        Garbage collect created resources (default true)
       --gc-metrics                Collect metrics during garbage collection
       --local-indexing            Enable local indexing
       --metrics-endpoint string   YAML file with a list of metric endpoints
@@ -253,6 +253,47 @@ Pre-requisites:
 	- 6 service(15 ports each) with 12 pod endpoints, 6 service(15 ports each) with 10 pod endpoints, 6 service(15 ports each) with 9 pod endpoints
 	- 12 service(15 ports each) with 8 pod endpoints, 12 service(15 ports each) with 6 pod endpoints, 12 service(15 ports each) with 5 pod endpoints
 	- 29 service(15 ports each) with 4 pod endpoints, 29 service(15 ports each) with 6 pod endpoints
+
+## Workers Scale 
+As a day2 operation, we can use this option to scale our cluster's worker nodes to a desired count and capture their bootup times.
+
+!!! Note    
+
+    This is only supported for openshift clusters hosted on AWS at the moment.
+
+### Options
+```
+$ kube-burner-ocp workers-scale
+
+Usage:
+  kube-burner-ocp workers-scale [flags]
+
+Flags:
+  -m, --metrics-profile string        Comma-separated list of metric profiles (default "metrics.yml")
+      --metrics-directory string      Directory to dump the metrics files in, when using default local indexing (default "collected-metrics")
+      --step duration                 Prometheus step size (default 30s)
+      --additional-worker-nodes int   Additional workers to scale (default 3)
+      --enable-autoscaler             Enables autoscaler while scaling the cluster
+      --scale-event-epoch int         Scale event epoch time
+      --user-metadata string          User provided metadata file, in YAML format
+      --tarball-name string           Dump collected metrics into a tarball with the given name, requires local indexing
+  -h, --help                          help for workers-scale
+
+```
+
+### Examples
+1. Manually scale a cluster to desired node count and capture bootup times.
+```
+$ kube-burner-ocp workers-scale --additional-worker-nodes 24
+```
+2. Auto scale a cluster to a desired node count and capture bootup times. Also disable garbage collection.
+```
+$ kube-burner-ocp workers-scale --additional-worker-nodes 24 --enable-autoscaler --gc=false
+```
+3. Without any scaling, simply capture bootup times on an already scaled cluster. We just have to specify the timestamp when the scale event was triggered.
+```
+$ kube-burner-ocp workers-scale --scale-event-epoch 1725635502
+```
 
 ## Custom Workload: Bring your own workload
 
