@@ -12,28 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
-
+package workerscale
 
 import (
+	"strings"
 	"sync"
 	"time"
-	"strings"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/cloud-bulldozer/go-commons/indexers"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
-	mtypes "github.com/kube-burner/kube-burner/pkg/measurements/types"
 	mmetrics "github.com/kube-burner/kube-burner/pkg/measurements/metrics"
+	mtypes "github.com/kube-burner/kube-burner/pkg/measurements/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // setupMetrics sets up the measurment factory for us
 func setupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvider *config.KubeClientProvider) {
 	configSpec := config.Spec{
-		GlobalConfig: config.GlobalConfig {
+		GlobalConfig: config.GlobalConfig{
 			UUID: uuid,
-			Measurements: []mtypes.Measurement {
+			Measurements: []mtypes.Measurement{
 				{
 					Name: measurementName,
 				},
@@ -58,10 +57,10 @@ func finalizeMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[string
 		log.Infof("%s: %s 50th: %v 99th: %v max: %v avg: %v", JobName, nq.QuantileName, nq.P50, nq.P99, nq.Max, nq.Avg)
 	}
 	metricMap := map[string][]interface{}{
-		nodeReadyLatencyMeasurement: normLatencies,
+		nodeReadyLatencyMeasurement:          normLatencies,
 		nodeReadyLatencyQuantilesMeasurement: latencyQuantiles,
 	}
-	measurements.IndexLatencyMeasurement(mtypes.Measurement{ Name: measurementName }, JobName, metricMap, map[string]indexers.Indexer{
+	measurements.IndexLatencyMeasurement(mtypes.Measurement{Name: measurementName}, JobName, metricMap, map[string]indexers.Indexer{
 		"": indexerValue,
 	})
 }
@@ -92,21 +91,21 @@ func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[stri
 		nodeMetricValue := nmValue.(measurements.NodeMetric)
 		uuid = nodeMetricValue.UUID
 		normLatencies = append(normLatencies, NodeReadyMetric{
-			ScaleEventTimestamp: scaleEventTimestamp,
+			ScaleEventTimestamp:      scaleEventTimestamp,
 			MachineCreationTimestamp: machineCreationTimeStamp,
-			MachineCreationLatency: int(machineCreationTimeStamp.Sub(scaleEventTimestamp).Milliseconds()),
-			MachineReadyTimestamp: machineReadyTimeStamp,
-			MachineReadyLatency: int(machineReadyTimeStamp.Sub(scaleEventTimestamp).Milliseconds()),
-			NodeCreationTimestamp: nodeMetricValue.Timestamp,
-			NodeCreationLatency: int(nodeMetricValue.Timestamp.Sub(scaleEventTimestamp).Milliseconds()),
-			NodeReadyTimestamp: nodeMetricValue.NodeReady,
-			NodeReadyLatency: int(nodeMetricValue.NodeReady.Sub(scaleEventTimestamp).Milliseconds()),
-			MetricName:       nodeReadyLatencyMeasurement,
-			UUID:             uuid,
-			AMIID: amiID,
-			JobName: JobName,
-			Name:             nodeMetricValue.Name,
-			Labels:           nodeMetricValue.Labels,
+			MachineCreationLatency:   int(machineCreationTimeStamp.Sub(scaleEventTimestamp).Milliseconds()),
+			MachineReadyTimestamp:    machineReadyTimeStamp,
+			MachineReadyLatency:      int(machineReadyTimeStamp.Sub(scaleEventTimestamp).Milliseconds()),
+			NodeCreationTimestamp:    nodeMetricValue.Timestamp,
+			NodeCreationLatency:      int(nodeMetricValue.Timestamp.Sub(scaleEventTimestamp).Milliseconds()),
+			NodeReadyTimestamp:       nodeMetricValue.NodeReady,
+			NodeReadyLatency:         int(nodeMetricValue.NodeReady.Sub(scaleEventTimestamp).Milliseconds()),
+			MetricName:               nodeReadyLatencyMeasurement,
+			UUID:                     uuid,
+			AMIID:                    amiID,
+			JobName:                  JobName,
+			Name:                     nodeMetricValue.Name,
+			Labels:                   nodeMetricValue.Labels,
 		})
 	}
 	quantileMap := map[string][]float64{}

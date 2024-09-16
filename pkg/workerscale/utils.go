@@ -12,26 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
-
+package workerscale
 
 import (
+	"context"
 	"fmt"
 	"time"
-	"context"
 
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/kubernetes"
-	log "github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/wait"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
+	log "github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 // helper function to create a pointer to an int32
 func int32Ptr(i int32) *int32 {
-    return &i
+	return &i
 }
 
 // discardPreviousMachines updates the current machines details discarding the previous ones
@@ -44,7 +43,7 @@ func discardPreviousMachines(prevMachineDetails map[string]MachineInfo, currentM
 }
 
 // getMachineClient creates a reusable machine client
-func getMachineClient(restConfig *rest.Config) (*machinev1beta1.MachineV1beta1Client) {
+func getMachineClient(restConfig *rest.Config) *machinev1beta1.MachineV1beta1Client {
 	machineClient, err := machinev1beta1.NewForConfig(restConfig)
 	if err != nil {
 		log.Fatalf("error creating machine API client: %s", err)
@@ -56,11 +55,11 @@ func getMachineClient(restConfig *rest.Config) (*machinev1beta1.MachineV1beta1Cl
 // getNodeCount returns current node count
 func getNodeCount(clientset kubernetes.Interface) (int, error) {
 	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-    if err != nil {
-        return 0, fmt.Errorf("error listing nodes: %s", err)
-    }
+	if err != nil {
+		return 0, fmt.Errorf("error listing nodes: %s", err)
+	}
 
-    return len(nodes.Items), nil
+	return len(nodes.Items), nil
 }
 
 // isNodeReady checks if a node is ready

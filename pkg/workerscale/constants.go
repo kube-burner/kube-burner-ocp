@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
-
+package workerscale
 
 import "time"
 
@@ -25,7 +24,7 @@ const defaultClusterAutoScaler = "default"
 
 // Measurement constants
 const measurementName = "nodeLatency"
-const nodeReadyLatencyMeasurement          = "nodeReadyLatencyMeasurement"
+const nodeReadyLatencyMeasurement = "nodeReadyLatencyMeasurement"
 const nodeReadyLatencyQuantilesMeasurement = "nodeReadyLatencyQuantilesMeasurement"
 
 // Misc constants

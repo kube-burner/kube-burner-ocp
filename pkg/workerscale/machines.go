@@ -12,25 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
-
+package workerscale
 
 import (
-	"fmt"
-	"time"
-	"sync"
 	"context"
 	"encoding/json"
+	"fmt"
+	"sync"
+	"time"
 
+	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 )
 
 // listMachines lists all worker machines in the cluster
-func getMachines(machineClient *machinev1beta1.MachineV1beta1Client) (map[string]MachineInfo, string) {
+func getMachines(machineClient *machinev1beta1.MachineV1beta1Client, scaleEventEpoch int64) (map[string]MachineInfo, string) {
 	var amiID string
 	var machineReadyTimestamp time.Time
 	machineDetails := make(map[string]MachineInfo)
@@ -40,13 +39,13 @@ func getMachines(machineClient *machinev1beta1.MachineV1beta1Client) (map[string
 	}
 
 	for _, machine := range machines.Items {
-		if _, ok := machine.Labels["machine.openshift.io/cluster-api-machine-role"]; ok && 
-		machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "infra" &&
-		machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "workload" &&
-		machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "master" &&
-		machine.Labels["machine.openshift.io/cluster-api-machine-role"] == "worker" {
-			if machine.Status.Phase != nil && *machine.Status.Phase == "Running" {
-				if (amiID == "") {
+		if _, ok := machine.Labels["machine.openshift.io/cluster-api-machine-role"]; ok &&
+			machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "infra" &&
+			machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "workload" &&
+			machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "master" &&
+			machine.Labels["machine.openshift.io/cluster-api-machine-role"] == "worker" {
+			if machine.Status.Phase != nil && *machine.Status.Phase == "Running" && machine.CreationTimestamp.Time.UTC().Unix() > scaleEventEpoch {
+				if amiID == "" {
 					var awsSpec AWSProviderSpec
 					if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &awsSpec); err != nil {
 						log.Errorf("error unmarshaling providerSpec: %w", err)
@@ -65,9 +64,9 @@ func getMachines(machineClient *machinev1beta1.MachineV1beta1Client) (map[string
 					}
 				}
 				machineDetails[machine.Name] = MachineInfo{
-					nodeUID: string(machine.Status.NodeRef.UID),
+					nodeUID:           string(machine.Status.NodeRef.UID),
 					creationTimestamp: machine.CreationTimestamp.Time.UTC(),
-					readyTimestamp: machineReadyTimestamp,
+					readyTimestamp:    machineReadyTimestamp,
 				}
 			}
 		}
@@ -76,7 +75,7 @@ func getMachines(machineClient *machinev1beta1.MachineV1beta1Client) (map[string
 	return machineDetails, amiID
 }
 
-// editMachineSets edits machinesets parallely
+// editMachineSets edits machinesets parallelly
 func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientSet kubernetes.Interface, machineSetsToEdit sync.Map, isScaleUp bool) {
 	var wg sync.WaitGroup
 	machineSetsToEdit.Range(func(key, value interface{}) bool {
@@ -92,9 +91,9 @@ func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientS
 		go func(ms string, r int) {
 			defer wg.Done()
 			err := updateMachineSetReplicas(machineClient, ms, int32(r), maxWaitTimeout, machineSetsToEdit)
-            if err != nil {
-                log.Errorf("Failed to edit MachineSet %s: %v", ms, err)
-            }
+			if err != nil {
+				log.Errorf("Failed to edit MachineSet %s: %v", ms, err)
+			}
 		}(machineSet, replica)
 		return true
 	})
@@ -107,17 +106,17 @@ func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientS
 
 // updateMachineSetsReplicas updates machines replicas
 func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, maxWaitTimeout time.Duration, machineSetsToEdit sync.Map) error {
-    machineSet, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
-    if err != nil {
-        return fmt.Errorf("error getting machineset: %s", err)
-    }
+	machineSet, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("error getting machineset: %s", err)
+	}
 
-    machineSet.Spec.Replicas = &newReplicaCount
+	machineSet.Spec.Replicas = &newReplicaCount
 	updateTimestamp := time.Now().UTC().Truncate(time.Second)
-    _, err = machineClient.MachineSets(machineNamespace).Update(context.TODO(), machineSet, metav1.UpdateOptions{})
-    if err != nil {
-        return fmt.Errorf("error updating machineset: %s", err)
-    }
+	_, err = machineClient.MachineSets(machineNamespace).Update(context.TODO(), machineSet, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("error updating machineset: %s", err)
+	}
 	msValue, _ := machineSetsToEdit.Load(name)
 	msInfo := msValue.(MachineSetInfo)
 	msInfo.lastUpdatedTime = updateTimestamp
@@ -125,15 +124,15 @@ func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client
 
 	err = waitForMachineSet(machineClient, name, newReplicaCount, maxWaitTimeout)
 	if err != nil {
-        return fmt.Errorf("timeout waiting for MachineSet %s to be ready: %v", name, err)
-    }
+		return fmt.Errorf("timeout waiting for MachineSet %s to be ready: %v", name, err)
+	}
 
-    log.Infof("MachineSet %s updated to %d replicas", name, newReplicaCount)
+	log.Infof("MachineSet %s updated to %d replicas", name, newReplicaCount)
 	return nil
 }
 
 // getMachineSets lists all machinesets
-func getMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) (map[int][]string) {
+func getMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) map[int][]string {
 	machineSetReplicas := make(map[int][]string)
 	machineSets, err := machineClient.MachineSets(machineNamespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -142,7 +141,7 @@ func getMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) (map[int
 
 	for _, ms := range machineSets.Items {
 		if ms.Labels["machine.openshift.io/cluster-api-machine-role"] != "infra" &&
-		ms.Labels["machine.openshift.io/cluster-api-machine-role"] != "workload" {
+			ms.Labels["machine.openshift.io/cluster-api-machine-role"] != "workload" {
 			replicas := int(*ms.Spec.Replicas)
 			machineSetReplicas[replicas] = append(machineSetReplicas[replicas], ms.Name)
 		}
@@ -154,14 +153,36 @@ func getMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) (map[int
 // waitForMachineSet waits for machinesets to be ready with new replica count
 func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, maxWaitTimeout time.Duration) error {
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
-        ms, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
-        if err != nil {
-            return false, err
-        }
-        if ms.Status.Replicas == ms.Status.ReadyReplicas && ms.Status.ReadyReplicas == newReplicaCount {
-            return true, nil
-        }
-        log.Debugf("Waiting for MachineSet %s to reach %d replicas, currently %d ready", name, newReplicaCount, ms.Status.ReadyReplicas)
-        return false, nil
-    })
+		ms, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if ms.Status.Replicas == ms.Status.ReadyReplicas && ms.Status.ReadyReplicas == newReplicaCount {
+			return true, nil
+		}
+		log.Debugf("Waiting for MachineSet %s to reach %d replicas, currently %d ready", name, newReplicaCount, ms.Status.ReadyReplicas)
+		return false, nil
+	})
+}
+
+// waitForWorkerMachineSets waits for all the worker machinesets in specific to be ready
+func waitForWorkerMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, maxWaitTimeout time.Duration) error {
+	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(_ context.Context) (done bool, err error) {
+		// Get all MachineSets with the worker label
+		labelSelector := metav1.ListOptions{
+			LabelSelector: "hive.openshift.io/machine-pool=worker",
+		}
+		machineSets, err := machineClient.MachineSets(machineNamespace).List(context.TODO(), labelSelector)
+		if err != nil {
+			return false, err
+		}
+		for _, ms := range machineSets.Items {
+			if ms.Status.Replicas != ms.Status.ReadyReplicas {
+				log.Debugf("Waiting for MachineSet %s to reach %d replicas, currently %d ready", ms.Name, ms.Status.Replicas, ms.Status.ReadyReplicas)
+				return false, nil
+			}
+		}
+		log.Info("All worker MachineSets have reached desired replica count")
+		return true, nil
+	})
 }

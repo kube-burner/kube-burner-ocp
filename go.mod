@@ -7,7 +7,7 @@ toolchain go1.22.3
 require (
 	github.com/cloud-bulldozer/go-commons v1.0.16
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner v1.10.6
+	github.com/kube-burner/kube-burner v1.10.7
 	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
 	github.com/openshift/client-go v0.0.0-20240821135114-75c118605d5f
 	github.com/praserx/ipconv v1.2.1
@@ -17,10 +17,6 @@ require (
 	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.30.1
 )
-
-replace github.com/kube-burner/kube-burner => /home/vchalla/myforks/kube-burner
-
-replace kube-burner.io/ocp/pkg/workers_scale => ./pkg/workers_scale
 
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect

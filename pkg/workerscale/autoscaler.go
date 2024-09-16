@@ -12,30 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
-
+package workerscale
 
 import (
-	"time"
-	"sync"
 	"context"
+	"sync"
+	"time"
 
+	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/kube-burner/kube-burner/pkg/measurements"
+	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/client-go/dynamic"
 	batchv1 "k8s.io/api/batch/v1"
-	"k8s.io/client-go/kubernetes"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"github.com/kube-burner/kube-burner/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured" 
-	"github.com/kube-burner/kube-burner/pkg/measurements"
-	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 )
 
-type AutoScalerScenario struct {}
+type AutoScalerScenario struct{}
 
 // Returns a new scenario object
 func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
@@ -46,12 +45,12 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 	dynamicClient := dynamic.NewForConfigOrDie(restConfig)
 	machineClient := getMachineClient(restConfig)
 	machineSetDetails := getMachineSets(machineClient)
-	prevMachineDetails, _ := getMachines(machineClient)
-	machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, scaleConfig.AdditionalWorkerNodes)
+	prevMachineDetails, _ := getMachines(machineClient, 0)
+	machineSetsToEdit := adjustMachineSets(machineSetDetails, scaleConfig.AdditionalWorkerNodes)
 	setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 	measurements.Start()
 	createMachineAutoscalers(dynamicClient, machineSetsToEdit)
-	createAutoScaler(dynamicClient, nodeCount + scaleConfig.AdditionalWorkerNodes)
+	createAutoScaler(dynamicClient, nodeCount+scaleConfig.AdditionalWorkerNodes)
 	triggerJob, triggerTime := createBatchJob(clientSet)
 	// Delay for the clusterautoscaler resources to come up
 	time.Sleep(5 * time.Minute)
@@ -59,7 +58,7 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 	if err = measurements.Stop(); err != nil {
 		log.Error(err.Error())
 	}
-	scaledMachineDetails, amiID := getMachines(machineClient)
+	scaledMachineDetails, amiID := getMachines(machineClient, 0)
 	discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
 	finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID, 0)
 	deleteAutoScaler(dynamicClient)
@@ -72,7 +71,7 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 }
 
 // createBatchJob creates a job to load the cluster
-func createBatchJob(clientset kubernetes.Interface) (string, time.Time){
+func createBatchJob(clientset kubernetes.Interface) (string, time.Time) {
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "work-queue-",
@@ -118,8 +117,8 @@ func deleteBatchJob(clientset kubernetes.Interface, jobName string) {
 	jobsClient := clientset.BatchV1().Jobs(defaultNamespace)
 	deletePolicy := metav1.DeletePropagationForeground
 	err := jobsClient.Delete(context.TODO(), jobName, metav1.DeleteOptions{
-        PropagationPolicy: &deletePolicy,
-    })
+		PropagationPolicy: &deletePolicy,
+	})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			log.Infof("Job %s not found in namespace %s", jobName, defaultNamespace)
@@ -170,7 +169,7 @@ func createMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit
 				log.Fatalf("failed to create MachineAutoscaler: %v", err)
 			}
 		}
-	
+
 		log.Infof("MachineAutoscaler created: %v", machineSet)
 		return true
 	})
@@ -231,7 +230,7 @@ func createAutoScaler(dynamicClient dynamic.Interface, maxNodesTotal int) {
 		},
 	}
 
-    _, err := dynamicClient.Resource(gvr).Namespace("").Create(context.TODO(), clusterAutoscaler, metav1.CreateOptions{})
+	_, err := dynamicClient.Resource(gvr).Namespace("").Create(context.TODO(), clusterAutoscaler, metav1.CreateOptions{})
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			log.Infof("cluster autoscaler resource %s already exists", defaultClusterAutoScaler)
@@ -241,7 +240,7 @@ func createAutoScaler(dynamicClient dynamic.Interface, maxNodesTotal int) {
 		}
 	}
 
-    log.Infof("Cluster Autoscaler created: %v", defaultClusterAutoScaler)
+	log.Infof("Cluster Autoscaler created: %v", defaultClusterAutoScaler)
 }
 
 // deleteAutoScaler deletes the ClusterAutoscaler resource on the cluster by its name
@@ -278,15 +277,15 @@ func waitForMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clie
 		go func(ms string, r int) {
 			defer wg.Done()
 			err := waitForMachineSet(machineClient, ms, int32(r), maxWaitTimeout)
-            if err != nil {
-                log.Errorf("Failed waiting for MachineSet %s: %v", ms, err)
-            }
+			if err != nil {
+				log.Errorf("Failed waiting for MachineSet %s: %v", ms, err)
+			}
 		}(machineSet, msInfo.currentReplicas)
 		return true
 	})
 	wg.Wait()
 	log.Infof("All the machinesets have been scaled")
 	if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
-		log.Infof("Error waiting for nodes: %v", err)
+		log.Fatalf("Error waiting for nodes: %v", err)
 	}
 }
