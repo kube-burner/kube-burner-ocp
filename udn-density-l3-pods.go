@@ -63,7 +63,7 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
-	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("Iterations"))
+	cmd.Flags().IntVar(&iterations, "iterations", 0, "Iterations")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
