@@ -15,17 +15,17 @@
 package ocp
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
-	"encoding/json"
 	"time"
-	"fmt"
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
-	"github.com/cloud-bulldozer/go-commons/version"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
-	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/cloud-bulldozer/go-commons/version"
 	"github.com/kube-burner/kube-burner/pkg/burner"
+	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/prometheus"
 	"github.com/kube-burner/kube-burner/pkg/util/metrics"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -133,17 +133,17 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				break
 			}
 			jobSummary := burner.JobSummary{
-				Timestamp: time.Unix(start, 0).UTC(),
+				Timestamp:    time.Unix(start, 0).UTC(),
 				EndTimestamp: time.Unix(end, 0).UTC(),
-				ElapsedTime: time.Unix(end, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
-				UUID: uuid,
+				ElapsedTime:  time.Unix(end, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
+				UUID:         uuid,
 				JobConfig: config.Job{
 					Name: jobName,
 				},
-				Metadata: metricsScraper.Metadata,
+				Metadata:   metricsScraper.Metadata,
 				MetricName: "jobSummary",
-				Version: fmt.Sprintf("%v@%v", version.Version, version.GitCommit),
-				Passed: rc == 0,
+				Version:    fmt.Sprintf("%v@%v", version.Version, version.GitCommit),
+				Passed:     rc == 0,
 			}
 			burner.IndexJobSummary([]burner.JobSummary{jobSummary}, indexerValue)
 		},
