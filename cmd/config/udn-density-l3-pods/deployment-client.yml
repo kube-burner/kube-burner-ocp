@@ -14,10 +14,10 @@ spec:
         app: client
     spec:
       topologySpreadConstraints:
-      - maxSkew: 1 
+      - maxSkew: 1
         topologyKey: kubernetes.io/hostname
-        whenUnsatisfiable: ScheduleAnyway 
-        labelSelector: 
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
           matchLabels:
             app: client
       affinity:

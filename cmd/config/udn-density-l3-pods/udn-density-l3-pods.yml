@@ -31,8 +31,8 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
-  - name: node-density-udn
-    namespace: node-density-udn
+  - name: udn-density-l3-pods
+    namespace: udn-density-l3-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
