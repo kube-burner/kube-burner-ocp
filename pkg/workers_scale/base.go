@@ -14,7 +14,6 @@
 
 package workers_scale
 
-
 import (
 	"sort"
 	"sync"
@@ -22,11 +21,9 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
 	log "github.com/sirupsen/logrus"
-	
-	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 )
 
-type BaseScenario struct {}
+type BaseScenario struct{}
 
 // Returns a new scenario object
 func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
@@ -45,13 +42,13 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 			log.Error(err.Error())
 		}
 		scaledMachineDetails, amiID := getMachines(machineClient, scaleConfig.ScaleEventEpoch)
-		finalizeMetrics(sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 	} else {
 		machineSetDetails := getMachineSets(machineClient)
 		prevMachineDetails, _ := getMachines(machineClient, 0)
 		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 		measurements.Start()
-		machineSetsToEdit := adjustMachineSets(machineClient, machineSetDetails, scaleConfig.AdditionalWorkerNodes)
+		machineSetsToEdit := adjustMachineSets(machineSetDetails, scaleConfig.AdditionalWorkerNodes)
 		log.Info("Updating machinessets evenly to reach desired count")
 		editMachineSets(machineClient, clientSet, machineSetsToEdit, true)
 		if err = measurements.Stop(); err != nil {
@@ -68,7 +65,7 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 }
 
 // adjustMachineSets equally spreads requested number of machines across machinesets
-func adjustMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machineSetReplicas map[int][]string, desiredWorkerCount int) (sync.Map){
+func adjustMachineSets(machineSetReplicas map[int][]string, desiredWorkerCount int) *sync.Map {
 	var lastIndex int
 	machineSetsToEdit := sync.Map{}
 	var keys []int
@@ -85,7 +82,7 @@ func adjustMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machi
 				if desiredWorkerCount > 0 {
 					if _, exists := machineSetsToEdit.Load(machineSet); !exists {
 						machineSetsToEdit.Store(machineSet, MachineSetInfo{
-							prevReplicas: value,
+							prevReplicas:    value,
 							currentReplicas: value + 1,
 						})
 					}
@@ -93,7 +90,7 @@ func adjustMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machi
 					msInfo := msValue.(MachineSetInfo)
 					msInfo.currentReplicas = value + 1
 					machineSetsToEdit.Store(machineSet, msInfo)
-					machineSetReplicas[value + 1] = append(machineSetReplicas[value + 1], machineSet)
+					machineSetReplicas[value+1] = append(machineSetReplicas[value+1], machineSet)
 					lastIndex = index
 					desiredWorkerCount--
 					modified = true
@@ -101,13 +98,13 @@ func adjustMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machi
 					break
 				}
 			}
-			if lastIndex == len(machineSets) - 1 {
+			if lastIndex == len(machineSets)-1 {
 				delete(machineSetReplicas, value)
 			} else {
-				machineSetReplicas[value] = machineSets[lastIndex + 1:]
+				machineSetReplicas[value] = machineSets[lastIndex+1:]
 			}
 		}
-		if modified && (index == len(keys) - 1) || (value + 1 != keys[index + 1]) {
+		if modified && (index == len(keys)-1) || (value+1 != keys[index+1]) {
 			keys = append(keys[:index+1], append([]int{value + 1}, keys[index+1:]...)...)
 		}
 		if desiredWorkerCount <= 0 {
@@ -115,5 +112,5 @@ func adjustMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, machi
 		}
 		index++
 	}
-	return machineSetsToEdit
+	return &machineSetsToEdit
 }

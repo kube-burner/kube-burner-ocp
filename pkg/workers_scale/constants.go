@@ -14,7 +14,6 @@
 
 package workers_scale
 
-
 import "time"
 
 // Resource constants
@@ -25,7 +24,7 @@ const defaultClusterAutoScaler = "default"
 
 // Measurement constants
 const measurementName = "nodeLatency"
-const nodeReadyLatencyMeasurement          = "nodeReadyLatencyMeasurement"
+const nodeReadyLatencyMeasurement = "nodeReadyLatencyMeasurement"
 const nodeReadyLatencyQuantilesMeasurement = "nodeReadyLatencyQuantilesMeasurement"
 
 // Misc constants

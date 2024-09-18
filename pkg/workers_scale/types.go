@@ -17,10 +17,9 @@ package workers_scale
 import (
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/cloud-bulldozer/go-commons/indexers"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
 
 // Interface for our scenarios
 type Scenario interface {
@@ -29,12 +28,12 @@ type Scenario interface {
 
 // ScaleConfig contains configuration for scaling
 type ScaleConfig struct {
-	UUID string
+	UUID                  string
 	AdditionalWorkerNodes int
-	Metadata map[string]interface{}
-	Indexer indexers.Indexer
-	GC bool
-	ScaleEventEpoch int64
+	Metadata              map[string]interface{}
+	Indexer               indexers.Indexer
+	GC                    bool
+	ScaleEventEpoch       int64
 }
 
 // Struct to extract AMIID from aws provider spec
@@ -46,47 +45,47 @@ type AWSProviderSpec struct {
 
 // MachineInfo provides information about a machine resource
 type MachineInfo struct {
-	nodeUID string
+	nodeUID           string
 	creationTimestamp time.Time
-	readyTimestamp time.Time
+	readyTimestamp    time.Time
 }
 
 // MachineSetInfo provides information about a machineset resource
 type MachineSetInfo struct {
 	lastUpdatedTime time.Time
-	prevReplicas int
+	prevReplicas    int
 	currentReplicas int
 }
 
 // ProviderStatusCondition of a machine
 type ProviderStatusCondition struct {
-    LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-    Message            string      `json:"message"`
-    Reason             string      `json:"reason"`
-    Status             string      `json:"status"`
-    Type               string      `json:"type"`
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+	Message            string      `json:"message"`
+	Reason             string      `json:"reason"`
+	Status             string      `json:"status"`
+	Type               string      `json:"type"`
 }
 
 // ProviderStatus of a machine
 type ProviderStatus struct {
-    Conditions []ProviderStatusCondition `json:"conditions"`
+	Conditions []ProviderStatusCondition `json:"conditions"`
 }
 
 // NodeReadyMetric to capture details on node bootup
 type NodeReadyMetric struct {
-	ScaleEventTimestamp        time.Time `json:"-"`
-	MachineCreationTimestamp time.Time `json:"-"`
-	MachineCreationLatency int `json:"machineCreationLatency"`
-	MachineReadyTimestamp time.Time `json:"-"`
-	MachineReadyLatency int `json:"machineReadyLatency"`
-	NodeCreationTimestamp time.Time `json:"-"`
-	NodeCreationLatency int `json:"nodeCreationLatency"`
-	NodeReadyTimestamp time.Time `json:"-"`
-	NodeReadyLatency int `json:"nodeReadyLatency"`
-	MetricName       string `json:"metricName"`
-	AMIID string `json:"amiID"`
-	UUID             string `json:"uuid"`
-	JobName string `json:"jobName,omitempty"`
-	Name             string `json:"nodeName"`
-	Labels           map[string]string    `json:"labels"`
+	ScaleEventTimestamp      time.Time         `json:"-"`
+	MachineCreationTimestamp time.Time         `json:"-"`
+	MachineCreationLatency   int               `json:"machineCreationLatency"`
+	MachineReadyTimestamp    time.Time         `json:"-"`
+	MachineReadyLatency      int               `json:"machineReadyLatency"`
+	NodeCreationTimestamp    time.Time         `json:"-"`
+	NodeCreationLatency      int               `json:"nodeCreationLatency"`
+	NodeReadyTimestamp       time.Time         `json:"-"`
+	NodeReadyLatency         int               `json:"nodeReadyLatency"`
+	MetricName               string            `json:"metricName"`
+	AMIID                    string            `json:"amiID"`
+	UUID                     string            `json:"uuid"`
+	JobName                  string            `json:"jobName,omitempty"`
+	Name                     string            `json:"nodeName"`
+	Labels                   map[string]string `json:"labels"`
 }
