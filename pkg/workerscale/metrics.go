@@ -49,9 +49,9 @@ func setupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvid
 }
 
 // finalizeMetrics performs and indexes required metrics
-func finalizeMetrics(machineSetsToEdit sync.Map, scaledMachineDetails map[string]MachineInfo, indexerValue indexers.Indexer, amiID string, scaleEventEpoch int64) {
+func finalizeMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, indexerValue indexers.Indexer, amiID string, scaleEventEpoch int64) {
 	nodeMetrics := measurements.GetMetrics()
-	normLatencies, latencyQuantiles := calculateMetrics(&machineSetsToEdit, scaledMachineDetails, nodeMetrics[0], amiID, scaleEventEpoch)
+	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, nodeMetrics[0], amiID, scaleEventEpoch)
 	for _, q := range latencyQuantiles {
 		nq := q.(mmetrics.LatencyQuantiles)
 		log.Infof("%s: %s 50th: %v 99th: %v max: %v avg: %v", JobName, nq.QuantileName, nq.P50, nq.P99, nq.Max, nq.Avg)

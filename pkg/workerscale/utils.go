@@ -16,7 +16,6 @@ package workerscale
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
@@ -52,16 +51,6 @@ func getMachineClient(restConfig *rest.Config) *machinev1beta1.MachineV1beta1Cli
 	return machineClient
 }
 
-// getNodeCount returns current node count
-func getNodeCount(clientset kubernetes.Interface) (int, error) {
-	nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return 0, fmt.Errorf("error listing nodes: %s", err)
-	}
-
-	return len(nodes.Items), nil
-}
-
 // isNodeReady checks if a node is ready
 func isNodeReady(node *v1.Node) bool {
 	for _, condition := range node.Status.Conditions {
@@ -73,7 +62,7 @@ func isNodeReady(node *v1.Node) bool {
 }
 
 // waitForNodes waits for all the nodes to be ready
-func waitForNodes(clientset kubernetes.Interface, maxWaitTimeout time.Duration) error {
+func waitForNodes(clientset kubernetes.Interface) error {
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {

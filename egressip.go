@@ -102,19 +102,18 @@ func getFirstUsableAddr(cidr string) uint32 {
 	baseAddrInt, err := ipconv.IPv4ToInt(firstUsableIP)
 	if err != nil {
 		log.Fatal("Error converting IP to int: ", err)
-		os.Exit(1)
 	}
 	return baseAddrInt
 }
 
-// egress IPs and node IPs will be in same cidr. So we need to exclude node IPs from CIDR to generate list of avaialble egress IPs.
+// egress IPs and node IPs will be in same cidr. So we need to exclude node IPs from CIDR to generate list of available egress IPs.
 func generateEgressIPs(numJobIterations int, addressesPerIteration int, externalServerIP string) {
 
 	nodeIPs, egressIPCidr := getEgressIPCidrNodeIPs()
 	// Add external server ip to nodeIPs to get excluded while creating egress ip list
 	nodeIPs = append(nodeIPs, externalServerIP)
 	baseAddrInt := getFirstUsableAddr(egressIPCidr)
-	// list to host avaialble egress IPs
+	// list to host available egress IPs
 	addrSlice := make([]string, 0, (numJobIterations * addressesPerIteration))
 
 	// map to store nodeIPs
@@ -123,7 +122,6 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 		nodeipuint32, err := ipconv.IPv4ToInt(net.ParseIP(nodeip))
 		if err != nil {
 			log.Fatal("Error: ", err)
-			os.Exit(1)
 		}
 		nodeMap[nodeipuint32] = true
 	}

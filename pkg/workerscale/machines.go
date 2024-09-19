@@ -48,14 +48,14 @@ func getMachines(machineClient *machinev1beta1.MachineV1beta1Client, scaleEventE
 				if amiID == "" {
 					var awsSpec AWSProviderSpec
 					if err := json.Unmarshal(machine.Spec.ProviderSpec.Value.Raw, &awsSpec); err != nil {
-						log.Errorf("error unmarshaling providerSpec: %w", err)
+						log.Errorf("error unmarshaling providerSpec: %v", err)
 					}
 					amiID = awsSpec.AMI.ID
 				}
 				rawProviderStatus := machine.Status.ProviderStatus.Raw
 				var providerStatus ProviderStatus
 				if err := json.Unmarshal(rawProviderStatus, &providerStatus); err != nil {
-					log.Errorf("error unmarshaling providerStatus: %w", err)
+					log.Errorf("error unmarshaling providerStatus: %v", err)
 				}
 				for _, condition := range providerStatus.Conditions {
 					if condition.Type == "MachineCreation" && condition.Status == "True" {
@@ -76,7 +76,7 @@ func getMachines(machineClient *machinev1beta1.MachineV1beta1Client, scaleEventE
 }
 
 // editMachineSets edits machinesets parallelly
-func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientSet kubernetes.Interface, machineSetsToEdit sync.Map, isScaleUp bool) {
+func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientSet kubernetes.Interface, machineSetsToEdit *sync.Map, isScaleUp bool) {
 	var wg sync.WaitGroup
 	machineSetsToEdit.Range(func(key, value interface{}) bool {
 		machineSet := key.(string)
@@ -90,7 +90,7 @@ func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientS
 		wg.Add(1)
 		go func(ms string, r int) {
 			defer wg.Done()
-			err := updateMachineSetReplicas(machineClient, ms, int32(r), maxWaitTimeout, machineSetsToEdit)
+			err := updateMachineSetReplicas(machineClient, ms, int32(r), machineSetsToEdit)
 			if err != nil {
 				log.Errorf("Failed to edit MachineSet %s: %v", ms, err)
 			}
@@ -99,13 +99,13 @@ func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientS
 	})
 	wg.Wait()
 	log.Infof("All the machinesets have been editted")
-	if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
+	if err := waitForNodes(clientSet); err != nil {
 		log.Infof("Error waiting for nodes: %v", err)
 	}
 }
 
 // updateMachineSetsReplicas updates machines replicas
-func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, maxWaitTimeout time.Duration, machineSetsToEdit sync.Map) error {
+func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, machineSetsToEdit *sync.Map) error {
 	machineSet, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting machineset: %s", err)
@@ -122,7 +122,7 @@ func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client
 	msInfo.lastUpdatedTime = updateTimestamp
 	machineSetsToEdit.Store(name, msInfo)
 
-	err = waitForMachineSet(machineClient, name, newReplicaCount, maxWaitTimeout)
+	err = waitForMachineSet(machineClient, name, newReplicaCount)
 	if err != nil {
 		return fmt.Errorf("timeout waiting for MachineSet %s to be ready: %v", name, err)
 	}
@@ -151,7 +151,7 @@ func getMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) map[int]
 }
 
 // waitForMachineSet waits for machinesets to be ready with new replica count
-func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, maxWaitTimeout time.Duration) error {
+func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32) error {
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		ms, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
@@ -166,7 +166,7 @@ func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name 
 }
 
 // waitForWorkerMachineSets waits for all the worker machinesets in specific to be ready
-func waitForWorkerMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, maxWaitTimeout time.Duration) error {
+func waitForWorkerMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) error {
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(_ context.Context) (done bool, err error) {
 		// Get all MachineSets with the worker label
 		labelSelector := metav1.ListOptions{

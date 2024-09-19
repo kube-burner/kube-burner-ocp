@@ -45,14 +45,14 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		log.Info("Scale event epoch time specified. Hence calculating node latencies without any scaling")
 		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 		measurements.Start()
-		if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
+		if err := waitForNodes(clientSet); err != nil {
 			log.Fatalf("Error waiting for nodes: %v", err)
 		}
 		if err = measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
 		scaledMachineDetails, amiID := getMachines(machineClient, scaleConfig.ScaleEventEpoch)
-		finalizeMetrics(sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 	} else {
 		prevMachineDetails, _ := getMachines(machineClient, 0)
 		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
@@ -68,11 +68,11 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 			time.Sleep(1 * time.Minute)
 		}
 		log.Info("Waiting for the machinesets to be ready")
-		err = waitForWorkerMachineSets(machineClient, maxWaitTimeout)
+		err = waitForWorkerMachineSets(machineClient)
 		if err != nil {
 			log.Fatalf("Error waitingMachineSets to be ready: %v", err)
 		}
-		if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
+		if err := waitForNodes(clientSet); err != nil {
 			log.Fatalf("Error waiting for nodes: %v", err)
 		}
 		if err = measurements.Stop(); err != nil {
@@ -80,7 +80,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		}
 		scaledMachineDetails, amiID := getMachines(machineClient, 0)
 		discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
-		finalizeMetrics(sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, triggerTime.Unix())
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, triggerTime.Unix())
 		if scaleConfig.GC {
 			if scaleConfig.AutoScalerEnabled {
 				deleteBatchJob(clientSet, triggerJob)

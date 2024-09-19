@@ -41,7 +41,6 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
-	nodeCount, _ := getNodeCount(clientSet)
 	dynamicClient := dynamic.NewForConfigOrDie(restConfig)
 	machineClient := getMachineClient(restConfig)
 	machineSetDetails := getMachineSets(machineClient)
@@ -50,7 +49,7 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 	setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 	measurements.Start()
 	createMachineAutoscalers(dynamicClient, machineSetsToEdit)
-	createAutoScaler(dynamicClient, nodeCount+scaleConfig.AdditionalWorkerNodes)
+	createAutoScaler(dynamicClient, len(prevMachineDetails)+scaleConfig.AdditionalWorkerNodes)
 	triggerJob, triggerTime := createBatchJob(clientSet)
 	// Delay for the clusterautoscaler resources to come up
 	time.Sleep(5 * time.Minute)
@@ -131,7 +130,7 @@ func deleteBatchJob(clientset kubernetes.Interface, jobName string) {
 }
 
 // createMachineAutoscalers will create the autoscalers at machine level
-func createMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit sync.Map) {
+func createMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit *sync.Map) {
 	machineSetsToEdit.Range(func(key, value interface{}) bool {
 		machineSet := key.(string)
 		msInfo := value.(MachineSetInfo)
@@ -176,7 +175,7 @@ func createMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit
 }
 
 // deleteMachineAutoscalers deletes the MachineAutoscaler resources for the provided machine sets
-func deleteMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit sync.Map) {
+func deleteMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit *sync.Map) {
 	machineSetsToEdit.Range(func(key, value interface{}) bool {
 		machineSet := key.(string)
 
@@ -266,7 +265,7 @@ func deleteAutoScaler(dynamicClient dynamic.Interface) {
 }
 
 // Wait for machinesets to get ready
-func waitForMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientSet kubernetes.Interface, machineSetsToEdit sync.Map, triggerTime time.Time) {
+func waitForMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientSet kubernetes.Interface, machineSetsToEdit *sync.Map, triggerTime time.Time) {
 	var wg sync.WaitGroup
 	machineSetsToEdit.Range(func(key, value interface{}) bool {
 		machineSet := key.(string)
@@ -276,7 +275,7 @@ func waitForMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clie
 		wg.Add(1)
 		go func(ms string, r int) {
 			defer wg.Done()
-			err := waitForMachineSet(machineClient, ms, int32(r), maxWaitTimeout)
+			err := waitForMachineSet(machineClient, ms, int32(r))
 			if err != nil {
 				log.Errorf("Failed waiting for MachineSet %s: %v", ms, err)
 			}
@@ -285,7 +284,7 @@ func waitForMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clie
 	})
 	wg.Wait()
 	log.Infof("All the machinesets have been scaled")
-	if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
+	if err := waitForNodes(clientSet); err != nil {
 		log.Fatalf("Error waiting for nodes: %v", err)
 	}
 }

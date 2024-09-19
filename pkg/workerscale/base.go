@@ -35,14 +35,14 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		log.Info("Scale event epoch time specified. Hence calculating node latencies without any scaling")
 		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 		measurements.Start()
-		if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
+		if err := waitForNodes(clientSet); err != nil {
 			log.Fatalf("Error waiting for nodes: %v", err)
 		}
 		if err = measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
 		scaledMachineDetails, amiID := getMachines(machineClient, scaleConfig.ScaleEventEpoch)
-		finalizeMetrics(sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 	} else {
 		machineSetDetails := getMachineSets(machineClient)
 		prevMachineDetails, _ := getMachines(machineClient, 0)
@@ -65,7 +65,7 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 }
 
 // adjustMachineSets equally spreads requested number of machines across machinesets
-func adjustMachineSets(machineSetReplicas map[int][]string, desiredWorkerCount int) sync.Map {
+func adjustMachineSets(machineSetReplicas map[int][]string, desiredWorkerCount int) *sync.Map {
 	var lastIndex int
 	machineSetsToEdit := sync.Map{}
 	var keys []int
@@ -112,5 +112,5 @@ func adjustMachineSets(machineSetReplicas map[int][]string, desiredWorkerCount i
 		}
 		index++
 	}
-	return machineSetsToEdit
+	return &machineSetsToEdit
 }
