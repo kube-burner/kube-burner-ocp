@@ -31,23 +31,27 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	wscale "kube-burner.io/ocp/pkg/workers_scale"
 )
 
-// NewIndex orchestrates indexing for ocp wrapper
-func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobra.Command {
-	var metricsProfile, jobName string
-	var start, end int64
+// NewWorkersScale orchestrates scaling workers in ocp wrapper
+func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobra.Command {
+	var enableAutoscaler bool
+	var metricsProfile string
 	var userMetadata, metricsDirectory string
 	var prometheusStep time.Duration
 	var uuid string
-	var rc int
+	var err error
+	var scaleEventEpoch int64
+	var rc, additionalWorkerNodes int
 	var prometheusURL, prometheusToken string
 	var tarballName string
 	var indexer config.MetricsEndpoint
 	var clusterMetadataMap map[string]interface{}
+	const autoScaled = "autoScaled"
 	cmd := &cobra.Command{
-		Use:          "index",
-		Short:        "Runs index sub-command",
+		Use:          "workers-scale",
+		Short:        "Runs workers-scale sub-command",
 		Long:         "If no other indexer is specified, local indexer is used by default",
 		SilenceUsage: true,
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -55,13 +59,11 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			os.Exit(rc)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			start := time.Now().Unix()
 			uuid, _ = cmd.Flags().GetString("uuid")
-			clusterMetadata, err := ocpMetaAgent.GetClusterMetadata()
-			if err != nil {
-				log.Fatal("Error obtaining clusterMetadata: ", err.Error())
-			}
 			esServer, _ := cmd.Flags().GetString("es-server")
 			esIndex, _ := cmd.Flags().GetString("es-index")
+			gc, _ := cmd.Flags().GetBool("gc")
 			workloads.ConfigSpec.GlobalConfig.UUID = uuid
 			// When metricsEndpoint is specified, don't fetch any prometheus token
 			if *metricsEndpoint == "" {
@@ -97,11 +99,20 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				}
 			}
 
+			clusterMetadata, err = ocpMetaAgent.GetClusterMetadata()
+			if err != nil {
+				log.Fatal("Error obtaining clusterMetadata: ", err.Error())
+			}
 			metadata := make(map[string]interface{})
 			jsonData, _ := json.Marshal(clusterMetadata)
 			json.Unmarshal(jsonData, &clusterMetadataMap)
 			for k, v := range clusterMetadataMap {
 				metadata[k] = v
+			}
+			if enableAutoscaler {
+				metadata[autoScaled] = true
+			} else {
+				metadata[autoScaled] = false
 			}
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
@@ -110,12 +121,27 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				UserMetaData:    userMetadata,
 				RawMetadata:     metadata,
 			})
+			var indexerValue indexers.Indexer
+			for _, value := range metricsScraper.IndexerList {
+				indexerValue = value
+				break
+			}
+			scenario := fetchScenario(enableAutoscaler)
+			scenario.OrchestrateWorkload(wscale.ScaleConfig{
+				UUID:                  uuid,
+				AdditionalWorkerNodes: additionalWorkerNodes,
+				Metadata:              metricsScraper.Metadata,
+				Indexer:               indexerValue,
+				GC:                    gc,
+				ScaleEventEpoch:       scaleEventEpoch,
+			})
+			end := time.Now().Unix()
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
 					Start: time.Unix(start, 0),
 					End:   time.Unix(end, 0),
 					JobConfig: config.Job{
-						Name: jobName,
+						Name: wscale.JobName,
 					},
 				}
 				if prometheusClient.ScrapeJobsMetrics(prometheusJob) != nil {
@@ -127,18 +153,13 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 					log.Fatal(err)
 				}
 			}
-			var indexerValue indexers.Indexer
-			for _, value := range metricsScraper.IndexerList {
-				indexerValue = value
-				break
-			}
 			jobSummary := burner.JobSummary{
 				Timestamp:    time.Unix(start, 0).UTC(),
 				EndTimestamp: time.Unix(end, 0).UTC(),
 				ElapsedTime:  time.Unix(end, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
 				UUID:         uuid,
 				JobConfig: config.Job{
-					Name: jobName,
+					Name: wscale.JobName,
 				},
 				Metadata:   metricsScraper.Metadata,
 				MetricName: "jobSummary",
@@ -148,14 +169,23 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			burner.IndexJobSummary([]burner.JobSummary{jobSummary}, indexerValue)
 		},
 	}
-	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "comma-separated list of metric profiles")
+	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "Comma-separated list of metric profiles")
 	cmd.Flags().StringVar(&metricsDirectory, "metrics-directory", "collected-metrics", "Directory to dump the metrics files in, when using default local indexing")
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
-	cmd.Flags().Int64Var(&start, "start", time.Now().Unix()-3600, "Epoch start time")
-	cmd.Flags().Int64Var(&end, "end", time.Now().Unix(), "Epoch end time")
-	cmd.Flags().StringVar(&jobName, "job-name", "kube-burner-ocp-indexing", "Indexing job name")
+	cmd.Flags().IntVar(&additionalWorkerNodes, "additional-worker-nodes", 3, "Additional workers to scale")
+	cmd.Flags().BoolVar(&enableAutoscaler, "enable-autoscaler", false, "Enables autoscaler while scaling the cluster")
+	cmd.Flags().Int64Var(&scaleEventEpoch, "scale-event-epoch", 0, "Scale event epoch time")
 	cmd.Flags().StringVar(&userMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	cmd.Flags().StringVar(&tarballName, "tarball-name", "", "Dump collected metrics into a tarball with the given name, requires local indexing")
 	cmd.Flags().SortFlags = false
 	return cmd
+}
+
+// FetchScenario helps us to fetch relevant class
+func fetchScenario(enableAutoscaler bool) wscale.Scenario {
+	if enableAutoscaler {
+		return &wscale.AutoScalerScenario{}
+	} else {
+		return &wscale.BaseScenario{}
+	}
 }
