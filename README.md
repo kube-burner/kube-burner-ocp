@@ -27,6 +27,7 @@ Available Commands:
   node-density-cni               Runs node-density-cni workload
   node-density-heavy             Runs node-density-heavy workload
   pvc-density                    Runs pvc-density workload
+  udn-density-l3-pods            Runs udn-density-l3-pods workload
   version                        Print the version number of kube-burner
   web-burner-cluster-density     Runs web-burner-cluster-density workload
   web-burner-init                Runs web-burner-init workload
@@ -170,6 +171,10 @@ Note: This workload calculates the number of iterations to create from the numbe
 Creates two deployments, a postgresql database, and a simple client that performs periodic insert queries (configured through liveness and readiness probes) on the previous database and a service that is used by the client to reach the database.
 
 Note: this workload calculates the number of iterations to create from the number of nodes and desired pods per node.  In order to keep the test scalable and performant, chunks of 1000 iterations will by broken into separate namespaces, using the config variable `iterationsPerNamespace`.
+
+### udn-density-l3-pods
+
+For User-Defined Network (UDN) L3 segmentation testing. It creates two deployments, a client/curl and a server/nxing.
 
 ## Network Policy workloads
 
@@ -338,7 +343,7 @@ global:
     - name: <metric_name>
       thresholds:
         - <threshold_key>: <threshold_value>
-          
+
 jobs:
   - name: <job_name>
     namespace: <namespace_name>
