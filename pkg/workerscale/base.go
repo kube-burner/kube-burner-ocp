@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
+package workerscale
 
 import (
 	"sort"
@@ -35,8 +35,8 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		log.Info("Scale event epoch time specified. Hence calculating node latencies without any scaling")
 		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 		measurements.Start()
-		if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
-			log.Infof("Error waiting for nodes: %v", err)
+		if err := waitForNodes(clientSet); err != nil {
+			log.Fatalf("Error waiting for nodes: %v", err)
 		}
 		if err = measurements.Stop(); err != nil {
 			log.Error(err.Error())

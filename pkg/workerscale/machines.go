@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
+package workerscale
 
 import (
 	"context"
@@ -90,7 +90,7 @@ func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientS
 		wg.Add(1)
 		go func(ms string, r int) {
 			defer wg.Done()
-			err := updateMachineSetReplicas(machineClient, ms, int32(r), maxWaitTimeout, machineSetsToEdit)
+			err := updateMachineSetReplicas(machineClient, ms, int32(r), machineSetsToEdit)
 			if err != nil {
 				log.Errorf("Failed to edit MachineSet %s: %v", ms, err)
 			}
@@ -99,13 +99,13 @@ func editMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clientS
 	})
 	wg.Wait()
 	log.Infof("All the machinesets have been editted")
-	if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
+	if err := waitForNodes(clientSet); err != nil {
 		log.Infof("Error waiting for nodes: %v", err)
 	}
 }
 
 // updateMachineSetsReplicas updates machines replicas
-func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, maxWaitTimeout time.Duration, machineSetsToEdit *sync.Map) error {
+func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, machineSetsToEdit *sync.Map) error {
 	machineSet, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("error getting machineset: %s", err)
@@ -122,7 +122,7 @@ func updateMachineSetReplicas(machineClient *machinev1beta1.MachineV1beta1Client
 	msInfo.lastUpdatedTime = updateTimestamp
 	machineSetsToEdit.Store(name, msInfo)
 
-	err = waitForMachineSet(machineClient, name, newReplicaCount, maxWaitTimeout)
+	err = waitForMachineSet(machineClient, name, newReplicaCount)
 	if err != nil {
 		return fmt.Errorf("timeout waiting for MachineSet %s to be ready: %v", name, err)
 	}
@@ -151,7 +151,7 @@ func getMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) map[int]
 }
 
 // waitForMachineSet waits for machinesets to be ready with new replica count
-func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32, maxWaitTimeout time.Duration) error {
+func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name string, newReplicaCount int32) error {
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		ms, err := machineClient.MachineSets(machineNamespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
@@ -162,5 +162,27 @@ func waitForMachineSet(machineClient *machinev1beta1.MachineV1beta1Client, name 
 		}
 		log.Debugf("Waiting for MachineSet %s to reach %d replicas, currently %d ready", name, newReplicaCount, ms.Status.ReadyReplicas)
 		return false, nil
+	})
+}
+
+// waitForWorkerMachineSets waits for all the worker machinesets in specific to be ready
+func waitForWorkerMachineSets(machineClient *machinev1beta1.MachineV1beta1Client) error {
+	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(_ context.Context) (done bool, err error) {
+		// Get all MachineSets with the worker label
+		labelSelector := metav1.ListOptions{
+			LabelSelector: "hive.openshift.io/machine-pool=worker",
+		}
+		machineSets, err := machineClient.MachineSets(machineNamespace).List(context.TODO(), labelSelector)
+		if err != nil {
+			return false, err
+		}
+		for _, ms := range machineSets.Items {
+			if ms.Status.Replicas != ms.Status.ReadyReplicas {
+				log.Debugf("Waiting for MachineSet %s to reach %d replicas, currently %d ready", ms.Name, ms.Status.Replicas, ms.Status.ReadyReplicas)
+				return false, nil
+			}
+		}
+		log.Info("All worker MachineSets have reached desired replica count")
+		return true, nil
 	})
 }

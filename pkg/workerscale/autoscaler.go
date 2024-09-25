@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
+package workerscale
 
 import (
 	"context"
@@ -275,7 +275,7 @@ func waitForMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clie
 		wg.Add(1)
 		go func(ms string, r int) {
 			defer wg.Done()
-			err := waitForMachineSet(machineClient, ms, int32(r), maxWaitTimeout)
+			err := waitForMachineSet(machineClient, ms, int32(r))
 			if err != nil {
 				log.Errorf("Failed waiting for MachineSet %s: %v", ms, err)
 			}
@@ -284,7 +284,7 @@ func waitForMachineSets(machineClient *machinev1beta1.MachineV1beta1Client, clie
 	})
 	wg.Wait()
 	log.Infof("All the machinesets have been scaled")
-	if err := waitForNodes(clientSet, maxWaitTimeout); err != nil {
-		log.Infof("Error waiting for nodes: %v", err)
+	if err := waitForNodes(clientSet); err != nil {
+		log.Fatalf("Error waiting for nodes: %v", err)
 	}
 }

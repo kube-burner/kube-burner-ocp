@@ -1,4 +1,4 @@
-// Copyright 2022 The Kube-burner Authors.
+// Copyright 2024 The Kube-burner Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	wscale "kube-burner.io/ocp/pkg/workers_scale"
+	wscale "kube-burner.io/ocp/pkg/workerscale"
 )
 
 // NewWorkersScale orchestrates scaling workers in ocp wrapper
@@ -126,7 +126,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				indexerValue = value
 				break
 			}
-			scenario := fetchScenario(enableAutoscaler)
+			scenario := fetchScenario(enableAutoscaler, clusterMetadata)
 			scenario.OrchestrateWorkload(wscale.ScaleConfig{
 				UUID:                  uuid,
 				AdditionalWorkerNodes: additionalWorkerNodes,
@@ -134,6 +134,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				Indexer:               indexerValue,
 				GC:                    gc,
 				ScaleEventEpoch:       scaleEventEpoch,
+				AutoScalerEnabled:     enableAutoscaler,
 			})
 			end := time.Now().Unix()
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
@@ -182,10 +183,13 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 }
 
 // FetchScenario helps us to fetch relevant class
-func fetchScenario(enableAutoscaler bool) wscale.Scenario {
-	if enableAutoscaler {
-		return &wscale.AutoScalerScenario{}
+func fetchScenario(enableAutoscaler bool, clusterMetadata ocpmetadata.ClusterMetadata) wscale.Scenario {
+	if clusterMetadata.ClusterType == "rosa" {
+		return &wscale.RosaScenario{}
 	} else {
+		if enableAutoscaler {
+			return &wscale.AutoScalerScenario{}
+		}
 		return &wscale.BaseScenario{}
 	}
 }

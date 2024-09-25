@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package workers_scale
+package workerscale
 
 import (
 	"context"
@@ -62,7 +62,7 @@ func isNodeReady(node *v1.Node) bool {
 }
 
 // waitForNodes waits for all the nodes to be ready
-func waitForNodes(clientset kubernetes.Interface, maxWaitTimeout time.Duration) error {
+func waitForNodes(clientset kubernetes.Interface) error {
 	return wait.PollUntilContextTimeout(context.TODO(), time.Second, maxWaitTimeout, true, func(ctx context.Context) (done bool, err error) {
 		nodes, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
