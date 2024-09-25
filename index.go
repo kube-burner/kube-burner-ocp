@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
@@ -35,7 +34,8 @@ import (
 
 // NewIndex orchestrates indexing for ocp wrapper
 func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobra.Command {
-	var metricsProfile, jobName string
+	var jobName string
+	var metricsProfiles []string
 	var start, end int64
 	var userMetadata, metricsDirectory string
 	var prometheusStep time.Duration
@@ -70,9 +70,6 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 					log.Fatal("Error obtaining prometheus information from cluster: ", err.Error())
 				}
 			}
-			metricsProfiles := strings.FieldsFunc(metricsProfile, func(r rune) bool {
-				return r == ',' || r == ' '
-			})
 			indexer = config.MetricsEndpoint{
 				Endpoint:      prometheusURL,
 				Token:         prometheusToken,
@@ -148,7 +145,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			burner.IndexJobSummary([]burner.JobSummary{jobSummary}, indexerValue)
 		},
 	}
-	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "comma-separated list of metric profiles")
+	cmd.Flags().StringSliceVarP(&metricsProfiles, "metrics-profile", "m", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&metricsDirectory, "metrics-directory", "collected-metrics", "Directory to dump the metrics files in, when using default local indexing")
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
 	cmd.Flags().Int64Var(&start, "start", time.Now().Unix()-3600, "Epoch start time")

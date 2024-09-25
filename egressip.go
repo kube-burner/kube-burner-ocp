@@ -149,6 +149,7 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, addressesPerIteration int
 	var externalServerIP string
 	var podReadyThreshold time.Duration
+	var metricsProfiles []string
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
@@ -160,7 +161,7 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			generateEgressIPs(iterations, addressesPerIteration, externalServerIP)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, "metrics-egressip.yml")
+			setMetrics(cmd, metricsProfiles)
 			wh.Run(cmd.Name())
 		},
 	}
@@ -168,6 +169,7 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().StringVar(&externalServerIP, "external-server-ip", "", "External server IP address")
 	cmd.Flags().IntVar(&addressesPerIteration, "addresses-per-iteration", 1, fmt.Sprintf("%v iterations", variant))
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-egressip.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	cmd.MarkFlagRequired("external-server-ip")
 	return cmd
