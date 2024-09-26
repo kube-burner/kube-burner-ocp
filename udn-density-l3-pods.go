@@ -17,19 +17,17 @@ package ocp
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 )
 
 // NewUDNDensityL3Pods holds udn-density-l3-pods workload
 func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
-	var churnPercent, churnCycles, iterations, podsPerNode int
-	var churn, svcLatency bool
+	var churnPercent, churnCycles, iterations int
+	var churn bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var churnDeletionStrategy string
 	cmd := &cobra.Command{
@@ -43,14 +41,8 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
 			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
 			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
-			ingressDomain, err := wh.MetadataAgent.GetDefaultIngressDomain()
-			if err != nil {
-				log.Fatal("Error obtaining default ingress domain: ", err.Error())
-			}
-			os.Setenv("INGRESS_DOMAIN", ingressDomain)
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-			os.Setenv("SVC_LATENCY", strconv.FormatBool(svcLatency))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, "metrics.yml")
@@ -65,7 +57,5 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Iterations")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
-	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
-	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	return cmd
 }
