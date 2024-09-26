@@ -90,7 +90,8 @@ print_events() {
 check_metric_value() {
   sleep 3s # There's some delay on the documents to show up in OpenSearch
   for metric in "${@}"; do
-    endpoint="${ES_SERVER}/${ES_INDEX}/_search?q=uuid.keyword:${UUID}+AND+metricName.keyword:${metric}+AND+ocpVersion.keyword:*"
+    query="uuid.keyword:${UUID}+AND+metricName.keyword:${metric}+AND+(metadata.ocpVersion.keyword:*+OR+ocpVersion.keyword:*)"
+    endpoint="${ES_SERVER}/${ES_INDEX}/_search?q=${query}"
     RESULT=$(curl -sS ${endpoint} | jq '.hits.total.value // error')
     RETURN_CODE=$?
     if [ "${RETURN_CODE}" -ne 0 ]; then
