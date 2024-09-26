@@ -85,3 +85,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace github.com/kube-burner/kube-burner => github.com/rsevilla87/kube-burner v1.7.6-0.20240926073724-2b0caacee619
