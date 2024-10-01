@@ -32,6 +32,7 @@ func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 	var namespacedIterations bool
 	var iterationsPerNamespace int
 	var metricsProfiles []string
+	var rc int
 	cmd := &cobra.Command{
 		Use:          "node-density-heavy",
 		Short:        "Runs node-density-heavy workload",
@@ -51,7 +52,10 @@ func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			wh.Run(cmd.Name())
+			rc = wh.Run(cmd.Name())
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")

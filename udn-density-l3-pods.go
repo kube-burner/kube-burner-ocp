@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
-
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +30,7 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var churnDeletionStrategy string
 	var metricsProfiles []string
+	var rc int
 	cmd := &cobra.Command{
 		Use:          "udn-density-l3-pods",
 		Short:        "Runs node-density-udn workload",
@@ -47,7 +47,10 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			wh.Run(cmd.Name())
+			rc = wh.Run(cmd.Name())
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
 		},
 	}
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")

@@ -30,6 +30,7 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var bridge string
 	var podReadyThreshold time.Duration
 	var metricsProfiles []string
+	var rc int
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
@@ -46,7 +47,10 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			wh.Run(cmd.Name())
+			rc = wh.Run(cmd.Name())
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")

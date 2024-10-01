@@ -55,7 +55,6 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 		Long:         "If no other indexer is specified, local indexer is used by default",
 		SilenceUsage: true,
 		PostRun: func(cmd *cobra.Command, args []string) {
-			log.Info("👋 Exiting kube-burner ", uuid)
 			os.Exit(rc)
 		},
 		Run: func(cmd *cobra.Command, args []string) {

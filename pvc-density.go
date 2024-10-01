@@ -42,6 +42,7 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageProvisioners, metricsProfiles []string
 	var claimSize string
 	var containerImage string
+	var rc int
 	provisioner := "aws"
 
 	cmd := &cobra.Command{
@@ -65,7 +66,10 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			wh.Run(cmd.Name())
+			rc = wh.Run(cmd.Name())
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
 		},
 	}
 
