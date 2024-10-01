@@ -1,5 +1,6 @@
 name: Execute tests on OCP
 on:
+  workflow_dispatch:
   workflow_call:
     secrets:
       OPENSHIFT_SERVER:
@@ -57,3 +58,4 @@ jobs:
         OPENSHIFT_SERVER: ${{ secrets.OPENSHIFT_SERVER }}
         OPENSHIFT_USER: ${{ secrets.OPENSHIFT_USER }}
         OPENSHIFT_PASSWORD: ${{ secrets.OPENSHIFT_PASSWORD }}
+        PERFSCALE_PROD_ES_SERVER: ${{ secrets.PERFSCALE_PROD_ES_SERVER }}
