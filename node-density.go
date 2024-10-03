@@ -30,6 +30,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var podsPerNode int
 	var podReadyThreshold time.Duration
 	var containerImage string
+	var metricsProfiles []string
 	cmd := &cobra.Command{
 		Use:          "node-density",
 		Short:        "Runs node-density workload",
@@ -45,12 +46,13 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("CONTAINER_IMAGE", containerImage)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, "metrics.yml")
+			setMetrics(cmd, metricsProfiles)
 			wh.Run(cmd.Name())
 		},
 	}
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }

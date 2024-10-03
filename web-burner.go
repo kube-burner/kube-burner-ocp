@@ -29,6 +29,7 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var bfd, crd, icni, probe, sriov bool
 	var bridge string
 	var podReadyThreshold time.Duration
+	var metricsProfiles []string
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
@@ -44,7 +45,7 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			os.Setenv("SRIOV", fmt.Sprint(sriov))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, "metrics.yml")
+			setMetrics(cmd, metricsProfiles)
 			wh.Run(cmd.Name())
 		},
 	}
@@ -57,5 +58,6 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().BoolVar(&probe, "probe", false, "Enable readiness probes")
 	cmd.Flags().BoolVar(&sriov, "sriov", true, "Enable SRIOV")
 	cmd.Flags().StringVar(&bridge, "bridge", "br-ex", "Data-plane bridge")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }

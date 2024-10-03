@@ -28,16 +28,13 @@ import (
 
 var clusterMetadata ocpmetadata.ClusterMetadata
 
-func setMetrics(cmd *cobra.Command, metricsProfile string) {
-	var metricsProfiles []string
+func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
 	switch ProfileType(profileType) {
 	case Reporting:
 		metricsProfiles = []string{"metrics-report.yml"}
-	case Regular:
-		metricsProfiles = []string{metricsProfile}
 	case Both:
-		metricsProfiles = []string{"metrics-report.yml", metricsProfile}
+		metricsProfiles = append(metricsProfiles, "metrics-report.yml")
 	}
 	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 }
