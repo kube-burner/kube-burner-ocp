@@ -33,6 +33,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	var churnDelay, churnDuration time.Duration
 	var churnDeletionStrategy string
 	var podReadyThreshold time.Duration
+	var metricsProfiles []string
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
@@ -60,7 +61,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 					log.Errorf("image-registry deployment is not deployed")
 				}
 			}
-			setMetrics(cmd, "metrics-aggregated.yml")
+			setMetrics(cmd, metricsProfiles)
 			wh.Run(cmd.Name())
 		},
 	}
@@ -73,6 +74,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }

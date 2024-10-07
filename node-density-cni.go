@@ -32,6 +32,7 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 	var namespacedIterations, svcLatency bool
 	var podReadyThreshold time.Duration
 	var iterationsPerNamespace int
+	var metricsProfiles []string
 	cmd := &cobra.Command{
 		Use:          "node-density-cni",
 		Short:        "Runs node-density-cni workload",
@@ -49,7 +50,7 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("SVC_LATENCY", strconv.FormatBool(svcLatency))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, "metrics.yml")
+			setMetrics(cmd, metricsProfiles)
 			wh.Run(cmd.Name())
 		},
 	}
@@ -58,5 +59,6 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1000, "Iterations per namespace")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }
