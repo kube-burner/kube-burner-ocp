@@ -7,7 +7,7 @@ load helpers.bash
 setup_file() {
   cd ocp
   export BATS_TEST_TIMEOUT=600
-  export ES_SERVER="https://search-perfscale-dev-chmf5l4sh66lvxbnadi4bznl3a.us-west-2.es.amazonaws.com"
+  export ES_SERVER="$PERFSCALE_PROD_ES_SERVER"
   export ES_INDEX="kube-burner-ocp"
   trap print_events ERR
   setup-prometheus
