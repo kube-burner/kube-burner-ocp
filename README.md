@@ -268,6 +268,9 @@ We apply the same round-robin and unique combination logic to CIDRs and port ran
 **Connection Testing Support**
 kube-burner measures network policy latency through connection testing. Currently, all pods are configured to listen on port 8080. As a result, client pods will send requests to port 8080 during testing.
 
+### Convergence tracker
+Convergence tracker https://github.com/npinaeva/k8s-netpol-scale/tree/main/kube-burner-workload/openshift/openflow-tracker is integrated into network policy workload. It creates pods on each worker node which moniots OVS flows. It measures when OVS flows gets stabilized and report this as a metric.
+
 ## EgressIP workloads
 
 This workload creates an egress IP for the client pods. SDN (OVN) will use egress IP for the traffic from client pods to external server instead of default node IP.
