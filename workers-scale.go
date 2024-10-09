@@ -55,7 +55,6 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 		Long:         "If no other indexer is specified, local indexer is used by default",
 		SilenceUsage: true,
 		PostRun: func(cmd *cobra.Command, args []string) {
-			log.Info("👋 Exiting kube-burner ", uuid)
 			os.Exit(rc)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -119,7 +118,8 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				ConfigSpec:      &workloads.ConfigSpec,
 				MetricsEndpoint: *metricsEndpoint,
 				UserMetaData:    userMetadata,
-				RawMetadata:     metadata,
+				MetricsMetadata: metadata,
+				SummaryMetadata: metadata,
 			})
 			var indexerValue indexers.Indexer
 			for _, value := range metricsScraper.IndexerList {
@@ -130,7 +130,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			scenario.OrchestrateWorkload(wscale.ScaleConfig{
 				UUID:                  uuid,
 				AdditionalWorkerNodes: additionalWorkerNodes,
-				Metadata:              metricsScraper.Metadata,
+				Metadata:              metricsScraper.MetricsMetadata,
 				Indexer:               indexerValue,
 				GC:                    gc,
 				ScaleEventEpoch:       scaleEventEpoch,
@@ -162,7 +162,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				JobConfig: config.Job{
 					Name: wscale.JobName,
 				},
-				Metadata:   metricsScraper.Metadata,
+				Metadata:   metricsScraper.SummaryMetadata,
 				MetricName: "jobSummary",
 				Version:    fmt.Sprintf("%v@%v", version.Version, version.GitCommit),
 				Passed:     rc == 0,

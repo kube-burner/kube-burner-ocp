@@ -39,9 +39,10 @@ var dynamicStorageProvisioners = map[string]string{
 func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 
 	var iterations int
-	var storageProvisioners []string
+	var storageProvisioners, metricsProfiles []string
 	var claimSize string
 	var containerImage string
+	var rc int
 	provisioner := "aws"
 
 	cmd := &cobra.Command{
@@ -64,8 +65,11 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("STORAGE_PROVISIONER", fmt.Sprint(dynamicStorageProvisioners[provisioner]))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, "metrics.yml")
-			wh.Run(cmd.Name())
+			setMetrics(cmd, metricsProfiles)
+			rc = wh.Run(cmd.Name())
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
 		},
 	}
 
@@ -73,6 +77,6 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&provisioner, "provisioner", provisioner, fmt.Sprintf("[%s]", strings.Join(storageProvisioners, " ")))
 	cmd.Flags().StringVar(&claimSize, "claim-size", "256Mi", "claim-size=256Mi")
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
-
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }

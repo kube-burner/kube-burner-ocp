@@ -25,6 +25,8 @@ import (
 // NewCrdScale holds the crd-scale workload
 func NewCrdScale(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations int
+	var metricsProfiles []string
+	var rc int
 	cmd := &cobra.Command{
 		Use:          "crd-scale",
 		Short:        "Runs crd-scale workload",
@@ -33,11 +35,15 @@ func NewCrdScale(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, "metrics-aggregated.yml")
-			wh.Run(cmd.Name())
+			setMetrics(cmd, metricsProfiles)
+			rc = wh.Run(cmd.Name())
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of CRDs to create")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }

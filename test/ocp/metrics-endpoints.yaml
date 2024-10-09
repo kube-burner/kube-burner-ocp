@@ -1,6 +1,6 @@
 - endpoint: http://localhost:9090
   metrics:
-    - metrics.yml
+    - custom-metrics.yml
   alerts:
     - alerts.yml
   indexer:
@@ -10,7 +10,7 @@
       type: opensearch
 - endpoint: http://localhost:9090
   metrics:
-    - metrics.yml
+    - custom-metrics.yml
   indexer:
       esServers: ["{{.ES_SERVER}}"]
       insecureSkipVerify: true

@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
-
 	"github.com/spf13/cobra"
 )
 
@@ -30,6 +29,8 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churn bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var churnDeletionStrategy string
+	var metricsProfiles []string
+	var rc int
 	cmd := &cobra.Command{
 		Use:          "udn-density-l3-pods",
 		Short:        "Runs node-density-udn workload",
@@ -45,8 +46,11 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, "metrics.yml")
-			wh.Run(cmd.Name())
+			setMetrics(cmd, metricsProfiles)
+			rc = wh.Run(cmd.Name())
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
 		},
 	}
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
@@ -57,5 +61,6 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Iterations")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }

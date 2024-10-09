@@ -15,7 +15,7 @@ setup_file() {
 
 setup() {
   export UUID; UUID=$(uuidgen)
-  export COMMON_FLAGS="--es-server=${ES_SERVER} --es-index=${ES_INDEX} --alerting=true --uuid=${UUID} --qps=5 --burst=5"
+  export COMMON_FLAGS="--es-server=${ES_SERVER} --es-index=${ES_INDEX} --alerting=true --qps=5 --burst=5"
 }
 
 teardown() {
@@ -30,12 +30,12 @@ teardown_file() {
 }
 
 @test "custom-workload as node-density" {
-  run_cmd kube-burner-ocp init --config=custom-workload.yml ${COMMON_FLAGS} --metrics-endpoint metrics-endpoints.yaml
+  run_cmd kube-burner-ocp init --config=custom-workload.yml --metrics-endpoint metrics-endpoints.yaml --uuid=${UUID}
   check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "node-density: es-indexing=true" {
-  run_cmd kube-burner-ocp node-density --pods-per-node=75 --pod-ready-threshold=10s ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp node-density --pods-per-node=75 --pod-ready-threshold=10s --uuid=${UUID} ${COMMON_FLAGS}
   check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
@@ -45,18 +45,18 @@ teardown_file() {
 }
 
 @test "cluster-density-ms: metrics-endpoint=true; es-indexing=true" {
-  run_cmd kube-burner-ocp cluster-density-ms --iterations=1 --churn=false --metrics-endpoint metrics-endpoints.yaml ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp cluster-density-ms --iterations=1 --churn=false --metrics-endpoint metrics-endpoints.yaml --uuid=${UUID}
   check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
-  run_cmd kube-burner-ocp cluster-density-v2 --iterations=5 --churn-duration=1m --churn-delay=5s --profile-type=both ${COMMON_FLAGS} --user-metadata=user-metadata.yml --service-latency
+  run_cmd kube-burner-ocp cluster-density-v2 --iterations=2 --churn-duration=1m --churn-delay=5s --profile-type=both ${COMMON_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID}
   check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion 
 }
 
-@test "cluster-density-v2: churn-deletion-strategy=gvr" {
-  run_cmd kube-burner-ocp cluster-density-v2 --iterations=2 --churn=true --churn-duration=1m --churn-delay=10s --churn-deletion-strategy=gvr ${COMMON_FLAGS}
-  check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+@test "cluster-density-v2: churn-deletion-strategy=gvr; custom-metrics=true" {
+  run_cmd kube-burner-ocp cluster-density-v2 --iterations=2 --churn=true --churn-duration=1m --churn-delay=5s --churn-deletion-strategy=gvr --metrics-profile=custom-metrics.yml ${COMMON_FLAGS} --uuid=${UUID}
+  check_metric_value prometheusRSS jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "cluster-density-v2: indexing=false; churning=false" {
@@ -76,7 +76,7 @@ teardown_file() {
 }
 
 @test "index: local-indexing=true" {
-  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-profile "metrics.yml,metrics.yml"
+  run_cmd kube-burner-ocp index --uuid=${UUID} --metrics-profile "custom-metrics.yml"
 }
 
 @test "index: metrics-endpoints=true; es-indexing=true" {
@@ -84,12 +84,12 @@ teardown_file() {
 }
 
 @test "networkpolicy-multitenant" {
-  run_cmd kube-burner-ocp networkpolicy-multitenant --iterations 5  ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp networkpolicy-multitenant --iterations 5 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
 @test "pvc-density" {
   # Since 'aws' is the chosen storage provisioner, this will only execute successfully if the ocp environment is aws
-  run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner=aws ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner=aws ${COMMON_FLAGS} --uuid=${UUID}
   check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
