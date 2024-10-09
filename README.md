@@ -61,7 +61,7 @@ Documentation is [available here](https://kube-burner.github.io/kube-burner-ocp/
 Some of the benefits the OCP wrapper provides are:
 
 - Simplified execution of the supported workloads. (Only some flags are required)
-- Adds OpenShift metadata to the generated documents.
+- Adds OpenShift metadata to generated jobSummary and a small subset of metadata fields to the remaining metrics.
 - Prevents modifying configuration files to tweak some of the parameters of the workloads.
 - Discovers the Prometheus URL and authentication token, so the user does not have to perform those operations before using them.
 - Workloads configuration is directly embedded in the binary.

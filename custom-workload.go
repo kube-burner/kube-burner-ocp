@@ -31,6 +31,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var configFile, churnDeletionStrategy string
 	var iterations, churnPercent, churnCycles, iterationsPerNamespace, podsPerNode int
+	var rc int
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Runs custom workload",
@@ -67,7 +68,10 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatalf("Error reading custom configuration file: %v", err.Error())
 			}
 			configFileName := strings.Split(configFile, ".")[0]
-			wh.Run(configFileName)
+			rc = wh.Run(configFileName)
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
 		},
 	}
 	cmd.Flags().StringVarP(&configFile, "config", "c", "", "Config file path or url")

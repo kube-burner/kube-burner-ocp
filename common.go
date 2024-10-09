@@ -28,16 +28,13 @@ import (
 
 var clusterMetadata ocpmetadata.ClusterMetadata
 
-func setMetrics(cmd *cobra.Command, metricsProfile string) {
-	var metricsProfiles []string
+func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
 	switch ProfileType(profileType) {
 	case Reporting:
 		metricsProfiles = []string{"metrics-report.yml"}
-	case Regular:
-		metricsProfiles = []string{metricsProfile}
 	case Both:
-		metricsProfiles = []string{"metrics-report.yml", metricsProfile}
+		metricsProfiles = append(metricsProfiles, "metrics-report.yml")
 	}
 	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 }
@@ -66,6 +63,10 @@ func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
 	if err != nil {
 		return err
 	}
-	json.Unmarshal(jsonData, &wh.Metadata)
+	json.Unmarshal(jsonData, &wh.SummaryMetadata)
+	wh.MetricsMetadata = map[string]interface{}{
+		"ocpMajorVersion": clusterMetadata.OCPMajorVersion,
+		"ocpVersion":      clusterMetadata.OCPVersion,
+	}
 	return nil
 }
