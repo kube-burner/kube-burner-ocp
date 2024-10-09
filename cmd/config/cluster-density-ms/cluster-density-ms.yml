@@ -53,11 +53,6 @@ jobs:
       - objectTemplate: imagestream.yml
         replicas: 1
 
-      - objectTemplate: deployment.yml
-        replicas: 4
-        inputVars:
-          podReplicas: 2
-
       - objectTemplate: service.yml
         replicas: 2
         
@@ -69,3 +64,8 @@ jobs:
 
       - objectTemplate: configmap.yml
         replicas: 10
+
+      - objectTemplate: deployment.yml
+        replicas: 4
+        inputVars:
+          podReplicas: 2

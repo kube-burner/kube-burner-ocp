@@ -60,17 +60,6 @@ jobs:
       - objectTemplate: build.yml
         replicas: 1
 
-      - objectTemplate: deployment-server.yml
-        replicas: 3
-        inputVars:
-          podReplicas: 2
-
-      - objectTemplate: deployment-client.yml
-        replicas: 2
-        inputVars:
-          podReplicas: 2
-          ingressDomain: {{.INGRESS_DOMAIN}}
-
       - objectTemplate: service.yml
         replicas: 5
         
@@ -91,3 +80,14 @@ jobs:
 
       - objectTemplate: np-allow-from-ingress.yml
         replicas: 1
+
+      - objectTemplate: deployment-server.yml
+        replicas: 3
+        inputVars:
+          podReplicas: 2
+
+      - objectTemplate: deployment-client.yml
+        replicas: 2
+        inputVars:
+          podReplicas: 2
+          ingressDomain: {{.INGRESS_DOMAIN}}
