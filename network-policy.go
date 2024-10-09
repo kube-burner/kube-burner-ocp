@@ -146,6 +146,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	var iterations, podsPerNamespace, netpolPerNamespace, localPods, podSelectors, singlePorts, portRanges, remoteNamespaces, remotePods, cidrs int
 	var netpolLatency bool
 	var rc int
+	var convergenceTimeout, convergencePeriod int
 
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
@@ -170,6 +171,8 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			os.Setenv("CIDRS", fmt.Sprint(cidrs))
 			os.Setenv("NETPOL_LATENCY", strconv.FormatBool(netpolLatency))
 			os.Setenv("NETWORK_POLICY_PROXY_ROUTE", networkPolicyProxyRouteName)
+			os.Setenv("CONVERGENCE_TIMEOUT", fmt.Sprint(convergenceTimeout))
+			os.Setenv("CONVERGENCE_PERIOD", fmt.Sprint(convergencePeriod))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, "metrics-aggregated.yml")
@@ -196,6 +199,8 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd.Flags().IntVar(&remotePods, "remotes-pods", 2, "Number of pods in remote namespaces to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().IntVar(&cidrs, "cidrs", 2, "Number of cidrs to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().BoolVar(&netpolLatency, "networkpolicy-latency", true, "Enable network policy latency measurement")
+	cmd.Flags().IntVar(&convergenceTimeout, "convergence-timeout", 60, "Convergence timeout in seconds, provide integer value")
+	cmd.Flags().IntVar(&convergencePeriod, "convergence-period", 180, "Convergence period in seconds, provide integer value")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }
