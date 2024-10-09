@@ -63,6 +63,10 @@ func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
 	if err != nil {
 		return err
 	}
-	json.Unmarshal(jsonData, &wh.Metadata)
+	json.Unmarshal(jsonData, &wh.SummaryMetadata)
+	wh.MetricsMetadata = map[string]interface{}{
+		"ocpMajorVersion": clusterMetadata.OCPMajorVersion,
+		"ocpVersion":      clusterMetadata.OCPVersion,
+	}
 	return nil
 }

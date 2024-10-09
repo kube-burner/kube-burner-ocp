@@ -105,7 +105,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				ConfigSpec:      &workloads.ConfigSpec,
 				MetricsEndpoint: *metricsEndpoint,
 				UserMetaData:    userMetadata,
-				RawMetadata:     metadata,
+				MetricsMetadata: metadata,
 			})
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
@@ -137,7 +137,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				JobConfig: config.Job{
 					Name: jobName,
 				},
-				Metadata:   metricsScraper.Metadata,
+				Metadata:   metricsScraper.SummaryMetadata,
 				MetricName: "jobSummary",
 				Version:    fmt.Sprintf("%v@%v", version.Version, version.GitCommit),
 				Passed:     rc == 0,
