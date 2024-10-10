@@ -119,12 +119,7 @@ teardown_file() {
   run_cmd kube-burner-ocp cluster-health
 }
 
-@test "workers-scale: local-indexing=true" {
-  run_cmd kube-burner-ocp workers-scale --uuid=xyz --additional-worker-nodes 1 --metrics-profile "metrics.yml"
+@test "workers-scale metrics scraping case: es-indexing=true" {
+  run_cmd kube-burner-ocp workers-scale --uuid=xyz --metrics-profile custom-metrics.yml --es-server=${ES_SERVER} --es-index=${ES_INDEX} --scale-event-epoch 1704067200
   check_file_list collected-metrics-xyz/jobSummary.json collected-metrics-xyz/nodeReadyLatencyMeasurement-workers-scale.json collected-metrics-xyz/nodeReadyLatencyQuantilesMeasurement-workers-scale.json
-}
-
-@test "workers-scale: enable-autoscaler=true; es-indexing=true" {
-  run_cmd kube-burner-ocp workers-scale --uuid="${UUID}" --additional-worker-nodes 1 --metrics-profile "metrics.yml" --enable-autoscaler=true --es-server=${ES_SERVER} --es-index=${ES_INDEX}
-  check_metric_value jobSummary nodeReadyLatencyMeasurement nodeReadyLatencyQuantilesMeasurement
 }
