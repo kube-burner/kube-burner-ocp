@@ -35,6 +35,8 @@ type ScaleConfig struct {
 	GC                    bool
 	ScaleEventEpoch       int64
 	AutoScalerEnabled     bool
+	MCKubeConfig          string
+	IsHCP                 bool
 }
 
 // Struct to extract AMIID from aws provider spec

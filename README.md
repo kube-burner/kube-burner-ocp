@@ -276,6 +276,7 @@ Usage:
 Flags:
   -m, --metrics-profile string        Comma-separated list of metric profiles (default "metrics.yml")
       --metrics-directory string      Directory to dump the metrics files in, when using default local indexing (default "collected-metrics")
+      --mc-kubeconfig string          Path for management cluster kubeconfig
       --step duration                 Prometheus step size (default 30s)
       --additional-worker-nodes int   Additional workers to scale (default 3)
       --enable-autoscaler             Enables autoscaler while scaling the cluster
@@ -283,7 +284,6 @@ Flags:
       --user-metadata string          User provided metadata file, in YAML format
       --tarball-name string           Dump collected metrics into a tarball with the given name, requires local indexing
   -h, --help                          help for workers-scale
-
 ```
 
 ### Examples
