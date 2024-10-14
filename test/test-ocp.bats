@@ -120,6 +120,6 @@ teardown_file() {
 }
 
 @test "workers-scale metrics scraping case: es-indexing=true" {
-  run_cmd kube-burner-ocp workers-scale --uuid=xyz --metrics-profile custom-metrics.yml --es-server=${ES_SERVER} --es-index=${ES_INDEX} --scale-event-epoch 1704067200
-  check_file_list collected-metrics-xyz/jobSummary.json collected-metrics-xyz/nodeReadyLatencyMeasurement-workers-scale.json collected-metrics-xyz/nodeReadyLatencyQuantilesMeasurement-workers-scale.json
+  run_cmd kube-burner-ocp workers-scale --uuid=${UUID} --metrics-profile custom-metrics.yml --es-server=${ES_SERVER} --es-index=${ES_INDEX} --scale-event-epoch 1704067200
+  check_metric_value jobSummary nodeReadyLatencyMeasurement nodeReadyLatencyQuantilesMeasurement
 }
