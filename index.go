@@ -106,7 +106,6 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				MetricsEndpoint: *metricsEndpoint,
 				UserMetaData:    userMetadata,
 				MetricsMetadata: metadata,
-				SummaryMetadata: metadata,
 			})
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
