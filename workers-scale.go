@@ -36,8 +36,8 @@ import (
 
 // NewWorkersScale orchestrates scaling workers in ocp wrapper
 func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobra.Command {
-	var enableAutoscaler bool
-	var metricsProfile string
+	var enableAutoscaler, isHCP bool
+	var metricsProfile, mcKubeConfig string
 	var userMetadata, metricsDirectory string
 	var prometheusStep time.Duration
 	var uuid string
@@ -127,6 +127,13 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				break
 			}
 			scenario := fetchScenario(enableAutoscaler, clusterMetadata)
+			if _, ok := scenario.(*wscale.RosaScenario); ok {
+				if clusterMetadata.MasterNodesCount == 0 && clusterMetadata.InfraNodesCount == 0 {
+					isHCP = true
+				}
+			} else {
+				isHCP = false
+			}
 			scenario.OrchestrateWorkload(wscale.ScaleConfig{
 				UUID:                  uuid,
 				AdditionalWorkerNodes: additionalWorkerNodes,
@@ -135,6 +142,8 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				GC:                    gc,
 				ScaleEventEpoch:       scaleEventEpoch,
 				AutoScalerEnabled:     enableAutoscaler,
+				MCKubeConfig:          mcKubeConfig,
+				IsHCP:                 isHCP,
 			})
 			end := time.Now().Unix()
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
@@ -172,6 +181,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 	}
 	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "Comma-separated list of metric profiles")
 	cmd.Flags().StringVar(&metricsDirectory, "metrics-directory", "collected-metrics", "Directory to dump the metrics files in, when using default local indexing")
+	cmd.Flags().StringVar(&mcKubeConfig, "mc-kubeconfig", "", "Path for management cluster kubeconfig")
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
 	cmd.Flags().IntVar(&additionalWorkerNodes, "additional-worker-nodes", 3, "Additional workers to scale")
 	cmd.Flags().BoolVar(&enableAutoscaler, "enable-autoscaler", false, "Enables autoscaler while scaling the cluster")

@@ -16,15 +16,20 @@ package workerscale
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	machinev1beta1 "github.com/openshift/client-go/machine/clientset/versioned/typed/machine/v1beta1"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	infrav1 "sigs.k8s.io/cluster-api-provider-aws/v2/api/v1beta2"
+	"sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // helper function to create a pointer to an int32
@@ -49,6 +54,23 @@ func getMachineClient(restConfig *rest.Config) *machinev1beta1.MachineV1beta1Cli
 	}
 
 	return machineClient
+}
+
+// getCAPIClient create a cluster api client
+func getCAPIClient(restConfig *rest.Config) client.Client {
+	capiScheme := runtime.NewScheme()
+	if err := v1beta1.AddToScheme(capiScheme); err != nil {
+		log.Fatalf("error adding CAPI types to scheme: %s", err)
+	}
+	if err := infrav1.AddToScheme(capiScheme); err != nil {
+		log.Fatalf("error adding AWS CAPI types to scheme: %s", err)
+	}
+	capiClient, err := client.New(restConfig, client.Options{Scheme: capiScheme})
+	if err != nil {
+		log.Fatalf("error creating CAPI client: %s", err)
+	}
+
+	return capiClient
 }
 
 // isNodeReady checks if a node is ready
@@ -78,4 +100,24 @@ func waitForNodes(clientset kubernetes.Interface) error {
 		log.Infof("All nodes are ready")
 		return true, nil
 	})
+}
+
+// getHCNamespace gets the longest hosted cluster namespace from management cluster
+func getHCNamespace(clientset kubernetes.Interface, clusterID string) string {
+	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		log.Fatalf("Error listing the namespaces: %s", err)
+	}
+
+	longestNamespace := ""
+	maxLength := 0
+	for _, ns := range namespaces.Items {
+		if strings.Contains(ns.Name, clusterID) {
+			if len(ns.Name) > maxLength {
+				longestNamespace = ns.Name
+				maxLength = len(ns.Name)
+			}
+		}
+	}
+	return longestNamespace
 }

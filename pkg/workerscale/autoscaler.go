@@ -83,7 +83,7 @@ func createBatchJob(clientset kubernetes.Interface) (string, time.Time) {
 					Containers: []v1.Container{
 						{
 							Name:    "work",
-							Image:   "quay.io/quay/busybox:latest",
+							Image:   "quay.io/cloud-bulldozer/nginx:latest",
 							Command: []string{"sleep", "300"},
 							Resources: v1.ResourceRequirements{
 								Requests: v1.ResourceList{
@@ -163,6 +163,16 @@ func createMachineAutoscalers(dynamicClient dynamic.Interface, machineSetsToEdit
 		if err != nil {
 			if errors.IsAlreadyExists(err) {
 				log.Infof("machine autoscaler resource %s already exists", machineSet)
+				existingAutoscaler, err := dynamicClient.Resource(gvr).Namespace(machineNamespace).Get(context.TODO(), machineSet, metav1.GetOptions{})
+				if err != nil {
+					log.Fatalf("failed to get MachineAutoscaler: %v", err)
+				}
+				existingAutoscaler.Object["spec"] = machineAutoscaler.Object["spec"]
+				_, err = dynamicClient.Resource(gvr).Namespace(machineNamespace).Update(context.TODO(), existingAutoscaler, metav1.UpdateOptions{})
+				if err != nil {
+					log.Fatalf("failed to update MachineAutoscaler: %v", err)
+				}
+				log.Infof("MachineAutoscaler updated: %v", machineSet)
 				return true
 			} else {
 				log.Fatalf("failed to create MachineAutoscaler: %v", err)
@@ -233,6 +243,16 @@ func createAutoScaler(dynamicClient dynamic.Interface, maxNodesTotal int) {
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
 			log.Infof("cluster autoscaler resource %s already exists", defaultClusterAutoScaler)
+			existingAutoscaler, err := dynamicClient.Resource(gvr).Namespace("").Get(context.TODO(), defaultClusterAutoScaler, metav1.GetOptions{})
+			if err != nil {
+				log.Fatalf("failed to get ClusterAutoscaler: %v", err)
+			}
+			existingAutoscaler.Object["spec"] = clusterAutoscaler.Object["spec"]
+			_, err = dynamicClient.Resource(gvr).Namespace("").Update(context.TODO(), existingAutoscaler, metav1.UpdateOptions{})
+			if err != nil {
+				log.Fatalf("failed to update ClusterAutoscaler: %v", err)
+			}
+			log.Infof("Cluster Autoscaler updated: %v", defaultClusterAutoScaler)
 			return
 		} else {
 			log.Fatalf("failed to create ClusterAutoscaler: %v", err)
