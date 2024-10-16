@@ -66,7 +66,7 @@ func openShiftCmd() *cobra.Command {
 			return
 		}
 		util.ConfigureLogging(cmd)
-		util.SetupLogging(workloadConfig.UUID)
+		util.SetupLogging("ocp-"+workloadConfig.UUID)
 		if extract {
 			if err := workloads.ExtractWorkload(ocpConfig, configDir, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
 				log.Fatal(err.Error())
