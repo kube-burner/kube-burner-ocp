@@ -1,0 +1,92 @@
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: convergence-tracker-{{.Replica}}
+spec:
+  selector:
+    matchLabels:
+      app: convergence-tracker
+  template:
+    metadata:
+      labels:
+        name: convergence-tracker
+        app: convergence-tracker
+    spec:
+      serviceAccountName: convergence-tracker
+      containers:
+      - image: quay.io/cloud-bulldozer/convergencetracker:latest
+        name: tracker
+        securityContext:
+          privileged: true
+        command: [ "/bin/bash", "-c", "python openflow-tracker.py"]
+        resources:
+          requests:
+            memory: "25Mi"
+            cpu: "25m"
+        volumeMounts:
+        - name: openvswitch
+          mountPath: /var/run/openvswitch
+        - name: host-var-log-ovs
+          mountPath: /var/log/openvswitch
+        - name: ovn
+          mountPath: /var/run/ovn
+        - name: ovn-ic
+          mountPath: /var/run/ovn-ic
+        - name: pod-logs
+          mountPath: /var/log/pods
+        env:
+        - name: CONVERGENCE_PERIOD
+          value: "{{.convergence_period}}"
+        - name: CONVERGENCE_TIMEOUT
+          value: "{{.convergence_timeout}}"
+        - name: POLL_TIMEOUT
+          value: "5"
+        - name: ES_SERVER
+          value: {{.es_server}}
+        - name: ES_INDEX_NETPOL
+          value: {{.es_index}}
+        - name: UUID
+          value: {{.UUID}}
+        - name: METADATA
+          value: "{{.metadata}}"
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        imagePullPolicy: IfNotPresent
+      volumes:
+      - name: openvswitch
+        hostPath:
+          path: /var/run/openvswitch
+      - name: ovn
+        hostPath:
+          path: /var/run/ovn/
+      - name: ovn-ic
+        hostPath:
+          path: /var/run/ovn-ic/
+      - name: ovn-kubernetes
+        hostPath:
+          path: /var/run/ovn-kubernetes
+      - name: host-var-log-ovs
+        hostPath:
+          path: /var/log/openvswitch
+      - name: pod-logs
+        hostPath:
+          path: /var/log/pods
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+      restartPolicy: Always
+
