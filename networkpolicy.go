@@ -24,7 +24,7 @@ import (
 )
 
 // NewNetworkPolicy holds network-policy workload
-func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
+func NewNetworkPolicyLegacy(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, churnPercent, churnCycles int
 	var churn bool
 	var churnDelay, churnDuration time.Duration
