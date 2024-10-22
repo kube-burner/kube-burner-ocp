@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
@@ -36,16 +35,15 @@ import (
 
 // NewWorkersScale orchestrates scaling workers in ocp wrapper
 func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobra.Command {
-	var enableAutoscaler, isHCP bool
-	var metricsProfile, mcKubeConfig string
-	var userMetadata, metricsDirectory string
-	var prometheusStep time.Duration
-	var uuid string
 	var err error
-	var scaleEventEpoch int64
+	var enableAutoscaler, isHCP bool
+	var uuid, mcKubeConfig string
+	var metricsProfiles []string
+	var prometheusStep time.Duration
+	var scaleEventEpoch, start, end int64
 	var rc, additionalWorkerNodes int
 	var prometheusURL, prometheusToken string
-	var tarballName string
+	var userMetadata, metricsDirectory, tarballName string
 	var indexer config.MetricsEndpoint
 	var clusterMetadataMap map[string]interface{}
 	const autoScaled = "autoScaled"
@@ -58,7 +56,9 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			os.Exit(rc)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			start := time.Now().Unix()
+			if start == 0 {
+				start = time.Now().Unix()
+			}
 			uuid, _ = cmd.Flags().GetString("uuid")
 			esServer, _ := cmd.Flags().GetString("es-server")
 			esIndex, _ := cmd.Flags().GetString("es-index")
@@ -71,9 +71,6 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 					log.Fatal("Error obtaining prometheus information from cluster: ", err.Error())
 				}
 			}
-			metricsProfiles := strings.FieldsFunc(metricsProfile, func(r rune) bool {
-				return r == ',' || r == ' '
-			})
 			indexer = config.MetricsEndpoint{
 				Endpoint:      prometheusURL,
 				Token:         prometheusToken,
@@ -145,7 +142,9 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				MCKubeConfig:          mcKubeConfig,
 				IsHCP:                 isHCP,
 			})
-			end := time.Now().Unix()
+			if end == 0 {
+				end = time.Now().Unix()
+			}
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
 					Start: time.Unix(start, 0),
@@ -179,7 +178,9 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			burner.IndexJobSummary([]burner.JobSummary{jobSummary}, indexerValue)
 		},
 	}
-	cmd.Flags().StringVarP(&metricsProfile, "metrics-profile", "m", "metrics.yml", "Comma-separated list of metric profiles")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-nodebootup.yml", "metrics-nodebootup-report.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().Int64Var(&start, "start", 0, "Epoch start time")
+	cmd.Flags().Int64Var(&end, "end", 0, "Epoch end time")
 	cmd.Flags().StringVar(&metricsDirectory, "metrics-directory", "collected-metrics", "Directory to dump the metrics files in, when using default local indexing")
 	cmd.Flags().StringVar(&mcKubeConfig, "mc-kubeconfig", "", "Path for management cluster kubeconfig")
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
