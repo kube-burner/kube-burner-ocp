@@ -49,7 +49,7 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 	setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
 	measurements.Start()
 	createMachineAutoscalers(dynamicClient, machineSetsToEdit)
-	createAutoScaler(dynamicClient, len(prevMachineDetails)+scaleConfig.AdditionalWorkerNodes)
+	createAutoScaler(dynamicClient, autoScalerBuffer+len(prevMachineDetails)+scaleConfig.AdditionalWorkerNodes)
 	triggerJob, triggerTime := createBatchJob(clientSet)
 	// Delay for the clusterautoscaler resources to come up
 	time.Sleep(5 * time.Minute)
