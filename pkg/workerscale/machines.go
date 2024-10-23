@@ -45,6 +45,7 @@ func getMachines(machineClient *machinev1beta1.MachineV1beta1Client, scaleEventE
 
 	for _, machine := range machines.Items {
 		if _, ok := machine.Labels["machine.openshift.io/cluster-api-machine-role"]; ok &&
+			machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "master" &&
 			machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "infra" &&
 			machine.Labels["machine.openshift.io/cluster-api-machine-role"] != "workload" {
 			if machine.Status.Phase != nil && *machine.Status.Phase == "Running" && machine.CreationTimestamp.Time.UTC().Unix() > scaleEventEpoch {
