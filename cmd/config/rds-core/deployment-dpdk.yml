@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dpdk-{{.Replica}}
+  annotations:
+    # Disable CPU balance with CRIO
+    irq-load-balancing.crio.io: "disable"
+    cpu-load-balancing.crio.io: "disable"
+    cpu-quota.crio.io: "disable"
+  labels:
+    group: load
+    svc: dpdk-{{.Replica}}
+spec:
+  replicas: {{.podReplicas}}
+  selector:
+    matchLabels:
+      name: dpdk-{{.Replica}}
+  template:
+    metadata:
+      labels:
+        group: load
+        name: dpdk-{{.Replica}}
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "sriov-net-{{ .Iteration }}-1" },
+          { "name": "sriov-net-{{ .Iteration }}-2" }
+        ]'
+    spec:
+      runtimeClassName: performance-{{.perf_profile}}
+      containers:
+        - name: dpdk
+          image: ghcr.io/abraham2512/fedora-stress-ng:master
+          imagePullPolicy: Always
+          # Request and Limits must be identical for the Pod to be assigned to the QoS Guarantee
+          resources:
+            requests:
+              cpu: {{.dpdk_cores}}
+              memory: 1024M
+              hugepages-1Gi: 16Gi
+            limits:
+              cpu: {{.dpdk_cores}}
+              memory: 1024M
+              hugepages-1Gi: 16Gi
+          env:
+            - name: stress_cpu
+              value: "4"
+            - name: stress_vm
+              value: "1"
+            - name: stress_vm-bytes
+              value: "512M"
+          volumeMounts:
+            - mountPath: /hugepages
+              name: hugepage
+      dnsPolicy: Default
+      terminationGracePeriodSeconds: 1
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker-dpdk
+                operator: Exists
+      # Add not-ready/unreachable tolerations for 15 minutes so that node
+      # failure doesn't trigger pod deletion.
+      tolerations:
+        - key: "node.kubernetes.io/not-ready"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 900
+        - key: "node.kubernetes.io/unreachable"
+          operator: "Exists"
+          effect: "NoExecute"
+          tolerationSeconds: 900
+      volumes:
+        - name: hugepage
+          emptyDir:
+            medium: HugePages
