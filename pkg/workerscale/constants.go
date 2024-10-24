@@ -21,6 +21,7 @@ const JobName = "workers-scale"
 const machineNamespace = "openshift-machine-api"
 const defaultNamespace = "default"
 const defaultClusterAutoScaler = "default"
+const autoScalerBuffer = 10
 
 // Measurement constants
 const measurementName = "nodeLatency"
