@@ -1,0 +1,25 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: rds-{{.Replica}}
+  annotations:
+    metallb.universe.tf/address-pool: address-pool
+    kube-burner.io/service-latency: "false"
+spec:
+  selector:
+    app: nginx
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+    - name: http1
+      protocol: TCP
+      port: 81
+      targetPort: 8080
+    - name: http2
+      protocol: TCP
+      port: 82
+      targetPort: 8080
+  type: LoadBalancer

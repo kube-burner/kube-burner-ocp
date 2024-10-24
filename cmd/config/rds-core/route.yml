@@ -1,0 +1,11 @@
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: rds-{{.Replica}}
+spec:
+  to:
+    kind: Service
+    name: rds-{{.Replica}}
+  tls:
+    termination: edge

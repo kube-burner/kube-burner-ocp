@@ -259,10 +259,72 @@ Pre-requisites:
 	- 12 service(15 ports each) with 8 pod endpoints, 12 service(15 ports each) with 6 pod endpoints, 12 service(15 ports each) with 5 pod endpoints
 	- 29 service(15 ports each) with 4 pod endpoints, 29 service(15 ports each) with 6 pod endpoints
 
-## Workers Scale 
+## Core RDS workloads
+
+The telco core reference design specification (RDS) describes OpenShift Container Platform clusters running on commodity hardware that can support large scale telco applications including control plane and some centralized data plane functions. It captures the recommended, tested, and supported configurations to get reliable and repeatable performance for clusters running the telco core profile.
+
+Pre-requisites:
+ - A **PerformanceProfile** with isolated and reserved cores, 1G hugepages and and `topologyPolicy=single-numa-node`. Hugepages should be allocated in the first NUMA node (the one that would be used by DPDK deployments):
+     ```yaml
+      hugepages:
+      defaultHugepagesSize: 1G
+      pages:
+      - count: 160
+        node: 0
+        size: 1G
+      - count: 6
+        node: 1
+        size: 1G
+     ```
+ - **MetalLB operator** limiting speaker pods to specific nodes (aprox. 10%, 12 in the case of 120 node iterations with the corresponding ***worker-metallb*** label):
+     ```yaml
+     apiVersion: metallb.io/v1beta1
+     kind: MetalLB
+     metadata:
+       name: metallb
+       namespace: metallb-system
+     spec:
+       nodeSelector:
+         node-role.kubernetes.io/worker-metallb: ""
+       speakerTolerations:
+       - key: "Example"
+         operator: "Exists"
+         effect: "NoExecute"
+     ```
+ - **SRIOV operator** with its corresponding *SriovNetworkNodePolicy*
+ - Some nodes (i.e.: 25% of them) with the ***worker-dpdk*** label to host the DPDK pods, i.e.:
+     ```
+     $ kubectl label node worker1 node-role.kubernetes.io/worker-dpdk=
+     ```
+
+Object count:
+| Iterations / nodes / namespaces   | 1    | 120                                 |
+| --------------------------------- | ---- | ----------------------------------- |
+| configmaps                        | 30   | 3600                                |
+| deployments_best_effort           | 25   | 3000                                |
+| deployments_dpdk                  | 2    | 240 (assuming 24 worker-dpdk nodes) |
+| endpoints (210x service)          | 4200 | 504000                              |
+| endpoints lb (90 x service)       | 90   | 10800                               |
+| networkPolicy                     | 3    | 360                                 |
+| namespaces                        | 1    | 120                                 |
+| pods_best_effort (2 x deployment) | 50   | 6000                                |
+| pods_dpdk (1 x deployment)        | 2    | 240 (assuming 24 worker-dpdk nodes) |
+| route                             | 2    | 240                                 |
+| services                          | 20   | 2400                                |
+| services (lb)                     | 1    | 120                                 |
+| secrets                           | 42   | 5040                                |
+
+
+Input parameters specific to the workload:
+| Parameter           | Description                                                                                      | Default value |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
+| dpdk-cores          | Number of cores assigned for each DPDK pod (should fill all the isolated cores of one NUMA node) | 2             |
+| performance-profile | Name of the performance profile implemented on the cluster                                       | default       |
+
+## Workers Scale
 As a day2 operation, we can use this option to scale our cluster's worker nodes to a desired count and capture their bootup times.
 
-!!! Note    
+!!! Note
 
     This is only supported for openshift clusters hosted on AWS at the moment.
 
