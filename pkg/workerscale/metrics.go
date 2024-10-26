@@ -90,7 +90,13 @@ func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[stri
 		nmValue, _ := nodeMetrics.Load(info.nodeUID)
 		nodeMetricValue := nmValue.(measurements.NodeMetric)
 		uuid = nodeMetricValue.UUID
+		// Prevents OS indexing error due to conflicts
+		if osID, exists := nodeMetricValue.Labels["node.openshift.io/os_id"]; exists {
+			nodeMetricValue.Labels["node_openshift_io_os_id"] = osID
+			delete(nodeMetricValue.Labels, "node.openshift.io/os_id")
+		}
 		normLatencies = append(normLatencies, NodeReadyMetric{
+			Timestamp:                time.Now().UTC(),
 			ScaleEventTimestamp:      scaleEventTimestamp,
 			MachineCreationTimestamp: machineCreationTimeStamp,
 			MachineCreationLatency:   int(machineCreationTimeStamp.Sub(scaleEventTimestamp).Milliseconds()),

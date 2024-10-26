@@ -53,6 +53,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 		Long:         "If no other indexer is specified, local indexer is used by default",
 		SilenceUsage: true,
 		PostRun: func(cmd *cobra.Command, args []string) {
+			log.Info("👋 Exiting kube-burner ", uuid)
 			os.Exit(rc)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -96,6 +97,8 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			}
 
 			clusterMetadata, err = ocpMetaAgent.GetClusterMetadata()
+			clusterMetadata.WorkerNodesCount += additionalWorkerNodes
+			clusterMetadata.TotalNodes += additionalWorkerNodes
 			if err != nil {
 				log.Fatal("Error obtaining clusterMetadata: ", err.Error())
 			}
