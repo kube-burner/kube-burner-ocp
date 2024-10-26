@@ -146,8 +146,6 @@ func runRosaWithLogin(args ...string) ([]byte, error) {
 	fullCommand := fmt.Sprintf("%s && %s", loginCommand, mainCommand)
 
 	cmd := exec.Command("bash", "-c", fullCommand)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	cmd.Env = os.Environ()
 
 	output, err := cmd.CombinedOutput()
