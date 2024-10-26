@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -127,7 +126,7 @@ func editMachinepool(clusterID string, minReplicas int, maxReplicas int, autoSca
 	}
 	editOutput, err := runRosaWithLogin(cmdArgs...)
 	if err != nil {
-		log.Fatalf("Failed to edit machinepool: %v", err)
+		log.Fatalf("Failed to edit machinepool: %v. Output: %s", err, string(editOutput))
 	}
 	log.Infof("Machinepool edited successfully on cluster: %v", clusterID)
 	time.Sleep(1 * time.Minute)

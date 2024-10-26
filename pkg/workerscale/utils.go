@@ -131,7 +131,10 @@ func runRosaWithLogin(args ...string) ([]byte, error) {
 	rosaSSOClientID := os.Getenv("ROSA_SSO_CLIENT_ID")
 	rosaSSOClientSecret := os.Getenv("ROSA_SSO_CLIENT_SECRET")
 	rosaToken := os.Getenv("ROSA_TOKEN")
-	rosaLoginEnv = os.Getenv("ROSA_LOGIN_ENV")
+	var rosaLoginEnv = os.Getenv("ROSA_LOGIN_ENV")
+	if rosaLoginEnv == "" {
+		rosaLoginEnv = "staging" // default value
+	}
 	if rosaSSOClientID != "" && rosaSSOClientSecret != "" {
 		loginCommand = fmt.Sprintf("rosa login --env %s --client-id %s --client-secret %s >/dev/null 2>&1", rosaLoginEnv, rosaSSOClientID, rosaSSOClientSecret)
 	} else if rosaToken != "" {

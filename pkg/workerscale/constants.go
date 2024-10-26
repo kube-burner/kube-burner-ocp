@@ -30,5 +30,3 @@ const nodeReadyLatencyQuantilesMeasurement = "nodeReadyLatencyQuantilesMeasureme
 
 // Misc constants
 const maxWaitTimeout = 4 * time.Hour
-
-var rosaLoginEnv = "staging"
