@@ -76,7 +76,7 @@ type ProviderStatus struct {
 
 // NodeReadyMetric to capture details on node bootup
 type NodeReadyMetric struct {
-	Timestamp                time.Time         `json"timestamp"`
+	Timestamp                time.Time         `json:"timestamp"`
 	ScaleEventTimestamp      time.Time         `json:"scaleEventTimestamp"`
 	MachineCreationTimestamp time.Time         `json:"-"`
 	MachineCreationLatency   int               `json:"machineCreationLatency"`
