@@ -125,6 +125,8 @@ func editMachinepool(clusterID string, minReplicas int, maxReplicas int, autoSca
 		cmdArgs = append(cmdArgs, fmt.Sprintf("--replicas=%d", maxReplicas))
 	}
 	cmd := exec.Command("rosa", cmdArgs...)
+	// Pass the current environment to the command
+	cmd.Env = os.Environ()
 	editOutput, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Failed to edit machinepool: %v. Output: %s", err, string(editOutput))
@@ -144,9 +146,11 @@ func verifyRosaInstall() {
 	log.Info("ROSA CLI is installed.")
 
 	cmd := exec.Command("rosa", "whoami")
+	// Pass the current environment to the command
+	cmd.Env = os.Environ()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatal("You are not logged in. Please login using 'rosa login' and retry.")
+		log.Fatalf("You are not logged in. Please login using 'rosa login' and retry. Error: %v", err)
 	}
 	log.Info("You are already logged in.")
 	log.Debug(string(output))
@@ -173,6 +177,8 @@ func getClusterID(dynamicClient dynamic.Interface, mcPrescence bool) string {
 	// Special case for hcp where cluster version object has external ID
 	if mcPrescence {
 		cmd := exec.Command("rosa", "describe", "cluster", "-c", clusterID, "-o", "json")
+		// Pass the current environment to the command
+		cmd.Env = os.Environ()
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			log.Fatalf("Failed to describe cluster: %v", err)
