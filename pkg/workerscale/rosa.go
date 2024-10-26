@@ -151,7 +151,7 @@ func verifyRosaInstall() {
 	cmd.Env = os.Environ()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatal("You are not logged in. Please login using 'rosa login' and retry.")
+		log.Fatalf("You are not logged in. Please login using 'rosa login' and retry. Error: %v", err)
 	}
 	log.Info("You are already logged in.")
 	log.Debug(string(output))
