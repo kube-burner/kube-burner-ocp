@@ -16,9 +16,6 @@ package workerscale
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -123,34 +120,4 @@ func getHCNamespace(clientset kubernetes.Interface, clusterID string) string {
 		}
 	}
 	return longestNamespace
-}
-
-// Helper function to execute `rosa login` and the main `rosa` command in a single shell execution
-func runRosaWithLogin(args ...string) ([]byte, error) {
-	var loginCommand string
-	rosaSSOClientID := os.Getenv("ROSA_SSO_CLIENT_ID")
-	rosaSSOClientSecret := os.Getenv("ROSA_SSO_CLIENT_SECRET")
-	rosaToken := os.Getenv("ROSA_TOKEN")
-	var rosaLoginEnv = os.Getenv("ROSA_LOGIN_ENV")
-	if rosaLoginEnv == "" {
-		rosaLoginEnv = "staging" // default value
-	}
-	if rosaSSOClientID != "" && rosaSSOClientSecret != "" {
-		loginCommand = fmt.Sprintf("rosa login --env %s --client-id %s --client-secret %s >/dev/null 2>&1", rosaLoginEnv, rosaSSOClientID, rosaSSOClientSecret)
-	} else if rosaToken != "" {
-		loginCommand = fmt.Sprintf("rosa login --env %s --token %s >/dev/null 2>&1", rosaLoginEnv, rosaToken)
-	} else {
-		return nil, fmt.Errorf("Cannot login! You need to securely supply SSO credentials ROSA_SSO_CLIENT_ID/ROSA_SSO_CLIENT_SECRET or an ROSA_TOKEN!")
-	}
-	mainCommand := fmt.Sprintf("rosa %s", strings.Join(args, " "))
-	fullCommand := fmt.Sprintf("%s && %s", loginCommand, mainCommand)
-
-	cmd := exec.Command("bash", "-c", fullCommand)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute combined rosa command: %w", err)
-	}
-	return output, nil
 }
