@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -124,7 +125,8 @@ func editMachinepool(clusterID string, minReplicas int, maxReplicas int, autoSca
 	} else {
 		cmdArgs = append(cmdArgs, fmt.Sprintf("--replicas=%d", maxReplicas))
 	}
-	editOutput, err := runRosaWithLogin(cmdArgs...)
+	cmd := exec.Command("bash", "-c", "rosa"+" "+strings.Join(cmdArgs, " "))
+	editOutput, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Failed to edit machinepool: %v. Output: %s", err, string(editOutput))
 	}
@@ -142,10 +144,10 @@ func verifyRosaInstall() {
 	}
 	log.Info("ROSA CLI is installed.")
 
-	cmdArgs := []string{"whoami"}
-	output, err := runRosaWithLogin(cmdArgs...)
+	cmd := exec.Command("bash", "-c", "rosa whoami")
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("You are not logged in. Please login using 'rosa login' and retry. Error: %v", err)
+		log.Fatalf("You are not logged in. Please login using 'rosa login' and retry: %v. Output: %s", err, string(output))
 	}
 	log.Info("You are already logged in.")
 	log.Debug(string(output))
@@ -171,10 +173,10 @@ func getClusterID(dynamicClient dynamic.Interface, mcPrescence bool) string {
 
 	// Special case for hcp where cluster version object has external ID
 	if mcPrescence {
-		cmdArgs := []string{"describe", "cluster", "-c", clusterID, "-o", "json"}
-		output, err := runRosaWithLogin(cmdArgs...)
+		cmd := exec.Command("bash", "-c", "rosa", "describe", "cluster", "-c", clusterID, "-o", "json")
+		output, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Fatalf("Failed to describe cluster: %v", err)
+			log.Fatalf("Failed to describe cluster: %v. Output: %s", err, string(output))
 		}
 		var result map[string]interface{}
 		if err := json.Unmarshal(output, &result); err != nil {
