@@ -81,7 +81,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		if scaleConfig.AutoScalerEnabled {
 			triggerJob, triggerTime = createBatchJob(clientSet)
 			// Slightly more delay for the cluster autoscaler resources to come up
-			time.Sleep(2 * time.Minute)
+			time.Sleep(5 * time.Minute)
 		}
 		log.Info("Waiting for the machinesets to be ready")
 		if err = waitForWorkers(machineClient, clusterID, hcNamespace, scaleConfig.IsHCP); err != nil {
@@ -98,7 +98,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 			editMachinepool(clusterID, len(prevMachineDetails), len(prevMachineDetails), scaleConfig.AutoScalerEnabled, scaleConfig.IsHCP)
 			if scaleConfig.AutoScalerEnabled {
 				deleteBatchJob(clientSet, triggerJob)
-				time.Sleep(2 * time.Minute)
+				time.Sleep(5 * time.Minute)
 			}
 			log.Info("Waiting for the machinesets to scale down")
 			if err = waitForWorkers(machineClient, clusterID, hcNamespace, scaleConfig.IsHCP); err != nil {
