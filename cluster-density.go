@@ -59,7 +59,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				kubeClientProvider := config.NewKubeClientProvider("", "")
 				clientset, _ := kubeClientProvider.ClientSet(0, 0)
 				if !isImageRegistryAvailable(clientset) {
-					log.Fatal("image-registry deployment is not deployed")
+					log.Fatal("image-registry deployment is not available")
 				}
 			}
 			setMetrics(cmd, metricsProfiles)
