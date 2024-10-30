@@ -36,7 +36,7 @@ import (
 
 type RosaScenario struct{}
 
-func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
+func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) string {
 	var err error
 	var triggerJob string
 	var clusterID string
@@ -72,6 +72,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 			log.Error(err.Error())
 		}
 		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		return amiID
 	} else {
 		prevMachineDetails, _ := getMachineDetails(machineClient, 0, clusterID, hcNamespace, scaleConfig.IsHCP)
 		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
@@ -105,6 +106,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 				log.Fatalf("Error waiting for MachineSets to scale down: %v", err)
 			}
 		}
+		return amiID
 	}
 }
 

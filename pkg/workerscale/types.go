@@ -23,7 +23,7 @@ import (
 
 // Interface for our scenarios
 type Scenario interface {
-	OrchestrateWorkload(ScaleConfig)
+	OrchestrateWorkload(ScaleConfig) string
 }
 
 // ScaleConfig contains configuration for scaling

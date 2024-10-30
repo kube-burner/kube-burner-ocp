@@ -47,6 +47,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 	var indexer config.MetricsEndpoint
 	var clusterMetadataMap map[string]interface{}
 	const autoScaled = "autoScaled"
+	const imageID = "imageId"
 	cmd := &cobra.Command{
 		Use:          "workers-scale",
 		Short:        "Runs workers-scale sub-command",
@@ -60,6 +61,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			if start == 0 {
 				start = time.Now().Unix()
 			}
+			jobEnd := end
 			uuid, _ = cmd.Flags().GetString("uuid")
 			esServer, _ := cmd.Flags().GetString("es-server")
 			esIndex, _ := cmd.Flags().GetString("es-index")
@@ -120,7 +122,10 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				ConfigSpec:      &workloads.ConfigSpec,
 				MetricsEndpoint: *metricsEndpoint,
 				UserMetaData:    userMetadata,
-				MetricsMetadata: metadata,
+				MetricsMetadata: map[string]interface{}{
+					"ocpMajorVersion": clusterMetadata.OCPMajorVersion,
+					"ocpVersion":      clusterMetadata.OCPVersion,
+				},
 				SummaryMetadata: metadata,
 			})
 			var indexerValue indexers.Indexer
@@ -136,7 +141,7 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			} else {
 				isHCP = false
 			}
-			scenario.OrchestrateWorkload(wscale.ScaleConfig{
+			imageId := scenario.OrchestrateWorkload(wscale.ScaleConfig{
 				UUID:                  uuid,
 				AdditionalWorkerNodes: additionalWorkerNodes,
 				Metadata:              metricsScraper.MetricsMetadata,
@@ -147,8 +152,12 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 				MCKubeConfig:          mcKubeConfig,
 				IsHCP:                 isHCP,
 			})
+			metricsScraper.SummaryMetadata[imageID] = imageId
 			if end == 0 {
-				end = time.Now().Unix()
+				jobEnd = time.Now().Unix()
+				end = jobEnd + TenMinutes
+			} else {
+				end += TenMinutes
 			}
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
@@ -169,8 +178,8 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			}
 			jobSummary := burner.JobSummary{
 				Timestamp:    time.Unix(start, 0).UTC(),
-				EndTimestamp: time.Unix(end, 0).UTC(),
-				ElapsedTime:  time.Unix(end, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
+				EndTimestamp: time.Unix(jobEnd, 0).UTC(),
+				ElapsedTime:  time.Unix(jobEnd, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
 				UUID:         uuid,
 				JobConfig: config.Job{
 					Name: wscale.JobName,
