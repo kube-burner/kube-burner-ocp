@@ -97,8 +97,10 @@ func NewWorkersScale(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata
 			}
 
 			clusterMetadata, err = ocpMetaAgent.GetClusterMetadata()
-			clusterMetadata.WorkerNodesCount += additionalWorkerNodes
-			clusterMetadata.TotalNodes += additionalWorkerNodes
+			if scaleEventEpoch == 0 {
+				clusterMetadata.WorkerNodesCount += additionalWorkerNodes
+				clusterMetadata.TotalNodes += additionalWorkerNodes
+			}
 			if err != nil {
 				log.Fatal("Error obtaining clusterMetadata: ", err.Error())
 			}
