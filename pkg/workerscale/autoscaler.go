@@ -37,7 +37,7 @@ import (
 type AutoScalerScenario struct{}
 
 // Returns a new scenario object
-func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
+func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig ScaleConfig) string {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
@@ -67,6 +67,8 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 		log.Info("Restoring machine sets to previous state")
 		editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
 	}
+
+	return amiID
 }
 
 // createBatchJob creates a job to load the cluster

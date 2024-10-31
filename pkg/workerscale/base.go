@@ -26,7 +26,7 @@ import (
 type BaseScenario struct{}
 
 // Returns a new scenario object
-func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
+func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) string {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
@@ -43,6 +43,7 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		}
 		scaledMachineDetails, amiID := getMachines(machineClient, scaleConfig.ScaleEventEpoch)
 		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		return amiID
 	} else {
 		machineSetDetails := getMachineSets(machineClient)
 		prevMachineDetails, _ := getMachines(machineClient, 0)
@@ -61,6 +62,7 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 			log.Info("Restoring machine sets to previous state")
 			editMachineSets(machineClient, clientSet, machineSetsToEdit, false)
 		}
+		return amiID
 	}
 }
 
