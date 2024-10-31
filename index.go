@@ -15,6 +15,7 @@
 package ocp
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -33,7 +34,7 @@ import (
 )
 
 // NewIndex orchestrates indexing for ocp wrapper
-func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobra.Command {
+func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata, ocpConfig embed.FS) *cobra.Command {
 	var jobName string
 	var metricsProfiles []string
 	var start, end int64
@@ -44,6 +45,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 	var prometheusURL, prometheusToken string
 	var tarballName string
 	var indexer config.MetricsEndpoint
+	var embedded bool
 	var clusterMetadataMap map[string]interface{}
 	cmd := &cobra.Command{
 		Use:          "index",
@@ -102,11 +104,16 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				metadata[k] = v
 			}
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
+			if embedded {
+				workloads.ConfigSpec.EmbedFSDir = ConfigDir + "/metrics"
+				workloads.ConfigSpec.EmbedFS = ocpConfig
+			}
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
 				ConfigSpec:      &workloads.ConfigSpec,
 				MetricsEndpoint: *metricsEndpoint,
 				UserMetaData:    userMetadata,
 				MetricsMetadata: metadata,
+				EmbedConfig:     embedded,
 			})
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
@@ -147,6 +154,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 		},
 	}
 	cmd.Flags().StringSliceVarP(&metricsProfiles, "metrics-profile", "m", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&embedded, "embedded", false, "Use embedded metric profiles")
 	cmd.Flags().StringVar(&metricsDirectory, "metrics-directory", "collected-metrics", "Directory to dump the metrics files in, when using default local indexing")
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
 	cmd.Flags().Int64Var(&start, "start", time.Now().Unix()-3600, "Epoch start time")
