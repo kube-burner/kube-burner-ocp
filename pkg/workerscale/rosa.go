@@ -71,7 +71,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) s
 		if err := measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
-		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 		return amiID
 	} else {
 		prevMachineDetails, _ := getMachineDetails(machineClient, 0, clusterID, hcNamespace, scaleConfig.IsHCP)
@@ -93,7 +93,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) s
 		if err := measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
-		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, triggerTime.Unix())
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, triggerTime.Unix())
 		if scaleConfig.GC {
 			log.Info("Restoring machine pool to previous state")
 			editMachinepool(clusterID, len(prevMachineDetails), len(prevMachineDetails), scaleConfig.AutoScalerEnabled, scaleConfig.IsHCP)
