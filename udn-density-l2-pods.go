@@ -24,7 +24,7 @@ import (
 )
 
 // NewUDNDensityL3Pods holds udn-density-l3-pods workload
-func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
+func NewUDNDensityL2Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
 	var churn bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
@@ -32,8 +32,8 @@ func NewUDNDensityL3Pods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
-		Use:          "udn-density-l3-pods",
-		Short:        "Runs node-density-udn-l3 workload",
+		Use:          "udn-density-l2-pods",
+		Short:        "Runs node-density-udn-l2 workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			os.Setenv("CHURN", fmt.Sprint(churn))
