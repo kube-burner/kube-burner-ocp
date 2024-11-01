@@ -59,7 +59,7 @@ func (awsAutoScalerScenario *AutoScalerScenario) OrchestrateWorkload(scaleConfig
 	}
 	scaledMachineDetails, amiID := getMachines(machineClient, 0)
 	discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
-	finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID, 0)
+	finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, 0)
 	deleteAutoScaler(dynamicClient)
 	deleteMachineAutoscalers(dynamicClient, machineSetsToEdit)
 	deleteBatchJob(clientSet, triggerJob)

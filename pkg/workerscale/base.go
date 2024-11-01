@@ -42,7 +42,7 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) st
 			log.Error(err.Error())
 		}
 		scaledMachineDetails, amiID := getMachines(machineClient, scaleConfig.ScaleEventEpoch)
-		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 		return amiID
 	} else {
 		machineSetDetails := getMachineSets(machineClient)
@@ -57,7 +57,7 @@ func (awsScenario *BaseScenario) OrchestrateWorkload(scaleConfig ScaleConfig) st
 		}
 		scaledMachineDetails, amiID := getMachines(machineClient, 0)
 		discardPreviousMachines(prevMachineDetails, scaledMachineDetails)
-		finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		finalizeMetrics(machineSetsToEdit, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
 		if scaleConfig.GC {
 			log.Info("Restoring machine sets to previous state")
 			editMachineSets(machineClient, clientSet, machineSetsToEdit, false)

@@ -92,4 +92,5 @@ type NodeReadyMetric struct {
 	JobName                  string            `json:"jobName,omitempty"`
 	Name                     string            `json:"nodeName"`
 	Labels                   map[string]string `json:"labels"`
+	Metadata                 interface{}       `json:"metadata,omitempty"`
 }
