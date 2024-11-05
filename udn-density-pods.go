@@ -47,8 +47,8 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			if l2 && l3 {
-				// unset l3 if both are enabled.
+			// Disable l3 when the user chooses l2
+			if l2 {
 				l3 = false
 			}
 			if l3 {
@@ -73,5 +73,6 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Iterations")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.MarkFlagsMutuallyExclusive("layer2", "layer3")
 	return cmd
 }
