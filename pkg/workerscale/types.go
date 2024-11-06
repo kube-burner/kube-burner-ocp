@@ -23,7 +23,7 @@ import (
 
 // Interface for our scenarios
 type Scenario interface {
-	OrchestrateWorkload(ScaleConfig)
+	OrchestrateWorkload(ScaleConfig) string
 }
 
 // ScaleConfig contains configuration for scaling
@@ -76,7 +76,8 @@ type ProviderStatus struct {
 
 // NodeReadyMetric to capture details on node bootup
 type NodeReadyMetric struct {
-	ScaleEventTimestamp      time.Time         `json:"-"`
+	Timestamp                time.Time         `json:"timestamp"`
+	ScaleEventTimestamp      time.Time         `json:"scaleEventTimestamp"`
 	MachineCreationTimestamp time.Time         `json:"-"`
 	MachineCreationLatency   int               `json:"machineCreationLatency"`
 	MachineReadyTimestamp    time.Time         `json:"-"`
@@ -91,4 +92,5 @@ type NodeReadyMetric struct {
 	JobName                  string            `json:"jobName,omitempty"`
 	Name                     string            `json:"nodeName"`
 	Labels                   map[string]string `json:"labels"`
+	Metadata                 interface{}       `json:"metadata,omitempty"`
 }

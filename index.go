@@ -55,6 +55,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			os.Exit(rc)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			jobEnd := end
 			uuid, _ = cmd.Flags().GetString("uuid")
 			clusterMetadata, err := ocpMetaAgent.GetClusterMetadata()
 			if err != nil {
@@ -110,7 +111,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
 					Start: time.Unix(start, 0),
-					End:   time.Unix(end, 0),
+					End:   time.Unix(end+TenMinutes, 0),
 					JobConfig: config.Job{
 						Name: jobName,
 					},
@@ -131,8 +132,8 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			}
 			jobSummary := burner.JobSummary{
 				Timestamp:    time.Unix(start, 0).UTC(),
-				EndTimestamp: time.Unix(end, 0).UTC(),
-				ElapsedTime:  time.Unix(end, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
+				EndTimestamp: time.Unix(jobEnd, 0).UTC(),
+				ElapsedTime:  time.Unix(jobEnd, 0).UTC().Sub(time.Unix(start, 0).UTC()).Round(time.Second).Seconds(),
 				UUID:         uuid,
 				JobConfig: config.Job{
 					Name: jobName,

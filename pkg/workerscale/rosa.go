@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,7 +36,7 @@ import (
 
 type RosaScenario struct{}
 
-func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
+func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) string {
 	var err error
 	var triggerJob string
 	var clusterID string
@@ -70,7 +71,8 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		if err := measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
-		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, scaleConfig.ScaleEventEpoch)
+		return amiID
 	} else {
 		prevMachineDetails, _ := getMachineDetails(machineClient, 0, clusterID, hcNamespace, scaleConfig.IsHCP)
 		setupMetrics(scaleConfig.UUID, scaleConfig.Metadata, kubeClientProvider)
@@ -80,7 +82,7 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		if scaleConfig.AutoScalerEnabled {
 			triggerJob, triggerTime = createBatchJob(clientSet)
 			// Slightly more delay for the cluster autoscaler resources to come up
-			time.Sleep(2 * time.Minute)
+			time.Sleep(5 * time.Minute)
 		}
 		log.Info("Waiting for the machinesets to be ready")
 		if err = waitForWorkers(machineClient, clusterID, hcNamespace, scaleConfig.IsHCP); err != nil {
@@ -91,19 +93,20 @@ func (rosaScenario *RosaScenario) OrchestrateWorkload(scaleConfig ScaleConfig) {
 		if err := measurements.Stop(); err != nil {
 			log.Error(err.Error())
 		}
-		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Indexer, amiID, triggerTime.Unix())
+		finalizeMetrics(&sync.Map{}, scaledMachineDetails, scaleConfig.Metadata, scaleConfig.Indexer, amiID, triggerTime.Unix())
 		if scaleConfig.GC {
 			log.Info("Restoring machine pool to previous state")
 			editMachinepool(clusterID, len(prevMachineDetails), len(prevMachineDetails), scaleConfig.AutoScalerEnabled, scaleConfig.IsHCP)
 			if scaleConfig.AutoScalerEnabled {
 				deleteBatchJob(clientSet, triggerJob)
-				time.Sleep(2 * time.Minute)
+				time.Sleep(5 * time.Minute)
 			}
 			log.Info("Waiting for the machinesets to scale down")
 			if err = waitForWorkers(machineClient, clusterID, hcNamespace, scaleConfig.IsHCP); err != nil {
 				log.Fatalf("Error waiting for MachineSets to scale down: %v", err)
 			}
 		}
+		return amiID
 	}
 }
 
@@ -124,7 +127,7 @@ func editMachinepool(clusterID string, minReplicas int, maxReplicas int, autoSca
 	} else {
 		cmdArgs = append(cmdArgs, fmt.Sprintf("--replicas=%d", maxReplicas))
 	}
-	cmd := exec.Command("rosa", cmdArgs...)
+	cmd := exec.Command("bash", "-c", "rosa"+" "+strings.Join(cmdArgs, " "))
 	editOutput, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Fatalf("Failed to edit machinepool: %v. Output: %s", err, string(editOutput))
@@ -143,10 +146,10 @@ func verifyRosaInstall() {
 	}
 	log.Info("ROSA CLI is installed.")
 
-	cmd := exec.Command("rosa", "whoami")
+	cmd := exec.Command("bash", "-c", "rosa whoami")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatal("You are not logged in. Please login using 'rosa login' and retry.")
+		log.Fatalf("You are not logged in. Please login using 'rosa login' and retry: %v. Output: %s", err, string(output))
 	}
 	log.Info("You are already logged in.")
 	log.Debug(string(output))
@@ -172,10 +175,10 @@ func getClusterID(dynamicClient dynamic.Interface, mcPrescence bool) string {
 
 	// Special case for hcp where cluster version object has external ID
 	if mcPrescence {
-		cmd := exec.Command("rosa", "describe", "cluster", "-c", clusterID, "-o", "json")
+		cmd := exec.Command("bash", "-c", "rosa", "describe", "cluster", "-c", clusterID, "-o", "json")
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			log.Fatalf("Failed to describe cluster: %v", err)
+			log.Fatalf("Failed to describe cluster: %v. Output: %s", err, string(output))
 		}
 		var result map[string]interface{}
 		if err := json.Unmarshal(output, &result); err != nil {

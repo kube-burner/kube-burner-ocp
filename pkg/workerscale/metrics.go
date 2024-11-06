@@ -49,9 +49,9 @@ func setupMetrics(uuid string, metadata map[string]interface{}, kubeClientProvid
 }
 
 // finalizeMetrics performs and indexes required metrics
-func finalizeMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, indexerValue indexers.Indexer, amiID string, scaleEventEpoch int64) {
+func finalizeMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, metadata map[string]interface{}, indexerValue indexers.Indexer, amiID string, scaleEventEpoch int64) {
 	nodeMetrics := measurements.GetMetrics()
-	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, nodeMetrics[0], amiID, scaleEventEpoch)
+	normLatencies, latencyQuantiles := calculateMetrics(machineSetsToEdit, scaledMachineDetails, metadata, nodeMetrics[0], amiID, scaleEventEpoch)
 	for _, q := range latencyQuantiles {
 		nq := q.(mmetrics.LatencyQuantiles)
 		log.Infof("%s: %s 50th: %v 99th: %v max: %v avg: %v", JobName, nq.QuantileName, nq.P50, nq.P99, nq.Max, nq.Avg)
@@ -66,7 +66,7 @@ func finalizeMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[strin
 }
 
 // calculateMetrics calculates the metrics for node bootup times
-func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, nodeMetrics *sync.Map, amiID string, scaleEventEpoch int64) ([]interface{}, []interface{}) {
+func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[string]MachineInfo, metadata map[string]interface{}, nodeMetrics *sync.Map, amiID string, scaleEventEpoch int64) ([]interface{}, []interface{}) {
 	var scaleEventTimestamp time.Time
 	var uuid, machineSetName string
 	var normLatencies, latencyQuantiles []interface{}
@@ -90,7 +90,14 @@ func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[stri
 		nmValue, _ := nodeMetrics.Load(info.nodeUID)
 		nodeMetricValue := nmValue.(measurements.NodeMetric)
 		uuid = nodeMetricValue.UUID
+		// Prevents OS indexing error due to mapping conflicts
+		for key, value := range nodeMetricValue.Labels {
+			newKey := strings.ReplaceAll(key, ".", "_")
+			nodeMetricValue.Labels[newKey] = value
+			delete(nodeMetricValue.Labels, key)
+		}
 		normLatencies = append(normLatencies, NodeReadyMetric{
+			Timestamp:                time.Now().UTC(),
 			ScaleEventTimestamp:      scaleEventTimestamp,
 			MachineCreationTimestamp: machineCreationTimeStamp,
 			MachineCreationLatency:   int(machineCreationTimeStamp.Sub(scaleEventTimestamp).Milliseconds()),
@@ -106,6 +113,7 @@ func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[stri
 			JobName:                  JobName,
 			Name:                     nodeMetricValue.Name,
 			Labels:                   nodeMetricValue.Labels,
+			Metadata:                 metadata,
 		})
 	}
 	quantileMap := map[string][]float64{}
@@ -121,6 +129,7 @@ func calculateMetrics(machineSetsToEdit *sync.Map, scaledMachineDetails map[stri
 		latencySummary.UUID = uuid
 		latencySummary.MetricName = nodeReadyLatencyQuantilesMeasurement
 		latencySummary.JobName = JobName
+		latencySummary.Metadata = metadata
 		return latencySummary
 	}
 
