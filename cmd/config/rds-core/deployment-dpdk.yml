@@ -3,10 +3,7 @@ kind: Deployment
 metadata:
   name: dpdk-{{.Replica}}
   annotations:
-    # Disable CPU balance with CRIO
-    irq-load-balancing.crio.io: "disable"
-    cpu-load-balancing.crio.io: "disable"
-    cpu-quota.crio.io: "disable"
+
   labels:
     group: load
     svc: dpdk-{{.Replica}}
@@ -21,6 +18,9 @@ spec:
         group: load
         name: dpdk-{{.Replica}}
       annotations:
+        irq-load-balancing.crio.io: "disable"
+        cpu-load-balancing.crio.io: "disable"
+        cpu-quota.crio.io: "disable"
         k8s.v1.cni.cncf.io/networks: '[
           { "name": "sriov-net-{{ .Iteration }}-1" },
           { "name": "sriov-net-{{ .Iteration }}-2" }
