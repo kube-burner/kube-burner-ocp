@@ -1,0 +1,1093 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+      <link rel="icon" href="media/logo/kube-burner-logo-mini.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.44">
+    
+    
+      
+        <title>Kube-burner-ocp</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.0253249f.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="css/extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#openshift-wrapper" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="Kube-burner-ocp" class="md-header__button md-logo" aria-label="Kube-burner-ocp" data-md-component="logo">
+      
+  <img src="media/logo/kube-burner-logo-mini.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Kube-burner-ocp
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              OpenShift
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label=""  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/kube-burner/kube-burner-ocp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="Kube-burner-ocp" class="md-nav__button md-logo" aria-label="Kube-burner-ocp" data-md-component="logo">
+      
+  <img src="media/logo/kube-burner-logo-mini.png" alt="logo">
+
+    </a>
+    Kube-burner-ocp
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/kube-burner/kube-burner-ocp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    OpenShift
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    OpenShift
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#multiple-endpoints-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Multiple endpoints support
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Multiple endpoints support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#metrics-endpointsyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      metrics-endpoints.yaml
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cluster-density-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      Cluster density workloads
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Cluster density workloads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cluster-density-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      cluster-density-v2
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cluster-density-ms" class="md-nav__link">
+    <span class="md-ellipsis">
+      cluster-density-ms
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#node-density-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      Node density workloads
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Node density workloads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#node-density" class="md-nav__link">
+    <span class="md-ellipsis">
+      node-density
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-density-cni" class="md-nav__link">
+    <span class="md-ellipsis">
+      node-density-cni
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#node-density-heavy" class="md-nav__link">
+    <span class="md-ellipsis">
+      node-density-heavy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#udn-density-l3-pods" class="md-nav__link">
+    <span class="md-ellipsis">
+      udn-density-l3-pods
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network-policy-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      Network Policy workloads
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Network Policy workloads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#networkpolicy-multitenant" class="md-nav__link">
+    <span class="md-ellipsis">
+      networkpolicy-multitenant
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkpolicy-matchlabels" class="md-nav__link">
+    <span class="md-ellipsis">
+      networkpolicy-matchlabels
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#networkpolicy-matchexpressions" class="md-nav__link">
+    <span class="md-ellipsis">
+      networkpolicy-matchexpressions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#egressip-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      EgressIP workloads
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#web-burner-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      Web-burner workloads
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Web-burner workloads">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#web-burner-init" class="md-nav__link">
+    <span class="md-ellipsis">
+      web-burner-init
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-burner-node-density" class="md-nav__link">
+    <span class="md-ellipsis">
+      web-burner-node-density
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#web-burner-cluster-density" class="md-nav__link">
+    <span class="md-ellipsis">
+      web-burner-cluster-density
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#core-rds-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      Core RDS workloads
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workers-scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workers Scale
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Workers Scale">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      Options
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Examples
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-workload-bring-your-own-workload" class="md-nav__link">
+    <span class="md-ellipsis">
+      Custom Workload: Bring your own workload
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#index" class="md-nav__link">
+    <span class="md-ellipsis">
+      Index
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metrics-profile-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      Metrics-profile type
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#customizing-workloads" class="md-nav__link">
+    <span class="md-ellipsis">
+      Customizing workloads
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="openshift-wrapper">OpenShift Wrapper<a class="headerlink" href="#openshift-wrapper" title="Permanent link">&para;</a></h1>
+<p>This plugin is a very opinionated OpenShift wrapper designed to simplify the execution of different workloads in this Kubernetes distribution.</p>
+<p>Executed with <code>kube-burner-ocp</code>, it looks like:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>kube-burner-ocp<span class="w"> </span><span class="nb">help</span>
+<span class="go">kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads</span>
+
+<span class="go">Usage:</span>
+<span class="go">  kube-burner-ocp [command]</span>
+
+<span class="go">Available Commands:</span>
+<span class="go">  cluster-density-ms             Runs cluster-density-ms workload</span>
+<span class="go">  cluster-density-v2             Runs cluster-density-v2 workload</span>
+<span class="go">  cluster-health                 Checks for ocp cluster health</span>
+<span class="go">  completion                     Generate the autocompletion script for the specified shell</span>
+<span class="go">  crd-scale                      Runs crd-scale workload</span>
+<span class="go">  help                           Help about any command</span>
+<span class="go">  index                          Runs index sub-command</span>
+<span class="go">  init                           Runs custom workload</span>
+<span class="go">  networkpolicy-matchexpressions Runs networkpolicy-matchexpressions workload</span>
+<span class="go">  networkpolicy-matchlabels      Runs networkpolicy-matchlabels workload</span>
+<span class="go">  networkpolicy-multitenant      Runs networkpolicy-multitenant workload</span>
+<span class="go">  node-density                   Runs node-density workload</span>
+<span class="go">  node-density-cni               Runs node-density-cni workload</span>
+<span class="go">  node-density-heavy             Runs node-density-heavy workload</span>
+<span class="go">  pvc-density                    Runs pvc-density workload</span>
+<span class="go">  udn-density-l3-pods            Runs udn-density-l3-pods workload</span>
+<span class="go">  version                        Print the version number of kube-burner</span>
+<span class="go">  web-burner-cluster-density     Runs web-burner-cluster-density workload</span>
+<span class="go">  web-burner-init                Runs web-burner-init workload</span>
+<span class="go">  web-burner-node-density        Runs web-burner-node-density workload</span>
+
+<span class="go">Flags:</span>
+<span class="go">      --alerting                  Enable alerting (default true)</span>
+<span class="go">      --burst int                 Burst (default 20)</span>
+<span class="go">      --es-index string           Elastic Search index</span>
+<span class="go">      --es-server string          Elastic Search endpoint</span>
+<span class="go">      --extract                   Extract workload in the current directory</span>
+<span class="go">      --gc                        Garbage collect created resources (default true)</span>
+<span class="go">      --gc-metrics                Collect metrics during garbage collection</span>
+<span class="go">      --local-indexing            Enable local indexing</span>
+<span class="go">      --metrics-endpoint string   YAML file with a list of metric endpoints</span>
+<span class="go">      --profile-type string       Metrics profile to use, supported options are: regular, reporting or both (default &quot;both&quot;)</span>
+<span class="go">      --qps int                   QPS (default 20)</span>
+<span class="go">      --timeout duration          Benchmark timeout (default 4h0m0s)</span>
+<span class="go">      --user-metadata string      User provided metadata file, in YAML format</span>
+<span class="go">      --uuid string               Benchmark UUID (default &quot;0827cb6a-9367-4f0b-b11c-75030c69479e&quot;)</span>
+<span class="go">      --log-level string          Allowed values: debug, info, warn, error, fatal (default &quot;info&quot;)</span>
+<span class="go">  -h, --help                      help for kube-burner-ocp</span>
+</code></pre></div>
+<h2 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h2>
+<p>Documentation is <a href="https://kube-burner.github.io/kube-burner-ocp/">available here</a></p>
+<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
+<p>Some of the benefits the OCP wrapper provides are:</p>
+<ul>
+<li>Simplified execution of the supported workloads. (Only some flags are required)</li>
+<li>Adds OpenShift metadata to generated jobSummary and a small subset of metadata fields to the remaining metrics.</li>
+<li>Prevents modifying configuration files to tweak some of the parameters of the workloads.</li>
+<li>Discovers the Prometheus URL and authentication token, so the user does not have to perform those operations before using them.</li>
+<li>Workloads configuration is directly embedded in the binary.</li>
+</ul>
+<p>Running node-density with 100 pods per node</p>
+<div class="highlight"><pre><span></span><code><span class="go">kube-burner-ocp node-density --pods-per-node=100</span>
+</code></pre></div>
+<p>With the command above, the wrapper will calculate the required number of pods to deploy across all worker nodes of the cluster.</p>
+<h2 id="multiple-endpoints-support">Multiple endpoints support<a class="headerlink" href="#multiple-endpoints-support" title="Permanent link">&para;</a></h2>
+<p>The flag <code>--metrics-endpoint</code> can be used to interact with multiple Prometheus endpoints
+For example:</p>
+<div class="highlight"><pre><span></span><code><span class="go">kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-cycles=2 --es-index kube-burner --es-server https://www.esurl.com:443 --metrics-endpoint metrics-endpoints.yaml</span>
+</code></pre></div>
+<h3 id="metrics-endpointsyaml">metrics-endpoints.yaml<a class="headerlink" href="#metrics-endpointsyaml" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">prometheus-k8s-openshift-monitoring.apps.rook.devshift.org</span><span class="w"> </span>
+<span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metrics.yml</span>
+<span class="w">  </span><span class="nt">alerts</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">alerts.yml</span>
+<span class="w">  </span><span class="nt">indexer</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">esServers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;{{.ES_SERVER}}&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">insecureSkipVerify</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">      </span><span class="nt">defaultIndex</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{{</span><span class="nv">.ES_INDEX</span><span class="p p-Indicator">}}</span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">opensearch</span>
+<span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://prometheus-k8s-openshift-monitoring.apps.rook.devshift.org</span>
+<span class="w">  </span><span class="nt">token</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{{</span><span class="w"> </span><span class="nv">.TOKEN</span><span class="w"> </span><span class="p p-Indicator">}}</span><span class="w"> </span>
+<span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metrics.yml</span>
+<span class="w">  </span><span class="nt">indexer</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">esServers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;{{.ES_SERVER}}&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">insecureSkipVerify</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">      </span><span class="nt">defaultIndex</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{{</span><span class="nv">.ES_INDEX</span><span class="p p-Indicator">}}</span>
+<span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">opensearch</span>
+</code></pre></div>
+<p><code>.TOKEN</code> can be captured by running <code>TOKEN=$(oc create token -n openshift-monitoring prometheus-k8s)</code></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Avoid passing absolute path of the file with --metrics-endpoint option</p>
+<p>Metric profile names specified against <code>metrics</code> key should be unique and shouldn't overlap with the existing ones. A metric profile will be looked up in this directory <a href="https://github.com/kube-burner/kube-burner-ocp/tree/main/cmd/config">config</a> first for the sake of simplicity and if it doesn't exist, will fallback to our specified path. So in order for our own metric profile to get picked up, we will need to specify its absolute path or name differently whenever there is an overlap with the existing ones.</p>
+</div>
+<h2 id="cluster-density-workloads">Cluster density workloads<a class="headerlink" href="#cluster-density-workloads" title="Permanent link">&para;</a></h2>
+<p>This workload family is a control-plane density focused workload that that creates different objects across the cluster. There are 2 different variants <a href="#cluster-density-v2">cluster-density-v2</a> and <a href="#cluster-density-ms">cluster-density-ms</a>.</p>
+<p>Each iteration of these create a new namespace, the three support similar configuration flags. Check them out from the subcommand help.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Workload churning of 1h is enabled by default in the <code>cluster-density</code> workloads; you can disable it by passing <code>--churn=false</code> to the workload subcommand.</p>
+</div>
+<h3 id="cluster-density-v2">cluster-density-v2<a class="headerlink" href="#cluster-density-v2" title="Permanent link">&para;</a></h3>
+<p>Each iteration creates the following objects in each of the created namespaces:</p>
+<ul>
+<li>1 image stream.</li>
+<li>1 build. The OCP internal container registry must be set-up previously because the resulting container image will be pushed there.</li>
+<li>3 deployments with two pod 2 replicas (nginx) mounting 4 secrets, 4 config maps, and 1 downward API volume each.</li>
+<li>2 deployments with two pod 2 replicas (curl) mounting 4 Secrets, 4 config maps and 1 downward API volume each. These pods have configured a readiness probe that makes a request to one of the services and one of the routes created by this workload every 10 seconds.</li>
+<li>5 services, each one pointing to the TCP/8080 port of one of the nginx deployments.</li>
+<li>2 edge routes pointing to the to first and second services respectively.</li>
+<li>10 secrets containing a 2048-character random string.</li>
+<li>10 config maps containing a 2048-character random string.</li>
+<li>3 network policies:<ul>
+<li>deny-all traffic</li>
+<li>allow traffic from client/nginx pods to server/nginx pods</li>
+<li>allow traffic from openshift-ingress namespace (where routers are deployed by default) to the namespace</li>
+</ul>
+</li>
+</ul>
+<h3 id="cluster-density-ms">cluster-density-ms<a class="headerlink" href="#cluster-density-ms" title="Permanent link">&para;</a></h3>
+<p>Lightest version of this workload family, each iteration the following objects in each of the created namespaces:</p>
+<ul>
+<li>1 image stream.</li>
+<li>4 deployments with two pod replicas (pause) mounting 4 secrets, 4 config maps, and 1 downward API volume each.</li>
+<li>2 services, each one pointing to the TCP/8080 and TCP/8443 ports of the first and second deployment respectively.</li>
+<li>1 edge route pointing to the to first service.</li>
+<li>20 secrets containing a 2048-character random string.</li>
+<li>10 config maps containing a 2048-character random string.</li>
+</ul>
+<h2 id="node-density-workloads">Node density workloads<a class="headerlink" href="#node-density-workloads" title="Permanent link">&para;</a></h2>
+<p>The workloads of this family create a single namespace with a set of pods, deployments, and services depending on the workload.</p>
+<h3 id="node-density">node-density<a class="headerlink" href="#node-density" title="Permanent link">&para;</a></h3>
+<p>This workload is meant to fill with pause pods all the worker nodes from the cluster. It can be customized with the following flags. This workload is usually used to measure the Pod's ready latency KPI.</p>
+<h3 id="node-density-cni">node-density-cni<a class="headerlink" href="#node-density-cni" title="Permanent link">&para;</a></h3>
+<p>It creates two deployments, a client/curl and a server/nxing, and 1 service backed by the previous server pods. The client application has configured an startup probe that makes requests to the previous service every second with a timeout of 600s.</p>
+<p>Note: This workload calculates the number of iterations to create from the number of nodes and desired pods per node.  In order to keep the test scalable and performant, chunks of 1000 iterations will by broken into separate namespaces, using the config variable <code>iterationsPerNamespace</code>.</p>
+<h3 id="node-density-heavy">node-density-heavy<a class="headerlink" href="#node-density-heavy" title="Permanent link">&para;</a></h3>
+<p>Creates two deployments, a postgresql database, and a simple client that performs periodic insert queries (configured through liveness and readiness probes) on the previous database and a service that is used by the client to reach the database.</p>
+<p>Note: this workload calculates the number of iterations to create from the number of nodes and desired pods per node.  In order to keep the test scalable and performant, chunks of 1000 iterations will by broken into separate namespaces, using the config variable <code>iterationsPerNamespace</code>.</p>
+<h3 id="udn-density-l3-pods">udn-density-l3-pods<a class="headerlink" href="#udn-density-l3-pods" title="Permanent link">&para;</a></h3>
+<p>For User-Defined Network (UDN) L3 segmentation testing. It creates two deployments, a client/curl and a server/nxing.</p>
+<h2 id="network-policy-workloads">Network Policy workloads<a class="headerlink" href="#network-policy-workloads" title="Permanent link">&para;</a></h2>
+<p>With the help of <a href="https://kubernetes.io/docs/concepts/services-networking/network-policies/">networkpolicy</a> object we can control traffic flow at the IP address or port level in Kubernetes. A networkpolicy can come in various shapes and sizes. Allow traffic from a specific namespace, Deny traffic from a specific pod IP, Deny all traffic, etc. Hence we have come up with a few test cases which try to cover most of them. They are as follows.</p>
+<h3 id="networkpolicy-multitenant">networkpolicy-multitenant<a class="headerlink" href="#networkpolicy-multitenant" title="Permanent link">&para;</a></h3>
+<ul>
+<li>500 namespaces</li>
+<li>20 pods in each namespace. Each pod acts as a server and a client</li>
+<li>Default deny networkpolicy is applied first that blocks traffic to any test namespace</li>
+<li>3 network policies in each namespace that allows traffic from the same namespace and two other namespaces using namespace selectors</li>
+</ul>
+<h3 id="networkpolicy-matchlabels">networkpolicy-matchlabels<a class="headerlink" href="#networkpolicy-matchlabels" title="Permanent link">&para;</a></h3>
+<ul>
+<li>5 namespaces</li>
+<li>100 pods in each namespace. Each pod acts as a server and a client</li>
+<li>Each pod with 2 labels and each label shared is by 5 pods</li>
+<li>Default deny networkpolicy is applied first</li>
+<li>Then for each unique label in a namespace we have a networkpolicy with that label as a podSelector which allows traffic from pods with some other randomly selected label. This translates to 40 networkpolicies/namespace</li>
+</ul>
+<h3 id="networkpolicy-matchexpressions">networkpolicy-matchexpressions<a class="headerlink" href="#networkpolicy-matchexpressions" title="Permanent link">&para;</a></h3>
+<ul>
+<li>5 namespaces</li>
+<li>25 pods in each namespace. Each pod acts as a server and a client</li>
+<li>Each pod with 2 labels and each label shared is by 5 pods</li>
+<li>Default deny networkpolicy is applied first</li>
+<li>Then for each unique label in a namespace we have a networkpolicy with that label as a podSelector which allows traffic from pods which <em>don't</em> have some other randomly-selected label. This translates to 10 networkpolicies/namespace</li>
+</ul>
+<h2 id="egressip-workloads">EgressIP workloads<a class="headerlink" href="#egressip-workloads" title="Permanent link">&para;</a></h2>
+<p>This workload creates an egress IP for the client pods. SDN (OVN) will use egress IP for the traffic from client pods to external server instead of default node IP.</p>
+<p>Each iteration creates the following objects in each of the created namespaces:</p>
+<ul>
+<li>1 deployment with the configured number of client pod replicas. Client pod runs the quay.io/cloud-bulldozer/eipvalidator app which periodically sends http request to the configured "EXT_SERVER_HOST" server at an "DELAY_BETWEEN_REQ_SEC" interval with a request timeout of "REQ_TIMEOUT_SEC" seconds. Client pod then validates if the body of the response has configured "EGRESS_IPS". Once the client pod starts running and after receiving first succesful response with configured "EGRESS_IPS", it sets "eip_startup_latency_total" prometheus metric.</li>
+<li>1 EgressIP object. EgressIP object is cluster scoped. EgressIP object will have number of egress IP addresses which user specified through "addresses-per-iteration" cli option. kube-burner generates these addresses for the egressIP object from the egress IP list provided by kube-burner-ocp. OVN applies egressIPs to the pods in the current job iteration because of "namespaceSelector" and "podSelector" fields in the egressIP object.</li>
+</ul>
+<p>Note: User has to manually create the external server or use the e2e-benchmarking(https://github.com/cloud-bulldozer/e2e-benchmarking/tree/master/workloads/kube-burner-ocp-wrapper#egressip) which deploys external server and runs the workload with required configuration.</p>
+<p>Running 1 iteration with 1 egress IP address per iteration (or egressIP object).</p>
+<div class="highlight"><pre><span></span><code><span class="go">kube-burner-ocp egressip --addresses-per-iteration=1 --iterations=1 --external-server-ip=10.0.34.43</span>
+</code></pre></div>
+<p>With the command above, each namespace has one pod with a dedicated egress IP. OVN will use this dedicated egress IP for the http requests from client pod's to 10.0.34.43.</p>
+<h2 id="web-burner-workloads">Web-burner workloads<a class="headerlink" href="#web-burner-workloads" title="Permanent link">&para;</a></h2>
+<p>This workload is meant to emulate some telco specific workloads. Before running <em>web-burner-node-density</em> or <em>web-burner-cluster-density</em> load the environment with <em>web-burner-init</em> first (without the garbage collection flag: <code>--gc=false</code>).</p>
+<p>Pre-requisites:</p>
+<ul>
+<li>At least two worker nodes</li>
+<li>At least one of the worker nodes must have the <code>node-role.kubernetes.io/worker-spk</code> label</li>
+</ul>
+<h3 id="web-burner-init">web-burner-init<a class="headerlink" href="#web-burner-init" title="Permanent link">&para;</a></h3>
+<ul>
+<li>35 (macvlan/sriov) networks for 35 lb namespace</li>
+<li>35 lb-ns</li>
+<li>1 frr config map, 4 emulated lb pods on each namespace</li>
+<li>35 app-ns<ul>
+<li>1 emulated lb pod on each namespace for bfd session</li>
+</ul>
+</li>
+</ul>
+<h3 id="web-burner-node-density">web-burner-node-density<a class="headerlink" href="#web-burner-node-density" title="Permanent link">&para;</a></h3>
+<ul>
+<li>35 app-ns</li>
+<li>3 app pods and services on each namespace</li>
+<li>35 normal-ns<ul>
+<li>1 service with 60 normal pod endpoints on each namespace</li>
+</ul>
+</li>
+</ul>
+<h3 id="web-burner-cluster-density">web-burner-cluster-density<a class="headerlink" href="#web-burner-cluster-density" title="Permanent link">&para;</a></h3>
+<ul>
+<li>20 normal-ns<ul>
+<li>30 configmaps, 38 secrets, 38 normal pods and services, 5 deployments with 2 replica pods on each namespace</li>
+</ul>
+</li>
+<li>35 served-ns</li>
+<li>3 app pods on each namespace</li>
+<li>2 app-served-ns<ul>
+<li>1 service(15 ports) with 84 pod endpoints, 1 service(15 ports) with 56 pod endpoints, 1 service(15 ports) with 25 pod endpoints</li>
+<li>3 service(15 ports each) with 24 pod endpoints, 3 service(15 ports each) with 14 pod endpoints</li>
+<li>6 service(15 ports each) with 12 pod endpoints, 6 service(15 ports each) with 10 pod endpoints, 6 service(15 ports each) with 9 pod endpoints</li>
+<li>12 service(15 ports each) with 8 pod endpoints, 12 service(15 ports each) with 6 pod endpoints, 12 service(15 ports each) with 5 pod endpoints</li>
+<li>29 service(15 ports each) with 4 pod endpoints, 29 service(15 ports each) with 6 pod endpoints</li>
+</ul>
+</li>
+</ul>
+<h2 id="core-rds-workloads">Core RDS workloads<a class="headerlink" href="#core-rds-workloads" title="Permanent link">&para;</a></h2>
+<p>The telco core reference design specification (RDS) describes OpenShift Container Platform clusters running on commodity hardware that can support large scale telco applications including control plane and some centralized data plane functions. It captures the recommended, tested, and supported configurations to get reliable and repeatable performance for clusters running the telco core profile.</p>
+<p>Pre-requisites:
+ - A <strong>PerformanceProfile</strong> with isolated and reserved cores, 1G hugepages and and <code>topologyPolicy=single-numa-node</code>. Hugepages should be allocated in the first NUMA node (the one that would be used by DPDK deployments):
+     <div class="highlight"><pre><span></span><code><span class="w"> </span><span class="nt">hugepages</span><span class="p">:</span>
+<span class="w"> </span><span class="nt">defaultHugepagesSize</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1G</span>
+<span class="w"> </span><span class="nt">pages</span><span class="p">:</span>
+<span class="w"> </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">160</span>
+<span class="w">   </span><span class="nt">node</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class="w">   </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1G</span>
+<span class="w"> </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">count</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6</span>
+<span class="w">   </span><span class="nt">node</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">   </span><span class="nt">size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1G</span>
+</code></pre></div>
+ - <strong>MetalLB operator</strong> limiting speaker pods to specific nodes (aprox. 10%, 12 in the case of 120 node iterations with the corresponding <strong><em>worker-metallb</em></strong> label):
+     <div class="highlight"><pre><span></span><code><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb.io/v1beta1</span>
+<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MetalLB</span>
+<span class="nt">metadata</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb</span>
+<span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">metallb-system</span>
+<span class="nt">spec</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">nodeSelector</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">node-role.kubernetes.io/worker-metallb</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+<span class="w">  </span><span class="nt">speakerTolerations</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Example&quot;</span>
+<span class="w">    </span><span class="nt">operator</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Exists&quot;</span>
+<span class="w">    </span><span class="nt">effect</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;NoExecute&quot;</span>
+</code></pre></div>
+ - <strong>SRIOV operator</strong> with its corresponding <em>SriovNetworkNodePolicy</em>
+ - Some nodes (i.e.: 25% of them) with the <strong><em>worker-dpdk</em></strong> label to host the DPDK pods, i.e.:
+     <div class="highlight"><pre><span></span><code>$ kubectl label node worker1 node-role.kubernetes.io/worker-dpdk=
+</code></pre></div></p>
+<p>Object count:
+| Iterations / nodes / namespaces   | 1    | 120                                 |
+| --------------------------------- | ---- | ----------------------------------- |
+| configmaps                        | 30   | 3600                                |
+| deployments_best_effort           | 25   | 3000                                |
+| deployments_dpdk                  | 2    | 240 (assuming 24 worker-dpdk nodes) |
+| endpoints (210x service)          | 4200 | 504000                              |
+| endpoints lb (90 x service)       | 90   | 10800                               |
+| networkPolicy                     | 3    | 360                                 |
+| namespaces                        | 1    | 120                                 |
+| pods_best_effort (2 x deployment) | 50   | 6000                                |
+| pods_dpdk (1 x deployment)        | 2    | 240 (assuming 24 worker-dpdk nodes) |
+| route                             | 2    | 240                                 |
+| services                          | 20   | 2400                                |
+| services (lb)                     | 1    | 120                                 |
+| secrets                           | 42   | 5040                                |</p>
+<p>Input parameters specific to the workload:
+| Parameter           | Description                                                                                      | Default value |
+| ------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
+| dpdk-cores          | Number of cores assigned for each DPDK pod (should fill all the isolated cores of one NUMA node) | 2             |
+| performance-profile | Name of the performance profile implemented on the cluster                                       | default       |</p>
+<h2 id="workers-scale">Workers Scale<a class="headerlink" href="#workers-scale" title="Permanent link">&para;</a></h2>
+<p>As a day2 operation, we can use this option to scale our cluster's worker nodes to a desired count and capture their bootup times.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is only supported for openshift clusters hosted on AWS at the moment.</p>
+</div>
+<h3 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code>$ kube-burner-ocp workers-scale
+
+Usage:
+  kube-burner-ocp workers-scale [flags]
+
+Flags:
+  -m, --metrics-profile string        Comma-separated list of metric profiles (default &quot;metrics.yml&quot;)
+      --metrics-directory string      Directory to dump the metrics files in, when using default local indexing (default &quot;collected-metrics&quot;)
+      --mc-kubeconfig string          Path for management cluster kubeconfig
+      --step duration                 Prometheus step size (default 30s)
+      --additional-worker-nodes int   Additional workers to scale (default 3)
+      --enable-autoscaler             Enables autoscaler while scaling the cluster
+      --scale-event-epoch int         Scale event epoch time
+      --user-metadata string          User provided metadata file, in YAML format
+      --tarball-name string           Dump collected metrics into a tarball with the given name, requires local indexing
+  -h, --help                          help for workers-scale
+</code></pre></div>
+<h3 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Manually scale a cluster to desired node count and capture bootup times.
+<div class="highlight"><pre><span></span><code>$ kube-burner-ocp workers-scale --additional-worker-nodes 24
+</code></pre></div></li>
+<li>Auto scale a cluster to a desired node count and capture bootup times. Also disable garbage collection.
+<div class="highlight"><pre><span></span><code>$ kube-burner-ocp workers-scale --additional-worker-nodes 24 --enable-autoscaler --gc=false
+</code></pre></div></li>
+<li>Without any scaling, simply capture bootup times on an already scaled cluster. We just have to specify the timestamp when the scale event was triggered.
+<div class="highlight"><pre><span></span><code>$ kube-burner-ocp workers-scale --scale-event-epoch 1725635502
+</code></pre></div></li>
+</ol>
+<h2 id="custom-workload-bring-your-own-workload">Custom Workload: Bring your own workload<a class="headerlink" href="#custom-workload-bring-your-own-workload" title="Permanent link">&para;</a></h2>
+<p>To kickstart kube-burner-ocp with a custom workload, <code>init</code> becomes your go-to command. This command is equipped with flags that enable to seamlessly integrate and run your personalized workloads. Here's a breakdown of the flags accepted by the init command:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>kube-burner-ocp<span class="w"> </span>init<span class="w"> </span>--help
+<span class="go">Runs custom workload</span>
+
+<span class="go">Usage:</span>
+<span class="go">  kube-burner-ocp init [flags]</span>
+
+<span class="go">Flags:</span>
+<span class="go">    --churn                            Enable churning (default true)</span>
+<span class="go">    --churn-cycles int                 Churn cycles to execute</span>
+<span class="go">    --churn-delay duration             Time to wait between each churn (default 2m0s)</span>
+<span class="go">    --churn-deletion-strategy string   Churn deletion strategy to use (default &quot;default&quot;)</span>
+<span class="go">    --churn-duration duration          Churn duration (default 5m0s)</span>
+<span class="go">    --churn-percent int                Percentage of job iterations that kube-burner will churn each round (default 10)</span>
+<span class="go">    -c, --config string                    Config file path or url</span>
+<span class="go">    -h, --help                             help for init</span>
+<span class="go">    --iterations int                   Job iterations. Mutually exclusive with &#39;--pods-per-node&#39; (default 1)</span>
+<span class="go">    --iterations-per-namespace int     Iterations per namespace (default 1)</span>
+<span class="go">    --namespaced-iterations            Namespaced iterations (default true)</span>
+<span class="go">    --pods-per-node int                Pods per node. Mutually exclusive with &#39;--iterations&#39; (default 50)</span>
+<span class="go">    --service-latency                  Enable service latency measurement</span>
+</code></pre></div>
+<p>Creating a custom workload for kube-burner-ocp is a seamless process, and you have the flexibility to craft it according to your specific needs. Below is a template to guide you through the customization of your workload:</p>
+<div class="highlight"><pre><span></span><code><span class="nn">---</span>
+<span class="nt">indexers</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">esServers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;{{.ES_SERVER}}&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">insecureSkipVerify</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">defaultIndex</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{{</span><span class="nv">.ES_INDEX</span><span class="p p-Indicator">}}</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">opensearch</span>
+<span class="nt">global</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">gc</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{{</span><span class="nv">.GC</span><span class="p p-Indicator">}}</span>
+<span class="w">  </span><span class="nt">gcMetrics</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{{</span><span class="nv">.GC_METRICS</span><span class="p p-Indicator">}}</span>
+<span class="w">  </span><span class="nt">measurements</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;metric_name&gt;</span>
+<span class="w">      </span><span class="nt">thresholds</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">&lt;threshold_key&gt;</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;threshold_value&gt;</span>
+
+<span class="nt">jobs</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;job_name&gt;</span>
+<span class="w">    </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;namespace_name&gt;</span>
+<span class="w">    </span><span class="nt">jobIterations</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;number of iterations&gt;</span>
+<span class="w">    </span><span class="nt">qps</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{{</span><span class="nv">.QPS</span><span class="p p-Indicator">}}</span><span class="w">     </span><span class="c1"># Both QPS and BURST can be specified through the CLI</span>
+<span class="w">    </span><span class="nt">burst</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{{</span><span class="nv">.BURST</span><span class="p p-Indicator">}}</span>
+<span class="w">    </span><span class="nt">namespacedIterations</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;bool&gt;</span>
+<span class="w">    </span><span class="nt">podWait</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;bool&gt;</span>
+<span class="w">    </span><span class="nt">waitWhenFinished</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;bool&gt;</span>
+<span class="w">    </span><span class="nt">preLoadImages</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;bool&gt;</span>
+<span class="w">    </span><span class="nt">preLoadPeriod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;preLoadPeriod_in_seconds&gt;</span>
+<span class="w">    </span><span class="nt">namespaceLabels</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">&lt;namespaceLabels_key&gt;</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;namespaceLabels_value&gt;</span>
+<span class="w">    </span><span class="nt">objects</span><span class="p">:</span>
+
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">objectTemplate</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;template_config&gt;</span>
+<span class="w">        </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">&lt;replica_int&gt;</span>
+<span class="w">        </span><span class="nt">inputVars</span><span class="p">:</span>
+<span class="w">          </span><span class="l l-Scalar l-Scalar-Plain">&lt;inputVar1&gt;:&lt;inputVar1_value&gt;</span>
+</code></pre></div>
+<p>You can start from scratch or explore pre-built workloads in the /config folder, offering a variety of examples used by kube-burner-ocp. Dive into the details of each section in the template to tailor the workload precisely to your requirements. Experiment, iterate, and discover the optimal configuration for your workload to seamlessly integrate with kube-burner-ocp.</p>
+<h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">&para;</a></h2>
+<p>Just like the regular kube-burner, <code>kube-burner-ocp</code> also has an indexing functionality which is exposed as <code>index</code> subcommand.</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>kube-burner-ocp<span class="w"> </span>index<span class="w"> </span>--help
+<span class="go">If no other indexer is specified, local indexer is used by default</span>
+
+<span class="go">Usage:</span>
+<span class="go">  kube-burner-ocp index [flags]</span>
+
+<span class="go">Flags:</span>
+<span class="go">  -m, --metrics-profile string     Metrics profile file (default &quot;metrics.yml&quot;)</span>
+<span class="go">      --metrics-directory string   Directory to dump the metrics files in, when using default local indexing (default &quot;collected-metrics&quot;)</span>
+<span class="go">  -s, --step duration              Prometheus step size (default 30s)</span>
+<span class="go">      --start int                  Epoch start time</span>
+<span class="go">      --end int                    Epoch end time</span>
+<span class="go">  -j, --job-name string            Indexing job name (default &quot;kube-burner-ocp-indexing&quot;)</span>
+<span class="go">      --user-metadata string       User provided metadata file, in YAML format</span>
+<span class="go">  -h, --help                       help for index</span>
+</code></pre></div>
+<h2 id="metrics-profile-type">Metrics-profile type<a class="headerlink" href="#metrics-profile-type" title="Permanent link">&para;</a></h2>
+<p>By specifying <code>--profile-type</code>, kube-burner can use two different metrics profiles when scraping metrics from prometheus. By default is configured with <code>both</code>, meaning that it will use the regular metrics profiles bound to the workload in question and the reporting metrics profile.</p>
+<p>When using the regular profiles (<a href="https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics-aggregated.yml">metrics-aggregated</a> or <a href="https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics.yml">metrics</a>), kube-burner scrapes and indexes metrics timeseries.</p>
+<p>The reporting profile is very useful to reduce the number of documents sent to the configured indexer. Thanks to the combination of aggregations and instant queries for prometheus metrics, and 4 summaries for latency measurements, only a few documents will be indexed per benchmark. This flag makes possible to specify one or both of these profiles indistinctly.</p>
+<h2 id="customizing-workloads">Customizing workloads<a class="headerlink" href="#customizing-workloads" title="Permanent link">&para;</a></h2>
+<p>It is possible to customize any of the above workload configurations by extracting, updating, and finally running it:</p>
+<div class="highlight"><pre><span></span><code><span class="gp">$ </span>kube-burner-ocp<span class="w"> </span>node-density<span class="w"> </span>--extract
+<span class="gp">$ </span>ls
+<span class="go">alerts.yml  metrics.yml  node-density.yml  pod.yml  metrics-report.yml</span>
+<span class="gp">$ </span>vi<span class="w"> </span>node-density.yml<span class="w">                               </span><span class="c1"># Perform modifications accordingly</span>
+<span class="gp">$ </span>kube-burner-ocp<span class="w"> </span>node-density<span class="w"> </span>--pods-per-node<span class="o">=</span><span class="m">100</span><span class="w">  </span><span class="c1"># Run workload</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.indexes", "navigation.top", "navigation.footer", "toc.integrate", "search.suggest", "search.highlight", "search.share", "content.code.copy"], "search": "assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"limit": 3, "provider": "mike"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.83f73b43.min.js"></script>
+      
+    
+  </body>
+</html>
