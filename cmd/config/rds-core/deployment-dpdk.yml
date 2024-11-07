@@ -2,8 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: dpdk-{{.Replica}}
-  annotations:
-
   labels:
     group: load
     svc: dpdk-{{.Replica}}
