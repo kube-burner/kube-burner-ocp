@@ -32,6 +32,8 @@ import (
 //go:embed config/*
 var ocpConfig embed.FS
 
+const configDir = "config"
+
 func openShiftCmd() *cobra.Command {
 	var workloadConfig workloads.Config
 	var wh workloads.WorkloadHelper
@@ -66,7 +68,7 @@ func openShiftCmd() *cobra.Command {
 		util.ConfigureLogging(cmd)
 		util.SetupLogging("ocp-" + workloadConfig.UUID)
 		if extract {
-			if err := workloads.ExtractWorkload(ocpConfig, ocp.ConfigDir, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
+			if err := workloads.ExtractWorkload(ocpConfig, configDir, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
 				log.Fatal(err.Error())
 			}
 			os.Exit(0)
@@ -74,7 +76,7 @@ func openShiftCmd() *cobra.Command {
 		if checkHealth && cmd.Name() != "cluster-health" {
 			ocp.ClusterHealthCheck()
 		}
-		workloadConfig.ConfigDir = ocp.ConfigDir
+		workloadConfig.ConfigDir = configDir
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		wh = workloads.NewWorkloadHelper(workloadConfig, ocpConfig, kubeClientProvider)
 		envVars := map[string]string{
@@ -112,8 +114,8 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewNodeDensity(&wh),
 		ocp.NewNodeDensityHeavy(&wh),
 		ocp.NewNodeDensityCNI(&wh),
-		ocp.NewUDNDensityL3Pods(&wh),
-		ocp.NewIndex(&wh.MetricsEndpoint, &wh.MetadataAgent, ocpConfig),
+		ocp.NewUDNDensityPods(&wh),
+		ocp.NewIndex(&wh, ocpConfig),
 		ocp.NewWorkersScale(&wh.MetricsEndpoint, &wh.MetadataAgent),
 		ocp.NewPVCDensity(&wh),
 		ocp.NewRDSCore(&wh),

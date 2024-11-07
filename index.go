@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
-	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
 	"github.com/cloud-bulldozer/go-commons/version"
 	"github.com/kube-burner/kube-burner/pkg/burner"
 	"github.com/kube-burner/kube-burner/pkg/config"
@@ -34,7 +33,7 @@ import (
 )
 
 // NewIndex orchestrates indexing for ocp wrapper
-func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata, ocpConfig embed.FS) *cobra.Command {
+func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 	var jobName string
 	var metricsProfiles []string
 	var start, end int64
@@ -45,7 +44,6 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata, ocpCo
 	var prometheusURL, prometheusToken string
 	var tarballName string
 	var indexer config.MetricsEndpoint
-	var embedded bool
 	var clusterMetadataMap map[string]interface{}
 	cmd := &cobra.Command{
 		Use:          "index",
@@ -59,7 +57,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata, ocpCo
 		Run: func(cmd *cobra.Command, args []string) {
 			jobEnd := end
 			uuid, _ = cmd.Flags().GetString("uuid")
-			clusterMetadata, err := ocpMetaAgent.GetClusterMetadata()
+			clusterMetadata, err := wh.MetadataAgent.GetClusterMetadata()
 			if err != nil {
 				log.Fatal("Error obtaining clusterMetadata: ", err.Error())
 			}
@@ -67,8 +65,8 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata, ocpCo
 			esIndex, _ := cmd.Flags().GetString("es-index")
 			workloads.ConfigSpec.GlobalConfig.UUID = uuid
 			// When metricsEndpoint is specified, don't fetch any prometheus token
-			if *metricsEndpoint == "" {
-				prometheusURL, prometheusToken, err = ocpMetaAgent.GetPrometheus()
+			if wh.MetricsEndpoint == "" {
+				prometheusURL, prometheusToken, err = wh.MetadataAgent.GetPrometheus()
 				if err != nil {
 					log.Fatal("Error obtaining prometheus information from cluster: ", err.Error())
 				}
@@ -104,16 +102,14 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata, ocpCo
 				metadata[k] = v
 			}
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
-			if embedded {
-				workloads.ConfigSpec.EmbedFSDir = ConfigDir + "/metrics"
-				workloads.ConfigSpec.EmbedFS = ocpConfig
-			}
+			workloads.ConfigSpec.EmbedFSDir = wh.ConfigDir + "/metrics"
+			workloads.ConfigSpec.EmbedFS = ocpConfig
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
 				ConfigSpec:      &workloads.ConfigSpec,
-				MetricsEndpoint: *metricsEndpoint,
+				MetricsEndpoint: wh.MetricsEndpoint,
 				UserMetaData:    userMetadata,
 				MetricsMetadata: metadata,
-				EmbedConfig:     embedded,
+				EmbedConfig:     true,
 			})
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
@@ -154,7 +150,6 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata, ocpCo
 		},
 	}
 	cmd.Flags().StringSliceVarP(&metricsProfiles, "metrics-profile", "m", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.Flags().BoolVar(&embedded, "embedded", false, "Use embedded metric profiles")
 	cmd.Flags().StringVar(&metricsDirectory, "metrics-directory", "collected-metrics", "Directory to dump the metrics files in, when using default local indexing")
 	cmd.Flags().DurationVar(&prometheusStep, "step", 30*time.Second, "Prometheus step size")
 	cmd.Flags().Int64Var(&start, "start", time.Now().Unix()-3600, "Epoch start time")

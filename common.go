@@ -28,8 +28,6 @@ import (
 
 var clusterMetadata ocpmetadata.ClusterMetadata
 
-const ConfigDir = "config"
-
 func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
 	switch ProfileType(profileType) {
