@@ -73,7 +73,7 @@ func openShiftCmd() *cobra.Command {
 			}
 			os.Exit(0)
 		}
-		if checkHealth && cmd.Name() != "cluster-health" {
+		if checkHealth && (cmd.Name() != "cluster-health" || cmd.Name() == "index") {
 			ocp.ClusterHealthCheck()
 		}
 		workloadConfig.ConfigDir = configDir
