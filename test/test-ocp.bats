@@ -15,7 +15,8 @@ setup_file() {
 
 setup() {
   export UUID; UUID=$(uuidgen)
-  export COMMON_FLAGS="--es-server=${ES_SERVER} --es-index=${ES_INDEX} --alerting=true --qps=5 --burst=5"
+  export RATE="--qps=10 --burst=10"
+  export COMMON_FLAGS="--es-server=${ES_SERVER} --es-index=${ES_INDEX} --alerting=true ${RATE}"
 }
 
 teardown() {
@@ -66,7 +67,7 @@ teardown_file() {
 @test "node-density-cni: gc=false; alerting=false" {
   # Disable gc and avoid metric indexing
   run_cmd kube-burner-ocp node-density-cni --pods-per-node=75 --gc=false --uuid=${UUID} --alerting=false
-  oc delete ns -l kube-burner-uuid=${UUID}
+  oc delete ns -l kube-burner-uuid=${UUID} --wait=false
   trap - ERR
 }
 
@@ -87,17 +88,15 @@ teardown_file() {
   run_cmd kube-burner-ocp networkpolicy-multitenant --iterations 5 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
-@test "pvc-density" {
-  # Since 'aws' is the chosen storage provisioner, this will only execute successfully if the ocp environment is aws
-  run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner=aws ${COMMON_FLAGS} --uuid=${UUID}
-  check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+@test "crd-scale; alerting=false" {
+  run_cmd kube-burner-ocp crd-scale --iterations=10 --alerting=false
 }
 
 @test "web-burner-node-density" {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
   run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
-  run_cmd kube-burner-ocp web-burner-init --gc=false --sriov=false --bridge=br-ex --bfd=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} --qps=5 --burst=5
-  run_cmd kube-burner-ocp web-burner-node-density --gc=false --probe=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} --qps=5 --burst=5
+  run_cmd kube-burner-ocp web-burner-init --gc=false --sriov=false --bridge=br-ex --bfd=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} ${RATE}
+  run_cmd kube-burner-ocp web-burner-node-density --gc=false --probe=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} ${RATE}
   check_running_pods kube-burner-job=init-served-job 1
   check_running_pods kube-burner-job=serving-job 4
   check_running_pods kube-burner-job=normal-job-1 60
@@ -107,8 +106,8 @@ teardown_file() {
 @test "web-burner-cluster-density" {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
   run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
-  run_cmd kube-burner-ocp web-burner-init --gc=false --sriov=false --bridge=br-ex --bfd=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} --qps=5 --burst=5
-  run_cmd kube-burner-ocp web-burner-cluster-density --gc=false --probe=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} --qps=5 --burst=5
+  run_cmd kube-burner-ocp web-burner-init --gc=false --sriov=false --bridge=br-ex --bfd=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} ${RATE}
+  run_cmd kube-burner-ocp web-burner-cluster-density --gc=false --probe=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} ${RATE}
   check_running_pods kube-burner-job=init-served-job 1
   check_running_pods kube-burner-job=serving-job 4
   check_running_pods kube-burner-job=cluster-density 35
