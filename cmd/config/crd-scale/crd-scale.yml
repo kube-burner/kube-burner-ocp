@@ -22,15 +22,15 @@ metricsEndpoints:
 
 jobs:
   - name: crd-scale
-    namespace: crd-scale
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: false
+    preLoadImages: false
     waitWhenFinished: true
     objects:
       - objectTemplate: example-crd.yml
         replicas: 1
         waitOptions:
-          forCondition: Established        
+          forCondition: Established
 
