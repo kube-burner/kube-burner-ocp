@@ -15,13 +15,13 @@
 package ocp
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/cloud-bulldozer/go-commons/indexers"
-	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
 	"github.com/cloud-bulldozer/go-commons/version"
 	"github.com/kube-burner/kube-burner/pkg/burner"
 	"github.com/kube-burner/kube-burner/pkg/config"
@@ -33,7 +33,7 @@ import (
 )
 
 // NewIndex orchestrates indexing for ocp wrapper
-func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobra.Command {
+func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 	var jobName string
 	var metricsProfiles []string
 	var start, end int64
@@ -57,7 +57,7 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 		Run: func(cmd *cobra.Command, args []string) {
 			jobEnd := end
 			uuid, _ = cmd.Flags().GetString("uuid")
-			clusterMetadata, err := ocpMetaAgent.GetClusterMetadata()
+			clusterMetadata, err := wh.MetadataAgent.GetClusterMetadata()
 			if err != nil {
 				log.Fatal("Error obtaining clusterMetadata: ", err.Error())
 			}
@@ -65,8 +65,8 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 			esIndex, _ := cmd.Flags().GetString("es-index")
 			workloads.ConfigSpec.GlobalConfig.UUID = uuid
 			// When metricsEndpoint is specified, don't fetch any prometheus token
-			if *metricsEndpoint == "" {
-				prometheusURL, prometheusToken, err = ocpMetaAgent.GetPrometheus()
+			if wh.MetricsEndpoint == "" {
+				prometheusURL, prometheusToken, err = wh.MetadataAgent.GetPrometheus()
 				if err != nil {
 					log.Fatal("Error obtaining prometheus information from cluster: ", err.Error())
 				}
@@ -102,11 +102,14 @@ func NewIndex(metricsEndpoint *string, ocpMetaAgent *ocpmetadata.Metadata) *cobr
 				metadata[k] = v
 			}
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
+			workloads.ConfigSpec.EmbedFSDir = wh.ConfigDir + "/metrics"
+			workloads.ConfigSpec.EmbedFS = ocpConfig
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
 				ConfigSpec:      &workloads.ConfigSpec,
-				MetricsEndpoint: *metricsEndpoint,
+				MetricsEndpoint: wh.MetricsEndpoint,
 				UserMetaData:    userMetadata,
 				MetricsMetadata: metadata,
+				EmbedConfig:     true,
 			})
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
