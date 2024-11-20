@@ -124,6 +124,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewWebBurner(&wh, "web-burner-node-density"),
 		ocp.NewWebBurner(&wh, "web-burner-cluster-density"),
 		ocp.NewEgressIP(&wh, "egressip"),
+		ocp.NewWhereabouts(&wh),
 		ocp.ClusterHealth(),
 		ocp.CustomWorkload(&wh),
 	)
