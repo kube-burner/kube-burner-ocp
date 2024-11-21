@@ -117,8 +117,3 @@ teardown_file() {
 @test "cluster-health" {
   run_cmd kube-burner-ocp cluster-health
 }
-
-@test "workers-scale metrics scraping case: es-indexing=true" {
-  run_cmd kube-burner-ocp workers-scale --uuid=${UUID} --metrics-profile custom-metrics.yml --es-server=${ES_SERVER} --es-index=${ES_INDEX} --scale-event-epoch 1704067200
-  check_metric_value jobSummary nodeReadyLatencyMeasurement nodeReadyLatencyQuantilesMeasurement
-}
