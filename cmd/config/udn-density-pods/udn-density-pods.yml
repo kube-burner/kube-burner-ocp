@@ -50,11 +50,11 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
-      {{ if eq .ENABLE_LAYER_2 "true"}}
-      - objectTemplate: udn_l2.yml
+      {{ if eq .ENABLE_LAYER_3 "true"}}
+      - objectTemplate: udn_l3.yml
         replicas: 1
       {{ else }}
-      - objectTemplate: udn_l3.yml
+      - objectTemplate: udn_l2.yml
         replicas: 1
       {{ end }}
 

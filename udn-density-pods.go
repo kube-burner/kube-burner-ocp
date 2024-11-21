@@ -26,11 +26,10 @@ import (
 // NewUDNDensityPods holds udn-density-pods workload
 func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
-	var churn bool
+	var churn, l3 bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var churnDeletionStrategy string
 	var metricsProfiles []string
-	var mode string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "udn-density-pods",
@@ -49,10 +48,10 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
 			// Disable l3 when the user chooses l2
-			if mode == "layer3" {
-				os.Setenv("ENABLE_LAYER_2", "false")
+			if l3 {
+				os.Setenv("ENABLE_LAYER_3", "true")
 			} else {
-				os.Setenv("ENABLE_LAYER_2", "true")
+				os.Setenv("ENABLE_LAYER_3", "false")
 			}
 			rc = wh.Run("udn-density-pods")
 		},
@@ -60,7 +59,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().StringVar(&mode, "mode", "layer3", "Layer3 UDN test")
+	cmd.Flags().BoolVar(&l3, "layer3", true, "Layer3 UDN test")
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
