@@ -54,6 +54,9 @@ jobs:
       - objectTemplate: udn.yml
         replicas: 1
 
+      - objectTemplate: service.yml
+        replicas: 5
+
       - objectTemplate: deployment-server.yml
         replicas: 3
         inputVars:
