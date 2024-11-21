@@ -52,10 +52,12 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 				l3 = false
 			}
 			if l3 {
-				rc = wh.Run("udn-density-l3-pods")
+				os.Setenv("ENABLE_LAYER_2", "false")
+				rc = wh.Run("udn-density-pods")
 			}
 			if l2 {
-				rc = wh.Run("udn-density-l2-pods")
+				os.Setenv("ENABLE_LAYER_2", "true")
+				rc = wh.Run("udn-density-pods")
 			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
