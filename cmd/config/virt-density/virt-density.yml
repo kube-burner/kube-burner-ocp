@@ -1,0 +1,46 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: vmiLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.VM_READY_THRESHOLD}}
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if eq .LOCAL_INDEXING "true" }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+jobs:
+  - name: virt-density
+    namespace: virt-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    preLoadImages: false
+    waitWhenFinished: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+
+      - objectTemplate: vm.yml
+        replicas: 1
