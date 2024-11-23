@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -49,8 +50,10 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			setMetrics(cmd, metricsProfiles)
 			// Disable l3 when the user chooses l2
 			if l3 {
+				log.Info("Layer 3 is enabled")
 				os.Setenv("ENABLE_LAYER_3", "true")
 			} else {
+				log.Info("Layer 2 is enabled")
 				os.Setenv("ENABLE_LAYER_3", "false")
 			}
 			rc = wh.Run("udn-density-pods")
