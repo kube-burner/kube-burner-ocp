@@ -27,7 +27,11 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
-  - name: udn-density-pods
+  {{ if eq .ENABLE_LAYER_3 "true" }}
+  - name: udn-density-pods-l3
+  {{ else }}
+  - name: udn-density-pods-l2
+  {{ end }}
     namespace: udn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
