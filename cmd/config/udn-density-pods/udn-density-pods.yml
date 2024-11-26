@@ -28,9 +28,9 @@ metricsEndpoints:
 
 jobs:
   {{ if eq .ENABLE_LAYER_3 "true" }}
-  - name: udn-density-pods-l3
+  - name: udn-density-l3-pods
   {{ else }}
-  - name: udn-density-pods-l2
+  - name: udn-density-l2-pods
   {{ end }}
     namespace: udn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
