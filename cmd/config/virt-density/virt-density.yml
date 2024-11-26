@@ -7,7 +7,7 @@ global:
       thresholds:
         - conditionType: VMIRunning
           metric: P99
-          threshold: {{.VM_READY_THRESHOLD}}
+          threshold: {{.VMI_RUNNING_THRESHOLD}}
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]

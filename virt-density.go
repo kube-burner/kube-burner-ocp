@@ -42,7 +42,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal(err.Error())
 			}
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(totalVMs-vmCount))
-			os.Setenv("VM_READY_THRESHOLD", fmt.Sprintf("%v", vmReadyThreshold))
+			os.Setenv("VMI_RUNNING_THRESHOLD", fmt.Sprintf("%v", vmReadyThreshold))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
