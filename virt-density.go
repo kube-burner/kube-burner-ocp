@@ -28,7 +28,7 @@ import (
 // Returns virt-density workload
 func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var vmsPerNode int
-	var vmReadyThreshold time.Duration
+	var vmiRunningThreshold time.Duration
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -42,7 +42,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal(err.Error())
 			}
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(totalVMs-vmCount))
-			os.Setenv("VMI_RUNNING_THRESHOLD", fmt.Sprintf("%v", vmReadyThreshold))
+			os.Setenv("VMI_RUNNING_THRESHOLD", fmt.Sprintf("%v", vmiRunningThreshold))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
@@ -53,7 +53,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 245, "VMs per node")
-	cmd.Flags().DurationVar(&vmReadyThreshold, "pod-ready-threshold", 15*time.Second, "VMI ready timeout threshold")
+	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 15*time.Second, "VMI ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }
