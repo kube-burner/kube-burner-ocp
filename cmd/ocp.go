@@ -72,7 +72,7 @@ func openShiftCmd() *cobra.Command {
 			}
 			os.Exit(0)
 		} else {
-			util.SetupLogging("ocp-" + workloadConfig.UUID)
+			util.SetupFileLogging("ocp-" + workloadConfig.UUID)
 		}
 		if checkHealth && (cmd.Name() != "cluster-health" || cmd.Name() == "index") {
 			ocp.ClusterHealthCheck()
@@ -109,9 +109,10 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewClusterDensity(&wh, "cluster-density-v2"),
 		ocp.NewClusterDensity(&wh, "cluster-density-ms"),
 		ocp.NewCrdScale(&wh),
-		ocp.NewNetworkPolicy(&wh, "networkpolicy-multitenant"),
-		ocp.NewNetworkPolicy(&wh, "networkpolicy-matchlabels"),
-		ocp.NewNetworkPolicy(&wh, "networkpolicy-matchexpressions"),
+		ocp.NewNetworkPolicy(&wh, "network-policy"),
+		ocp.NewNetworkPolicyLegacy(&wh, "networkpolicy-multitenant"),
+		ocp.NewNetworkPolicyLegacy(&wh, "networkpolicy-matchlabels"),
+		ocp.NewNetworkPolicyLegacy(&wh, "networkpolicy-matchexpressions"),
 		ocp.NewNodeDensity(&wh),
 		ocp.NewNodeDensityHeavy(&wh),
 		ocp.NewNodeDensityCNI(&wh),
