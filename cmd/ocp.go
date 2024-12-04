@@ -118,7 +118,6 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewNodeDensityCNI(&wh),
 		ocp.NewUDNDensityPods(&wh),
 		ocp.NewIndex(&wh, ocpConfig),
-		ocp.NewWorkersScale(&wh.MetricsEndpoint, &wh.MetadataAgent),
 		ocp.NewPVCDensity(&wh),
 		ocp.NewRDSCore(&wh),
 		ocp.NewWebBurner(&wh, "web-burner-init"),
