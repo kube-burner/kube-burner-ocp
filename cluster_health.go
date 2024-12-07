@@ -16,6 +16,7 @@ package ocp
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/kube-burner/kube-burner/pkg/config"
@@ -93,15 +94,14 @@ func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versio
 	return isHealthy
 }
 
-func clusterImageRegistryCheck(clientset kubernetes.Interface) bool {
+func isClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
 	deployment, err := clientset.AppsV1().Deployments("openshift-image-registry").Get(context.TODO(), "image-registry", metav1.GetOptions{})
 	if err != nil {
-		log.Errorf("Error getting deployment: %v", err)
-		return false
+		return fmt.Errorf("Error getting deployment: %v", err)
 	}
 	if deployment.Status.AvailableReplicas > 0 {
 		log.Debugf("Deployment image-registry in namespace openshift-image-registry is available with %d replicas", deployment.Status.AvailableReplicas)
-		return true
+		return nil
 	}
-	return false
+	return fmt.Errorf("Deployment image-registry in namespace openshift-image-registry doesn't have available replicas")
 }
