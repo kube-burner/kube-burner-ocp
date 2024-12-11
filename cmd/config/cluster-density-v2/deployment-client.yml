@@ -49,7 +49,7 @@ spec:
             - "/bin/sh"
             - "-c"
             - "curl --fail -sS ${SERVICE_ENDPOINT} -o /dev/null && curl --fail -sSk ${ROUTE_ENDPOINT} -o /dev/null"
-          periodSeconds: 2
+          periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         volumeMounts:
