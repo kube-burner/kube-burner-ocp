@@ -40,7 +40,15 @@ spec:
             memory: "10Mi"
             cpu: "10m"
         env:
+        - name: SERVICE_ENDPOINT
+          value: "http://udn-density-{{randInt 1 6}}/256.html"
         imagePullPolicy: IfNotPresent
+        readinessProbe:
+          exec:
+            command:
+            - "/bin/sh"
+            - "-c"
+            - "curl --fail -sS ${SERVICE_ENDPOINT} -o /dev/null"
         securityContext:
           privileged: false
         volumeMounts:
@@ -56,4 +64,3 @@ spec:
       restartPolicy: Always
   strategy:
     type: RollingUpdate
-
