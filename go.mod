@@ -5,9 +5,9 @@ go 1.22.0
 toolchain go1.22.3
 
 require (
-	github.com/cloud-bulldozer/go-commons v1.0.17
+	github.com/cloud-bulldozer/go-commons v1.0.18
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner v1.11.1
+	github.com/kube-burner/kube-burner v1.11.3
 	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
 	github.com/openshift/client-go v0.0.0-20240821135114-75c118605d5f
 	github.com/praserx/ipconv v1.2.1
