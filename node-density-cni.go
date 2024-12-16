@@ -28,10 +28,11 @@ import (
 
 // NewNodeDensity holds node-density-cni workload
 func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
-	var podsPerNode int
-	var namespacedIterations, svcLatency bool
+	var podsPerNode, iterationsPerNamespace, churnCycles, churnPercent int
+	var churnDelay, churnDuration time.Duration
+	var churnDeletionStrategy string
+	var churn, namespacedIterations, svcLatency bool
 	var podReadyThreshold time.Duration
-	var iterationsPerNamespace int
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -44,6 +45,13 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
+
+			os.Setenv("CHURN", fmt.Sprint(churn))
+			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
+			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
+			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
+			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
+			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint((totalPods-podCount)/2))
 			os.Setenv("NAMESPACED_ITERATIONS", fmt.Sprint(namespacedIterations))
 			os.Setenv("ITERATIONS_PER_NAMESPACE", fmt.Sprint(iterationsPerNamespace))
