@@ -33,7 +33,6 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnDeletionStrategy string
 	var churn, namespacedIterations, svcLatency bool
 	var podReadyThreshold time.Duration
-	var iterationsPerNamespace int
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{

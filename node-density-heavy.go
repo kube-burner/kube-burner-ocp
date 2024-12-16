@@ -27,10 +27,11 @@ import (
 
 // NewNodeDensity holds node-density-heavy workload
 func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
-	var podsPerNode int
+	var podsPerNode, iterationsPerNamespace, churnCycles, churnPercent int
+	var churnDelay, churnDuration time.Duration
+	var churnDeletionStrategy string
 	var podReadyThreshold, probesPeriod time.Duration
-	var namespacedIterations bool
-	var iterationsPerNamespace int
+	var churn, namespacedIterations bool
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
