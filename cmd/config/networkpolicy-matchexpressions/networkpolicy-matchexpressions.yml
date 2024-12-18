@@ -28,9 +28,9 @@ jobs:
     skipIndexing: true
     jobIterations: 1
     objects:
-      - objectTemplate: ../clusterrole.yml
+      - objectTemplate: clusterrole.yml
         replicas: 1
-      - objectTemplate: ../clusterrolebinding.yml
+      - objectTemplate: clusterrolebinding.yml
         replicas: 1
 
   - name: networkpolicy-matchexpressions
