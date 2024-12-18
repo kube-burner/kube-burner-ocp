@@ -11,6 +11,7 @@ CGO = 0
 GIT_COMMIT = $(shell git rev-parse HEAD)
 VERSION ?= $(shell hack/tag_name.sh)
 SOURCES := $(shell find . -type f -name "*.go")
+SOURCES += $(shell find cmd/config/)
 BUILD_DATE = $(shell date '+%Y-%m-%d-%H:%M:%S')
 VERSION_PKG=github.com/cloud-bulldozer/go-commons/version
 
