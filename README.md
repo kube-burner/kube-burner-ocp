@@ -178,30 +178,96 @@ For User-Defined Network (UDN) L3 segmentation testing. It creates two deploymen
 
 ## Network Policy workloads
 
-With the help of [networkpolicy](https://kubernetes.io/docs/concepts/services-networking/network-policies/) object we can control traffic flow at the IP address or port level in Kubernetes. A networkpolicy can come in various shapes and sizes. Allow traffic from a specific namespace, Deny traffic from a specific pod IP, Deny all traffic, etc. Hence we have come up with a few test cases which try to cover most of them. They are as follows.
+Network policy scale testing tooling involved  2 components:
+1. Template to include all network policy configuration options
+2. Latency measurement through connection testing
 
-### networkpolicy-multitenant
+A network policy defines the rules for ingress and egress traffic between pods in  local and remote namespaces. These remote namespace addresses can be configured using a combination of namespace and pod selectors, CIDRs, ports, and port ranges. Given that network policies offer a wide variety of configuration options, we developed a unified template that incorporates all these configuration parameters. Users can specify the desired count for each option.
 
-- 500 namespaces
-- 20 pods in each namespace. Each pod acts as a server and a client
-- Default deny networkpolicy is applied first that blocks traffic to any test namespace
-- 3 network policies in each namespace that allows traffic from the same namespace and two other namespaces using namespace selectors
+```console
+spec:
+  podSelector:
+    matchExpressions:
+    - key: num
+      operator: In
+      values:
+      - "1"
+      - "2"
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values:
+          - network-policy-perf-13
+          - network-policy-perf-14
+      podSelector:
+       matchExpressions:
+       - key: num
+         operator: In
+         values:
+         - "1"
+         - "2"
+    ports:
+    - port: 8080
+      protocol: TCP
 
-### networkpolicy-matchlabels
+```
 
-- 5 namespaces
-- 100 pods in each namespace. Each pod acts as a server and a client
-- Each pod with 2 labels and each label shared is by 5 pods
-- Default deny networkpolicy is applied first
-- Then for each unique label in a namespace we have a networkpolicy with that label as a podSelector which allows traffic from pods with some other randomly selected label. This translates to 40 networkpolicies/namespace
+### Scale Testing and Unique ACL Flows
+In our scale tests, we aim to create between 10 to 100 network policies within a single namespace. The primary focus is on preventing duplicate configuration options, which ensures that each network policy generates unique Access Control List (ACL) flows. To achieve this, we carefully designed our templating approach based on the following considerations:
 
-### networkpolicy-matchexpressions
+**Round-Robin Assignment:** We use a round-robin strategy to distribute
+1. remote namespaces among ingress and egress rules across kube burner job iterations
+2. remote namespaces among ingress and egress rules in the same kube burner job iteration
 
-- 5 namespaces
-- 25 pods in each namespace. Each pod acts as a server and a client
-- Each pod with 2 labels and each label shared is by 5 pods
-- Default deny networkpolicy is applied first
-- Then for each unique label in a namespace we have a networkpolicy with that label as a podSelector which allows traffic from pods which *don't* have some other randomly-selected label. This translates to 10 networkpolicies/namespace
+This ensures that we don’t overuse the same remote namespaces in a single iteration or among multiple interations. For instance, if namespace-1 uses namespace-2 and namespace-3 as its remote namespaces, then namespace-2 will start using namespace-4 and namespace-5 as remote namespaces in the next iteration.
+
+**Unique Namespace and Pod Combinations:** To avoid redundant flows, the templating system generates unique combinations of remote namespaces and pods for each network policy. Initially, we iterate through the list of remote namespaces, and once all remote namespaces are exhausted, we move on to iterate through the remote pods. This method ensures that every network policy within a namespace is assigned a distinct combination of remote namespaces and remote pods, avoiding duplicate pairs.
+
+**Templating Logic**
+Our templating logic is implemented as follows:
+``` console
+// Iterate over the list of namespaces to configure network policies.
+for namespace := namespaces {
+
+  // Each network policy uses a combination of a remote namespace and a remote pod to allow traffic.
+  for networkPolicy := networkPolicies {
+
+    /*
+    Iterate through the list of remote pods. Once all remote namespaces are exhausted,
+    continue iterating through the remote pods to ensure unique namespace/pod combinations.
+    */
+    for i, remotePod := range remotePods {
+        // Stop when we reach the maximum number of remote pods allowed.
+        if i == num_remote_pods {
+            break
+        }
+
+        // Iterate through the list of remote namespaces to pair with the remote pod.
+        for idx, remoteNamespace := range remoteNamespaces {
+            // Combine the remote namespace and pod into a unique pair for ACL configuration.
+            combine := fmt.Sprintf("%s:%s", remoteNamespace, remotePod)
+
+            // Stop iterating once we’ve exhausted the allowed number of remote namespaces.
+            if idx == num_remote_namespace {
+                break
+            }
+        }
+    }
+  }
+}
+
+```
+
+**CIDRs and Port Ranges**
+We apply the same round-robin and unique combination logic to CIDRs and port ranges, ensuring that these options are not reused in network policies within the same namespace.
+
+**Connection Testing Support**
+kube-burner measures network policy latency through connection testing. Currently, all pods are configured to listen on port 8080. As a result, client pods will send requests to port 8080 during testing.
+
+Note: Egress rules should not be enabled for network policy latency measurement connection testing.
 
 ## EgressIP workloads
 
@@ -320,47 +386,6 @@ Input parameters specific to the workload:
 | ------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
 | dpdk-cores          | Number of cores assigned for each DPDK pod (should fill all the isolated cores of one NUMA node) | 2             |
 | performance-profile | Name of the performance profile implemented on the cluster                                       | default       |
-
-## Workers Scale
-As a day2 operation, we can use this option to scale our cluster's worker nodes to a desired count and capture their bootup times.
-
-!!! Note
-
-    This is only supported for openshift clusters hosted on AWS at the moment.
-
-### Options
-```
-$ kube-burner-ocp workers-scale
-
-Usage:
-  kube-burner-ocp workers-scale [flags]
-
-Flags:
-  -m, --metrics-profile string        Comma-separated list of metric profiles (default "metrics.yml")
-      --metrics-directory string      Directory to dump the metrics files in, when using default local indexing (default "collected-metrics")
-      --mc-kubeconfig string          Path for management cluster kubeconfig
-      --step duration                 Prometheus step size (default 30s)
-      --additional-worker-nodes int   Additional workers to scale (default 3)
-      --enable-autoscaler             Enables autoscaler while scaling the cluster
-      --scale-event-epoch int         Scale event epoch time
-      --user-metadata string          User provided metadata file, in YAML format
-      --tarball-name string           Dump collected metrics into a tarball with the given name, requires local indexing
-  -h, --help                          help for workers-scale
-```
-
-### Examples
-1. Manually scale a cluster to desired node count and capture bootup times.
-```
-$ kube-burner-ocp workers-scale --additional-worker-nodes 24
-```
-2. Auto scale a cluster to a desired node count and capture bootup times. Also disable garbage collection.
-```
-$ kube-burner-ocp workers-scale --additional-worker-nodes 24 --enable-autoscaler --gc=false
-```
-3. Without any scaling, simply capture bootup times on an already scaled cluster. We just have to specify the timestamp when the scale event was triggered.
-```
-$ kube-burner-ocp workers-scale --scale-event-epoch 1725635502
-```
 
 ## Custom Workload: Bring your own workload
 
