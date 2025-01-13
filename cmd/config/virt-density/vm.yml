@@ -5,7 +5,7 @@ metadata:
   labels:
     kubevirt.io/os: cirros
 spec:
-  running: true
+  runStrategy: Always
   template:
     metadata:
       labels:
