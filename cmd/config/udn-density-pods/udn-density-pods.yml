@@ -62,6 +62,9 @@ jobs:
         replicas: 1
       {{ end }}
 
+      - objectTemplate: service.yml
+        replicas: 5
+
       - objectTemplate: deployment-server.yml
         replicas: 3
         inputVars:

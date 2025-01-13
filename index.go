@@ -103,13 +103,12 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 			}
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
 			workloads.ConfigSpec.EmbedFSDir = wh.ConfigDir + "/metrics"
-			workloads.ConfigSpec.EmbedFS = ocpConfig
+			workloads.ConfigSpec.EmbedFS = &ocpConfig
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
 				ConfigSpec:      &workloads.ConfigSpec,
 				MetricsEndpoint: wh.MetricsEndpoint,
 				UserMetaData:    userMetadata,
 				MetricsMetadata: metadata,
-				EmbedConfig:     true,
 			})
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
