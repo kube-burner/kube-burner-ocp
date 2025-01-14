@@ -13,6 +13,10 @@ spec:
       labels:
         name: rds-{{.Replica}}
         app: nginx
+      annotations:
+        k8s.v1.cni.cncf.io/networks: '[
+          { "name": "sriov-net-{{ .Iteration }}-1" }
+        ]'
     spec:
       topologySpreadConstraints:
       - maxSkew: 1
