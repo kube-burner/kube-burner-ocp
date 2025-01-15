@@ -38,6 +38,12 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: {{.NAMESPACED_ITERATIONS}}
     iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
