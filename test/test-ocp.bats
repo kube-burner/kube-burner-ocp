@@ -92,6 +92,10 @@ teardown_file() {
   run_cmd kube-burner-ocp crd-scale --iterations=10 --alerting=false
 }
 
+@test "virt-density" {
+  run_cmd kube-burner-ocp index --vms-per-node=10
+}
+
 @test "web-burner-node-density" {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
   run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
