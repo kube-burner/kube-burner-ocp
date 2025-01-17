@@ -93,7 +93,7 @@ teardown_file() {
 }
 
 @test "virt-density" {
-  run_cmd kube-burner-ocp index --vms-per-node=10
+  run_cmd kube-burner-ocp virt-density --vms-per-node=10
 }
 
 @test "web-burner-node-density" {
