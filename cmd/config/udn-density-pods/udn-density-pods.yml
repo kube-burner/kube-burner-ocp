@@ -87,6 +87,12 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
     objects:
 
+      - objectTemplate: np-deny-all.yml
+        replicas: 1
+
+      - objectTemplate: np-allow-from-clients.yml
+        replicas: 1
+
       - objectTemplate: service.yml
         replicas: 5
 
