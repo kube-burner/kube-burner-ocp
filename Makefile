@@ -2,7 +2,7 @@
 .PHONY: build lint clean test help all
 
 
-ARCH ?= amd64
+ARCH ?= $(shell uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
 BIN_NAME = kube-burner-ocp
 BIN_DIR = bin
 BIN_PATH = $(BIN_DIR)/$(ARCH)/$(BIN_NAME)
