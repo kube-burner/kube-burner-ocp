@@ -13,11 +13,10 @@ jobs:
         ref: ${{ github.event.pull_request.head.sha }}
         persist-credentials: false
 
-    - name: Set up Go environment
-      run: go env -w GOPROXY=direct
-
-    - name: Update Go module dependencies
-      run: go mod tidy
+    - name: Set up Go 1.23
+      uses: actions/setup-go@v5
+      with:
+        go-version: 1.23
 
     - name: Install pre-commit
       run: pip install pre-commit
