@@ -52,7 +52,7 @@ teardown_file() {
 
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
   run_cmd kube-burner-ocp cluster-density-v2 --iterations=2 --churn-duration=1m --churn-delay=5s --profile-type=both ${COMMON_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID}
-  check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion 
+  check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion
 }
 
 @test "cluster-density-v2: churn-deletion-strategy=gvr; custom-metrics=true" {
@@ -94,6 +94,7 @@ teardown_file() {
 
 @test "virt-density" {
   run_cmd kube-burner-ocp virt-density --vms-per-node=10
+  check_metric_value vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
 }
 
 @test "web-burner-node-density" {
