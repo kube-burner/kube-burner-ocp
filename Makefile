@@ -11,6 +11,7 @@ CGO = 0
 GIT_COMMIT = $(shell git rev-parse HEAD)
 VERSION ?= $(shell hack/tag_name.sh)
 SOURCES := $(shell find . -type f -name "*.go")
+SOURCES += $(shell find cmd/config/)
 BUILD_DATE = $(shell date '+%Y-%m-%d-%H:%M:%S')
 VERSION_PKG=github.com/cloud-bulldozer/go-commons/version
 
@@ -28,7 +29,7 @@ help:
 
 build: $(BIN_PATH)
 
-$(BIN_PATH): $(SOURCES)
+$(BIN_PATH): go.sum $(SOURCES)
 	@echo -e "\033[2mBuilding $(BIN_PATH)\033[0m"
 	@echo "GOPATH=$(GOPATH)"
 	GOARCH=$(ARCH) CGO_ENABLED=$(CGO) go build -v -ldflags "-X $(VERSION_PKG).GitCommit=$(GIT_COMMIT) -X $(VERSION_PKG).BuildDate=$(BUILD_DATE) -X $(VERSION_PKG).Version=$(VERSION)" -o $(BIN_PATH) ./cmd/

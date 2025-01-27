@@ -28,10 +28,41 @@ metricsEndpoints:
 
 jobs:
   {{ if eq .ENABLE_LAYER_3 "true" }}
-  - name: udn-density-l3-pods
+  - name: create-udn-l3
   {{ else }}
-  - name: udn-density-l2-pods
+  - name: create-udn-l2
   {{ end }}
+    namespace: udn-density-pods
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: false
+    preLoadPeriod: 15s
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
+    jobPause: {{.JOB_PAUSE}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      {{ if eq .ENABLE_LAYER_3 "true"}}
+      - objectTemplate: udn_l3.yml
+        replicas: 1
+      {{ else }}
+      - objectTemplate: udn_l2.yml
+        replicas: 1
+      {{ end }}
+
+  - name: udn-density-pods
     namespace: udn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
@@ -48,19 +79,16 @@ jobs:
     churnDelay: {{.CHURN_DELAY}}
     churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
     jobPause: 5m
+    cleanup: false
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
-      {{ if eq .ENABLE_LAYER_3 "true"}}
-      - objectTemplate: udn_l3.yml
-        replicas: 1
-      {{ else }}
-      - objectTemplate: udn_l2.yml
-        replicas: 1
-      {{ end }}
+
+      - objectTemplate: service.yml
+        replicas: 5
 
       - objectTemplate: deployment-server.yml
         replicas: 3
@@ -71,3 +99,4 @@ jobs:
         replicas: 2
         inputVars:
           podReplicas: 2
+
