@@ -27,10 +27,11 @@ import (
 
 // NewNodeDensity holds node-density-heavy workload
 func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
-	var podsPerNode int
+	var podsPerNode, iterationsPerNamespace, churnCycles, churnPercent int
+	var churnDelay, churnDuration time.Duration
+	var churnDeletionStrategy string
 	var podReadyThreshold, probesPeriod time.Duration
-	var namespacedIterations bool
-	var iterationsPerNamespace int
+	var churn, namespacedIterations bool
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -43,6 +44,12 @@ func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
+			os.Setenv("CHURN", fmt.Sprint(churn))
+			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
+			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
+			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
+			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
+			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
 			// We divide by two the number of pods to deploy to obtain the workload iterations
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint((totalPods-podCount)/2))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
