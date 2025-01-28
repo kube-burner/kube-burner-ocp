@@ -2,7 +2,7 @@
 .PHONY: build lint clean test help all
 
 
-ARCH ?= amd64
+ARCH ?= $(shell uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/)
 BIN_NAME = kube-burner-ocp
 BIN_DIR = bin
 BIN_PATH = $(BIN_DIR)/$(ARCH)/$(BIN_NAME)
@@ -29,7 +29,7 @@ help:
 
 build: $(BIN_PATH)
 
-$(BIN_PATH): $(SOURCES)
+$(BIN_PATH): go.sum $(SOURCES)
 	@echo -e "\033[2mBuilding $(BIN_PATH)\033[0m"
 	@echo "GOPATH=$(GOPATH)"
 	GOARCH=$(ARCH) CGO_ENABLED=$(CGO) go build -v -ldflags "-X $(VERSION_PKG).GitCommit=$(GIT_COMMIT) -X $(VERSION_PKG).BuildDate=$(BUILD_DATE) -X $(VERSION_PKG).Version=$(VERSION)" -o $(BIN_PATH) ./cmd/
