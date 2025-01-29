@@ -53,6 +53,7 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
     objects:
       {{ if eq .ENABLE_LAYER_3 "true"}}
       - objectTemplate: udn_l3.yml
@@ -85,6 +86,7 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
     objects:
 
       - objectTemplate: np-deny-all.yml
