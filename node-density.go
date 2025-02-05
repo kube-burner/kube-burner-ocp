@@ -28,6 +28,7 @@ import (
 // NewNodeDensity holds node-density workload
 func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var podsPerNode int
+	var pprof bool
 	var podReadyThreshold time.Duration
 	var containerImage string
 	var metricsProfiles []string
@@ -43,6 +44,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal(err.Error())
 			}
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(totalPods-podCount))
+			os.Setenv("PPROF", fmt.Sprint(pprof))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
 			os.Setenv("CONTAINER_IMAGE", containerImage)
 		},
@@ -55,6 +57,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
+	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
