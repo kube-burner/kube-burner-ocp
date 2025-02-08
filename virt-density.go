@@ -53,7 +53,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 245, "VMs per node")
-	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 20*time.Second, "VMI ready timeout threshold")
+	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 25*time.Second, "VMI ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }
