@@ -27,7 +27,7 @@ import (
 // NewUDNDensityPods holds udn-density-pods workload
 func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
-	var churn, l3 bool
+	var churn, l3, simple bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var churnDeletionStrategy, jobPause string
 	var metricsProfiles []string
@@ -38,6 +38,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			os.Setenv("JOB_PAUSE", jobPause)
+			os.Setenv("SIMPLE", fmt.Sprint(simple))
 			os.Setenv("CHURN", fmt.Sprint(churn))
 			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
 			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
@@ -65,6 +66,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&l3, "layer3", true, "Layer3 UDN test")
 	cmd.Flags().StringVar(&jobPause, "job-pause", "1ms", "Time to pause after finishing the job")
+	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
