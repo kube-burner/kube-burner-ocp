@@ -107,6 +107,7 @@ jobs:
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
 
+      {{ if ne .SIMPLE "true"}}
       - objectTemplate: np-deny-all.yml
         replicas: 1
 
@@ -115,6 +116,7 @@ jobs:
 
       - objectTemplate: service.yml
         replicas: 5
+     {{ end }}
 
       - objectTemplate: deployment-server.yml
         replicas: 3
@@ -125,4 +127,4 @@ jobs:
         replicas: 2
         inputVars:
           podReplicas: 2
-
+          simple: {{.SIMPLE}}
