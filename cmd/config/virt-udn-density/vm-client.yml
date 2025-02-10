@@ -1,0 +1,53 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: virt-client-{{.Iteration}}
+  labels:
+    kubevirt.io/os: fedora
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/os: fedora
+    spec:
+      terminationGracePeriodSeconds: 0
+      domain:
+        resources:
+          requests:
+            memory: 1Gi
+        devices:
+          disks:
+          - name: containerdisk
+            disk:
+              bus: virtio
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          - name: emptydisk
+            disk:
+              bus: virtio
+          interfaces:
+          - name: primary-udn-net
+            binding:
+              name: {{.bindingMethod}}
+      networks:
+      - name: primary-udn-net
+        pod: {}
+      volumes:
+      - name: containerdisk
+        containerDisk:
+          image: quay.io/openshift-cnv/qe-cnv-tests-fedora:40
+          imagePullPolicy: IfNotPresent
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            password: perfscale
+            chpasswd: { expire: False }
+            runcmd:
+              - dnf install -y --nodocs curl
+              - curl -sS --fail udn-density-svc.virt-density-{{.Iteration}}.svc.cluster.local --retry 30 --retry-delay 10
+      - name: emptydisk
+        emptyDisk:
+          capacity: "50Mi"
