@@ -1,0 +1,91 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: vmiLatency
+      thresholds:
+        - conditionType: VMIRunning
+          metric: P99
+          threshold: {{.VMI_RUNNING_THRESHOLD}}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if eq .LOCAL_INDEXING "true" }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+jobs:
+  {{ if eq .ENABLE_LAYER_3 "true" }}
+  - name: create-udn-l3
+  {{ else }}
+  - name: create-udn-l2
+  {{ end }}
+    namespace: virt-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: false
+    preLoadPeriod: 15s
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
+    jobPause: {{.JOB_PAUSE}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      {{ if eq .ENABLE_LAYER_3 "true"}}
+      - objectTemplate: udn_l3.yml
+        replicas: 1
+      {{ else }}
+      - objectTemplate: udn_l2.yml
+        replicas: 1
+      {{ end }}
+
+  - name: virt-density-udn
+    namespace: virt-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    preLoadImages: false
+    preLoadPeriod: 15s
+    waitWhenFinished: true
+    jobPause: 2m
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: service.yml
+        replicas: 1
+      - objectTemplate: vm-client.yml
+        replicas: 1
+        inputVars:
+          bindingMethod: {{.UDN_BINDING_METHOD}}
+      - objectTemplate: vm-server.yml
+        replicas: 1
+        inputVars:
+          bindingMethod: {{.UDN_BINDING_METHOD}}
