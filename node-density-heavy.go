@@ -29,7 +29,7 @@ import (
 func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 	var podsPerNode int
 	var podReadyThreshold, probesPeriod time.Duration
-	var namespacedIterations bool
+	var namespacedIterations, pprof bool
 	var iterationsPerNamespace int
 	var metricsProfiles []string
 	var rc int
@@ -45,6 +45,7 @@ func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 			// We divide by two the number of pods to deploy to obtain the workload iterations
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint((totalPods-podCount)/2))
+			os.Setenv("PPROF", fmt.Sprint(pprof))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
 			os.Setenv("PROBES_PERIOD", fmt.Sprint(probesPeriod.Seconds()))
 			os.Setenv("NAMESPACED_ITERATIONS", fmt.Sprint(namespacedIterations))
@@ -59,6 +60,7 @@ func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&probesPeriod, "probes-period", 10*time.Second, "Perf app readiness/livenes probes period")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")

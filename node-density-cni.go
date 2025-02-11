@@ -29,7 +29,7 @@ import (
 // NewNodeDensity holds node-density-cni workload
 func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 	var podsPerNode int
-	var namespacedIterations, svcLatency bool
+	var namespacedIterations, svcLatency, pprof bool
 	var podReadyThreshold time.Duration
 	var iterationsPerNamespace int
 	var metricsProfiles []string
@@ -45,6 +45,7 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal(err)
 			}
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint((totalPods-podCount)/2))
+			os.Setenv("PPROF", fmt.Sprint(pprof))
 			os.Setenv("NAMESPACED_ITERATIONS", fmt.Sprint(namespacedIterations))
 			os.Setenv("ITERATIONS_PER_NAMESPACE", fmt.Sprint(iterationsPerNamespace))
 			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
@@ -60,6 +61,7 @@ func NewNodeDensityCNI(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
+	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1000, "Iterations per namespace")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")

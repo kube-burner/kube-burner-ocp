@@ -8,6 +8,24 @@ global:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
+{{ if eq .PPROF "true" }}
+    - name: pprof
+      pprofInterval: 2m
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=30
+      - name: ovn-controller
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29105/debug/pprof/profile?seconds=30
+      - name: ovnk-control-plane
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=30
+{{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
@@ -53,6 +71,7 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
     objects:
       {{ if eq .ENABLE_LAYER_3 "true"}}
       - objectTemplate: udn_l3.yml
@@ -85,10 +104,19 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
     objects:
+
+      {{ if ne .SIMPLE "true"}}
+      - objectTemplate: np-deny-all.yml
+        replicas: 1
+
+      - objectTemplate: np-allow-from-clients.yml
+        replicas: 1
 
       - objectTemplate: service.yml
         replicas: 5
+     {{ end }}
 
       - objectTemplate: deployment-server.yml
         replicas: 3
@@ -99,4 +127,4 @@ jobs:
         replicas: 2
         inputVars:
           podReplicas: 2
-
+          simple: {{.SIMPLE}}
