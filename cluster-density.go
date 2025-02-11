@@ -29,7 +29,7 @@ import (
 // NewClusterDensity holds cluster-density workload
 func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, churnPercent, churnCycles int
-	var churn, svcLatency bool
+	var churn, svcLatency, pprof bool
 	var churnDelay, churnDuration time.Duration
 	var churnDeletionStrategy string
 	var podReadyThreshold time.Duration
@@ -40,6 +40,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRun: func(cmd *cobra.Command, args []string) {
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
+			os.Setenv("PPROF", fmt.Sprint(pprof))
 			os.Setenv("CHURN", fmt.Sprint(churn))
 			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
 			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
@@ -71,6 +72,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))
+	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
