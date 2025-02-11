@@ -93,7 +93,7 @@ teardown_file() {
 }
 
 @test "virt-density" {
-  run_cmd kube-burner-ocp virt-density --vms-per-node=10 --uuid=${UUID}
+  run_cmd kube-burner-ocp virt-density --vms-per-node=10 --uuid=${UUID} ${COMMON_FLAGS}
   check_metric_value jobSummary vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
 }
 

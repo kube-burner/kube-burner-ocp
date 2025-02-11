@@ -94,7 +94,7 @@ func openShiftCmd() *cobra.Command {
 			envVars["ALERTS"] = ""
 		}
 		// If metricsEndpoint is not set, use values from flags
-		if workloadConfig.MetricsEndpoint == "" {
+		if workloadConfig.MetricsEndpoint == "" && esServer != "" && esIndex != "" {
 			envVars["ES_SERVER"] = esServer
 			envVars["ES_INDEX"] = esIndex
 		}
