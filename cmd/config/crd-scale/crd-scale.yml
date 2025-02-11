@@ -32,5 +32,7 @@ jobs:
       - objectTemplate: example-crd.yml
         replicas: 1
         waitOptions:
-          forCondition: Established
+          customStatusPaths:
+          - key: '(.conditions.[] | select(.type == "Established")).status'
+            value: "True"
 
