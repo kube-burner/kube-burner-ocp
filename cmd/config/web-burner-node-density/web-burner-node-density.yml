@@ -71,7 +71,9 @@ jobs:
         inputVars:
           probe: "{{ $.PROBE }}"
         waitOptions:
-          forCondition: "Ready"
+          customStatusPaths:
+          - key: '(.conditions.[] | select(.type == "Ready")).status'
+            value: "True"
 {{ end }}
 
 {{ $servedLimit := mul .LIMITCOUNT .SCALE | int }}
@@ -117,7 +119,9 @@ jobs:
       - objectTemplate: node_density_pod_served.yml
         replicas: 3
         waitOptions:
-          forCondition: Ready
+          customStatusPaths:
+          - key: '(.conditions.[] | select(.type == "Ready")).status'
+            value: "True"
         inputVars:
           probe: "{{ $.PROBE }}"
 {{ end }}
@@ -142,6 +146,8 @@ jobs:
       - objectTemplate: node_density_pod_served.yml
         replicas: 3
         waitOptions:
-          forCondition: Ready
+          customStatusPaths:
+          - key: '(.conditions.[] | select(.type == "Ready")).status'
+            value: "True"
         inputVars:
           probe: "{{ $.PROBE }}"
