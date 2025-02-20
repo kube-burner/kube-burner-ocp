@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
+	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
