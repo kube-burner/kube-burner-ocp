@@ -1,0 +1,52 @@
+kind: MultiNetworkPolicy
+apiVersion: k8s.cni.cncf.io/v1beta1
+metadata:
+  name: ingress-{{.Iteration}}-{{.Replica}}
+  {{- $namespace_name := print "network-policy-perf-" $.Iteration }}
+  {{- $vlanId := add (div $.Iteration .namespaces_per_vlan) 1}}
+  annotations:
+    k8s.v1.cni.cncf.io/policy-for: {{$namespace_name}}/br-ex-vlan-{{$vlanId}}
+spec:
+  podSelector: {}
+  ingress:
+  {{- $peerNsIdx := add (mul $.Iteration .pod_selectors .netpols_per_namespace .peer_namespaces) (mul (sub $.Replica 1) .pod_selectors .peer_namespaces) 1}}
+  {{- range $ps, $e := until $.pod_selectors }}
+    {{- $nsStart := add $peerNsIdx (mul $ps $.peer_namespaces) }}
+    {{- $nsList := list }}
+    {{- range $i, $v := until $.peer_namespaces }}
+      {{- $nextNs := add $nsStart $i }}
+      {{- if ge $nextNs $.namespaces_per_vlan }}
+        {{- $nextNs = mod $nextNs $.namespaces_per_vlan }}
+      {{- end }}
+      {{- $next_namespace := print "network-policy-perf-" $nextNs }}
+      {{- $nsList = append $nsList $next_namespace }}
+    {{- end }}
+    {{- $nsNames := toJson $nsList }}
+  - from:
+    - namespaceSelector:
+        matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: In
+            values: {{$nsNames}}
+    ports:
+    {{- $single_port := 8079 }}
+    {{- range $i, $e := until $.single_ports }}
+      {{- $single_port = add $single_port 1 }}
+      - protocol: TCP
+        port: {{$single_port}}
+    {{- end }}
+  {{- end }}
+  {{- $subnetStartIdx := add (mul $.Replica $.cidr_rules) 1 }}
+  {{- range $i, $e := until .cidr_rules }}
+      {{- $subnetIdx := add $subnetStartIdx $i }}
+  - from:
+    - ipBlock:
+        cidr: {{GetSubnet24 (int $subnetIdx) }}
+    ports:
+      {{- $single_port := 1000 }}
+      {{- range $i, $e := until $.single_ports }}
+        {{- $single_port = add $single_port 1 }}
+      - protocol: TCP
+        port: {{$single_port}}
+      {{- end }}
+  {{- end }}

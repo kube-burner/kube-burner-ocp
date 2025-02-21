@@ -1,0 +1,49 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  {{- $vlanId := add (div $.Iteration .namespaces_per_vlan) 1}}
+  name: vm-{{$vlanId}}-{{.Replica}} 
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/os: fedora
+    spec:
+      terminationGracePeriodSeconds: 0
+      domain:
+        resources:
+          requests:
+            memory: 1Gi
+        devices:
+          disks:
+          - name: containerdisk
+            disk:
+              bus: virtio
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          - name: emptydisk
+            disk:
+              bus: virtio
+          interfaces:
+          - name: br-ex-vlan-{{$vlanId}}
+            bridge: {}
+      networks:
+      - multus:
+          networkName: br-ex-vlan-{{$vlanId}}
+        name: br-ex-vlan-{{$vlanId}}
+      volumes:
+      - name: containerdisk
+        containerDisk:
+          image: quay.io/openshift-cnv/qe-cnv-tests-fedora:40
+          imagePullPolicy: IfNotPresent
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            password: perfscale
+            chpasswd: { expire: False }
+      - name: emptydisk
+        emptyDisk:
+          capacity: "10Mi"

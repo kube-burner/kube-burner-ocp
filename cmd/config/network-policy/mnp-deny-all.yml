@@ -1,0 +1,12 @@
+apiVersion: k8s.cni.cncf.io/v1beta1
+kind: MultiNetworkPolicy
+metadata:
+  name: deny-all
+  annotations:
+    {{- $vlanId := add (div $.Iteration .namespaces_per_vlan) 1}}
+    k8s.v1.cni.cncf.io/policy-for: network-policy-perf-{{.Iteration}}/br-ex-vlan-{{$vlanId}}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress: []

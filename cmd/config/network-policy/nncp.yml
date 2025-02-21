@@ -1,0 +1,11 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: vlan{{.Replica}}-on-br-ex
+spec:
+  desiredState:
+    ovn:
+      bridge-mappings:
+        - localnet: br-ex-vlan-{{.Replica}}
+          bridge: br-ex
+          state: present
