@@ -48,6 +48,12 @@ jobs:
         OPENSHIFT_USER: ${{ secrets.OPENSHIFT_USER }}
         OPENSHIFT_PASSWORD: ${{ secrets.OPENSHIFT_PASSWORD }}
 
+    - name: Install Virtctl
+      run: |
+        export VERSION=$(curl https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt)
+        wget https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/virtctl-${VERSION}-linux-amd64 -O /tmp/virtctl
+        chmod +x /tmp/virtctl
+
     - name: Execute Tests
       run: |
         export PATH=${PATH}:/tmp/
