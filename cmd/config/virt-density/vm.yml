@@ -2,20 +2,18 @@ apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   name: virt-density-{{.Iteration}}
-  labels:
-    kubevirt.io/os: cirros
 spec:
   runStrategy: Always
   template:
     metadata:
       labels:
-        kubevirt.io/os: cirros
+        kubevirt.io/os: fedora
     spec:
       terminationGracePeriodSeconds: 0
       domain:
         resources:
           requests:
-            memory: 32Mi
+            memory: 1Gi
         devices:
           disks:
           - name: containerdisk
@@ -30,7 +28,7 @@ spec:
       volumes:
       - name: containerdisk
         containerDisk:
-          image: quay.io/rsevilla/cirros:0.6.3
+          image: quay.io/openshift-cnv/qe-cnv-tests-fedora:40
           imagePullPolicy: IfNotPresent
       - name: cloudinitdisk
         cloudInitNoCloud:
