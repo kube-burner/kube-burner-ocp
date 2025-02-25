@@ -126,6 +126,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewEgressIP(&wh, "egressip"),
 		ocp.NewWhereabouts(&wh),
 		ocp.NewVirtDensity(&wh),
+		ocp.NewVirtUDNDensity(&wh),
 		ocp.ClusterHealth(),
 		ocp.CustomWorkload(&wh),
 	)
