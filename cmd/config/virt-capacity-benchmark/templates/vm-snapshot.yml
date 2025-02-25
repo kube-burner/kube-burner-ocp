@@ -1,0 +1,14 @@
+apiVersion: snapshot.kubevirt.io/v1beta1
+kind: VirtualMachineSnapshot
+metadata:
+  name: "{{ .name }}-{{ .counter }}-{{ .Replica }}"
+  labels:
+  {{range $key, $value := .snapshotLabels }}
+    {{ $key }}: {{ $value }}
+  {{end}}
+spec:
+  deletionPolicy: delete
+  source:
+    apiGroup: kubevirt.io
+    kind: VirtualMachine
+    name: "{{ .name }}-{{ .counter }}-{{ .Replica }}"

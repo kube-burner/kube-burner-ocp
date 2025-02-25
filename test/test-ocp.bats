@@ -122,3 +122,14 @@ teardown_file() {
 @test "cluster-health" {
   run_cmd kube-burner-ocp cluster-health
 }
+
+@test "virt-capacity-benchmark" {
+  VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS=${VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS:-oci-bv}
+  run_cmd kube-burner-ocp virt-capacity-benchmark --storage-class $VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS --max-iterations 2  --data-volume-count 2 --vms 2 --skip-migration-job --volume-round-size 50 --skip-resize-propagation-check
+  local jobs=("create-vms" "restart-vms")
+  for job in "${jobs[@]}"; do
+    check_metric_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency VMReady
+  done
+  oc delete namespace virt-capacity-benchmark
+}
