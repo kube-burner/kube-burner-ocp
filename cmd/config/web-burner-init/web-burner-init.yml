@@ -1,3 +1,4 @@
+# This feature is under the deprecation path and will be removed in a future release.
 ---
 global:
   gc: {{.GC}}

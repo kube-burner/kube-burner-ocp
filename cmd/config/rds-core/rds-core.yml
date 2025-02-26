@@ -1,3 +1,6 @@
+# This workload has special hardware requirements.
+# In order to meet those requirements we have added CI tests in e2e-benchmarking: 
+# https://github.com/openshift/release/tree/master/ci-operator/step-registry/cloud-bulldozer/e2e-benchmarking
 ---
 global:
   gc: {{.GC}}

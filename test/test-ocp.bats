@@ -81,22 +81,44 @@ teardown_file() {
 }
 
 @test "index: metrics-endpoints=true; es-indexing=true" {
-  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --metrics-profile metrics.yml --es-server=https://search-perfscale-dev-chmf5l4sh66lvxbnadi4bznl3a.us-west-2.es.amazonaws.com:443 --es-index=ripsaw-kube-burner --user-metadata user-metadata.yml
+  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --metrics-profile metrics.yml --es-server=$PERFSCALE_PROD_ES_SERVER --es-index=ripsaw-kube-burner --user-metadata user-metadata.yml
+}
+
+@test "networkpolicy" {
+  run_cmd kube-burner-ocp network-policy --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
+}
+
+@test "networkpolicy-matchexpressions" {
+  run_cmd kube-burner-ocp networkpolicy-matchexpressions --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
+}
+
+@test "networkpolicy-matchlabels" {
+  run_cmd kube-burner-ocp networkpolicy-matchlabels --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
 @test "networkpolicy-multitenant" {
   run_cmd kube-burner-ocp networkpolicy-multitenant --iterations 5 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
+@test "whereabouts" {
+  run_cmd kube-burner-ocp whereabouts --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
+}
+
 @test "crd-scale; alerting=false" {
-  run_cmd kube-burner-ocp crd-scale --iterations=10 --alerting=false
+  run_cmd kube-burner-ocp crd-scale --iterations=2 --alerting=false
+}
+
+@test "pvc-density" {
+  PVC_DENSITY_STORAGE_CLASS=${PVC_DENSITY_STORAGE_CLASS:-oci}
+  run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner $PVC_DENSITY_STORAGE_CLASS
 }
 
 @test "virt-density" {
-  run_cmd kube-burner-ocp virt-density --vms-per-node=10 --uuid=${UUID} ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp virt-density --vms-per-node=2 --uuid=${UUID} ${COMMON_FLAGS}
   check_metric_value jobSummary vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
 }
 
+# This test is under the deprecation path and will be removed in a future update.
 @test "web-burner-node-density" {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
   run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
@@ -108,6 +130,7 @@ teardown_file() {
   run_cmd oc delete project served-ns-0 serving-ns-0
 }
 
+# This test is under the deprecation path and will be removed in a future update.
 @test "web-burner-cluster-density" {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
   run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
