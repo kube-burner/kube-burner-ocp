@@ -85,7 +85,9 @@ jobs:
         replicas: 1
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
+          vmImage: {{.VM_IMAGE}}
       - objectTemplate: vm-server.yml
         replicas: 1
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
+          vmImage: {{.VM_IMAGE}}
