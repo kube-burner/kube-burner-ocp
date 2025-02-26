@@ -15,7 +15,7 @@ spec:
       domain:
         resources:
           requests:
-            memory: 1Gi
+            memory: 256Mi
         devices:
           disks:
           - name: containerdisk
@@ -37,7 +37,7 @@ spec:
       volumes:
       - name: containerdisk
         containerDisk:
-          image: quay.io/openshift-cnv/qe-cnv-tests-fedora:40
+          image: {{.vmImage}}
           imagePullPolicy: IfNotPresent
       - name: cloudinitdisk
         cloudInitNoCloud:
@@ -47,7 +47,7 @@ spec:
             chpasswd: { expire: False }
             runcmd:
               - dnf install -y --nodocs curl
-              - curl -sS --fail udn-density-svc.virt-density-{{.Iteration}}.svc.cluster.local --retry 30 --retry-delay 10
+              - curl -sS --fail 10.132.0.5 --retry 30 --retry-delay 10
       - name: emptydisk
         emptyDisk:
           capacity: "50Mi"
