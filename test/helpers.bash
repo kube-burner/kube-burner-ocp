@@ -110,3 +110,29 @@ run_cmd(){
   echo "$@"
   ${@}
 }
+
+check_metric_recorded() {
+  local folder=$1
+  local job=$2
+  local type=$3
+  local metric=$4
+  local m
+  m=$(cat ${folder}/${type}Measurement-${job}.json | jq .[0].${metric})
+  if [[ ${m} -eq 0 ]]; then
+      echo "metric ${type}/${metric} was not recorded for ${job}"
+      return 1
+  fi
+}
+
+check_quantile_recorded() {
+  local folder=$1
+  local job=$2
+  local type=$3
+  local quantileName=$4
+
+  MEASUREMENT=$(cat ${folder}/${type}QuantilesMeasurement-${job}.json | jq --arg name "${quantileName}" '[.[] | select(.quantileName == $name)][0].avg')
+  if [[ ${MEASUREMENT} -eq 0 ]]; then
+    echo "Quantile for ${type}/${quantileName} was not recorded for ${job}"
+    return 1
+  fi
+}

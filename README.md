@@ -5,7 +5,7 @@ This plugin is a very opinionated OpenShift wrapper designed to simplify the exe
 Executed with `kube-burner-ocp`, it looks like:
 
 ```console
-$ kube-burner-ocp help
+$ kube-burner-ocp --help
 kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads
 
 Usage:
@@ -29,6 +29,8 @@ Available Commands:
   pvc-density                    Runs pvc-density workload
   udn-density-l3-pods            Runs udn-density-l3-pods workload
   version                        Print the version number of kube-burner
+  virt-capacity-benchmark        Runs capacity-benchmark workload
+  virt-density                   Runs virt-density workload
   web-burner-cluster-density     Runs web-burner-cluster-density workload
   web-burner-init                Runs web-burner-init workload
   web-burner-node-density        Runs web-burner-node-density workload
@@ -86,7 +88,7 @@ kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-
 ### metrics-endpoints.yaml
 
 ```yaml
-- endpoint: prometheus-k8s-openshift-monitoring.apps.rook.devshift.org 
+- endpoint: prometheus-k8s-openshift-monitoring.apps.rook.devshift.org
   metrics:
     - metrics.yml
   alerts:
@@ -97,7 +99,7 @@ kube-burner-ocp cluster-density-v2 --iterations=1 --churn-duration=2m0s --churn-
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 - endpoint: https://prometheus-k8s-openshift-monitoring.apps.rook.devshift.org
-  token: {{ .TOKEN }} 
+  token: {{ .TOKEN }}
   metrics:
     - metrics.yml
   indexer:
@@ -386,6 +388,71 @@ Input parameters specific to the workload:
 | ------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
 | dpdk-cores          | Number of cores assigned for each DPDK pod (should fill all the isolated cores of one NUMA node) | 2             |
 | performance-profile | Name of the performance profile implemented on the cluster                                       | default       |
+
+
+## Virt Workloads
+
+This workload family is a focused on Virtualization creating different objects across the cluster.
+
+The different variants are:
+- [virt-density](#virt-density)
+- [virt-capacity-benchmark](#virt-capacity-benchmark).
+
+### Virt Density
+
+### Virt Capacity Benchmark
+
+Test the capacity of Virtual Machines and Volumes supported by the cluster and a specific storage class.
+
+#### Environment Requirements
+
+In order to verify that the `VirtualMachine` completed their boot and that volume resize propagated successfully, the test uses `virtctl ssh`.
+Therefore, `virtctl` must be installed and available in the `PATH`.
+
+See the [Temporary SSH Keys](#temporary-ssh-keys) for details on the SSH keys used for the test
+
+#### Test Sequence
+
+The test runs a workload in a loop without deleting previously created resources. By default it will continue until a failure occurs.
+Each loop is comprised of the following steps:
+- Create VMs
+- Resize the root and data volumes
+- Restart the VMs
+- Snapshot the VMs
+- Migrate the VMs
+
+#### Tested StorageClass
+
+By default, the test will search for the `StorageClass` to use:
+
+1. Use the default `StorageClass` for Virtualization annotated with `storageclass.kubevirt.io/is-default-virt-class`
+2. If does not exist, use general default `StorageClass` annotated with `storageclass.kubernetes.io/is-default-class`
+3. If does not exist, fail the test before starting
+
+To use a different one, use `--storage-class` to provide a different name.
+
+Please note that regardless to which `StorageClass` is used, it must:
+- Support Volume Expansion: `allowVolumeExpansion: true`.
+- Have a corresponding `VolumeSnapshotClass` using the same provisioner
+
+#### Test Namespace
+
+All `VirtualMachines` are created in the same namespace.
+
+By default, the namespace is `virt-capacity-benchmark`. Set it by passing `--namespace` (or `-n`)
+
+#### Test Size Parameters
+
+Users may control the workload sizes by passing the following arguments:
+- `--max-iterations` - Maximum number of iterations, or 0 (default) for infinite. In any case, the test will stop upon failure
+- `--vms` - Number of VMs for each iteration (default 5)
+- `--data-volume-count` - Number of data volumes for each VM (default 9)
+
+#### Temporary SSH Keys
+
+The test generated the SSH keys automatically.
+By default, it stores the pair in a temporary directory.
+Users may choose the store the key in a specified directory by setting `--ssh-key-path`
 
 ## Custom Workload: Bring your own workload
 
