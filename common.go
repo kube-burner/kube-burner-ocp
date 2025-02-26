@@ -70,3 +70,26 @@ func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
 	}
 	return nil
 }
+
+// Add metadata specific to the CNV workloads
+func AddVirtMetadata(wh *workloads.WorkloadHelper, vmImage, udnLayer, udnBindingMethod string) error {
+	var err error
+	var cnvVersion string
+	kubeClientProvider := config.NewKubeClientProvider("", "")
+	_, restConfig := kubeClientProvider.DefaultClientSet()
+	wh.MetadataAgent, err = ocpmetadata.NewMetadata(restConfig)
+	if err != nil {
+		return err
+	}
+	cnvVersion, err = wh.MetadataAgent.GetOCPVirtualizationVersion()
+	if err != nil {
+		return err
+	}
+	wh.SummaryMetadata["OCPVirtualizationVersion"] = cnvVersion
+	if udnLayer != "" {
+		wh.SummaryMetadata["UdnLayer"] = udnLayer
+		wh.SummaryMetadata["UdnBindingMethod"] = udnBindingMethod
+	}
+	wh.SummaryMetadata["VmImage"] = vmImage
+	return nil
+}
