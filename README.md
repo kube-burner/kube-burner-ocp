@@ -178,6 +178,10 @@ Note: this workload calculates the number of iterations to create from the numbe
 
 For User-Defined Network (UDN) L3 segmentation testing. It creates two deployments, a client/curl and a server/nxing.
 
+### virt-density-pods
+
+Creates two VMs, one Ngnix server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. 
+
 ## Network Policy workloads
 
 Network policy scale testing tooling involved  2 components:

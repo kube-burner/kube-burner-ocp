@@ -28,7 +28,7 @@ spec:
       volumes:
       - name: containerdisk
         containerDisk:
-          image: quay.io/openshift-cnv/qe-cnv-tests-fedora:40
+          image: {{.vmImage}}
           imagePullPolicy: IfNotPresent
       - name: cloudinitdisk
         cloudInitNoCloud:

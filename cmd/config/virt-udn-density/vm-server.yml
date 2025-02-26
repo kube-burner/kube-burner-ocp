@@ -16,7 +16,7 @@ spec:
       domain:
         resources:
           requests:
-            memory: 1Gi
+            memory: 256Mi
         devices:
           disks:
           - name: containerdisk
@@ -40,10 +40,16 @@ spec:
       volumes:
       - name: containerdisk
         containerDisk:
-          image: quay.io/openshift-cnv/qe-cnv-tests-fedora:40
+          image: {{.vmImage}}
           imagePullPolicy: IfNotPresent
       - name: cloudinitdisk
         cloudInitNoCloud:
+          networkData: |
+            version: 2
+            ethernets:
+              eth0:
+                dhcp4: true
+                addresses: [10.132.0.5/24]
           userData: |-
             #cloud-config
             password: perfscale

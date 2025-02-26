@@ -6,4 +6,4 @@ spec:
   topology: Layer2
   layer2:
     role: Primary
-    subnets: ["10.132.0.0/16"]
+    subnets: ["10.132.0.0/24"]
