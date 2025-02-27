@@ -27,7 +27,8 @@ import (
 // NewNetworkPolicy holds network-policy workload
 func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, podsPerNamespace, netpolPerNamespace, localPods, podSelectors, singlePorts, portRanges, remoteNamespaces, remotePods, cidrs int
-	var netpolLatency bool
+	var vlans, namespacesPerVlan, vmsPerNamespace int
+	var netpolLatency, multiNetworkPolicy, virt bool
 	var metricsProfiles []string
 	var netpolReadyThreshold time.Duration
 	var rc int
@@ -46,6 +47,11 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			os.Setenv("REMOTE_PODS", fmt.Sprint(remotePods))
 			os.Setenv("CIDRS", fmt.Sprint(cidrs))
 			os.Setenv("NETPOL_LATENCY", strconv.FormatBool(netpolLatency))
+			os.Setenv("MULTI_NETWORK_POLICY", strconv.FormatBool(multiNetworkPolicy))
+			os.Setenv("VIRT", strconv.FormatBool(virt))
+			os.Setenv("VLANS", fmt.Sprint(vlans))
+			os.Setenv("NAMESPACES_PER_VLAN", fmt.Sprint(namespacesPerVlan))
+			os.Setenv("VMS_PER_NAMESPACE", fmt.Sprint(vmsPerNamespace))
 			os.Setenv("NETPOL_READY_THRESHOLD", fmt.Sprintf("%v", netpolReadyThreshold))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -69,6 +75,11 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd.Flags().IntVar(&cidrs, "cidrs", 2, "Number of cidrs to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().BoolVar(&netpolLatency, "networkpolicy-latency", true, "Enable network policy latency measurement")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&multiNetworkPolicy, "multi-network-policy", false, "Enable multi network policy")
+	cmd.Flags().BoolVar(&virt, "virt", false, "Multi network policy on the virtual machines")
+	cmd.Flags().IntVar(&vlans, "vlans", 10, "Number of localnet vlans created on br-ex using NodeNetworkConfigurationPolicy (nncp). This workload is designed to share nncp by the namespaces, but not using multiple nncp in a namespace")
+	cmd.Flags().IntVar(&namespacesPerVlan, "namespaces-per-vlan", 2, "Number of namespaces sharing the same VLAN")
+	cmd.Flags().IntVar(&vmsPerNamespace, "vms-per-namespace", 10, "Number of vms created in a namespace")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }
