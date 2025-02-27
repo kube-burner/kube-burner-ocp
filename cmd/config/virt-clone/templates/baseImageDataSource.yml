@@ -1,0 +1,15 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataSource
+metadata:
+  name: {{ .cloneDataSourceName }}
+spec:
+  source:
+    {{ if .useSnapshot }}
+    snapshot:
+      name: {{ .cloneDataSourceSnapshotName }}
+      namespace: {{ .cloneDataSourceSnapshotNamespace }}
+    {{ else }}
+    pvc:
+      name: {{ .cloneDataSourcePVCName }}
+      namespace: {{ .cloneDataSourcePVCNamespace }}
+    {{ end }}

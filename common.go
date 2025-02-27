@@ -28,7 +28,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var clusterMetadata ocpmetadata.ClusterMetadata
+var (
+	clusterMetadata ocpmetadata.ClusterMetadata
+
+	accessModeTranslator = map[string]string{
+		"RO":  "ReadOnly",
+		"RWO": "ReadWriteOnce",
+		"RWX": "ReadWriteMany",
+	}
+)
 
 func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")

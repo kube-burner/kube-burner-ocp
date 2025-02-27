@@ -1,0 +1,73 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+  labels:
+  {{ range $key, $value := .vmLabels }}
+    {{ $key }}: {{ $value }}
+  {{ end }}
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: "{{ .rootDiskVolumeName }}-{{ .Iteration }}-{{ .Replica }}"
+      labels:
+      {{ range $key, $value := .rootVolumeLabels }}
+        {{ $key }}: {{ $value }}
+      {{ end }}
+    spec:
+    {{ if .rootdiskVolumeSource }}
+      source: {{ .rootdiskVolumeSource | mustToJson }}
+    {{ end }}
+    {{ if .rootdiskVolumeSourceRef }}
+      sourceRef: {{ .rootdiskVolumeSourceRef | mustToJson }}
+    {{ end }}
+      storage:
+        accessModes:
+        - {{ .accessMode }}
+        storageClassName: {{ .storageClassName }}
+        resources:
+          requests:
+            storage: {{ default "5Gi" .rootVolumeSize }}
+  running: true
+  template:
+    spec:
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: {{ .sshPublicKeySecret }}
+      architecture: amd64
+      domain:
+        resources:
+          requests:
+            memory: {{ default "512Mi" .vmMemory }}
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+            bootOrder: 1
+          interfaces:
+          - name: default
+            masquerade: {}
+            bootOrder: 2
+        machine:
+          type: pc-q35-rhel9.4.0
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: "{{ .rootDiskVolumeName }}-{{ .Iteration }}-{{ .Replica }}"
+        name: rootdisk
+      - cloudInitNoCloud:
+          userData: |
+            #cloud-config
+            chpasswd:
+              expire: false
+            password: {{ uuidv4 }}
+            user: fedora
+            runcmd: []
+        name: cloudinitdisk

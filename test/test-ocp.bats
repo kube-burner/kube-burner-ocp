@@ -156,3 +156,16 @@ teardown_file() {
   done
   oc delete namespace virt-capacity-benchmark
 }
+
+@test "virt-clone" {
+  VIRT_CLONE_STORAGE_CLASS=${VIRT_CLONE_STORAGE_CLASS:-oci-bv}
+  run_cmd kube-burner-ocp virt-clone --storage-class $VIRT_CLONE_STORAGE_CLASS --access-mode RWO
+  local jobs=("create-base-vm" "create-clone-vms")
+  for job in "${jobs[@]}"; do
+    check_metric_recorded ./virt-clone-results ${job} dvLatency dvReadyLatency
+    check_metric_recorded ./virt-clone-results ${job} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-clone-results ${job} dvLatency Ready
+    check_quantile_recorded ./virt-clone-results ${job} vmiLatency VMReady
+  done
+  run_cmd oc delete ns -l kube-burner.io/test-name=virt-clone
+}
