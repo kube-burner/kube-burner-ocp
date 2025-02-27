@@ -33,6 +33,7 @@ var dynamicStorageProvisioners = map[string]string{
 	"gce":        "kubernetes.io/gce-pd",
 	"ibm":        "powervs.csi.ibm.com",
 	"vsphere":    "kubernetes.io/vsphere-volume",
+	"oci":        "blockvolume.csi.oraclecloud.com",
 }
 
 // NewPVCDensity holds pvc-density workload
@@ -57,7 +58,7 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			for key := range dynamicStorageProvisioners {
 				storageProvisioners = append(storageProvisioners, key)
 			}
-			re := regexp.MustCompile(`(?sm)^(cinder|azure\-disk|azure\-file|gce|ibm|vsphere|aws)$`)
+			re := regexp.MustCompile(`(?sm)^(cinder|azure\-disk|azure\-file|gce|ibm|vsphere|aws|oci)$`)
 			if !re.MatchString(provisioner) {
 				log.Fatal(fmt.Errorf("%s does not match one of %s", provisioner, storageProvisioners))
 			}
