@@ -1,0 +1,114 @@
+# This workload has special hardware requirements.
+# In order to meet those requirements we have added CI tests in e2e-benchmarking: 
+# https://github.com/openshift/release/tree/master/ci-operator/step-registry/cloud-bulldozer/e2e-benchmarking
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: raLatency
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if eq .LOCAL_INDEXING "true" }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+jobs:
+  - name: udn-bgp-create-namespaces
+    namespace: udn-bgp
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    skipIndexing: true
+    jobPause: 1m
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: configmap.yml
+        replicas: 1
+
+  - name: udn-bgp-create-cudn
+    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
+    jobIterations: {{$numCudn}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    jobPause: 15m
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: cudn.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          total_namespaces: {{.JOB_ITERATIONS}}
+
+  - name: udn-bgp-create-pods
+    namespace: udn-bgp
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 15s
+    jobPause: 10m
+    cleanup: false
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: pod.yml
+        replicas: 1 
+        inputVars:
+          podReplicas: 1
+
+  - name: udn-bgp-route-advertisements
+    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
+    jobIterations: {{$numCudn}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: ra.yml
+        replicas: 1
+        inputVars:
+          numDummyIfaces: 10
+          numAddressOnDummyIface: 20
+          exportScenarioMaxTimeout: 10m
+          importScenarioMaxTimeout: 10m

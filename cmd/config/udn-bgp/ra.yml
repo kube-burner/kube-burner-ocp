@@ -1,0 +1,11 @@
+apiVersion: k8s.ovn.org/v1
+kind: RouteAdvertisements
+metadata:
+  name: ra-{{.Iteration}}
+spec:
+  networkSelector:
+    matchLabels:
+      cudn-{{.Iteration}}: ""
+  advertisements:
+  - "PodNetwork"
+  - "EgressIP"
