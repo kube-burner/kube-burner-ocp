@@ -90,6 +90,24 @@
   metricName: max-99thEtcdRoundTripTime
   instant: true
 
+- query: max(max_over_time((delta(etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum[1m:30s])/2)[{{.elapsed}}:30s]))
+  metricName: max-99thEtcdCompaction
+  instant: true
+
+- query: etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum
+  metricName: 99thEtcdCompaction-raw
+  instant: true
+  captureStart: true
+
+- query: max(max_over_time((delta(etcd_disk_backend_defrag_duration_seconds_sum[1m:30s])/2)[{{.elapsed}}:30s]))
+  metricName: max-99thEtcdDefrag
+  instant: true
+
+- query: etcd_disk_backend_defrag_duration_seconds_sum
+  metricName: 99thEtcdDefrag-raw
+  instant: true
+  captureStart: true
+
 # Control-plane
 
 - query: avg(avg_over_time(topk(1, sum(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-kube-controller-manager"}[2m])) by (pod))[{{.elapsed}}:]))
