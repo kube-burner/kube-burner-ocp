@@ -27,10 +27,11 @@ import (
 
 // NewNodeDensity holds node-density-heavy workload
 func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
-	var podsPerNode int
 	var podReadyThreshold, probesPeriod time.Duration
-	var namespacedIterations, pprof bool
-	var iterationsPerNamespace int
+	var podsPerNode, iterationsPerNamespace, churnCycles, churnPercent int
+	var churnDelay, churnDuration time.Duration
+	var churnDeletionStrategy string
+	var churn, namespacedIterations, pprof bool
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -43,6 +44,12 @@ func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
+			os.Setenv("CHURN", fmt.Sprint(churn))
+			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
+			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
+			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
+			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
+			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
 			// We divide by two the number of pods to deploy to obtain the workload iterations
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint((totalPods-podCount)/2))
 			os.Setenv("PPROF", fmt.Sprint(pprof))
@@ -59,6 +66,12 @@ func NewNodeDensityHeavy(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
+	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
+	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
+	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
+	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
+	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
+	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "gvr", "Churn deletion strategy to use")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&probesPeriod, "probes-period", 10*time.Second, "Perf app readiness/livenes probes period")
