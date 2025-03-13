@@ -188,7 +188,7 @@
   metricName: max-memory-openshift-controller-manager
   instant: true
 
- # multus
+# multus
 
 - query: avg(avg_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-multus", pod=~"(multus).+", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
   metricName: cpu-multus
@@ -206,7 +206,7 @@
   metricName: max-memory-multus
   instant: true
 
- # stackrox 
+# stackrox
 
 - query: avg(avg_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="stackrox", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
   metricName: cpu-stackrox
@@ -222,6 +222,24 @@
 
 - query: max(avg_over_time(container_memory_rss{name!="", namespace="stackrox", container!="POD"}[{{.elapsed}}:])) by (container)
   metricName: max-memory-stackrox
+  instant: true
+
+# OpenShift virtualization
+
+- query: avg(avg_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-cnv", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
+  metricName: cpu-cnv
+  instant: true
+
+- query: max(max_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-cnv", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
+  metricName: max-cpu-cnv
+  instant: true
+
+- query: avg(avg_over_time(container_memory_rss{name!="", namespace="openshift-cnv", container!="POD"}[{{.elapsed}}:])) by (container)
+  metricName: memory-cnv
+  instant: true
+
+- query: max(avg_over_time(container_memory_rss{name!="", namespace="openshift-cnv", container!="POD"}[{{.elapsed}}:])) by (container)
+  metricName: max-memory-cnv
   instant: true
 
 # OVNKubernetes - standard & IC
