@@ -447,12 +447,22 @@ Users may control the workload sizes by passing the following arguments:
 - `--max-iterations` - Maximum number of iterations, or 0 (default) for infinite. In any case, the test will stop upon failure
 - `--vms` - Number of VMs for each iteration (default 5)
 - `--data-volume-count` - Number of data volumes for each VM (default 9)
+- `--min-vol-size` - Set the minimal volume size supported by the storage class
+- `--min-vol-inc-size` - Set the minimal volume size increment supported by the storage class
 
 #### Temporary SSH Keys
 
 The test generated the SSH keys automatically.
 By default, it stores the pair in a temporary directory.
 Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
+#### Skip test parts
+
+Some storage classes have limitations requiring the test to skip some parts:
+- `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
+- `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
+
+####
 
 ### Virt Clone
 
