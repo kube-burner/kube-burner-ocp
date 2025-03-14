@@ -118,6 +118,14 @@ teardown_file() {
   check_metric_value jobSummary vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
 }
 
+@test "virt-udn-l2-density" {
+  run_cmd kube-burner-ocp virt-density virt-udn-density --iteration 5 --layer3=false --binding-method=l2bridge ${COMMON_FLAGS} --uuid=${UUID}
+}
+
+@test "virt-udn-l3-density" {
+  run_cmd kube-burner-ocp virt-density virt-udn-density --iteration 2 ${COMMON_FLAGS} --uuid=${UUID}
+}
+
 # This test is under the deprecation path and will be removed in a future update.
 @test "web-burner-node-density" {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')

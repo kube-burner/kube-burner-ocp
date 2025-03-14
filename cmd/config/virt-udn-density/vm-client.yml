@@ -1,21 +1,21 @@
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
-  name: virt-density-{{.Iteration}}
+  name: virt-client-{{.Iteration}}
   labels:
-    kubevirt.io/os: cirros
+    kubevirt.io/os: fedora
 spec:
   runStrategy: Always
   template:
     metadata:
       labels:
-        kubevirt.io/os: cirros
+        kubevirt.io/os: fedora
     spec:
       terminationGracePeriodSeconds: 0
       domain:
         resources:
           requests:
-            memory: 32Mi
+            memory: 256Mi
         devices:
           disks:
           - name: containerdisk
@@ -27,6 +27,13 @@ spec:
           - name: emptydisk
             disk:
               bus: virtio
+          interfaces:
+          - name: primary-udn-net
+            binding:
+              name: {{.bindingMethod}}
+      networks:
+      - name: primary-udn-net
+        pod: {}
       volumes:
       - name: containerdisk
         containerDisk:
@@ -38,6 +45,9 @@ spec:
             #cloud-config
             password: perfscale
             chpasswd: { expire: False }
+            runcmd:
+              - dnf install -y --nodocs curl
+              - curl -sS --fail 10.132.0.5 --retry 30 --retry-delay 10
       - name: emptydisk
         emptyDisk:
-          capacity: "10Mi"
+          capacity: "50Mi"
