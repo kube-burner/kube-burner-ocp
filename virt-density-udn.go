@@ -36,7 +36,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "virt-udn-density",
-		Short:        "Runs virt-density workload",
+		Short:        "Runs virt-density-udn workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			os.Setenv("JOB_PAUSE", jobPause)
@@ -52,6 +52,10 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("UDN_BINDING_METHOD", bindingMethod)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			if bindingMethod != "passt" && bindingMethod != "l2bridge" {
+				fmt.Println("Invalid value for --binding-method. Allowed values are 'passt' or 'l2bridge'.")
+				os.Exit(1)
+			}
 			setMetrics(cmd, metricsProfiles)
 			if l3 {
 				log.Info("Layer 3 is enabled")
@@ -68,12 +72,12 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().BoolVar(&l3, "layer3", true, "Layer3 UDN test")
+	cmd.Flags().BoolVar(&l3, "layer3", false, "Enable Layer3 UDN instead of Layer2, default: false - layer2 enabled")
 	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().StringVar(&jobPause, "job-pause", "1ms", "Time to pause after finishing the job")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
-	cmd.Flags().StringVar(&bindingMethod, "binding-method", "passt", "Binding method for the VM UDN network interface")
+	cmd.Flags().StringVar(&bindingMethod, "binding-method", "l2bridge", "Binding method for the VM UDN network interface - acceptable values: 'l2bridge' | 'passt'")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
