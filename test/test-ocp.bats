@@ -101,7 +101,7 @@ teardown_file() {
 }
 
 @test "whereabouts" {
-  run_cmd kube-burner-ocp whereabouts --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
+  run_cmd kube-burner-ocp whereabouts --iterations 2 --pod-ready-threshold=1m ${COMMON_FLAGS} --uuid=${UUID}
 }
 
 @test "crd-scale; alerting=false" {
@@ -114,7 +114,7 @@ teardown_file() {
 }
 
 @test "virt-density" {
-  run_cmd kube-burner-ocp virt-density --vms-per-node=2 --uuid=${UUID} ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp virt-density --vms-per-node=2 --vmi-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS}
   check_metric_value jobSummary vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
 }
 
