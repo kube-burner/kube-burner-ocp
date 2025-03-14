@@ -148,7 +148,7 @@ teardown_file() {
 
 @test "virt-capacity-benchmark" {
   VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS=${VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS:-oci-bv}
-  run_cmd kube-burner-ocp virt-capacity-benchmark --storage-class $VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS --max-iterations 1  --data-volume-count 1 --vms 1 --skip-migration-job --volume-round-size 50 --skip-resize-propagation-check
+  run_cmd kube-burner-ocp virt-capacity-benchmark --storage-class $VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS --max-iterations 2  --data-volume-count 2 --vms 2 --skip-migration-job --skip-resize-job
   local jobs=("create-vms" "restart-vms")
   for job in "${jobs[@]}"; do
     check_metric_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency vmReadyLatency
