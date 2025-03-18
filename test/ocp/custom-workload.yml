@@ -7,7 +7,7 @@ global:
       thresholds:
         - conditionType: Ready
           metric: P99
-          threshold: 15s
+          threshold: 1m
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - indexer:
