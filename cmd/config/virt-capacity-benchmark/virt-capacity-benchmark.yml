@@ -82,7 +82,7 @@ jobs:
     inputVars:
       name: {{ $vmName }}
       counter: {{ .counter | toString }}
-      rootDiskImage: quay.io/containerdisks/fedora:latest
+      rootDiskImage: quay.io/containerdisks/fedora:41
       storageClassName: {{ .storageClassName }}
       vmLabels:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
@@ -101,6 +101,7 @@ jobs:
       {{ end }}
       accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
 
+{{ if not .skipResizeJob }}
 - name: resize-volumes
   jobType: patch
   jobIterations: 1
@@ -109,9 +110,7 @@ jobs:
   qps: 20
   burst: 20
   waitWhenFinished: true
-  {{ if not .skipResizePropagationCheck }}
   beforeCleanup: "./check.sh check_resize {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora {{ $resizedRootVolumeSize | toString }}G {{ $resizedDataVolumeSize | toString }}G"
-  {{ end }}
   objects:
   - apiVersion: v1
     kind: PersistentVolumeClaim
@@ -145,6 +144,7 @@ jobs:
       labelSelector:
         {{ $volumeLabelKey }}: {{ $volumeLabelValueRoot }}
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+{{ end }}
 
 - name: restart-vms
   jobType: kubevirt
