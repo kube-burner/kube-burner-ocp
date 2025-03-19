@@ -28,7 +28,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var clusterMetadata ocpmetadata.ClusterMetadata
+var (
+	clusterMetadata ocpmetadata.ClusterMetadata
+
+	accessModeTranslator = map[string]string{
+		"RO":  "ReadOnly",
+		"RWO": "ReadWriteOnce",
+		"RWX": "ReadWriteMany",
+	}
+)
 
 func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
@@ -89,11 +97,4 @@ func generateLoopCounterSlice(length int) []string {
 		counter[i] = fmt.Sprint(i + 1)
 	}
 	return counter
-}
-
-func roundUpToMultiple(num, multiple int) int {
-	if multiple == 0 {
-		return num // Avoid division by zero
-	}
-	return ((num + multiple - 1) / multiple) * multiple
 }

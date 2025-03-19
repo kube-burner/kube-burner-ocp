@@ -447,10 +447,64 @@ Users may control the workload sizes by passing the following arguments:
 - `--max-iterations` - Maximum number of iterations, or 0 (default) for infinite. In any case, the test will stop upon failure
 - `--vms` - Number of VMs for each iteration (default 5)
 - `--data-volume-count` - Number of data volumes for each VM (default 9)
+- `--min-vol-size` - Set the minimal volume size supported by the storage class
+- `--min-vol-inc-size` - Set the minimal volume size increment supported by the storage class
 
 #### Temporary SSH Keys
 
 The test generated the SSH keys automatically.
+By default, it stores the pair in a temporary directory.
+Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
+#### Skip test parts
+
+Some storage classes have limitations requiring the test to skip some parts:
+- `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
+- `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
+
+####
+
+### Virt Clone
+
+Test the capacity and performance of starting multiple virtual machines with a root disk as clones of a single volume. This test comes to mimic VDI sequence
+
+#### Test Sequence
+
+The test runs the following sequence:
+1. Create a `VirtualMachine` in namespace A
+2. Stop the `VirtualMachine`
+3. Create a `DataVolume` in namespace B using the rootdisk of the `VirtualMachine` as the source
+4. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
+5. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
+6. Create `VirtualMachine` in namespace B based in the `DataSource`. Some machines are marked as `persistent` and some `ephemeral`
+7. Restart the `ephemeral` machines by stopping them, deleting their disk and starting them again
+
+#### Tested StorageClass
+
+By default, the test will use the default `StorageClass`. To use a different one, use `--storage-class` to provide a different name.
+
+If `--use-snapshot` is explicitly set to `true` a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
+Otherwise, the test will check the `StorageProfile` for the `StorageClass` and act accordingly.
+
+#### Test Namespace
+
+The test creates `VirtualMachines` in two namespaces: `<baseName>-base` and `<baseName>-clones`
+
+By default, the `baseName` is `virt-clone`. Set it by passing `--namespace` (or `-n`)
+
+#### Test Size Parameters
+
+Users may control the workload sizes by passing the following arguments:
+- `--vms` - Number of `VirtualMachines` to create in step 6
+
+#### Volume Access Mode
+
+By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
+If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
+
+#### Temporary SSH Keys
+
+In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
 By default, it stores the pair in a temporary directory.
 Users may choose the store the key in a specified directory by setting `--ssh-key-path`
 
