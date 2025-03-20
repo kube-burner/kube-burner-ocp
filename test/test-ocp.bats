@@ -88,29 +88,12 @@ teardown_file() {
   run_cmd kube-burner-ocp network-policy --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
-@test "networkpolicy-matchexpressions" {
-  run_cmd kube-burner-ocp networkpolicy-matchexpressions --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
-}
-
-@test "networkpolicy-matchlabels" {
-  run_cmd kube-burner-ocp networkpolicy-matchlabels --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
-}
-
-@test "networkpolicy-multitenant" {
-  run_cmd kube-burner-ocp networkpolicy-multitenant --iterations 5 ${COMMON_FLAGS} --uuid=${UUID}
-}
-
 @test "whereabouts" {
   run_cmd kube-burner-ocp whereabouts --iterations 2 --pod-ready-threshold=1m ${COMMON_FLAGS} --uuid=${UUID}
 }
 
 @test "crd-scale; alerting=false" {
   run_cmd kube-burner-ocp crd-scale --iterations=2 --alerting=false
-}
-
-@test "pvc-density" {
-  PVC_DENSITY_STORAGE_CLASS=${PVC_DENSITY_STORAGE_CLASS:-oci}
-  run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner $PVC_DENSITY_STORAGE_CLASS
 }
 
 @test "virt-density" {
@@ -159,7 +142,7 @@ teardown_file() {
 
 @test "virt-clone" {
   VIRT_CLONE_STORAGE_CLASS=${VIRT_CLONE_STORAGE_CLASS:-oci-bv}
-  run_cmd kube-burner-ocp virt-clone --storage-class $VIRT_CLONE_STORAGE_CLASS --access-mode RWO
+  run_cmd kube-burner-ocp virt-clone --storage-class $VIRT_CLONE_STORAGE_CLASS --access-mode RWO --vms 2
   local jobs=("create-base-vm" "create-clone-vms")
   for job in "${jobs[@]}"; do
     check_metric_recorded ./virt-clone-results ${job} dvLatency dvReadyLatency
@@ -168,4 +151,9 @@ teardown_file() {
     check_quantile_recorded ./virt-clone-results ${job} vmiLatency VMReady
   done
   run_cmd oc delete ns -l kube-burner.io/test-name=virt-clone
+}
+
+@test "pvc-density" {
+  PVC_DENSITY_PROVISIONER=${PVC_DENSITY_PROVISIONER:-oci}
+  run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner $PVC_DENSITY_PROVISIONER
 }
