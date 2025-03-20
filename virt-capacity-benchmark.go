@@ -16,6 +16,7 @@ package ocp
 
 import (
 	"fmt"
+	"math"
 	"os"
 
 	k8sstorage "github.com/cloud-bulldozer/go-commons/v2/k8s-storage"
@@ -41,8 +42,9 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	var dataVolumeCount int
 	var testNamespace string
 	var skipMigrationJob bool
-	var volumeRoundSize int
-	var skipResizePropagationCheck bool
+	var minimalVolumeSize int
+	var minimalVolumeIncreaseSize int
+	var skipResizeJob bool
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -86,33 +88,35 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 
 			rootVolumeSize := 6
 			dataVolumeSize := 1
+			if minimalVolumeSize != 0 {
+				rootVolumeSize = int(math.Max(float64(rootVolumeSize), float64(minimalVolumeSize)))
+				dataVolumeSize = int(math.Max(float64(dataVolumeSize), float64(minimalVolumeSize)))
+			}
+
 			volumeSizeIncrement := 1
-			if volumeRoundSize != 0 {
-				log.Infof("Rounding volume sizes to be a multiple of %v", volumeRoundSize)
-				rootVolumeSize = roundUpToMultiple(rootVolumeSize, volumeRoundSize)
-				dataVolumeSize = roundUpToMultiple(dataVolumeSize, volumeRoundSize)
-				volumeSizeIncrement = roundUpToMultiple(volumeSizeIncrement, volumeRoundSize)
+			if minimalVolumeIncreaseSize != 0 {
+				volumeSizeIncrement = int(math.Max(float64(volumeSizeIncrement), float64(minimalVolumeIncreaseSize)))
 			}
 
 			if skipMigrationJob {
 				log.Infof("skipMigrationJob is set to true")
 			}
-			if skipResizePropagationCheck {
-				log.Infof("skipResizePropagationCheck is set to true")
+			if skipResizeJob {
+				log.Infof("skipResizeJob is set to true")
 			}
 
 			additionalVars := map[string]interface{}{
-				"privateKey":                 privateKeyPath,
-				"publicKey":                  publicKeyPath,
-				"vmCount":                    fmt.Sprint(vmsPerIteration),
-				"storageClassName":           storageClassName,
-				"testNamespace":              testNamespace,
-				"dataVolumeCounters":         generateLoopCounterSlice(dataVolumeCount),
-				"skipMigrationJob":           skipMigrationJob,
-				"rootVolumeSize":             rootVolumeSize,
-				"dataVolumeSize":             dataVolumeSize,
-				"volumeSizeIncrement":        volumeSizeIncrement,
-				"skipResizePropagationCheck": skipResizePropagationCheck,
+				"privateKey":          privateKeyPath,
+				"publicKey":           publicKeyPath,
+				"vmCount":             fmt.Sprint(vmsPerIteration),
+				"storageClassName":    storageClassName,
+				"testNamespace":       testNamespace,
+				"dataVolumeCounters":  generateLoopCounterSlice(dataVolumeCount),
+				"skipMigrationJob":    skipMigrationJob,
+				"rootVolumeSize":      rootVolumeSize,
+				"dataVolumeSize":      dataVolumeSize,
+				"volumeSizeIncrement": volumeSizeIncrement,
+				"skipResizeJob":       skipResizeJob,
 			}
 
 			setMetrics(cmd, metricsProfiles)
@@ -144,8 +148,9 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", 9, "Number of data volumes per VM")
 	cmd.Flags().StringVarP(&testNamespace, "namespace", "n", virtCapacityBenchmarkTestName, "Namespace to run the test in")
 	cmd.Flags().BoolVar(&skipMigrationJob, "skip-migration-job", false, "Skip the migration job - use when the StorageClass does not support RWX")
-	cmd.Flags().IntVar(&volumeRoundSize, "volume-round-size", 0, "Size to round up volume sizes to - use when enforced or overridden by the StorageClass")
-	cmd.Flags().BoolVar(&skipResizePropagationCheck, "skip-resize-propagation-check", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
+	cmd.Flags().IntVar(&minimalVolumeSize, "min-vol-size", 0, "Minimal volume size - use when enforced or overridden by the StorageClass")
+	cmd.Flags().IntVar(&minimalVolumeIncreaseSize, "min-vol-inc-size", 0, "Minimal volume increment size - use when enforced or overridden by the StorageClass")
+	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }

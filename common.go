@@ -98,10 +98,3 @@ func generateLoopCounterSlice(length int) []string {
 	}
 	return counter
 }
-
-func roundUpToMultiple(num, multiple int) int {
-	if multiple == 0 {
-		return num // Avoid division by zero
-	}
-	return ((num + multiple - 1) / multiple) * multiple
-}
