@@ -20,13 +20,23 @@ import (
 	"os"
 	"strings"
 
-	ocpmetadata "github.com/cloud-bulldozer/go-commons/ocp-metadata"
+	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
+	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var clusterMetadata ocpmetadata.ClusterMetadata
+var (
+	clusterMetadata ocpmetadata.ClusterMetadata
+
+	accessModeTranslator = map[string]string{
+		"RO":  "ReadOnly",
+		"RWO": "ReadWriteOnce",
+		"RWX": "ReadWriteMany",
+	}
+)
 
 func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
@@ -69,4 +79,22 @@ func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
 		"ocpVersion":      clusterMetadata.OCPVersion,
 	}
 	return nil
+}
+
+func getK8SConnector() k8sconnector.K8SConnector {
+	kubeClientProvider := config.NewKubeClientProvider("", "")
+	_, restConfig := kubeClientProvider.DefaultClientSet()
+	k8sConnector, err := k8sconnector.NewK8SConnector(restConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return k8sConnector
+}
+
+func generateLoopCounterSlice(length int) []string {
+	counter := make([]string, length)
+	for i := 0; i < length; i++ {
+		counter[i] = fmt.Sprint(i + 1)
+	}
+	return counter
 }

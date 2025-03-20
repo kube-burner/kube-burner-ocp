@@ -1,0 +1,214 @@
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := "virt-capacity-benchmark" }}
+{{- $nsName := .testNamespace -}}
+{{- $vmCount := .vmCount -}}
+{{- $vmName := $testName -}}
+{{- $sshPublicKeySecretName := $testName -}}
+{{- $rootVolumeSizeStr := (list (.rootVolumeSize | toString) "Gi") | join "" -}}
+{{- $dataVolumeSizeStr := (list (.dataVolumeSize | toString) "Gi") | join "" -}}
+{{- $resizedRootVolumeSize := add .rootVolumeSize .volumeSizeIncrement -}}
+{{- $resizedDataVolumeSize := add .dataVolumeSize .volumeSizeIncrement -}}
+{{- $volumeLabelKey := (list $testName "." $kubeBurnerFQDN "/volume-type") | join "" -}}
+{{- $volumeLabelValueRoot := "root" -}}
+{{- $volumeLabelValueData := "data" -}}
+{{- $jobCounterLabelKey := (list $testName "." $kubeBurnerFQDN "/counter") | join "" -}}
+{{- $jobCounterLabelValue := (list "counter-" (.counter | toString )) | join "" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
+{{- $metricsBaseDirectory := $testName -}}
+---
+global:
+  measurements:
+  - name: vmiLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "./{{ $metricsBaseDirectory }}/iteration-{{ .counter | toString }}"
+
+jobs:
+# Run cleanup only when counter is 0
+{{ if eq (.counter | int) 0 }}
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+{{ end }}
+
+- name: create-vms
+  jobType: create
+  jobIterations: 1
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # interval between jobs execution
+  jobIterationDelay: 20s
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: false
+  podWait: true
+  # timeout time after waiting for all object creation
+  maxWaitTimeout: 2h
+  jobPause: 10s
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  objects:
+
+  - objectTemplate: templates/secret_ssh_public.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $sshPublicKeySecretName }}
+      counter: {{ .counter | toString }}
+      publicKeyPath: {{ .publicKey }}
+
+  - objectTemplate: templates/vm.yml
+    replicas: {{ $vmCount }}
+    waitOptions:
+      labelSelector:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    inputVars:
+      name: {{ $vmName }}
+      counter: {{ .counter | toString }}
+      rootDiskImage: quay.io/containerdisks/fedora:41
+      storageClassName: {{ .storageClassName }}
+      vmLabels:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+      rootVolumeLabels:
+        {{ $volumeLabelKey }}: {{ $volumeLabelValueRoot }}
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+      rootVolumeSize: {{ $rootVolumeSizeStr }}
+      dataVolumeSize: {{ $dataVolumeSizeStr }}
+      dataVolumeLabels:
+        {{ $volumeLabelKey }}: {{ $volumeLabelValueData }}
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      dataVolumeCounters:
+      {{ range .dataVolumeCounters }}
+      - {{ . }}
+      {{ end }}
+      accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
+
+{{ if not .skipResizeJob }}
+- name: resize-volumes
+  jobType: patch
+  jobIterations: 1
+  jobIterationDelay: 15s
+  executionMode: sequential
+  qps: 20
+  burst: 20
+  waitWhenFinished: true
+  beforeCleanup: "./check.sh check_resize {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora {{ $resizedRootVolumeSize | toString }}G {{ $resizedDataVolumeSize | toString }}G"
+  objects:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    labelSelector:
+      {{ $volumeLabelKey }}: {{ $volumeLabelValueData }}
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    patchType: "application/strategic-merge-patch+json"
+    objectTemplate: templates/resize_pvc.yml
+    inputVars:
+      storageSize: "{{ $resizedDataVolumeSize | toString }}Gi"
+    waitOptions:
+      customStatusPaths:
+      - key: '.capacity.storage'
+        value: "{{ $resizedDataVolumeSize | toString }}Gi"
+      labelSelector:
+        {{ $volumeLabelKey }}: {{ $volumeLabelValueData }}
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    labelSelector:
+      {{ $volumeLabelKey }}: {{ $volumeLabelValueRoot }}
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    patchType: "application/strategic-merge-patch+json"
+    objectTemplate: templates/resize_pvc.yml
+    inputVars:
+      storageSize: "{{ $resizedRootVolumeSize | toString }}Gi"
+    waitOptions:
+      customStatusPaths:
+      - key: '.capacity.storage'
+        value: "{{ $resizedRootVolumeSize | toString }}Gi"
+      labelSelector:
+        {{ $volumeLabelKey }}: {{ $volumeLabelValueRoot }}
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+{{ end }}
+
+- name: restart-vms
+  jobType: kubevirt
+  qps: 20
+  burst: 20
+  jobIterations: 1
+  maxWaitTimeout: 1h
+  objectDelay: 1m
+  objectWait: true
+  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  objects:
+  - kubeVirtOp: restart
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+
+- name: snapshot-vms
+  jobType: create
+  qps: 20
+  burst: 20
+  jobIterations: 1
+  maxWaitTimeout: 1h
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # interval between jobs execution
+  jobIterationDelay: 20s
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: false
+  podWait: true
+  # timeout time after waiting for all object creation
+  jobPause: 10s
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  preLoadImages: false
+  objects:
+  - objectTemplate: templates/vm-snapshot.yml
+    replicas: {{ $vmCount }}
+    inputVars:
+      name: {{ $vmName }}
+      counter: {{ .counter | toString }}
+      snapshotLabels:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+    waitOptions:
+      customStatusPaths:
+      - key: '(.conditions.[] | select(.type == "Ready")).status'
+        value: "True"
+      labelSelector:
+        {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+
+{{ if not .skipMigrationJob }}
+- name: migrate-vms
+  jobType: kubevirt
+  qps: 20
+  burst: 20
+  jobIterations: 1
+  maxWaitTimeout: 1h
+  objectDelay: 1m
+  waitWhenFinished: true
+  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  objects:
+  - kubeVirtOp: migrate
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+{{ end }}

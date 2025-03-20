@@ -6,7 +6,7 @@ load helpers.bash
 
 setup_file() {
   cd ocp
-  export BATS_TEST_TIMEOUT=600
+  export BATS_TEST_TIMEOUT=1800
   export ES_SERVER="$PERFSCALE_PROD_ES_SERVER"
   export ES_INDEX="kube-burner-ocp"
   trap print_events ERR
@@ -36,12 +36,12 @@ teardown_file() {
 }
 
 @test "node-density: es-indexing=true" {
-  run_cmd kube-burner-ocp node-density --pods-per-node=75 --pod-ready-threshold=10s --uuid=${UUID} ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp node-density --pods-per-node=75 --pod-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS} --churn=true --churn-duration=1m --churn-delay=5s
   check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "node-density-heavy: gc-metrics=true; local-indexing=true" {
-  run_cmd kube-burner-ocp node-density-heavy --pods-per-node=75 --uuid=abcd --local-indexing --gc-metrics=true
+  run_cmd kube-burner-ocp node-density-heavy --pods-per-node=75 --pod-ready-threshold=1m --uuid=abcd --local-indexing --gc-metrics=true --churn=true --churn-cycles=2 --churn-delay=5s
   check_file_list collected-metrics-abcd/etcdVersion.json collected-metrics-abcd/jobSummary.json collected-metrics-abcd/podLatencyMeasurement-node-density-heavy.json collected-metrics-abcd/podLatencyQuantilesMeasurement-node-density-heavy.json
 }
 
@@ -66,7 +66,7 @@ teardown_file() {
 
 @test "node-density-cni: gc=false; alerting=false" {
   # Disable gc and avoid metric indexing
-  run_cmd kube-burner-ocp node-density-cni --pods-per-node=75 --gc=false --uuid=${UUID} --alerting=false
+  run_cmd kube-burner-ocp node-density-cni --pods-per-node=75 --gc=false --uuid=${UUID} --alerting=false --churn=true --churn-cycles=2 --churn-delay=5s
   oc delete ns -l kube-burner-uuid=${UUID} --wait=false
   trap - ERR
 }
@@ -81,22 +81,32 @@ teardown_file() {
 }
 
 @test "index: metrics-endpoints=true; es-indexing=true" {
-  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --metrics-profile metrics.yml --es-server=https://search-perfscale-dev-chmf5l4sh66lvxbnadi4bznl3a.us-west-2.es.amazonaws.com:443 --es-index=ripsaw-kube-burner --user-metadata user-metadata.yml
+  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --metrics-profile metrics.yml --es-server=$PERFSCALE_PROD_ES_SERVER --es-index=ripsaw-kube-burner --user-metadata user-metadata.yml
 }
 
-@test "networkpolicy-multitenant" {
-  run_cmd kube-burner-ocp networkpolicy-multitenant --iterations 5 ${COMMON_FLAGS} --uuid=${UUID}
+@test "networkpolicy" {
+  run_cmd kube-burner-ocp network-policy --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
+}
+
+@test "whereabouts" {
+  run_cmd kube-burner-ocp whereabouts --iterations 2 --pod-ready-threshold=1m ${COMMON_FLAGS} --uuid=${UUID}
 }
 
 @test "crd-scale; alerting=false" {
-  run_cmd kube-burner-ocp crd-scale --iterations=10 --alerting=false
+  run_cmd kube-burner-ocp crd-scale --iterations=2 --alerting=false
+}
+
+@test "pvc-density" {
+  PVC_DENSITY_STORAGE_CLASS=${PVC_DENSITY_STORAGE_CLASS:-oci}
+  run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner $PVC_DENSITY_STORAGE_CLASS
 }
 
 @test "virt-density" {
-  run_cmd kube-burner-ocp virt-density --vms-per-node=10 --uuid=${UUID} ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp virt-density --vms-per-node=2 --vmi-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS}
   check_metric_value jobSummary vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
 }
 
+# This test is under the deprecation path and will be removed in a future update.
 @test "web-burner-node-density" {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
   run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
@@ -108,6 +118,7 @@ teardown_file() {
   run_cmd oc delete project served-ns-0 serving-ns-0
 }
 
+# This test is under the deprecation path and will be removed in a future update.
 @test "web-burner-cluster-density" {
   LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
   run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
@@ -121,4 +132,28 @@ teardown_file() {
 
 @test "cluster-health" {
   run_cmd kube-burner-ocp cluster-health
+}
+
+@test "virt-capacity-benchmark" {
+  VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS=${VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS:-oci-bv}
+  run_cmd kube-burner-ocp virt-capacity-benchmark --storage-class $VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS --max-iterations 2  --data-volume-count 2 --vms 2 --skip-migration-job --skip-resize-job
+  local jobs=("create-vms" "restart-vms")
+  for job in "${jobs[@]}"; do
+    check_metric_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency VMReady
+  done
+  oc delete namespace virt-capacity-benchmark
+}
+
+@test "virt-clone" {
+  VIRT_CLONE_STORAGE_CLASS=${VIRT_CLONE_STORAGE_CLASS:-oci-bv}
+  run_cmd kube-burner-ocp virt-clone --storage-class $VIRT_CLONE_STORAGE_CLASS --access-mode RWO
+  local jobs=("create-base-vm" "create-clone-vms")
+  for job in "${jobs[@]}"; do
+    check_metric_recorded ./virt-clone-results ${job} dvLatency dvReadyLatency
+    check_metric_recorded ./virt-clone-results ${job} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-clone-results ${job} dvLatency Ready
+    check_quantile_recorded ./virt-clone-results ${job} vmiLatency VMReady
+  done
+  run_cmd oc delete ns -l kube-burner.io/test-name=virt-clone
 }

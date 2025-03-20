@@ -110,9 +110,6 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewClusterDensity(&wh, "cluster-density-ms"),
 		ocp.NewCrdScale(&wh),
 		ocp.NewNetworkPolicy(&wh, "network-policy"),
-		ocp.NewNetworkPolicyLegacy(&wh, "networkpolicy-multitenant"),
-		ocp.NewNetworkPolicyLegacy(&wh, "networkpolicy-matchlabels"),
-		ocp.NewNetworkPolicyLegacy(&wh, "networkpolicy-matchexpressions"),
 		ocp.NewNodeDensity(&wh),
 		ocp.NewNodeDensityHeavy(&wh),
 		ocp.NewNodeDensityCNI(&wh),
@@ -128,6 +125,8 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewVirtDensity(&wh),
 		ocp.ClusterHealth(),
 		ocp.CustomWorkload(&wh),
+		ocp.NewVirtCapacityBenchmark(&wh),
+		ocp.NewVirtClone(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
