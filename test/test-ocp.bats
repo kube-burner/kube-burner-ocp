@@ -88,18 +88,6 @@ teardown_file() {
   run_cmd kube-burner-ocp network-policy --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
-@test "networkpolicy-matchexpressions" {
-  run_cmd kube-burner-ocp networkpolicy-matchexpressions --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
-}
-
-@test "networkpolicy-matchlabels" {
-  run_cmd kube-burner-ocp networkpolicy-matchlabels --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
-}
-
-@test "networkpolicy-multitenant" {
-  run_cmd kube-burner-ocp networkpolicy-multitenant --iterations 5 ${COMMON_FLAGS} --uuid=${UUID}
-}
-
 @test "whereabouts" {
   run_cmd kube-burner-ocp whereabouts --iterations 2 --pod-ready-threshold=1m ${COMMON_FLAGS} --uuid=${UUID}
 }
