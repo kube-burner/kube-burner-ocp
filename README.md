@@ -1,5 +1,8 @@
 # OpenShift Wrapper
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/10060/badge)](https://www.bestpractices.dev/projects/10060)
+
 This plugin is a very opinionated OpenShift wrapper designed to simplify the execution of different workloads in this Kubernetes distribution.
 
 Executed with `kube-burner-ocp`, it looks like:
