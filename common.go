@@ -15,10 +15,12 @@
 package ocp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
@@ -26,6 +28,11 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 var (
@@ -120,4 +127,117 @@ func AddVirtMetadata(wh *workloads.WorkloadHelper, vmImage, udnLayer, udnBinding
 	}
 	wh.SummaryMetadata["VmImage"] = vmImage
 	return nil
+}
+
+func deletePVsForNamespaces(ctx context.Context, connector k8sconnector.K8SConnector, namespaceNamesMap map[string]struct{}) {
+	pvs, err := connector.ClientSet().CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Warnf("Failed listing PVs - %s", err)
+		return
+	}
+	deletingPVs := make(map[string]struct{})
+	for _, pv := range pvs.Items {
+		// PV not claimed
+		if pv.Spec.ClaimRef != nil {
+			continue
+		}
+		// PV not claimed by test namespace
+		if _, ok := namespaceNamesMap[pv.Spec.ClaimRef.Namespace]; !ok {
+			continue
+		}
+		// PV will be deleted automatically
+		if pv.Spec.PersistentVolumeReclaimPolicy != v1.PersistentVolumeReclaimDelete {
+			err = connector.ClientSet().CoreV1().PersistentVolumes().Delete(ctx, pv.Name, metav1.DeleteOptions{})
+			if err != nil {
+				log.Warnf("Failed to delete PV [%s]: %v", pv.Name, err)
+				continue
+			}
+		}
+		deletingPVs[pv.Name] = struct{}{}
+	}
+
+	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
+		pvs, err := connector.ClientSet().CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return false, err
+		}
+		for _, pv := range pvs.Items {
+			if _, ok := deletingPVs[pv.Name]; ok {
+				log.Debugf("Waiting for PV [%s] to be deleted", pv.Name)
+				return false, nil
+			}
+		}
+		log.Info("All deleted PVs are deleted")
+		return true, nil
+	})
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			log.Fatalf("Timeout cleaning up PersistentVolumes: %v", err)
+		}
+		log.Errorf("Error cleaning up PersistentVolumes: %v", err)
+	}
+}
+
+func deleteVolumeSnapshotContentForNamespaces(ctx context.Context, connector k8sconnector.K8SConnector, namespaceNamesMap map[string]struct{}) {
+	volumeSnapshotContentGVR := schema.GroupVersionResource{Group: "snapshot.storage.k8s.io", Version: "v1", Resource: "volumesnapshotcontents"}
+	itemList, err := connector.DynamicClient().Resource(volumeSnapshotContentGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		log.Warnf("Failed listing VolumeSnapshotContents - %s", err)
+		return
+	}
+	deletingVSCs := make(map[string]struct{})
+	for _, vsc := range itemList.Items {
+		namespace, found, err := unstructured.NestedString(vsc.Object, "spec", "volumeSnapshotRef", "namespace")
+		if err != nil {
+			log.Warnf("Error reading namespace of volumeSnapshotRef from VolumeSnapshotContent %s: %v", vsc.GetName(), err)
+			continue
+		}
+		if !found {
+			log.Warnf("Namespace not found in volumeSnapshotRef of VolumeSnapshotContent %s", vsc.GetName())
+			continue
+		}
+		// VolumeSnapshotContent does not belong to the test namespace
+		if _, ok := namespaceNamesMap[namespace]; !ok {
+			continue
+		}
+		deletionPolicy, found, err := unstructured.NestedString(vsc.Object, "spec", "deletionPolicy")
+		if err != nil {
+			log.Warnf("Error reading deletionPolicy from VolumeSnapshotContent %s: %v", vsc.GetName(), err)
+			continue
+		}
+		if !found {
+			log.Warnf("deletionPolicy not found in VolumeSnapshotContent %s", vsc.GetName())
+			continue
+		}
+		// VolumeSnapshotContent will be deleted automatically
+		if deletionPolicy != "Delete" {
+			err = connector.DynamicClient().Resource(volumeSnapshotContentGVR).Delete(ctx, vsc.GetName(), metav1.DeleteOptions{})
+			if err != nil {
+				log.Warnf("Failed to delete VolumeSnapshotContent [%s]: %v", vsc.GetName(), err)
+				continue
+			}
+		}
+		deletingVSCs[vsc.GetName()] = struct{}{}
+	}
+
+	err = wait.PollUntilContextCancel(ctx, time.Second, true, func(ctx context.Context) (bool, error) {
+		itemList, err := connector.DynamicClient().Resource(volumeSnapshotContentGVR).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return false, err
+		}
+		for _, vsc := range itemList.Items {
+			if _, ok := deletingVSCs[vsc.GetName()]; ok {
+				log.Debugf("Waiting for VolumeSnapshotContent [%s] to be deleted", vsc.GetName())
+				return false, nil
+			}
+		}
+		log.Info("All deleted VolumeSnapshotContent are deleted")
+		return true, nil
+	})
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			log.Fatalf("Timeout cleaning up VolumeSnapshotContent: %v", err)
+		}
+		log.Errorf("Error cleaning up VolumeSnapshotContent: %v", err)
+	}
 }
