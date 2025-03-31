@@ -183,7 +183,7 @@ For User-Defined Network (UDN) L3 segmentation testing. It creates two deploymen
 
 ### virt-density-pods
 
-Creates two VMs, one Ngnix server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. 
+Creates two VMs, one Ngnix server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales.
 
 ## Network Policy workloads
 
@@ -404,6 +404,7 @@ This workload family is a focused on Virtualization creating different objects a
 The different variants are:
 - [virt-density](#virt-density)
 - [virt-capacity-benchmark](#virt-capacity-benchmark).
+- [virt-clone](#virt-clone)
 
 ### Virt Density
 
@@ -469,8 +470,6 @@ Some storage classes have limitations requiring the test to skip some parts:
 - `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
 
-####
-
 ### Virt Clone
 
 Test the capacity and performance of starting multiple virtual machines with a root disk as clones of a single volume. This test comes to mimic VDI sequence
@@ -483,8 +482,7 @@ The test runs the following sequence:
 3. Create a `DataVolume` in namespace B using the rootdisk of the `VirtualMachine` as the source
 4. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
 5. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
-6. Create `VirtualMachine` in namespace B based in the `DataSource`. Some machines are marked as `persistent` and some `ephemeral`
-7. Restart the `ephemeral` machines by stopping them, deleting their disk and starting them again
+6. Create `VirtualMachine` in namespace B based in the `DataSource`
 
 #### Tested StorageClass
 
