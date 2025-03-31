@@ -1,6 +1,3 @@
-# This workload has special hardware requirements.
-# In order to meet those requirements we have added CI tests in e2e-benchmarking: 
-# https://github.com/openshift/release/tree/master/ci-operator/step-registry/cloud-bulldozer/e2e-benchmarking
 ---
 global:
   gc: {{.GC}}
@@ -48,6 +45,7 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+  {{ if eq .CHURN "false" }}
   {{ if eq .ENABLE_LAYER_3 "true" }}
   - name: create-udn-l3
   {{ else }}
@@ -62,12 +60,6 @@ jobs:
     waitWhenFinished: true
     preLoadImages: false
     preLoadPeriod: 15s
-    churn: {{.CHURN}}
-    churnCycles: {{.CHURN_CYCLES}}
-    churnDuration: {{.CHURN_DURATION}}
-    churnPercent: {{.CHURN_PERCENT}}
-    churnDelay: {{.CHURN_DELAY}}
-    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
     jobPause: {{.JOB_PAUSE}}
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
@@ -83,6 +75,8 @@ jobs:
       - objectTemplate: udn_l2.yml
         replicas: 1
       {{ end }}
+  {{ end }}
+
 
   {{ if eq .ENABLE_LAYER_3 "true"}}
   - name: udn-density-l3-pods
@@ -113,6 +107,15 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
+      {{ if eq .CHURN "true"}}
+      {{ if eq .ENABLE_LAYER_3 "true"}}
+      - objectTemplate: udn_l3.yml
+        replicas: 1
+      {{ else }}
+      - objectTemplate: udn_l2.yml
+        replicas: 1
+      {{ end }}
+      {{ end }}
 
       {{ if ne .SIMPLE "true"}}
       - objectTemplate: np-deny-all.yml
@@ -123,7 +126,7 @@ jobs:
 
       - objectTemplate: service.yml
         replicas: 5
-     {{ end }}
+      {{ end }}
 
       - objectTemplate: deployment-server.yml
         replicas: 3
