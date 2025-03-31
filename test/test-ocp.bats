@@ -97,8 +97,16 @@ teardown_file() {
 }
 
 @test "virt-density" {
-  run_cmd kube-burner-ocp virt-density --vms-per-node=2 --vmi-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS}
+  run_cmd kube-burner-ocp virt-density --vms-per-node=5 --vmi-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS}
   check_metric_value jobSummary vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
+}
+
+@test "virt-udn-l2-density" {
+  run_cmd kube-burner-ocp virt-udn-density --iteration 5 --layer3=false --binding-method=l2bridge ${COMMON_FLAGS} --uuid=${UUID}
+}
+
+@test "virt-udn-l3-density" {
+  run_cmd kube-burner-ocp virt-udn-density --iteration 2 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
 # This test is under the deprecation path and will be removed in a future update.
