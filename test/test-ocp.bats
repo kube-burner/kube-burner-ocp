@@ -145,7 +145,8 @@ teardown_file() {
     check_metric_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency vmReadyLatency
     check_quantile_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency VMReady
   done
-  oc delete namespace virt-capacity-benchmark
+  run_cmd kube-burner-ocp virt-capacity-benchmark --cleanup-only
+  check_destroyed_ns virt-capacity-benchmark
 }
 
 @test "virt-clone" {
