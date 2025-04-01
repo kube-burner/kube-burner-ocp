@@ -52,32 +52,21 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs capacity-benchmark workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			var err error
-
 			if !virtctl.IsInstalled() {
 				log.Fatalf("Failed to run virtctl. Check that it is installed, in PATH and working")
 			}
 
-			k8sConnector := getK8SConnector()
+			storageClassName, _ := getStorageAndSnapshotClasses(storageClassName, true, true)
+			if !skipResizeJob {
+				supported, err := k8sstorage.StorageClassSupportsVolumeExpansion(getK8SConnector(), storageClassName)
+				if err != nil {
+					log.Fatal(err)
+				}
+				if !supported {
+					log.Fatalf("Storage Class [%s] does not support volume expansion", storageClassName)
+				}
+			}
 
-			storageClassName, err = k8sstorage.GetStorageClassName(k8sConnector, storageClassName, true)
-			if err != nil {
-				log.Fatal(err)
-			}
-			supported, err := k8sstorage.StorageClassSupportsVolumeExpansion(k8sConnector, storageClassName)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if !supported {
-				log.Fatalf("Storage Class [%s] does not support volume expansion", storageClassName)
-			}
-			volumeSnapshotClassName, err := k8sstorage.GetVolumeSnapshotClassNameForStorageClass(k8sConnector, storageClassName)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if volumeSnapshotClassName == "" {
-				log.Fatalf("Could not find a corresponding VolumeSnapshotClass for StorageClass %s", storageClassName)
-			}
 			log.Infof("Running tests with Storage Class [%s]", storageClassName)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -111,7 +100,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				"vmCount":             fmt.Sprint(vmsPerIteration),
 				"storageClassName":    storageClassName,
 				"testNamespace":       testNamespace,
-				"dataVolumeCounters":  generateLoopCounterSlice(dataVolumeCount),
+				"dataVolumeCounters":  generateLoopCounterSlice(dataVolumeCount, 1),
 				"skipMigrationJob":    skipMigrationJob,
 				"rootVolumeSize":      rootVolumeSize,
 				"dataVolumeSize":      dataVolumeSize,
