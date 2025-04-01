@@ -61,7 +61,5 @@ jobs:
         make test-ocp
       env:
         TERM: linux
-        OPENSHIFT_SERVER: ${{ secrets.OPENSHIFT_SERVER }}
-        OPENSHIFT_USER: ${{ secrets.OPENSHIFT_USER }}
-        OPENSHIFT_PASSWORD: ${{ secrets.OPENSHIFT_PASSWORD }}
         PERFSCALE_PROD_ES_SERVER: ${{ secrets.PERFSCALE_PROD_ES_SERVER }}
+        TEST_BINARY: "/tmp/kube-burner-ocp"
