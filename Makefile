@@ -7,6 +7,7 @@ BIN_NAME = kube-burner-ocp
 BIN_DIR = bin
 BIN_PATH = $(BIN_DIR)/$(ARCH)/$(BIN_NAME)
 CGO = 0
+TEST_BINARY ?= $(CURDIR)/$(BIN_PATH)
 
 GIT_COMMIT = $(shell git rev-parse HEAD)
 VERSION ?= $(shell hack/tag_name.sh)
@@ -48,4 +49,4 @@ install:
 test: test-ocp
 
 test-ocp:
-	cd test && bats -F pretty -T --print-output-on-failure test-ocp.bats
+	cd test && KUBE_BURNER_OCP=$(TEST_BINARY) bats $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) -F pretty -T --print-output-on-failure test-ocp.bats
