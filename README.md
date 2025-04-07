@@ -407,6 +407,8 @@ The different variants are:
 
 ### Virt Density
 
+Similar to node-density, fills with VirtualMachines the worker nodes of the cluster (**kubevirt/OpenShift Virtualization is required** to run this workload). Meant to detect issues derived from spinning up high amounts VMs in a short amount of time and to track runningthe latencies of the different VM bootstrap stages.
+
 ### Virt Capacity Benchmark
 
 Test the capacity of Virtual Machines and Volumes supported by the cluster and a specific storage class.
