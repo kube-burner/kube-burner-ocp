@@ -34,9 +34,6 @@ Available Commands:
   version                        Print the version number of kube-burner
   virt-capacity-benchmark        Runs capacity-benchmark workload
   virt-density                   Runs virt-density workload
-  web-burner-cluster-density     Runs web-burner-cluster-density workload
-  web-burner-init                Runs web-burner-init workload
-  web-burner-node-density        Runs web-burner-node-density workload
 
 Flags:
       --alerting                  Enable alerting (default true)
@@ -183,11 +180,12 @@ For User-Defined Network (UDN) L3 segmentation testing. It creates two deploymen
 
 ### virt-density-pods
 
-Creates two VMs, one Ngnix server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. 
+Creates two VMs, one Ngnix server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales.
 
 ## Network Policy workloads
 
-Network policy scale testing tooling involved  2 components:
+Network policy scale testing tooling involved 2 components:
+
 1. Template to include all network policy configuration options
 2. Latency measurement through connection testing
 
@@ -225,9 +223,11 @@ spec:
 ```
 
 ### Scale Testing and Unique ACL Flows
+
 In our scale tests, we aim to create between 10 to 100 network policies within a single namespace. The primary focus is on preventing duplicate configuration options, which ensures that each network policy generates unique Access Control List (ACL) flows. To achieve this, we carefully designed our templating approach based on the following considerations:
 
 **Round-Robin Assignment:** We use a round-robin strategy to distribute
+
 1. remote namespaces among ingress and egress rules across kube burner job iterations
 2. remote namespaces among ingress and egress rules in the same kube burner job iteration
 
@@ -237,6 +237,7 @@ This ensures that we don’t overuse the same remote namespaces in a single iter
 
 **Templating Logic**
 Our templating logic is implemented as follows:
+
 ``` console
 // Iterate over the list of namespaces to configure network policies.
 for namespace := namespaces {
@@ -287,7 +288,7 @@ Each iteration creates the following objects in each of the created namespaces:
 - 1 deployment with the configured number of client pod replicas. Client pod runs the quay.io/cloud-bulldozer/eipvalidator app which periodically sends http request to the configured "EXT_SERVER_HOST" server at an "DELAY_BETWEEN_REQ_SEC" interval with a request timeout of "REQ_TIMEOUT_SEC" seconds. Client pod then validates if the body of the response has configured "EGRESS_IPS". Once the client pod starts running and after receiving first succesful response with configured "EGRESS_IPS", it sets "eip_startup_latency_total" prometheus metric.
 - 1 EgressIP object. EgressIP object is cluster scoped. EgressIP object will have number of egress IP addresses which user specified through "addresses-per-iteration" cli option. kube-burner generates these addresses for the egressIP object from the egress IP list provided by kube-burner-ocp. OVN applies egressIPs to the pods in the current job iteration because of "namespaceSelector" and "podSelector" fields in the egressIP object.
 
-Note: User has to manually create the external server or use the e2e-benchmarking(https://github.com/cloud-bulldozer/e2e-benchmarking/tree/master/workloads/kube-burner-ocp-wrapper#egressip) which deploys external server and runs the workload with required configuration.
+Note: User has to manually create the external server or use the [e2e-benchmarking](https://github.com/cloud-bulldozer/e2e-benchmarking/tree/master/workloads/kube-burner-ocp-wrapper#egressip) which deploys external server and runs the workload with required configuration.
 
 Running 1 iteration with 1 egress IP address per iteration (or egressIP object).
 
@@ -297,48 +298,12 @@ kube-burner-ocp egressip --addresses-per-iteration=1 --iterations=1 --external-s
 
 With the command above, each namespace has one pod with a dedicated egress IP. OVN will use this dedicated egress IP for the http requests from client pod's to 10.0.34.43.
 
-## Web-burner workloads
-
-This workload is meant to emulate some telco specific workloads. Before running *web-burner-node-density* or *web-burner-cluster-density* load the environment with *web-burner-init* first (without the garbage collection flag: `--gc=false`).
-
-Pre-requisites:
-
-- At least two worker nodes
-- At least one of the worker nodes must have the `node-role.kubernetes.io/worker-spk` label
-
-### web-burner-init
-
-- 35 (macvlan/sriov) networks for 35 lb namespace
-- 35 lb-ns
-  - 1 frr config map, 4 emulated lb pods on each namespace
--  35 app-ns
-	- 1 emulated lb pod on each namespace for bfd session
-
-### web-burner-node-density
-
-- 35 app-ns
-  - 3 app pods and services on each namespace
-- 35 normal-ns
-	- 1 service with 60 normal pod endpoints on each namespace
-
-### web-burner-cluster-density
-
-- 20 normal-ns
-	- 30 configmaps, 38 secrets, 38 normal pods and services, 5 deployments with 2 replica pods on each namespace
-- 35 served-ns
-  - 3 app pods on each namespace
-- 2 app-served-ns
-	- 1 service(15 ports) with 84 pod endpoints, 1 service(15 ports) with 56 pod endpoints, 1 service(15 ports) with 25 pod endpoints
-	- 3 service(15 ports each) with 24 pod endpoints, 3 service(15 ports each) with 14 pod endpoints
-	- 6 service(15 ports each) with 12 pod endpoints, 6 service(15 ports each) with 10 pod endpoints, 6 service(15 ports each) with 9 pod endpoints
-	- 12 service(15 ports each) with 8 pod endpoints, 12 service(15 ports each) with 6 pod endpoints, 12 service(15 ports each) with 5 pod endpoints
-	- 29 service(15 ports each) with 4 pod endpoints, 29 service(15 ports each) with 6 pod endpoints
-
 ## Core RDS workloads
 
 The telco core reference design specification (RDS) describes OpenShift Container Platform clusters running on commodity hardware that can support large scale telco applications including control plane and some centralized data plane functions. It captures the recommended, tested, and supported configurations to get reliable and repeatable performance for clusters running the telco core profile.
 
 Pre-requisites:
+
  - A **PerformanceProfile** with isolated and reserved cores, 1G hugepages and and `topologyPolicy=single-numa-node`. Hugepages should be allocated in the first NUMA node (the one that would be used by DPDK deployments):
      ```yaml
       hugepages:
@@ -373,6 +338,7 @@ Pre-requisites:
      ```
 
 Object count:
+
 | Iterations / nodes / namespaces   | 1    | 120                                 |
 | --------------------------------- | ---- | ----------------------------------- |
 | configmaps                        | 30   | 3600                                |
@@ -391,6 +357,7 @@ Object count:
 
 
 Input parameters specific to the workload:
+
 | Parameter           | Description                                                                                      | Default value |
 | ------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
 | dpdk-cores          | Number of cores assigned for each DPDK pod (should fill all the isolated cores of one NUMA node) | 2             |
@@ -402,6 +369,7 @@ Input parameters specific to the workload:
 This workload family is a focused on Virtualization creating different objects across the cluster.
 
 The different variants are:
+
 - [virt-density](#virt-density)
 - [virt-capacity-benchmark](#virt-capacity-benchmark).
 
@@ -422,6 +390,7 @@ See the [Temporary SSH Keys](#temporary-ssh-keys) for details on the SSH keys us
 
 The test runs a workload in a loop without deleting previously created resources. By default it will continue until a failure occurs.
 Each loop is comprised of the following steps:
+
 - Create VMs
 - Resize the root and data volumes
 - Restart the VMs
