@@ -165,3 +165,15 @@ teardown_file() {
   PVC_DENSITY_PROVISIONER=${PVC_DENSITY_PROVISIONER:-oci}
   run_cmd kube-burner-ocp pvc-density --iterations=2 --provisioner $PVC_DENSITY_PROVISIONER
 }
+
+@test "virt-ephemeral-restart" {
+  VIRT_EPHEMERAL_RESTART_STORAGE_CLASS=${VIRT_EPHEMERAL_RESTART_STORAGE_CLASS:-oci-bv}
+  run_cmd kube-burner-ocp virt-ephemeral-restart --storage-class $VIRT_EPHEMERAL_RESTART_STORAGE_CLASS --access-mode RWO --iteration-vms 2 --iterations 2
+
+  check_metric_recorded ./virt-ephemeral-restart-results start-vms dvLatency dvReadyLatency
+  check_metric_recorded ./virt-ephemeral-restart-results start-vms vmiLatency vmReadyLatency
+  check_quantile_recorded ./virt-ephemeral-restart-results start-vms dvLatency Ready
+  check_quantile_recorded ./virt-ephemeral-restart-results start-vms vmiLatency VMReady
+
+  run_cmd oc delete ns -l kube-burner.io/test-name=virt-ephemeral-restart
+}
