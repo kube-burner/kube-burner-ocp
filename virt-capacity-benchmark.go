@@ -125,7 +125,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			counter := 0
 			for {
 				os.Setenv("counter", fmt.Sprint(counter))
-				rc = wh.RunWithAdditionalVars(cmd.Name(), additionalVars)
+				rc = wh.RunWithAdditionalVars(cmd.Name(), additionalVars, nil)
 				if rc != 0 {
 					log.Infof("Capacity failed in loop #%d", counter)
 					break

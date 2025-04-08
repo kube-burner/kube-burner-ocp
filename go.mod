@@ -17,6 +17,7 @@ require (
 	k8s.io/client-go v0.31.1
 )
 
+replace github.com/kube-burner/kube-burner => /root/module/kube-burner
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
