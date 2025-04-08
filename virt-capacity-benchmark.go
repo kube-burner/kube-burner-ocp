@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strings"
 
 	k8sstorage "github.com/cloud-bulldozer/go-commons/v2/k8s-storage"
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
@@ -118,9 +119,8 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				"volumeSizeIncrement": volumeSizeIncrement,
 				"skipResizeJob":       skipResizeJob,
 			}
-
-			setMetrics(cmd, metricsProfiles)
-
+			metricsProfiles, _ := cmd.Flags().GetStringSlice("metrics-profile")
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			log.Infof("Running tests in Namespace [%s]", testNamespace)
 			counter := 0
 			for {
