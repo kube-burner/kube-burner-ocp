@@ -26,6 +26,10 @@ global:
         labelSelector: {app: ovnkube-control-plane}
         url: http://localhost:29108/debug/pprof/profile?seconds=30
 {{ end }}
+{{ if eq .SVC_LATENCY "true" }}
+    - name: serviceLatency
+      svcTimeout: 10s
+{{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
