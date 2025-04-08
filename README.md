@@ -48,7 +48,6 @@ Flags:
       --gc-metrics                Collect metrics during garbage collection
       --local-indexing            Enable local indexing
       --metrics-endpoint string   YAML file with a list of metric endpoints
-      --profile-type string       Metrics profile to use, supported options are: regular, reporting or both (default "both")
       --qps int                   QPS (default 20)
       --timeout duration          Benchmark timeout (default 4h0m0s)
       --user-metadata string      User provided metadata file, in YAML format
@@ -594,23 +593,23 @@ Usage:
   kube-burner-ocp index [flags]
 
 Flags:
-  -m, --metrics-profile string     Metrics profile file (default "metrics.yml")
+  -m, --metrics-profile strings    Comma separated list of metrics profiles to use (default [metrics.yml])
       --metrics-directory string   Directory to dump the metrics files in, when using default local indexing (default "collected-metrics")
   -s, --step duration              Prometheus step size (default 30s)
       --start int                  Epoch start time
       --end int                    Epoch end time
   -j, --job-name string            Indexing job name (default "kube-burner-ocp-indexing")
       --user-metadata string       User provided metadata file, in YAML format
+      --tarball-name string        Dump collected metrics into a tarball with the given name, requires local indexing
   -h, --help                       help for index
 ```
 
-## Metrics-profile type
+## Metrics profile
 
-By specifying `--profile-type`, kube-burner can use two different metrics profiles when scraping metrics from prometheus. By default is configured with `both`, meaning that it will use the regular metrics profiles bound to the workload in question and the reporting metrics profile.
+`kube-burner-ocp` ships with multiple metrics-profiles, specified with the flag `--metrics-profile`.
+When using the regular profiles ([metrics-aggregated](https://github.com/kube-burner/kube-burner-ocp/blob/main/cmd/config/metrics-aggregated.yml) or [metrics](https://github.com/kube-burner/kube-burner-ocp/blob/main/cmd/config/metrics.yml)), kube-burner scrapes and indexes metrics timeseries.
 
-When using the regular profiles ([metrics-aggregated](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics-aggregated.yml) or [metrics](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics.yml)), kube-burner scrapes and indexes metrics timeseries.
-
-The reporting profile is very useful to reduce the number of documents sent to the configured indexer. Thanks to the combination of aggregations and instant queries for prometheus metrics, and 4 summaries for latency measurements, only a few documents will be indexed per benchmark. This flag makes possible to specify one or both of these profiles indistinctly.
+The [reporting profile](https://github.com/kube-burner/kube-burner-ocp/blob/main/cmd/config/metrics-report.yml)) is useful to reduce the number of documents sent to the configured indexer. Thanks to the combination of aggregations and instant queries for prometheus metrics, only a few documents resulting from these queries will be indexed per benchmark.
 
 ## Customizing workloads
 

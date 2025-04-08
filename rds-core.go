@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -57,7 +58,8 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("INGRESS_DOMAIN", ingressDomain)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, metricsProfiles)
+			metricsProfiles, _ := cmd.Flags().GetStringSlice("metrics-profile")
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			rc = wh.Run(cmd.Name())
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

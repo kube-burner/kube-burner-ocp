@@ -36,18 +36,8 @@ var (
 		"RWO": "ReadWriteOnce",
 		"RWX": "ReadWriteMany",
 	}
+	rc int
 )
-
-func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
-	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
-	switch ProfileType(profileType) {
-	case Reporting:
-		metricsProfiles = []string{"metrics-report.yml"}
-	case Both:
-		metricsProfiles = append(metricsProfiles, "metrics-report.yml")
-	}
-	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
-}
 
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner
 func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
@@ -120,4 +110,16 @@ func AddVirtMetadata(wh *workloads.WorkloadHelper, vmImage, udnLayer, udnBinding
 	}
 	wh.SummaryMetadata["VmImage"] = vmImage
 	return nil
+}
+
+func NewWorkload(cmd *cobra.Command) *cobra.Command {
+	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		metricsProfiles, _ := cmd.Flags().GetStringSlice("metrics-profile")
+		fmt.Println(metricsProfiles)
+		os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
+	}
+	cmd.PostRun = func(cmd *cobra.Command, args []string) {
+		os.Exit(rc)
+	}
+	return cmd
 }

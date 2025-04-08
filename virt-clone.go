@@ -16,6 +16,7 @@ package ocp
 
 import (
 	"os"
+	"strings"
 
 	k8sstorage "github.com/cloud-bulldozer/go-commons/v2/k8s-storage"
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
@@ -105,8 +106,8 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 				"cloneVMCount":            vmCount,
 				"accessMode":              accessModeTranslator[volumeAccessMode],
 			}
-
-			setMetrics(cmd, metricsProfiles)
+			metricsProfiles, _ := cmd.Flags().GetStringSlice("metrics-profile")
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			rc = wh.RunWithAdditionalVars(cmd.Name(), additionalVars)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

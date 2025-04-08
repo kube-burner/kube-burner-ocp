@@ -17,6 +17,7 @@ package ocp
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -57,7 +58,8 @@ func NewNodeDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("CONTAINER_IMAGE", containerImage)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, metricsProfiles)
+			metricsProfiles, _ := cmd.Flags().GetStringSlice("metrics-profile")
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			rc = wh.Run(cmd.Name())
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
