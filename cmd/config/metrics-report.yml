@@ -317,6 +317,15 @@
   metricName: vmi-traffic-transmitted-cnv
   instant: true
 
+## Virt API reated metrics
+- query: sum(rate(apiserver_request_total{group=~".*kubevirt.*", verb=~"LIST|GET"}[1m])) by (code, group) 
+  metricName: virt-api-read-request-rate-cnv
+  instant: true
+
+- query: sum(rate(apiserver_request_total{group=~".*kubevirt.*", verb=~"POST|PUT|PATCH|DELETE"}[1m])) by (code, group)
+  metricName: virt-api-write-request-rate-cnv
+  instant: true
+
 ## vmi migration reated metrics
 - query: sum(kubevirt_vmi_migration_succeeded)
   metricName: migration-succeeded-cnv
