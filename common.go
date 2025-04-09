@@ -23,6 +23,7 @@ import (
 	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
 	"github.com/kube-burner/kube-burner/pkg/config"
+	"github.com/kube-burner/kube-burner/pkg/measurements"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -37,6 +38,12 @@ var (
 		"RWX": "ReadWriteMany",
 	}
 )
+
+var measurementFactoryMap = map[string]measurements.NewMeasurementFactory{
+	"podLatency":     measurements.NewPodLatencyMeasurementFactory,
+	"exampleLatency": NewExampleLatencyMeasurementFactory,
+	"raLatency":      NewRaLatencyMeasurementFactory,
+}
 
 func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")

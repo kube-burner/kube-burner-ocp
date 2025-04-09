@@ -1,0 +1,134 @@
+# This workload has special hardware requirements.
+# In order to meet those requirements we have added CI tests in e2e-benchmarking: 
+# https://github.com/openshift/release/tree/master/ci-operator/step-registry/cloud-bulldozer/e2e-benchmarking
+---
+global:
+  gc: false
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: raLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if eq .LOCAL_INDEXING "true" }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+jobs:
+  - name: udn-bgp-create-namespaces
+    namespace: udn-bgp
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    skipIndexing: true
+    jobPause: 20s
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: configmap.yml
+        replicas: 1
+
+  - name: udn-bgp-create-cudn
+    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
+    jobIterations: {{$numCudn}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    jobPause: 1m
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: cudn.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          total_namespaces: {{.JOB_ITERATIONS}}
+
+  - name: udn-bgp-create-pods
+    namespace: udn-bgp
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 15s
+    jobPause: 1m
+    cleanup: false
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: pod.yml
+        replicas: 1 
+        inputVars:
+          podReplicas: 1
+
+  - name: udn-bgp-export-routes
+    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
+    jobIterations: {{$numCudn}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    jobPause: 1m
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: ra.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          total_namespaces: {{.JOB_ITERATIONS}}
+
+  - name: udn-bgp-import-routes
+    namespace: udn-bgp
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    jobPause: 1m
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: secret.yml
+        replicas: 1
