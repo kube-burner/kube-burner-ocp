@@ -61,6 +61,8 @@ teardown_file() {
 }
 
 @test "cluster-density-v2: indexing=false; churning=false" {
+  # Ensure indexing variables are not set
+  unset ES_SERVER ES_INDEX
   run_cmd kube-burner-ocp cluster-density-v2 --iterations=2 --churn=false --uuid=${UUID}
 }
 
@@ -81,7 +83,7 @@ teardown_file() {
 }
 
 @test "index: metrics-endpoints=true; es-indexing=true" {
-  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --metrics-profile metrics.yml --es-server=$PERFSCALE_PROD_ES_SERVER --es-index=ripsaw-kube-burner --user-metadata user-metadata.yml
+  run_cmd kube-burner-ocp index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --user-metadata user-metadata.yml
 }
 
 @test "networkpolicy" {
