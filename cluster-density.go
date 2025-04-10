@@ -20,7 +20,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -56,15 +55,9 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			os.Setenv("INGRESS_DOMAIN", ingressDomain)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if cmd.Name() == "cluster-density-v2" {
-				kubeClientProvider := config.NewKubeClientProvider("", "")
-				clientSet, _ := kubeClientProvider.ClientSet(0, 0)
-				if err := isClusterImageRegistryAvailable(clientSet); err != nil {
-					log.Fatal(err.Error())
-				}
-			}
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name())
+			//measurementsFactory := measurements.NewMeasurementsFactory(ConfigSpec, metricsScraper.MetricsMetadata, measurementFactoryMap)
+			rc = wh.RunWithAdditionalVars(cmd.Name(), nil, measurementFactoryMap)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
