@@ -151,8 +151,11 @@ teardown_file() {
 }
 
 @test "virt-clone" {
-  VIRT_CLONE_STORAGE_CLASS=${VIRT_CLONE_STORAGE_CLASS:-oci-bv}
-  run_cmd ${KUBE_BURNER_OCP} virt-clone --storage-class $VIRT_CLONE_STORAGE_CLASS --access-mode RWO --vms 2
+  local STORAGE_PARAMETER
+  if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
+    STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
+  fi
+  run_cmd ${KUBE_BURNER_OCP} virt-clone ${STORAGE_PARAMETER} --access-mode RWO --vms 2
   local jobs=("create-base-vm" "create-clone-vms")
   for job in "${jobs[@]}"; do
     check_metric_recorded ./virt-clone-results ${job} dvLatency dvReadyLatency
@@ -166,4 +169,19 @@ teardown_file() {
 @test "pvc-density" {
   PVC_DENSITY_PROVISIONER=${PVC_DENSITY_PROVISIONER:-oci}
   run_cmd ${KUBE_BURNER_OCP} pvc-density --iterations=2 --provisioner $PVC_DENSITY_PROVISIONER
+}
+
+@test "virt-ephemeral-restart" {
+  local STORAGE_PARAMETER
+  if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
+    STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
+  fi
+  run_cmd ${KUBE_BURNER_OCP} virt-ephemeral-restart ${STORAGE_PARAMETER} --access-mode RWO --iteration-vms 2 --iterations 2
+  # Delete all resources before testing results to ensure they are deleted
+  run_cmd oc delete ns -l kube-burner.io/test-name=virt-ephemeral-restart
+
+  check_metric_recorded ./virt-ephemeral-restart-results start-vms dvLatency dvReadyLatency
+  check_metric_recorded ./virt-ephemeral-restart-results start-vms vmiLatency vmReadyLatency
+  check_quantile_recorded ./virt-ephemeral-restart-results start-vms dvLatency Ready
+  check_quantile_recorded ./virt-ephemeral-restart-results start-vms vmiLatency VMReady
 }

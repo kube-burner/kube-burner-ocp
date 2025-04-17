@@ -26,25 +26,26 @@ import (
 )
 
 const (
-	virtCloneSSHKeyFileName = "ssh"
-	virtCloneTmpDirPattern  = "kube-burner-virt-clone-*"
-	virtCloneTestName       = "virt-clone"
+	virtEphemeralRestartSSHKeyFileName = "ssh"
+	virtEphemeralRestartTmpDirPattern  = "kube-burner-virt-ephemeral-restart-*"
+	virtEphemeralRestartTestName       = "virt-ephemeral-restart"
 )
 
 // Returns virt-density workload
-func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
+func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
 	var volumeSnapshotClassName string
 	var sshKeyPairPath string
 	var useSnapshot bool
-	var vmCount int
-	var testNamespaceBaseName string
+	var iterations int
+	var vmsPerIteration int
+	var testNamespace string
 	var metricsProfiles []string
 	var volumeAccessMode string
 	var rc int
 	cmd := &cobra.Command{
-		Use:          virtCloneTestName,
-		Short:        "Runs virt-clone workload",
+		Use:          virtEphemeralRestartTestName,
+		Short:        "Runs virt-ephemeral-restart workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
 			if _, ok := accessModeTranslator[volumeAccessMode]; !ok {
@@ -58,19 +59,20 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			storageClassName, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, virtCloneTmpDirPattern, virtCloneSSHKeyFileName)
+			privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, virtEphemeralRestartTmpDirPattern, virtEphemeralRestartSSHKeyFileName)
 			if err != nil {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
 			}
 
-			additionalVars := map[string]interface{}{
+			additionalVars := map[string]any{
 				"privateKey":              privateKeyPath,
 				"publicKey":               publicKeyPath,
 				"storageClassName":        storageClassName,
 				"volumeSnapshotClassName": volumeSnapshotClassName,
-				"testNamespaceBaseName":   testNamespaceBaseName,
-				"cloneVMCount":            vmCount,
+				"testNamespace":           testNamespace,
+				"vmsPerIteration":         vmsPerIteration,
 				"accessMode":              accessModeTranslator[volumeAccessMode],
+				"vmGroups":                generateLoopCounterSlice(iterations, 0),
 			}
 
 			setMetrics(cmd, metricsProfiles)
@@ -83,8 +85,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&storageClassName, "storage-class", "", "Name of the Storage Class to test")
 	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generarated SSH keys")
 	cmd.Flags().BoolVar(&useSnapshot, "use-snapshot", true, "Clone from snapshot")
-	cmd.Flags().IntVar(&vmCount, "vms", 10, "Number of clone VMs to create")
-	cmd.Flags().StringVarP(&testNamespaceBaseName, "namespace", "n", virtCloneTestName, "Base name for the namespace to run the test in")
+	cmd.Flags().IntVar(&iterations, "iterations", 2, "Number of start iterations. The total number of VMs is iterations*iteration-vms")
+	cmd.Flags().IntVar(&vmsPerIteration, "iteration-vms", 10, "How many VMs to start simultaneously. The total number of VMs is iterations*iteration-vms")
+	cmd.Flags().StringVarP(&testNamespace, "namespace", "n", virtEphemeralRestartTestName, "Base name for the namespace to run the test in")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd

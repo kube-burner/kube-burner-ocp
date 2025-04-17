@@ -166,7 +166,7 @@ jobs:
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
   objects:
-  {{ if .useSnapshot | default false }}
+  {{ if .volumeSnapshotClassName | default false }}
   - objectTemplate: templates/baseImageDataVolumeSnapshot.yml
     replicas: 1
     inputVars:
@@ -186,7 +186,7 @@ jobs:
       cloneDataSourcePVCNamespace: {{ $cloneVMNamespace }}
       cloneDataSourceSnapshotName: {{ $cloneVolumeSnapshotName }}
       cloneDataSourceSnapshotNamespace: {{ $cloneVMNamespace }}
-      useSnapshot: {{ .useSnapshot | default false }}
+      useSnapshot: {{ .volumeSnapshotClassName | default false }}
     waitOptions:
       customStatusPaths:
       - key: '(.conditions.[] | select(.type == "Ready")).status'
@@ -272,6 +272,7 @@ jobs:
 - name: delete-ephemeral-volumes
   jobType: delete
   waitForDeletion: false
+  waitWhenFinished: false
   qps: 5
   burst: 10
   objects:
