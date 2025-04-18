@@ -4,22 +4,13 @@
 {{- $createBaseVMJobName := "create-base-vm" -}}
 {{- $baseVMNamespace := (list $namespaceBaseName "base") | join "-" -}}
 {{- $baseVMName := "base-vm" -}}
-{{- $baseVMRootDiskVolumeName := (list $baseVMName "root") | join "-" }}
 {{- $sshPublicKeySecretName := "burner-clone-test" -}}
 {{- $cloneVMNamespace := (list $namespaceBaseName "clones") | join "-" -}}
 {{- $cloneDataVolumeName := "master-image" -}}
+{{- $cloneVolumeSnapshotName := "master-image" -}}
 {{- $cloneDataSourceName := "master-image" -}}
 {{- $createCloneVMJobName := "create-clone-vms" -}}
 {{- $cloneVMName := "clone-vm" -}}
-{{- $cloneRootDiskVolumeName := (list $cloneVMName "root") | join "-" }}
-{{- $cloneVolumeSnapshotName := "master-image" -}}
-{{- $vmTypeLabelKey := "clone.kube-burner.io/vm-type" -}}
-{{- $typeMaster := "master" -}}
-{{- $typePersistent := "persistent" -}}
-{{- $typeEphemeral := "ephemeral" -}}
-{{- $volumeTypeLabelKey := "clone.kube-burner.io/volume-type" -}}
-{{- $persistentVMCount := (randInt 1 .cloneVMCount) -}}
-{{- $ephemeralVMCount := sub .cloneVMCount $persistentVMCount -}}
 
 global:
   measurements:
@@ -78,14 +69,9 @@ jobs:
     replicas: 1
     inputVars:
       vmName: {{ $baseVMName }}
-      vmLabels:
-        {{ $vmTypeLabelKey }}: {{ $typeMaster }}
-      rootDiskVolumeName: {{ $baseVMRootDiskVolumeName }}
-      rootVolumeLabels:
-        {{ $volumeTypeLabelKey }}: {{ $typeMaster }}
       rootdiskVolumeSource:
         registry:
-          url: "docker://quay.io/containerdisks/fedora:latest"
+          url: "docker://quay.io/containerdisks/fedora:41"
       storageClassName: {{ .storageClassName }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}
@@ -102,7 +88,6 @@ jobs:
   - kubeVirtOp: stop
     labelSelector:
       kube-burner-job: {{ $createBaseVMJobName }}
-      {{ $vmTypeLabelKey }}: {{ $typeMaster }}
 
 # Create the DV in a separate job to make sure it is ready before continuing
 - name: create-base-image-dv
@@ -135,7 +120,7 @@ jobs:
       cloneDataVolumeName: {{ $cloneDataVolumeName }}
       storageClassName: {{ .storageClassName }}
       baseVMNamespace: {{ $baseVMNamespace }}
-      baseVMRootDiskPVCName: "{{ $baseVMRootDiskVolumeName }}-0-1"
+      baseVMRootDiskPVCName: "{{ $baseVMName }}-0-1"
       accessMode: {{ .accessMode }}
     waitOptions:
       customStatusPaths:
@@ -223,14 +208,9 @@ jobs:
       publicKeyPath: {{ .publicKey }}
 
   - objectTemplate: templates/vm.yml
-    replicas: {{ $persistentVMCount }}
+    replicas: {{ .cloneVMCount }}
     inputVars:
-      vmName: "{{ $typePersistent }}-{{ $cloneVMName }}"
-      vmLabels:
-        {{ $vmTypeLabelKey }}: {{ $typePersistent }}
-      rootDiskVolumeName: "{{ $typePersistent }}-{{ $cloneRootDiskVolumeName }}"
-      rootVolumeLabels:
-        {{ $volumeTypeLabelKey }}: {{ $typePersistent }}
+      vmName: "{{ $cloneVMName }}"
       rootdiskVolumeSourceRef:
         kind: DataSource
         name: {{ $cloneDataSourceName }}
@@ -238,59 +218,3 @@ jobs:
       storageClassName: {{ .storageClassName }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}
-
-  - objectTemplate: templates/vm.yml
-    replicas: {{ $ephemeralVMCount }}
-    inputVars:
-      vmName: "{{ $typeEphemeral }}-{{ $cloneVMName }}"
-      vmLabels:
-        {{ $vmTypeLabelKey }}: {{ $typeEphemeral }}
-      rootDiskVolumeName: "{{ $typeEphemeral }}-{{ $cloneRootDiskVolumeName }}"
-      rootVolumeLabels:
-        {{ $volumeTypeLabelKey }}: {{ $typeEphemeral }}
-      rootdiskVolumeSourceRef:
-        kind: DataSource
-        name: {{ $cloneDataSourceName }}
-        namespace: {{ $cloneVMNamespace }}
-      storageClassName: {{ .storageClassName }}
-      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
-      accessMode: {{ .accessMode }}
-
-- name: stop-ephemeral-vms
-  jobType: kubevirt
-  qps: 20
-  burst: 20
-  jobIterations: 1
-  maxWaitTimeout: 1h
-  objectWait: true
-  objects:
-  - kubeVirtOp: stop
-    labelSelector:
-      kube-burner-job: {{ $createCloneVMJobName }}
-      {{ $vmTypeLabelKey }}: {{ $typeEphemeral }}
-
-- name: delete-ephemeral-volumes
-  jobType: delete
-  waitForDeletion: false
-  qps: 5
-  burst: 10
-  objects:
-  - apiVersion: cdi.kubevirt.io/v1beta1
-    kind: DataVolume
-    labelSelector:
-      {{ $volumeTypeLabelKey }}: {{ $typeEphemeral }}
-
-- name: start-ephemeral-vms
-  jobType: kubevirt
-  qps: 20
-  burst: 20
-  jobIterations: 1
-  maxWaitTimeout: 1h
-  objectDelay: 1m
-  beforeCleanup: "./check.sh check_vm_running {{ $vmTypeLabelKey }} {{ $typeEphemeral }} {{ $cloneVMNamespace }} {{ .privateKey }} fedora"
-  objectWait: true
-  objects:
-  - kubeVirtOp: start
-    labelSelector:
-      kube-burner-job: {{ $createCloneVMJobName }}
-      {{ $vmTypeLabelKey }}: {{ $typeEphemeral }}

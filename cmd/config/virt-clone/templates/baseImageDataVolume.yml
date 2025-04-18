@@ -15,6 +15,6 @@ spec:
     - {{ .accessMode }}
     resources:
       requests:
-        storage: {{ default "5Gi" .rootVolumeSize }}
+        storage: {{ default "6Gi" .rootVolumeSize }}
     storageClassName: {{ .storageClassName }}
 ...
