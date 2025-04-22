@@ -61,6 +61,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().BoolVar(&extract, "extract", false, "Extract workload in the current directory")
 	ocpCmd.PersistentFlags().StringVar(&metricsProfileType, "profile-type", "both", "Metrics profile to use, supported options are: regular, reporting or both")
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
+	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "metrics-endpoint")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		if cmd.Name() == "version" {
 			return
@@ -93,8 +94,7 @@ func openShiftCmd() *cobra.Command {
 		} else {
 			envVars["ALERTS"] = ""
 		}
-		// If metricsEndpoint is not set, use values from flags
-		if workloadConfig.MetricsEndpoint == "" && esServer != "" && esIndex != "" {
+		if workloadConfig.MetricsEndpoint == "" {
 			envVars["ES_SERVER"] = esServer
 			envVars["ES_INDEX"] = esIndex
 		}

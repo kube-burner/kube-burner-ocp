@@ -2,18 +2,10 @@ apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
-  labels:
-  {{ range $key, $value := .vmLabels }}
-    {{ $key }}: {{ $value }}
-  {{ end }}
 spec:
   dataVolumeTemplates:
   - metadata:
-      name: "{{ .rootDiskVolumeName }}-{{ .Iteration }}-{{ .Replica }}"
-      labels:
-      {{ range $key, $value := .rootVolumeLabels }}
-        {{ $key }}: {{ $value }}
-      {{ end }}
+      name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
     spec:
     {{ if .rootdiskVolumeSource }}
       source: {{ .rootdiskVolumeSource | mustToJson }}
@@ -27,7 +19,7 @@ spec:
         storageClassName: {{ .storageClassName }}
         resources:
           requests:
-            storage: {{ default "5Gi" .rootVolumeSize }}
+            storage: {{ default "6Gi" .rootVolumeSize }}
   running: true
   template:
     spec:
@@ -60,7 +52,7 @@ spec:
         pod: {}
       volumes:
       - dataVolume:
-          name: "{{ .rootDiskVolumeName }}-{{ .Iteration }}-{{ .Replica }}"
+          name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
         name: rootdisk
       - cloudInitNoCloud:
           userData: |

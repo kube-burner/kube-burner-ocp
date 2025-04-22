@@ -107,7 +107,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name(), additionalVars)
+			rc = wh.RunWithAdditionalVars(cmd.Name(), additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
