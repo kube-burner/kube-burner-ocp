@@ -405,6 +405,7 @@ The different variants are:
 - [virt-density](#virt-density)
 - [virt-capacity-benchmark](#virt-capacity-benchmark).
 - [virt-clone](#virt-clone)
+- [virt-ephemeral-restart](#virt-ephemeral-restart)
 
 ### Virt Density
 
@@ -503,6 +504,55 @@ By default, the `baseName` is `virt-clone`. Set it by passing `--namespace` (or 
 
 Users may control the workload sizes by passing the following arguments:
 - `--vms` - Number of `VirtualMachines` to create in step 6
+
+#### Volume Access Mode
+
+By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
+If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
+
+#### Temporary SSH Keys
+
+In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
+By default, it stores the pair in a temporary directory.
+Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
+### Virt Ephemeral Restart
+
+Test the performance of restarting ephemeral `VirtalMachine`s. Kubernetes native ephemeral volumes use local node storage. As a result, the cannot be used on large scale deployment.
+Instead, a restart is implemented by stopping the `VirtualMachine`, deleting the `DataVolume` backing its root volume and starting it.
+
+#### Test Sequence
+
+The test runs the following sequence:
+1. Create a `DataVolume` using a container image as the source
+2. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
+3. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
+4. Create `VirtualMachine`s based in the `DataSource`
+5. Stop all `VirtualMachine`s
+6. In batches, delete the `DataVolume` backing the root disk and start the `VirtualMachine`s
+
+#### Tested StorageClass
+
+By default, the test will use the default `StorageClass`. To use a different one, use `--storage-class` to provide a different name.
+
+If `--use-snapshot` is explicitly set to `true` a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
+Otherwise, the test will check the `StorageProfile` for the `StorageClass` and act accordingly.
+
+#### Test Namespace
+
+All `VirtualMachines` are created in the same namespace.
+
+By default, the namespace is `virt-ephemeral-restart`. Set it by passing `--namespace` (or `-n`)
+
+#### Test Size Parameters
+
+Users may control the workload sizes by passing the following arguments:
+- `--iteration-vms` - Number of `VirtualMachines` to batch in each group in step 6
+- `--iteration-vms` - Number of batches to run in step 6
+
+!!! Note
+
+    The total number of `VirtualMachines` created is `--iteration-vms` * `--iteration-vms`
 
 #### Volume Access Mode
 

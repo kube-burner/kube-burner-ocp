@@ -1,0 +1,67 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+  labels:
+    virt-ephemeral-restart.kube-burner.io/group: "group-{{ .Iteration }}"
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: "{{ .vmName }}-root-{{ .Iteration }}-{{ .Replica }}"
+    spec:
+    {{ if .rootdiskVolumeSource }}
+      source: {{ .rootdiskVolumeSource | mustToJson }}
+    {{ end }}
+    {{ if .rootdiskVolumeSourceRef }}
+      sourceRef: {{ .rootdiskVolumeSourceRef | mustToJson }}
+    {{ end }}
+      storage:
+        accessModes:
+        - {{ .accessMode }}
+        storageClassName: {{ .storageClassName }}
+        resources:
+          requests:
+            storage: {{ default "6Gi" .rootVolumeSize }}
+  runStrategy: RerunOnFailure
+  template:
+    spec:
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: {{ .sshPublicKeySecret }}
+      architecture: amd64
+      domain:
+        resources:
+          requests:
+            memory: {{ default "512Mi" .vmMemory }}
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+            bootOrder: 1
+          interfaces:
+          - name: default
+            masquerade: {}
+            bootOrder: 2
+        machine:
+          type: pc-q35-rhel9.4.0
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: "{{ .vmName }}-root-{{ .Iteration }}-{{ .Replica }}"
+        name: rootdisk
+      - cloudInitNoCloud:
+          userData: |
+            #cloud-config
+            chpasswd:
+              expire: false
+            password: {{ uuidv4 }}
+            user: fedora
+            runcmd: []
+        name: cloudinitdisk
