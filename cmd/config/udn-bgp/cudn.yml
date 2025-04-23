@@ -1,0 +1,30 @@
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-{{.Iteration}}
+  labels:
+    cudn-{{.Iteration}}: ""
+spec:
+  {{- $nsList := list }}
+  {{- $nsStart := mul $.Iteration $.namespaces_per_cudn }}
+  {{- range $i, $v := until $.namespaces_per_cudn }}
+    {{- $nextNs := mod (add $nsStart $i) $.total_namespaces }}
+    {{- $next_namespace := print "udn-bgp-" $nextNs }}
+    {{- $nsList = append $nsList $next_namespace }}
+  {{- end }}
+  {{- $nsNames := toJson $nsList }}
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values: {{$nsNames}}
+  {{- $firstOctet := add (div $.Iteration 255) 10 }}
+  {{- $secondOctet := mod $.Iteration 255 }}
+  {{- $cudnCidr := print $firstOctet "." $secondOctet ".0.0/16" }}
+  network:
+    topology: Layer3
+    layer3:
+      role: Primary
+      subnets:
+        - cidr: {{$cudnCidr}}
+          hostSubnet: 24
