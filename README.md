@@ -566,6 +566,149 @@ In order to verify that the VMs actually completed booting, the test generates a
 By default, it stores the pair in a temporary directory.
 Users may choose the store the key in a specified directory by setting `--ssh-key-path`
 
+## CUDN BGP Workload
+
+This workload tests BGP route exchange import and export scenarios for the CUDNs.
+
+Assumptions in this workload:
+1. Kube burner should be running on the host which is not used as a bastion host to deploy OCP cluster.
+   a) Routes in the CUDN gateway router when we have the same host as the deployment host and kube burner host
+```console
+sh-5.1# ovn-nbctl lr-route-list GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+IPv4 Routes
+Route Table <main>:
+              20.0.2.0/24             192.168.0.1 dst-ip rtoe-GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+                0.0.0.0/0               192.168.0.1 dst-ip rtoe-GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+```
+   b) Routes in the CUDN gateway router when the deployment host and the kube burner host is different
+```console
+sh-5.1# ovn-nbctl lr-route-list GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+IPv4 Routes
+Route Table <main>:
+              20.0.2.0/24             192.168.0.145 dst-ip rtoe-GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+                0.0.0.0/0               192.168.0.1 dst-ip rtoe-GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+```
+   In case of same host i.e scenario a, ping reply will reach the kube burner even if the route "20.0.2.0/24" is not added, but using default route "0.0.0.0/0 192.168.0.1". Our purpose of the testing is to verify if the external route "20.0.2.0/24" is properly added or not in CUDN's gateway router. So we want the ping test to fail if this route is not correctly imported.
+
+2. An external FRR will be running on the same host where the kube burner is running.
+   a) Here kube burner is the generator of the external routes. External FRR imports these routes into the OCP cluster through internal FRR and OVN.
+   b) Also when external FRR routes receive the routes from the OCP cluster, kube burner validates them.
+3. External FRR will be created by the user and configured to pair up with OCP cluster's OVN internal FRR routers
+2. External FRR additionally configured to advertise the host routes i.e
+
+```console
+vtysh
+configure terminal
+router bgp 64512
+redistribute static
+redistribute connected
+end
+write
+```
+
+Unlike a UDN network, a CUDN network will be cluster scoped and can be used by multiple namespaces. However we restrict this to one namespace by default as our aim here is testing BGP route exchange.
+
+This workload defines multiple jobs as per CUDN requirment. Some of the requirements:
+1. Namespace with label "k8s.ovn.org/primary-user-defined-network" before the CUDN creation
+2. OVN should create all the necessary resources for CUDN before a pod is created on it. Currently we don't have a mechanism to detect if the OVN has created all CUDN's resources. So we are using separate jobs for CUDN and pods with jobPause. Workload defines only one pod per CUDN.
+3. RouteAdvertiments CRD selecting the CUDN. We use 1:1 RA:CUDN mapping.
+
+As we want to measure BGP route exchange latency, this workload skips measurements for all the resources except RouteAdvertisements.
+
+This workload has 2 BGP route exchange scenarios 1) route export scenaio 2) route import scenario
+When a RouteAdvertisement is created, it advertises the selected CUDN's subnet to outside cluster. However, an external route is imported to the CUDN's gateway router only when it is advertised by the routeAdvertisment. Hence RouteAdvertisemnt for CUDN is mandatory for both export and import scenarios.
+
+Sequent of events during workload execution
+1. Job1 creates namespaces
+2. Job2 creates CUDNs
+3. Job3 creates Pods
+4. When Job4 execution starts, Kube burner calls start measurement.
+   RouteAdvertisment Latency measurement code then
+   a. Maintains a list of CUDN subnets and the pod addresses.
+   b. Starts export scenario
+      i) Main thread subscribes (through routeCh channel) to kernel's netlink sockets for route monitoring
+      ii) Starts export workers, which read from the subscribed routeCh channel
+      iii) Registers an informer for notifying router advertisement resource creation events
+5. Kube burner creates  RouteAdvertisments for CUDNs
+   a. Kubernetes API notify the RouteAdvertisment resource to the listening kube burner
+   b. OVN using the internal FRR advertises this route to the outside cluster (i.e to external FRR)
+   c. External FRR adds the routes to the host. Kernel notifies the routes to the kube burner using netlink sockets
+6. RouteAdvertisment Latency measurement code (watchers and export worker threads) then
+   a. Records RouteAdvertisement name and creation timestamp when routeadvertisement resource is detected by the API
+   b. For each route notified by the kernel, pings the corresponding CUDN's pod and records ping success timestamp
+7. Kube burner calls stop measurements. RouteAdvertisment Latency measurement code then
+   a. Waits for export scenario completion
+   b. Starts import scenario
+      i) Main thread creates interfaces, prepares IP addresses and pods to ping (which are needed for worker threads)
+      ii) Starts import workers
+      iii) Import workers add IP addresses on the interfaces
+      iv) Kernel creates the linux route for the added IP address. Then external FRR router exports this to the cluster.
+      v) OVN imports this route into the CUDN's gateway router.
+      vi) Import worker pings the CUDN pod using the CUDN pod address as destination address and above added IP address as the source address.
+      vii) Import worker records the ping success timestamp
+   c. Waits for import scenario complettion
+8. kube burner indexes all the latency measurements
+
+### RouteAdvertisement Latency Metrics
+
+RouteAdvetisements latency is calculated for both import and export scenarios, these latency metrics are in ms. It can be enabled with:
+
+```json
+  measurements:
+  - name: podLatency
+```
+
+The metrics collected are route advertisement latency timeseries (raLatencyMeasurement) and six documents holding a summary with different route latency quantiles of ping test and netlink route detection latency (raLatencyQuantilesMeasurement).
+
+One document, such as the following, is indexed per each internal (through Routeadvertisment CRD) and external route (adding ip address on dummy interface) created by the workload:
+
+```json
+[
+  {
+    "timestamp": "2025-04-15T08:41:10Z",
+    "metricName": "raLatencyMeasurement",
+    "uuid": "2c8a64a8-0409-4d17-8643-c28db8216821",
+    "jobName": "udn-bgp-route-advertisements",
+    "routeAdvertisementName": "ra-0",
+    "metadata": {
+      "ocpMajorVersion": "4.19",
+      "ocpVersion": "4.19.0-ec.3"
+    },
+    "scenario": "ExportRoutes",
+    "latency": [
+      10031
+    ],
+    "minReadyLatency": 10031,
+    "maxReadyLatency": 10031,
+    "readyLatency": 10031,
+    "netlinkRouteLatency": [
+      10026
+    ],
+    "maxNetlinkRouteLatency": 10026,
+    "minNetlinkRouteLatency": 10026,
+    "p99NetlinkRouteLatency": 10026
+  },
+  {
+    "timestamp": "2025-04-15T08:42:20.060393739Z",
+    "metricName": "raLatencyMeasurement",
+    "uuid": "2c8a64a8-0409-4d17-8643-c28db8216821",
+    "jobName": "udn-bgp-route-advertisements",
+    "routeAdvertisementName": "20.0.1.1/24",
+    "metadata": {
+      "ocpMajorVersion": "4.19",
+      "ocpVersion": "4.19.0-ec.3"
+    },
+    "scenario": "ImportRoutes",
+    "latency": [
+      13
+    ],
+    "minReadyLatency": 13,
+    "maxReadyLatency": 13,
+    "readyLatency": 13
+  }
+]
+```
+
 ## Custom Workload: Bring your own workload
 
 To kickstart kube-burner-ocp with a custom workload, `init` becomes your go-to command. This command is equipped with flags that enable to seamlessly integrate and run your personalized workloads. Here's a breakdown of the flags accepted by the init command:
