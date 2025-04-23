@@ -181,10 +181,6 @@ Note: this workload calculates the number of iterations to create from the numbe
 
 For User-Defined Network (UDN) L3 segmentation testing. It creates two deployments, a client/curl and a server/nxing.
 
-### virt-density-pods
-
-Creates two VMs, one Ngnix server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales.
-
 ## Network Policy workloads
 
 Network policy scale testing tooling involved  2 components:
@@ -403,6 +399,7 @@ This workload family is a focused on Virtualization creating different objects a
 
 The different variants are:
 - [virt-density](#virt-density)
+- [virt-udn-density](#virt-density-udn)
 - [virt-capacity-benchmark](#virt-capacity-benchmark).
 - [virt-clone](#virt-clone)
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
@@ -410,6 +407,10 @@ The different variants are:
 ### Virt Density
 
 Similar to node-density, fills with VirtualMachines the worker nodes of the cluster (**kubevirt/OpenShift Virtualization is required** to run this workload). Meant to detect issues derived from spinning up high amounts VMs in a short amount of time and to track runningthe latencies of the different VM bootstrap stages.
+
+### Virt Density Udn
+
+Similar to udn-density-pods scenario. Creates two VMs, one Ngnix server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
 
 ### Virt Capacity Benchmark
 
