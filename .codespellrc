@@ -1,0 +1,3 @@
+[codespell]
+skip = go.mod,go.sum
+ignore-words-list = passt

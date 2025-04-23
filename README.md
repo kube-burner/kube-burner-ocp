@@ -227,7 +227,7 @@ In our scale tests, we aim to create between 10 to 100 network policies within a
 1. remote namespaces among ingress and egress rules across kube burner job iterations
 2. remote namespaces among ingress and egress rules in the same kube burner job iteration
 
-This ensures that we don’t overuse the same remote namespaces in a single iteration or among multiple interations. For instance, if namespace-1 uses namespace-2 and namespace-3 as its remote namespaces, then namespace-2 will start using namespace-4 and namespace-5 as remote namespaces in the next iteration.
+This ensures that we don’t overuse the same remote namespaces in a single iteration or among multiple iterations. For instance, if namespace-1 uses namespace-2 and namespace-3 as its remote namespaces, then namespace-2 will start using namespace-4 and namespace-5 as remote namespaces in the next iteration.
 
 **Unique Namespace and Pod Combinations:** To avoid redundant flows, the templating system generates unique combinations of remote namespaces and pods for each network policy. Initially, we iterate through the list of remote namespaces, and once all remote namespaces are exhausted, we move on to iterate through the remote pods. This method ensures that every network policy within a namespace is assigned a distinct combination of remote namespaces and remote pods, avoiding duplicate pairs.
 
@@ -280,7 +280,7 @@ This workload creates an egress IP for the client pods. SDN (OVN) will use egres
 
 Each iteration creates the following objects in each of the created namespaces:
 
-- 1 deployment with the configured number of client pod replicas. Client pod runs the quay.io/cloud-bulldozer/eipvalidator app which periodically sends http request to the configured "EXT_SERVER_HOST" server at an "DELAY_BETWEEN_REQ_SEC" interval with a request timeout of "REQ_TIMEOUT_SEC" seconds. Client pod then validates if the body of the response has configured "EGRESS_IPS". Once the client pod starts running and after receiving first succesful response with configured "EGRESS_IPS", it sets "eip_startup_latency_total" prometheus metric.
+- 1 deployment with the configured number of client pod replicas. Client pod runs the quay.io/cloud-bulldozer/eipvalidator app which periodically sends http request to the configured "EXT_SERVER_HOST" server at an "DELAY_BETWEEN_REQ_SEC" interval with a request timeout of "REQ_TIMEOUT_SEC" seconds. Client pod then validates if the body of the response has configured "EGRESS_IPS". Once the client pod starts running and after receiving first successful response with configured "EGRESS_IPS", it sets "eip_startup_latency_total" prometheus metric.
 - 1 EgressIP object. EgressIP object is cluster scoped. EgressIP object will have number of egress IP addresses which user specified through "addresses-per-iteration" cli option. kube-burner generates these addresses for the egressIP object from the egress IP list provided by kube-burner-ocp. OVN applies egressIPs to the pods in the current job iteration because of "namespaceSelector" and "podSelector" fields in the egressIP object.
 
 Note: User has to manually create the external server or use the e2e-benchmarking(https://github.com/cloud-bulldozer/e2e-benchmarking/tree/master/workloads/kube-burner-ocp-wrapper#egressip) which deploys external server and runs the workload with required configuration.
@@ -347,7 +347,7 @@ Pre-requisites:
         node: 1
         size: 1G
      ```
- - **MetalLB operator** limiting speaker pods to specific nodes (aprox. 10%, 12 in the case of 120 node iterations with the corresponding ***worker-metallb*** label):
+ - **MetalLB operator** limiting speaker pods to specific nodes (approx. 10%, 12 in the case of 120 node iterations with the corresponding ***worker-metallb*** label):
      ```yaml
      apiVersion: metallb.io/v1beta1
      kind: MetalLB
@@ -410,7 +410,7 @@ Similar to node-density, fills with VirtualMachines the worker nodes of the clus
 
 ### Virt Density Udn
 
-Similar to udn-density-pods scenario. Creates two VMs, one Ngnix server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
+Similar to udn-density-pods scenario. Creates two VMs, one Nginx server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
 
 ### Virt Capacity Benchmark
 
@@ -608,7 +608,7 @@ write
 
 Unlike a UDN network, a CUDN network will be cluster scoped and can be used by multiple namespaces. However we restrict this to one namespace by default as our aim here is testing BGP route exchange.
 
-This workload defines multiple jobs as per CUDN requirment. Some of the requirements:
+This workload defines multiple jobs as per CUDN requirement. Some of the requirements:
 1. Namespace with label "k8s.ovn.org/primary-user-defined-network" before the CUDN creation
 2. OVN should create all the necessary resources for CUDN before a pod is created on it. Currently we don't have a mechanism to detect if the OVN has created all CUDN's resources. So we are using separate jobs for CUDN and pods with jobPause. Workload defines only one pod per CUDN.
 3. RouteAdvertiments CRD selecting the CUDN. We use 1:1 RA:CUDN mapping.

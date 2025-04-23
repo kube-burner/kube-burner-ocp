@@ -185,7 +185,7 @@ func (plmf raLatencyMeasurementFactory) NewMeasurement(jobConfig *config.Job, cl
 }
 
 // unlike default pod network, when a pod is created on udn network, pod ip address is retrieved from pod annotations.
-// we create list of cudn subnet and pod ip mappings. CUdn subnet is considered as a route exported to outside the cluster. When KB want's to ping test the cudn, it pings cudn's pods.
+// we create list of cudn subnet and pod ip mappings. CUdn subnet is considered as a route exported to outside the cluster. When KB wants to ping test the cudn, it pings cudn's pods.
 func (r *raLatency) getPods() error {
 	var err error
 	listOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("kube-burner-uuid=%s", r.Uuid)}
@@ -520,7 +520,7 @@ func (r *raLatency) createDummyInterface(i int) error {
 }
 
 /*
-In the import scenario, main thread creats all the dummy interfaces. It then writes to the channel
+In the import scenario, main thread creates all the dummy interfaces. It then writes to the channel
 1. which ip address should be created on these dummy interfaces and
 2. list of all cudn pods to ping for the route import verification
 
@@ -689,7 +689,7 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 			log.Debugf("count %v , desiredCount %v", count, desiredCount)
 			if count >= desiredCount {
 				log.Debugf("Desired count reached, signaling stop.")
-				// Give additional 10 seconds for threads to finsh (ping test after detecting routes)
+				// Give additional 10 seconds for threads to finish (ping test after detecting routes)
 				time.Sleep(10 * time.Second)
 				return
 			}
