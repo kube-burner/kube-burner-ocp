@@ -39,7 +39,6 @@ spec:
           requests:
             memory: "10Mi"
             cpu: "10m"
-        env:
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: false
@@ -118,4 +117,3 @@ spec:
       restartPolicy: Always
   strategy:
     type: RollingUpdate
-
