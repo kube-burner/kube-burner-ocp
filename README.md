@@ -474,6 +474,12 @@ Some storage classes have limitations requiring the test to skip some parts:
 - `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
 
+#### Cleanup
+
+Since the test is expected to run until failure, it is designed to keep all allocated resources to allow investigating the failure.
+To cleanup all allocated resources once the test is done set `--cleanup`.
+Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs
+
 ### Virt Clone
 
 Test the capacity and performance of starting multiple virtual machines with a root disk as clones of a single volume. This test comes to mimic VDI sequence
