@@ -140,14 +140,18 @@ teardown_file() {
 }
 
 @test "virt-capacity-benchmark" {
-  VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS=${VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS:-oci-bv}
-  run_cmd ${KUBE_BURNER_OCP} virt-capacity-benchmark --storage-class $VIRT_CAPACITY_BENCHMARK_STORAGE_CLASS --max-iterations 2  --data-volume-count 2 --vms 2 --skip-migration-job --skip-resize-job
+    local STORAGE_PARAMETER
+  if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
+    STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
+  fi
+  run_cmd ${KUBE_BURNER_OCP} virt-capacity-benchmark ${STORAGE_PARAMETER} --max-iterations 2  --data-volume-count 2 --vms 2 --skip-migration-job --skip-resize-job
+  run_cmd kube-burner-ocp virt-capacity-benchmark --cleanup-only
   local jobs=("create-vms" "restart-vms")
   for job in "${jobs[@]}"; do
     check_metric_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency vmReadyLatency
     check_quantile_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency VMReady
   done
-  oc delete namespace virt-capacity-benchmark
+  check_destroyed_ns virt-capacity-benchmark
 }
 
 @test "virt-clone" {

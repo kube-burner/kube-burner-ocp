@@ -33,6 +33,10 @@ const (
 	virtCapacityBenchmarkTestName       = "virt-capacity-benchmark"
 )
 
+var (
+	virtCapacityBenchmarkNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, virtCapacityBenchmarkTestName)
+)
+
 // NewVirtCapacityBenchmark holds the virt-capacity-benchmark workload
 func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
@@ -46,17 +50,23 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	var minimalVolumeIncreaseSize int
 	var skipResizeJob bool
 	var metricsProfiles []string
+	var cleanupOnly bool
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtCapacityBenchmarkTestName,
 		Short:        "Runs capacity-benchmark workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			if cleanupOnly {
+				return
+			}
+
 			if !virtctl.IsInstalled() {
 				log.Fatalf("Failed to run virtctl. Check that it is installed, in PATH and working")
 			}
 
-			storageClassName, _ := getStorageAndSnapshotClasses(storageClassName, true, true)
+			storageClassName, _ = getStorageAndSnapshotClasses(storageClassName, true, true)
 			if !skipResizeJob {
 				supported, err := k8sstorage.StorageClassSupportsVolumeExpansion(getK8SConnector(), storageClassName)
 				if err != nil {
@@ -66,10 +76,14 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 					log.Fatalf("Storage Class [%s] does not support volume expansion", storageClassName)
 				}
 			}
-
-			log.Infof("Running tests with Storage Class [%s]", storageClassName)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanupOnly {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), virtCapacityBenchmarkNamespaceLabelSelector)
+				return
+			}
+
 			privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, VirtCapacityBenchmarkTmpDirPattern, VirtCapacityBenchmarkSSHKeyFileName)
 			if err != nil {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
@@ -110,6 +124,8 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 
 			setMetrics(cmd, metricsProfiles)
 
+			log.Infof("Running tests with Storage Class [%s]", storageClassName)
+
 			log.Infof("Running tests in Namespace [%s]", testNamespace)
 			counter := 0
 			for {
@@ -124,6 +140,10 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 					log.Infof("Reached maxIterations [%d]", maxIterations)
 					break
 				}
+			}
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the current run")
+				cleanupTestNamespaces(cmd.Context(), virtCapacityBenchmarkNamespaceLabelSelector)
 			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -141,5 +161,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&minimalVolumeIncreaseSize, "min-vol-inc-size", 0, "Minimal volume increment size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanupOnly, "cleanup-only", false, "Only cleanup the resource created by the previous run. Do not run the test.")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup the resource created by the test.")
 	return cmd
 }
