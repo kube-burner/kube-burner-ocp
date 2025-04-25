@@ -17,6 +17,7 @@ package ocp
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
@@ -35,7 +36,7 @@ func NewCrdScale(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, metricsProfiles)
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			rc = wh.Run(cmd.Name())
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

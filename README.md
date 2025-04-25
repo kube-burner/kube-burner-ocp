@@ -48,7 +48,6 @@ Flags:
       --gc-metrics                Collect metrics during garbage collection
       --local-indexing            Enable local indexing
       --metrics-endpoint string   YAML file with a list of metric endpoints
-      --profile-type string       Metrics profile to use, supported options are: regular, reporting or both (default "both")
       --qps int                   QPS (default 20)
       --timeout duration          Benchmark timeout (default 4h0m0s)
       --user-metadata string      User provided metadata file, in YAML format
@@ -804,13 +803,21 @@ Flags:
   -h, --help                       help for index
 ```
 
-## Metrics-profile type
+## Metrics-profile
 
-By specifying `--profile-type`, kube-burner can use two different metrics profiles when scraping metrics from prometheus. By default is configured with `both`, meaning that it will use the regular metrics profiles bound to the workload in question and the reporting metrics profile.
+When using the regular profiles ([metrics-aggregated](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics-aggregated.yml) or [metrics](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics.yml)), kube-burner scrapes and indexes timeseries based metrics.
 
-When using the regular profiles ([metrics-aggregated](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics-aggregated.yml) or [metrics](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics.yml)), kube-burner scrapes and indexes metrics timeseries.
+The reporting profile ([metrics-report](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics-report.yml)) can be useful to reduce the number of documents sent to the configured indexer. Thanks to the combination of aggregations and instant queries for prometheus metrics, and 4 summaries for latency measurements, only a few documents will be indexed per benchmark. This flag makes possible to specify one or both of these profiles indistinctly.
 
-The reporting profile is very useful to reduce the number of documents sent to the configured indexer. Thanks to the combination of aggregations and instant queries for prometheus metrics, and 4 summaries for latency measurements, only a few documents will be indexed per benchmark. This flag makes possible to specify one or both of these profiles indistinctly.
+Every workload has defined a default metrics profile, you can customize it with the flag --metrics-profile, i.e:
+
+```shell
+$ kube-burner-ocp node-density --pods-per-node=100 --es-server=${ES_ENDPOINT} --metrics-profile metrics.yml,http://localhost:8080/custom-metrics.yml
+```
+
+!!! Note
+
+    As demonstrated above, it's possible to specify multiple metrics profiles by comma separated list. These files are first looked up in the embedded configuration, and then fall back to the specified path or URL.
 
 ## Customizing workloads
 

@@ -18,8 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
@@ -29,7 +27,6 @@ import (
 	kubeburnerutil "github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -50,17 +47,6 @@ var (
 		"RWX": "ReadWriteMany",
 	}
 )
-
-func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
-	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
-	switch ProfileType(profileType) {
-	case Reporting:
-		metricsProfiles = []string{"metrics-report.yml"}
-	case Both:
-		metricsProfiles = append(metricsProfiles, "metrics-report.yml")
-	}
-	os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
-}
 
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner
 func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {

@@ -17,6 +17,7 @@ package ocp
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/kube-burner/kube-burner/pkg/measurements"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -40,7 +41,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			os.Setenv("NAMESPACES_PER_CUDN", fmt.Sprint(namespacePerCudn))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, metricsProfiles)
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			rc = wh.RunWithAdditionalVars(cmd.Name(), nil, additionalMeasurementFactoryMap)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

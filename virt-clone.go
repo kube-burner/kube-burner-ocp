@@ -16,6 +16,7 @@ package ocp
 
 import (
 	"os"
+	"strings"
 
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
 	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
@@ -73,7 +74,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 				"accessMode":              accessModeTranslator[volumeAccessMode],
 			}
 
-			setMetrics(cmd, metricsProfiles)
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			rc = wh.RunWithAdditionalVars(cmd.Name(), additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

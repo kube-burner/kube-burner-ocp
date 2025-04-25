@@ -37,7 +37,6 @@ const configDir = "config"
 func openShiftCmd() *cobra.Command {
 	var workloadConfig workloads.Config
 	var wh workloads.WorkloadHelper
-	var metricsProfileType string
 	var esServer, esIndex string
 	var QPS, burst int
 	var gc, gcMetrics, alerting, checkHealth, localIndexing, extract bool
@@ -59,7 +58,6 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().BoolVar(&gcMetrics, "gc-metrics", false, "Collect metrics during garbage collection")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UserMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	ocpCmd.PersistentFlags().BoolVar(&extract, "extract", false, "Extract workload in the current directory")
-	ocpCmd.PersistentFlags().StringVar(&metricsProfileType, "profile-type", "both", "Metrics profile to use, supported options are: regular, reporting or both")
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
 	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "metrics-endpoint")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {

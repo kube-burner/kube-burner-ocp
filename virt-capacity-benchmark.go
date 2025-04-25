@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strings"
 
 	k8sstorage "github.com/cloud-bulldozer/go-commons/v2/k8s-storage"
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
@@ -122,7 +123,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				"skipResizeJob":       skipResizeJob,
 			}
 
-			setMetrics(cmd, metricsProfiles)
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 
 			log.Infof("Running tests with Storage Class [%s]", storageClassName)
 
