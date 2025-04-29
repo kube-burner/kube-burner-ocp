@@ -21,12 +21,12 @@ import (
 	"time"
 
 	uid "github.com/google/uuid"
+	ocp "github.com/kube-burner/kube-burner-ocp"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	ocp "github.com/kube-burner/kube-burner-ocp"
 )
 
 //go:embed config/*
