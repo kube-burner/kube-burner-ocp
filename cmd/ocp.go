@@ -26,7 +26,7 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"kube-burner.io/ocp"
+	ocp "github.com/kube-burner/kube-burner-ocp"
 )
 
 //go:embed config/*
