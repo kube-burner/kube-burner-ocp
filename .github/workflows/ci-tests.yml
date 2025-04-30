@@ -15,6 +15,9 @@ jobs:
   lint:
     uses: ./.github/workflows/linters.yml
 
+  build-matrix:
+    uses: ./.github/workflows/build-metrix.yml
+
   build:
     if: ${{ contains(github.event.pull_request.labels.*.name, 'ok-to-test') }}
     uses: ./.github/workflows/builders.yml
