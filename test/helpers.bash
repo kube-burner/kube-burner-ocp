@@ -26,6 +26,18 @@ setup-prometheus() {
   sleep 10
 }
 
+setup-shared-network() {
+  echo "Setting up shared network for monitoring"
+  $OCI_BIN network create monitoring
+}
+
+setup-opensearch() {
+  echo "Setting up open-search"
+  # Use version 1 to avoid the password requirement
+  $OCI_BIN run --rm -d --name opensearch --network monitoring --env="discovery.type=single-node" --env="plugins.security.disabled=true" --publish=9200:9200 --health-startup-cmd "curl localhost:9200" --health-startup-interval 5s --health-cmd "curl localhost:9200" docker.io/opensearchproject/opensearch:1
+  $OCI_BIN wait --condition=healthy opensearch
+}
+
 check_ns() {
   echo "Checking the number of namespaces labeled with \"${1}\" is \"${2}\""
   if [[ $(kubectl get ns -l "${1}" -o name | wc -l) != "${2}" ]]; then
