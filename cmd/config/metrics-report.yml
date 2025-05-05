@@ -224,24 +224,6 @@
   metricName: max-memory-multus
   instant: true
 
- # stackrox 
-
-- query: avg(avg_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="stackrox", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
-  metricName: cpu-stackrox
-  instant: true
-
-- query: max(max_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="stackrox", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
-  metricName: max-cpu-stackrox
-  instant: true
-
-- query: avg(avg_over_time(container_memory_rss{name!="", namespace="stackrox", container!="POD"}[{{.elapsed}}:])) by (container)
-  metricName: memory-stackrox
-  instant: true
-
-- query: max(avg_over_time(container_memory_rss{name!="", namespace="stackrox", container!="POD"}[{{.elapsed}}:])) by (container)
-  metricName: max-memory-stackrox
-  instant: true
-
 # OVNKubernetes - standard & IC
 
 - query: avg(avg_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-ovn-kubernetes", pod=~"(ovnkube-master|ovnkube-control-plane).+", container!="POD"}[2m])[{{.elapsed}}:])) by (container)

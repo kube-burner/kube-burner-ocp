@@ -577,7 +577,8 @@ Users may choose the store the key in a specified directory by setting `--ssh-ke
 This workload tests BGP route exchange import and export scenarios for the CUDNs.
 
 Assumptions in this workload:
-1. Kube burner should be running on the host which is not used as a bastion host to deploy OCP cluster.
+1. Kube burner must be running on a Linux host
+2. Kube burner should be running on the host which is not used as a bastion host to deploy OCP cluster.
    a) Routes in the CUDN gateway router when we have the same host as the deployment host and kube burner host
 ```console
 sh-5.1# ovn-nbctl lr-route-list GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
@@ -596,11 +597,11 @@ Route Table <main>:
 ```
    In case of same host i.e scenario a, ping reply will reach the kube burner even if the route "20.0.2.0/24" is not added, but using default route "0.0.0.0/0 192.168.0.1". Our purpose of the testing is to verify if the external route "20.0.2.0/24" is properly added or not in CUDN's gateway router. So we want the ping test to fail if this route is not correctly imported.
 
-2. An external FRR will be running on the same host where the kube burner is running.
+3. An external FRR will be running on the same host where the kube burner is running.
    a) Here kube burner is the generator of the external routes. External FRR imports these routes into the OCP cluster through internal FRR and OVN.
    b) Also when external FRR routes receive the routes from the OCP cluster, kube burner validates them.
-3. External FRR will be created by the user and configured to pair up with OCP cluster's OVN internal FRR routers
-2. External FRR additionally configured to advertise the host routes i.e
+4. External FRR will be created by the user and configured to pair up with OCP cluster's OVN internal FRR routers
+5. External FRR additionally configured to advertise the host routes i.e
 
 ```console
 vtysh
