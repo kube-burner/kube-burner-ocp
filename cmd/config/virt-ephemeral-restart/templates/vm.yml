@@ -2,10 +2,12 @@ apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+  labels:
+    virt-ephemeral-restart.kube-burner.io/group: "group-{{ .Iteration }}"
 spec:
   dataVolumeTemplates:
   - metadata:
-      name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+      name: "{{ .vmName }}-root-{{ .Iteration }}-{{ .Replica }}"
     spec:
     {{ if .rootdiskVolumeSource }}
       source: {{ .rootdiskVolumeSource | mustToJson }}
@@ -20,7 +22,7 @@ spec:
         resources:
           requests:
             storage: {{ default "6Gi" .rootVolumeSize }}
-  running: true
+  runStrategy: RerunOnFailure
   template:
     spec:
       accessCredentials:
@@ -52,7 +54,7 @@ spec:
         pod: {}
       volumes:
       - dataVolume:
-          name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+          name: "{{ .vmName }}-root-{{ .Iteration }}-{{ .Replica }}"
         name: rootdisk
       - cloudInitNoCloud:
           userData: |

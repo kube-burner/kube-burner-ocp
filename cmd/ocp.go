@@ -21,12 +21,12 @@ import (
 	"time"
 
 	uid "github.com/google/uuid"
+	ocp "github.com/kube-burner/kube-burner-ocp"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"kube-burner.io/ocp"
 )
 
 //go:embed config/*
@@ -61,6 +61,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().BoolVar(&extract, "extract", false, "Extract workload in the current directory")
 	ocpCmd.PersistentFlags().StringVar(&metricsProfileType, "profile-type", "both", "Metrics profile to use, supported options are: regular, reporting or both")
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
+	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "metrics-endpoint")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		if cmd.Name() == "version" {
 			return
@@ -93,8 +94,7 @@ func openShiftCmd() *cobra.Command {
 		} else {
 			envVars["ALERTS"] = ""
 		}
-		// If metricsEndpoint is not set, use values from flags
-		if workloadConfig.MetricsEndpoint == "" && esServer != "" && esIndex != "" {
+		if workloadConfig.MetricsEndpoint == "" {
 			envVars["ES_SERVER"] = esServer
 			envVars["ES_INDEX"] = esIndex
 		}
@@ -109,6 +109,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewClusterDensity(&wh, "cluster-density-v2"),
 		ocp.NewClusterDensity(&wh, "cluster-density-ms"),
 		ocp.NewCrdScale(&wh),
+		ocp.NewUdnBgp(&wh, "udn-bgp"),
 		ocp.NewNetworkPolicy(&wh, "network-policy"),
 		ocp.NewNodeDensity(&wh, "node-density"),
 		ocp.NewNodeDensity(&wh, "node-density-heavy"),
@@ -128,6 +129,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.CustomWorkload(&wh),
 		ocp.NewVirtCapacityBenchmark(&wh),
 		ocp.NewVirtClone(&wh),
+		ocp.NewVirtEphemeralRestart(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
