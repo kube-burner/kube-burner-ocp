@@ -18,13 +18,15 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kube-burner/kube-burner/pkg/measurements"
+	kubeburnermeasurements "github.com/kube-burner/kube-burner/pkg/measurements"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
+
+	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 )
 
-var additionalMeasurementFactoryMap = map[string]measurements.NewMeasurementFactory{
-	"raLatency": NewRaLatencyMeasurementFactory,
+var additionalMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurementFactory{
+	"raLatency": measurements.NewRaLatencyMeasurementFactory,
 }
 
 // NewUdnBgp holds udn-bgp workload
