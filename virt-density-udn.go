@@ -17,6 +17,7 @@ package ocp
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -56,7 +57,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				fmt.Println("Invalid value for --binding-method. Allowed values are 'passt' or 'l2bridge'.")
 				os.Exit(1)
 			}
-			setMetrics(cmd, metricsProfiles)
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			if l3 {
 				log.Info("Layer 3 is enabled")
 				os.Setenv("ENABLE_LAYER_3", "true")

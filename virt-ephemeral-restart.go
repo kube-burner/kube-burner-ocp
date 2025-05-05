@@ -16,6 +16,7 @@ package ocp
 
 import (
 	"os"
+	"strings"
 
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
 	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
@@ -75,7 +76,7 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 				"vmGroups":                generateLoopCounterSlice(iterations, 0),
 			}
 
-			setMetrics(cmd, metricsProfiles)
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			rc = wh.RunWithAdditionalVars(cmd.Name(), additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

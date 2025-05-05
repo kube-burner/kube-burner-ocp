@@ -17,6 +17,7 @@ package ocp
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -47,7 +48,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Setenv("VM_IMAGE", vmImage)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, metricsProfiles)
+			os.Setenv("METRICS", strings.Join(metricsProfiles, ","))
 			AddVirtMetadata(wh, vmImage, "", "")
 			rc = wh.Run(cmd.Name())
 		},
