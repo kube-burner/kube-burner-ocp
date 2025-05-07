@@ -1,19 +1,22 @@
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
-  name: virt-density-{{.Iteration}}
+  name: virt-server-{{.Iteration}}
+  labels:
+    kubevirt.io/os: fedora
 spec:
   runStrategy: Always
   template:
     metadata:
       labels:
         kubevirt.io/os: fedora
+        app: nginx
     spec:
       terminationGracePeriodSeconds: 0
       domain:
         resources:
           requests:
-            memory: 1Gi
+            memory: 256Mi
         devices:
           disks:
           - name: containerdisk
@@ -25,6 +28,15 @@ spec:
           - name: emptydisk
             disk:
               bus: virtio
+          interfaces:
+          - name: primary-udn-net
+            binding:
+              name: {{.bindingMethod}}
+            ports:
+            - port: 80
+      networks:
+      - name: primary-udn-net
+        pod: {}
       volumes:
       - name: containerdisk
         containerDisk:
@@ -32,10 +44,21 @@ spec:
           imagePullPolicy: IfNotPresent
       - name: cloudinitdisk
         cloudInitNoCloud:
+          networkData: |
+            version: 2
+            ethernets:
+              eth0:
+                dhcp4: true
+                addresses: [10.132.0.5/24]
           userData: |-
             #cloud-config
             password: perfscale
             chpasswd: { expire: False }
+            packages:
+              - nginx
+            runcmd:
+              - systemctl start nginx
+              - systemctl enable nginx
       - name: emptydisk
         emptyDisk:
-          capacity: "10Mi"
+          capacity: "50Mi"

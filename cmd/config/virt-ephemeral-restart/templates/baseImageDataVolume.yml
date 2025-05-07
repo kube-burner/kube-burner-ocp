@@ -2,19 +2,18 @@
 apiVersion: cdi.kubevirt.io/v1beta1
 kind: DataVolume
 metadata:
-  name: {{ .cloneDataVolumeName }}
+  name: {{ .baseDataVolumeName }}
   annotations:
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
 spec:
   source:
-    pvc:
-      namespace: {{ .baseVMNamespace }}
-      name: {{ .baseVMRootDiskPVCName }}
+    registry:
+      url: {{ .baseDataVolumeUrl }}
   storage:
     accessModes:
     - {{ .accessMode }}
     resources:
       requests:
-        storage: {{ default "6Gi" .rootVolumeSize }}
+        storage: {{ .baseDataVolumeSize }}
     storageClassName: {{ .storageClassName }}
 ...

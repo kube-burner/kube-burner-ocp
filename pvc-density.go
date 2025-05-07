@@ -27,7 +27,7 @@ import (
 
 var dynamicStorageProvisioners = map[string]string{
 	"aws":        "kubernetes.io/aws-ebs",
-	"cinder":     "kuberenetes.io/cinder",
+	"cinder":     "kubernetes.io/cinder",
 	"azure-disk": "kubernetes.io/azure-disk",
 	"azure-file": "kubernetes.io/azure-file",
 	"gce":        "kubernetes.io/gce-pd",

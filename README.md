@@ -1,5 +1,8 @@
 # OpenShift Wrapper
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/10060/badge)](https://www.bestpractices.dev/projects/10060)
+
 This plugin is a very opinionated OpenShift wrapper designed to simplify the execution of different workloads in this Kubernetes distribution.
 
 Executed with `kube-burner-ocp`, it looks like:
@@ -224,7 +227,7 @@ In our scale tests, we aim to create between 10 to 100 network policies within a
 1. remote namespaces among ingress and egress rules across kube burner job iterations
 2. remote namespaces among ingress and egress rules in the same kube burner job iteration
 
-This ensures that we don’t overuse the same remote namespaces in a single iteration or among multiple interations. For instance, if namespace-1 uses namespace-2 and namespace-3 as its remote namespaces, then namespace-2 will start using namespace-4 and namespace-5 as remote namespaces in the next iteration.
+This ensures that we don’t overuse the same remote namespaces in a single iteration or among multiple iterations. For instance, if namespace-1 uses namespace-2 and namespace-3 as its remote namespaces, then namespace-2 will start using namespace-4 and namespace-5 as remote namespaces in the next iteration.
 
 **Unique Namespace and Pod Combinations:** To avoid redundant flows, the templating system generates unique combinations of remote namespaces and pods for each network policy. Initially, we iterate through the list of remote namespaces, and once all remote namespaces are exhausted, we move on to iterate through the remote pods. This method ensures that every network policy within a namespace is assigned a distinct combination of remote namespaces and remote pods, avoiding duplicate pairs.
 
@@ -277,7 +280,7 @@ This workload creates an egress IP for the client pods. SDN (OVN) will use egres
 
 Each iteration creates the following objects in each of the created namespaces:
 
-- 1 deployment with the configured number of client pod replicas. Client pod runs the quay.io/cloud-bulldozer/eipvalidator app which periodically sends http request to the configured "EXT_SERVER_HOST" server at an "DELAY_BETWEEN_REQ_SEC" interval with a request timeout of "REQ_TIMEOUT_SEC" seconds. Client pod then validates if the body of the response has configured "EGRESS_IPS". Once the client pod starts running and after receiving first succesful response with configured "EGRESS_IPS", it sets "eip_startup_latency_total" prometheus metric.
+- 1 deployment with the configured number of client pod replicas. Client pod runs the quay.io/cloud-bulldozer/eipvalidator app which periodically sends http request to the configured "EXT_SERVER_HOST" server at an "DELAY_BETWEEN_REQ_SEC" interval with a request timeout of "REQ_TIMEOUT_SEC" seconds. Client pod then validates if the body of the response has configured "EGRESS_IPS". Once the client pod starts running and after receiving first successful response with configured "EGRESS_IPS", it sets "eip_startup_latency_total" prometheus metric.
 - 1 EgressIP object. EgressIP object is cluster scoped. EgressIP object will have number of egress IP addresses which user specified through "addresses-per-iteration" cli option. kube-burner generates these addresses for the egressIP object from the egress IP list provided by kube-burner-ocp. OVN applies egressIPs to the pods in the current job iteration because of "namespaceSelector" and "podSelector" fields in the egressIP object.
 
 Note: User has to manually create the external server or use the e2e-benchmarking(https://github.com/cloud-bulldozer/e2e-benchmarking/tree/master/workloads/kube-burner-ocp-wrapper#egressip) which deploys external server and runs the workload with required configuration.
@@ -344,7 +347,7 @@ Pre-requisites:
         node: 1
         size: 1G
      ```
- - **MetalLB operator** limiting speaker pods to specific nodes (aprox. 10%, 12 in the case of 120 node iterations with the corresponding ***worker-metallb*** label):
+ - **MetalLB operator** limiting speaker pods to specific nodes (approx. 10%, 12 in the case of 120 node iterations with the corresponding ***worker-metallb*** label):
      ```yaml
      apiVersion: metallb.io/v1beta1
      kind: MetalLB
@@ -396,9 +399,18 @@ This workload family is a focused on Virtualization creating different objects a
 
 The different variants are:
 - [virt-density](#virt-density)
+- [virt-udn-density](#virt-density-udn)
 - [virt-capacity-benchmark](#virt-capacity-benchmark).
+- [virt-clone](#virt-clone)
+- [virt-ephemeral-restart](#virt-ephemeral-restart)
 
 ### Virt Density
+
+Similar to node-density, fills with VirtualMachines the worker nodes of the cluster (**kubevirt/OpenShift Virtualization is required** to run this workload). Meant to detect issues derived from spinning up high amounts VMs in a short amount of time and to track runningthe latencies of the different VM bootstrap stages.
+
+### Virt Density Udn
+
+Similar to udn-density-pods scenario. Creates two VMs, one Nginx server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
 
 ### Virt Capacity Benchmark
 
@@ -462,7 +474,11 @@ Some storage classes have limitations requiring the test to skip some parts:
 - `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
 
-####
+#### Cleanup
+
+Since the test is expected to run until failure, it is designed to keep all allocated resources to allow investigating the failure.
+To cleanup all allocated resources once the test is done set `--cleanup`.
+Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs
 
 ### Virt Clone
 
@@ -476,8 +492,7 @@ The test runs the following sequence:
 3. Create a `DataVolume` in namespace B using the rootdisk of the `VirtualMachine` as the source
 4. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
 5. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
-6. Create `VirtualMachine` in namespace B based in the `DataSource`. Some machines are marked as `persistent` and some `ephemeral`
-7. Restart the `ephemeral` machines by stopping them, deleting their disk and starting them again
+6. Create `VirtualMachine` in namespace B based in the `DataSource`
 
 #### Tested StorageClass
 
@@ -507,6 +522,199 @@ If not supported, the access mode may be changes by setting `--access-mode`. The
 In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
 By default, it stores the pair in a temporary directory.
 Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
+### Virt Ephemeral Restart
+
+Test the performance of restarting ephemeral `VirtalMachine`s. Kubernetes native ephemeral volumes use local node storage. As a result, the cannot be used on large scale deployment.
+Instead, a restart is implemented by stopping the `VirtualMachine`, deleting the `DataVolume` backing its root volume and starting it.
+
+#### Test Sequence
+
+The test runs the following sequence:
+1. Create a `DataVolume` using a container image as the source
+2. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
+3. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
+4. Create `VirtualMachine`s based in the `DataSource`
+5. Stop all `VirtualMachine`s
+6. In batches, delete the `DataVolume` backing the root disk and start the `VirtualMachine`s
+
+#### Tested StorageClass
+
+By default, the test will use the default `StorageClass`. To use a different one, use `--storage-class` to provide a different name.
+
+If `--use-snapshot` is explicitly set to `true` a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
+Otherwise, the test will check the `StorageProfile` for the `StorageClass` and act accordingly.
+
+#### Test Namespace
+
+All `VirtualMachines` are created in the same namespace.
+
+By default, the namespace is `virt-ephemeral-restart`. Set it by passing `--namespace` (or `-n`)
+
+#### Test Size Parameters
+
+Users may control the workload sizes by passing the following arguments:
+- `--iteration-vms` - Number of `VirtualMachines` to batch in each group in step 6
+- `--iteration-vms` - Number of batches to run in step 6
+
+!!! Note
+
+    The total number of `VirtualMachines` created is `--iteration-vms` * `--iteration-vms`
+
+#### Volume Access Mode
+
+By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
+If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
+
+#### Temporary SSH Keys
+
+In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
+By default, it stores the pair in a temporary directory.
+Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
+## CUDN BGP Workload
+
+This workload tests BGP route exchange import and export scenarios for the CUDNs.
+
+Assumptions in this workload:
+1. Kube burner must be running on a Linux host
+2. Kube burner should be running on the host which is not used as a bastion host to deploy OCP cluster.
+   a) Routes in the CUDN gateway router when we have the same host as the deployment host and kube burner host
+```console
+sh-5.1# ovn-nbctl lr-route-list GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+IPv4 Routes
+Route Table <main>:
+              20.0.2.0/24             192.168.0.1 dst-ip rtoe-GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+                0.0.0.0/0               192.168.0.1 dst-ip rtoe-GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+```
+   b) Routes in the CUDN gateway router when the deployment host and the kube burner host is different
+```console
+sh-5.1# ovn-nbctl lr-route-list GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+IPv4 Routes
+Route Table <main>:
+              20.0.2.0/24             192.168.0.145 dst-ip rtoe-GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+                0.0.0.0/0               192.168.0.1 dst-ip rtoe-GR_cluster_udn_cudn.0_e34-h14-000-r650.rdu2.scalelab.redhat.com
+```
+   In case of same host i.e scenario a, ping reply will reach the kube burner even if the route "20.0.2.0/24" is not added, but using default route "0.0.0.0/0 192.168.0.1". Our purpose of the testing is to verify if the external route "20.0.2.0/24" is properly added or not in CUDN's gateway router. So we want the ping test to fail if this route is not correctly imported.
+
+3. An external FRR will be running on the same host where the kube burner is running.
+   a) Here kube burner is the generator of the external routes. External FRR imports these routes into the OCP cluster through internal FRR and OVN.
+   b) Also when external FRR routes receive the routes from the OCP cluster, kube burner validates them.
+4. External FRR will be created by the user and configured to pair up with OCP cluster's OVN internal FRR routers
+5. External FRR additionally configured to advertise the host routes i.e
+
+```console
+vtysh
+configure terminal
+router bgp 64512
+redistribute static
+redistribute connected
+end
+write
+```
+
+Unlike a UDN network, a CUDN network will be cluster scoped and can be used by multiple namespaces. However we restrict this to one namespace by default as our aim here is testing BGP route exchange.
+
+This workload defines multiple jobs as per CUDN requirement. Some of the requirements:
+1. Namespace with label "k8s.ovn.org/primary-user-defined-network" before the CUDN creation
+2. OVN should create all the necessary resources for CUDN before a pod is created on it. Currently we don't have a mechanism to detect if the OVN has created all CUDN's resources. So we are using separate jobs for CUDN and pods with jobPause. Workload defines only one pod per CUDN.
+3. RouteAdvertiments CRD selecting the CUDN. We use 1:1 RA:CUDN mapping.
+
+As we want to measure BGP route exchange latency, this workload skips measurements for all the resources except RouteAdvertisements.
+
+This workload has 2 BGP route exchange scenarios 1) route export scenaio 2) route import scenario
+When a RouteAdvertisement is created, it advertises the selected CUDN's subnet to outside cluster. However, an external route is imported to the CUDN's gateway router only when it is advertised by the routeAdvertisment. Hence RouteAdvertisemnt for CUDN is mandatory for both export and import scenarios.
+
+Sequent of events during workload execution
+1. Job1 creates namespaces
+2. Job2 creates CUDNs
+3. Job3 creates Pods
+4. When Job4 execution starts, Kube burner calls start measurement.
+   RouteAdvertisment Latency measurement code then
+   a. Maintains a list of CUDN subnets and the pod addresses.
+   b. Starts export scenario
+      i) Main thread subscribes (through routeCh channel) to kernel's netlink sockets for route monitoring
+      ii) Starts export workers, which read from the subscribed routeCh channel
+      iii) Registers an informer for notifying router advertisement resource creation events
+5. Kube burner creates  RouteAdvertisments for CUDNs
+   a. Kubernetes API notify the RouteAdvertisment resource to the listening kube burner
+   b. OVN using the internal FRR advertises this route to the outside cluster (i.e to external FRR)
+   c. External FRR adds the routes to the host. Kernel notifies the routes to the kube burner using netlink sockets
+6. RouteAdvertisment Latency measurement code (watchers and export worker threads) then
+   a. Records RouteAdvertisement name and creation timestamp when routeadvertisement resource is detected by the API
+   b. For each route notified by the kernel, pings the corresponding CUDN's pod and records ping success timestamp
+7. Kube burner calls stop measurements. RouteAdvertisment Latency measurement code then
+   a. Waits for export scenario completion
+   b. Starts import scenario
+      i) Main thread creates interfaces, prepares IP addresses and pods to ping (which are needed for worker threads)
+      ii) Starts import workers
+      iii) Import workers add IP addresses on the interfaces
+      iv) Kernel creates the linux route for the added IP address. Then external FRR router exports this to the cluster.
+      v) OVN imports this route into the CUDN's gateway router.
+      vi) Import worker pings the CUDN pod using the CUDN pod address as destination address and above added IP address as the source address.
+      vii) Import worker records the ping success timestamp
+   c. Waits for import scenario complettion
+8. kube burner indexes all the latency measurements
+
+### RouteAdvertisement Latency Metrics
+
+RouteAdvetisements latency is calculated for both import and export scenarios, these latency metrics are in ms. It can be enabled with:
+
+```json
+  measurements:
+  - name: podLatency
+```
+
+The metrics collected are route advertisement latency timeseries (raLatencyMeasurement) and six documents holding a summary with different route latency quantiles of ping test and netlink route detection latency (raLatencyQuantilesMeasurement).
+
+One document, such as the following, is indexed per each internal (through Routeadvertisment CRD) and external route (adding ip address on dummy interface) created by the workload:
+
+```json
+[
+  {
+    "timestamp": "2025-04-15T08:41:10Z",
+    "metricName": "raLatencyMeasurement",
+    "uuid": "2c8a64a8-0409-4d17-8643-c28db8216821",
+    "jobName": "udn-bgp-route-advertisements",
+    "routeAdvertisementName": "ra-0",
+    "metadata": {
+      "ocpMajorVersion": "4.19",
+      "ocpVersion": "4.19.0-ec.3"
+    },
+    "scenario": "ExportRoutes",
+    "latency": [
+      10031
+    ],
+    "minReadyLatency": 10031,
+    "maxReadyLatency": 10031,
+    "readyLatency": 10031,
+    "netlinkRouteLatency": [
+      10026
+    ],
+    "maxNetlinkRouteLatency": 10026,
+    "minNetlinkRouteLatency": 10026,
+    "p99NetlinkRouteLatency": 10026
+  },
+  {
+    "timestamp": "2025-04-15T08:42:20.060393739Z",
+    "metricName": "raLatencyMeasurement",
+    "uuid": "2c8a64a8-0409-4d17-8643-c28db8216821",
+    "jobName": "udn-bgp-route-advertisements",
+    "routeAdvertisementName": "20.0.1.1/24",
+    "metadata": {
+      "ocpMajorVersion": "4.19",
+      "ocpVersion": "4.19.0-ec.3"
+    },
+    "scenario": "ImportRoutes",
+    "latency": [
+      13
+    ],
+    "minReadyLatency": 13,
+    "maxReadyLatency": 13,
+    "readyLatency": 13
+  }
+]
+```
 
 ## Custom Workload: Bring your own workload
 
