@@ -27,9 +27,6 @@ setup() {
 
 teardown() {
   oc delete ns -l kube-burner-uuid="${UUID}" --ignore-not-found
-  # web-burner workload specific
-  oc label node -l node-role.kubernetes.io/worker-spk= node-role.kubernetes.io/worker-spk-
-  oc delete AdminPolicyBasedExternalRoute --all
 }
 
 teardown_file() {
@@ -119,30 +116,6 @@ teardown_file() {
 
 @test "virt-udn-l3-density" {
   run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iteration 2 ${COMMON_FLAGS} --uuid=${UUID}
-}
-
-# This test is under the deprecation path and will be removed in a future update.
-@test "web-burner-node-density" {
-  LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
-  run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
-  run_cmd ${KUBE_BURNER_OCP} web-burner-init --gc=false --sriov=false --bridge=br-ex --bfd=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} ${RATE}
-  run_cmd ${KUBE_BURNER_OCP} web-burner-node-density --gc=false --probe=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} ${RATE}
-  check_running_pods kube-burner-job=init-served-job 1
-  check_running_pods kube-burner-job=serving-job 4
-  check_running_pods kube-burner-job=normal-job-1 60
-  run_cmd oc delete project served-ns-0 serving-ns-0
-}
-
-# This test is under the deprecation path and will be removed in a future update.
-@test "web-burner-cluster-density" {
-  LB_WORKER=$(oc get node | grep worker | head -n 1 | cut -f 1 -d' ')
-  run_cmd oc label node $LB_WORKER node-role.kubernetes.io/worker-spk="" --overwrite
-  run_cmd ${KUBE_BURNER_OCP} web-burner-init --gc=false --sriov=false --bridge=br-ex --bfd=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} ${RATE}
-  run_cmd ${KUBE_BURNER_OCP} web-burner-cluster-density --gc=false --probe=false --es-server="" --es-index="" --alerting=true --uuid=${UUID} ${RATE}
-  check_running_pods kube-burner-job=init-served-job 1
-  check_running_pods kube-burner-job=serving-job 4
-  check_running_pods kube-burner-job=cluster-density 35
-  check_running_pods kube-burner-job=app-job-1 3
 }
 
 @test "cluster-health" {
