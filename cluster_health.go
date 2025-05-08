@@ -105,3 +105,15 @@ func isClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
 	}
 	return fmt.Errorf("Deployment image-registry in namespace openshift-image-registry doesn't have available replicas")
 }
+
+func isOLMv1Enabled(clientset kubernetes.Interface) error {
+	deployment, err := clientset.AppsV1().Deployments("openshift-catalogd").Get(context.TODO(), "catalogd-controller-manager", metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("Error getting deployment: %v", err)
+	}
+	if deployment.Status.AvailableReplicas > 0 {
+		log.Debugf("Deployment catalogd-controller-manager in namespace openshift-catalogd is available with %d replicas", deployment.Status.AvailableReplicas)
+		return nil
+	}
+	return fmt.Errorf("Deployment catalogd-controller-manager in namespace openshift-catalogd doesn't have available replicas")
+}

@@ -37,6 +37,12 @@ teardown_file() {
   fi
 }
 
+@test "olmv1 benchmark" {
+  run_cmd ${KUBE_BURNER_OCP} olm --log-level debug --uuid=${UUID} --iterations 20 --catalogImage registry.redhat.io/redhat/redhat-operator-index:v4.18
+  # no need, the created test clustercatalog resource has been removed
+  # run_cmd oc delete clustercatalog --all
+}
+
 @test "custom-workload as node-density" {
   run_cmd ${KUBE_BURNER_OCP} init --config=custom-workload.yml --metrics-endpoint metrics-endpoints.yaml --uuid=${UUID}
   check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
