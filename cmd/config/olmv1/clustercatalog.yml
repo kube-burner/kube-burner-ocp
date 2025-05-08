@@ -1,0 +1,12 @@
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterCatalog
+metadata:
+  name: {{.NAME_PREFIX}}-{{.Iteration}}
+spec:
+  availabilityMode: Available
+  priority: -100
+  source:
+    image:
+      pollIntervalMinutes: 10
+      ref: {{.catalogImage}}
+    type: Image

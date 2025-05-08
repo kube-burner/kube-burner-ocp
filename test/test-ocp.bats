@@ -172,3 +172,9 @@ teardown_file() {
   check_quantile_recorded ./virt-ephemeral-restart-results start-vms dvLatency Ready
   check_quantile_recorded ./virt-ephemeral-restart-results start-vms vmiLatency VMReady
 }
+
+@test "olmv1 benchmark test" {
+  run_cmd ${KUBE_BURNER_OCP} olm --uuid=${UUID}
+  check_metric_value jobSummary podLatencyMeasurement containerResourceUsageMeasurement
+  run_cmd oc delete clustercatalog --all
+}
