@@ -716,6 +716,15 @@ One document, such as the following, is indexed per each internal (through Route
 ]
 ```
 
+## OLMv1 Benchmark
+
+To evaluate the performance of `Operator Lifecycle Manager v1` (OLMv1), it initiates the creation of a series of `ClusterCatalog` custom resources. These resources serve as a representative workload to simulate realistic catalog management operations within the cluster. During the test execution, the system actively monitors and collects detailed resource usage metrics — specifically CPU and memory consumption — for the pods running in both the `openshift-catalogd` and `openshift-operator-controller` namespaces. These namespaces are critical components of the OLMv1 infrastructure, responsible for catalog resolution and operator deployment, respectively.
+In addition to standard resource metrics, the performance test is also capable of gathering pprof profiling data, which provides in-depth runtime insights such as goroutine activity, heap allocations, and CPU profiles. This profiling capability is contingent on the user explicitly enabling pprof endpoints within the OLMv1 components prior to test execution. Once enabled, the test can automatically scrape and archive the profiling data for further analysis, facilitating root cause investigation and performance optimization of the OLMv1 stack.
+
+### Environment Requirements
+
+OCP 4.18(OLMv1 GA) and above
+
 ## Custom Workload: Bring your own workload
 
 To kickstart kube-burner-ocp with a custom workload, `init` becomes your go-to command. This command is equipped with flags that enable to seamlessly integrate and run your personalized workloads. Here's a breakdown of the flags accepted by the init command:
