@@ -174,7 +174,7 @@ teardown_file() {
 }
 
 @test "olmv1 benchmark test" {
-  run_cmd ${KUBE_BURNER_OCP} olm --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} olm --uuid=${UUID} --iterations 10 --catalogImage registry.redhat.io/redhat/redhat-operator-index:v4.18
   check_metric_value jobSummary podLatencyMeasurement containerResourceUsageMeasurement
   run_cmd oc delete clustercatalog --all
 }
