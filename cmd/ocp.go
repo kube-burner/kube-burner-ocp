@@ -40,7 +40,7 @@ func openShiftCmd() *cobra.Command {
 	var metricsProfileType string
 	var esServer, esIndex string
 	var QPS, burst int
-	var gc, gcMetrics, alerting, checkHealth, localIndexing, extract bool
+	var gc, gcMetrics, alerting, checkHealth, localIndexing, extract, enableFileLogging bool
 	ocpCmd := &cobra.Command{
 		Use:  "kube-burner-ocp",
 		Long: `kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads`,
@@ -60,6 +60,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UserMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
 	ocpCmd.PersistentFlags().BoolVar(&extract, "extract", false, "Extract workload in the current directory")
 	ocpCmd.PersistentFlags().StringVar(&metricsProfileType, "profile-type", "both", "Metrics profile to use, supported options are: regular, reporting or both")
+	ocpCmd.PersistentFlags().BoolVar(&enableFileLogging, "enable-file-logging", true, "Enable file logging")
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
 	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "metrics-endpoint")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
@@ -72,7 +73,8 @@ func openShiftCmd() *cobra.Command {
 				log.Fatal(err.Error())
 			}
 			os.Exit(0)
-		} else {
+		}
+		if enableFileLogging {
 			util.SetupFileLogging("ocp-" + workloadConfig.UUID)
 		}
 		if checkHealth && (cmd.Name() != "cluster-health" || cmd.Name() == "index") {
