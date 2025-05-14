@@ -7,7 +7,7 @@
   metricName: eipRecoveryLatencyTotal
   instant: true
 
-- query: scale_startup_non_eip_total{}>0 
+- query: scale_startup_non_eip_total{}>0
   metricName: startupEipNodeIPReqCount
   instant: true
 
@@ -107,7 +107,7 @@
   metricName: secretCount
   instant: true
 
-- query: count(kube_deployment_labels{})
+- query: count(kube_deployment_spec_replicas{})
   metricName: deploymentCount
   instant: true
 
@@ -129,7 +129,7 @@
 - query: sum(kube_node_status_condition{status="true"}) by (condition)
   metricName: nodeStatus
 
-- query: count(kube_replicaset_labels{})
+- query: count(kube_replicaset_spec_replicas{})
   metricName: replicaSetCount
   instant: true
 
