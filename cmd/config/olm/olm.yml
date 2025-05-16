@@ -1,0 +1,67 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: podLatency
+    # - name: pprof
+    - name: nodeLatency
+
+{{ if eq .PPROF "true" }}
+    - name: pprof
+      pprofInterval: 2m
+      pprofDirectory: pprof-data
+      pprofTargets:
+      # the --pprof-bind-address was disabled as default, you can enable it by following https://github.com/openshift/operator-framework-operator-controller/blob/main/docs/draft/howto/profiling_with_pprof.md
+      - name: catalogd
+        namespace: "openshift-catalogd"
+        labelSelector: {control-plane: catalogd-controller-manager}
+        url: http://localhost:8083/debug/pprof/profile?seconds=30
+      - name: operator-controller
+        namespace: "openshift-operator-controller"
+        labelSelector: {control-plane: operator-controller-controller-manager}
+        url: http://localhost:8082/debug/pprof/profile?seconds=30
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if eq .LOCAL_INDEXING "true" }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  - name: create-clustercatalogs
+    namespace: olmv1
+    jobIterations: {{.JOB_ITERATIONS}}
+    maxWaitTimeout: 30m
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: {{.NAMESPACED_ITERATIONS}}
+    iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
+    podWait: true
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 15s
+    objects:
+      - objectTemplate: clustercatalog.yml
+        replicas: 1
+        inputVars:
+          NAME_PREFIX: "benchmark-cc"
+          catalogImage: {{.CATALOG_IMAGE}}
