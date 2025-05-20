@@ -1,0 +1,119 @@
+---
+# OpenShift virtualization
+## metadata
+- query: kubevirt_hyperconverged_operator_health_status{}
+  metricName: hco-operator-health-cnv
+  instant: true
+
+- query: sum(kubevirt_number_of_vms)
+  metricName: total-vm-created-cnv
+  instant: true
+
+- query: sum(cnv:vmi_status_running:count)
+  metricName: total-vmi-running-cnv
+  instant: true
+
+- query: cluster:vmi_request_cpu_cores:sum
+  metricName: total-cpu-request-cnv
+  instant: true
+
+- query: sum(kubevirt_vm_resource_requests)
+  metricName: total-mem-request-cnv
+  instant: true
+
+- query: kubevirt_virt_api_up
+  metricName: virt-api-pod-count-cnv
+  instant: true
+
+- query: sum(kubevirt_memory_delta_from_requested_bytes)
+  metricName: control-plane-pod-mem-usage-request-delta-cnv
+  instant: true
+
+- query: sum(kubevirt_vmi_launcher_memory_overhead_bytes{}) / count (kubevirt_vmi_launcher_memory_overhead_bytes{})
+  metricName: avg-virt-launcher-mem-overhead
+  instant: true
+
+## CPU and Memory related metircs
+- query: avg(avg_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-cnv", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
+  metricName: cpu-cnv
+  instant: true
+
+- query: max(max_over_time(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-cnv", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
+  metricName: max-cpu-cnv
+  instant: true
+
+- query: avg(avg_over_time(container_memory_rss{name!="", namespace="openshift-cnv", container!="POD"}[{{.elapsed}}:])) by (container)
+  metricName: memory-cnv
+  instant: true
+
+- query: max(avg_over_time(container_memory_rss{name!="", namespace="openshift-cnv", container!="POD"}[{{.elapsed}}:])) by (container)
+  metricName: max-memory-cnv
+  instant: true
+
+- query: sum(rate(container_cpu_usage_seconds_total{pod!~"virt-launcher.*", namespace="openshift-cnv"}[1m])) by (pod)
+  metricName: control-plane-pod-cpu-usage-cnv
+  instant: true
+
+- query: sum(container_memory_rss{pod!~"virt-launcher.*", namespace="openshift-cnv" }) by (pod)
+  metricName: control-plane-pod-mem-usage-cnv
+  instant: true
+
+- query: label_replace(sum(container_memory_rss{pod=~"virt-launcher.*"}) by (pod), "vmi", "$1", "pod", "virt-launcher-(.*)-[^-]+$")
+  metricName: mem-usage-by-vmi-cnv
+  instant: true
+
+- query: label_replace(sum(rate(container_cpu_usage_seconds_total{pod=~"virt-launcher.*"}[1m])) by (pod),"vmi", "$1", "pod", "virt-launcher-(.*)-[^-]+$")
+  metricName: cpu-usage-by-vmi-cnv
+  instant: true
+
+## storage related metrics
+- query: sum(rate(kubevirt_vmi_storage_iops_read_total[60s])) by (name)
+  metricName: vmi-read-iops-cnv
+  instant: true
+
+- query: sum(rate(kubevirt_vmi_storage_iops_write_total[60s])) by (name)
+  metricName: vmi-write-iops-cnv
+  instant: true
+
+- query: sum(rate(kubevirt_vmi_storage_read_traffic_bytes_total[60s])) by (name)
+  metricName: vmi-storage-read-traffic-cnv
+  instant: true
+
+- query: sum(rate(kubevirt_vmi_storage_write_traffic_bytes_total[60s])) by (name)
+  metricName: vmi-storage-write-traffic-cnv
+  instant: true
+
+## network related metrics
+- query: sum(rate(kubevirt_vmi_network_receive_bytes_total[60s])) by (name)
+  metricName: vmi-traffic-received-cnv
+  instant: true
+
+- query: sum(rate(kubevirt_vmi_network_transmit_bytes_total[60s])) by (name)
+  metricName: vmi-traffic-transmitted-cnv
+  instant: true
+
+## Virt API reated metrics
+- query: sum(rate(apiserver_request_total{group=~".*kubevirt.*", verb=~"LIST|GET"}[1m])) by (code, group) 
+  metricName: virt-api-read-request-rate-cnv
+  instant: true
+
+- query: sum(rate(apiserver_request_total{group=~".*kubevirt.*", verb=~"POST|PUT|PATCH|DELETE"}[1m])) by (code, group)
+  metricName: virt-api-write-request-rate-cnv
+  instant: true
+
+## vmi migration reated metrics
+- query: sum(kubevirt_vmi_migration_succeeded)
+  metricName: migration-succeeded-cnv
+  instant: true
+
+- query: sum(kubevirt_vmi_migrations_in_scheduling_phase)
+  metricName: migration-in-scheduling-phase-cnv
+  instant: true
+
+- query: sum(kubevirt_vmi_migrations_in_running_phase)
+  metricName: migration-in-running-phase-cnv
+  instant: true
+
+- query: sum(kubevirt_vmi_migrations_in_pending_phase)
+  metricName: migration-in-pending-phase-cnv
+  instant: true
