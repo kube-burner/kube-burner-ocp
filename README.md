@@ -555,11 +555,11 @@ By default, the namespace is `virt-ephemeral-restart`. Set it by passing `--name
 
 Users may control the workload sizes by passing the following arguments:
 - `--iteration-vms` - Number of `VirtualMachines` to batch in each group in step 6
-- `--iteration-vms` - Number of batches to run in step 6
+- `--iteration` - Number of batches to run in step 6
 
 !!! Note
 
-    The total number of `VirtualMachines` created is `--iteration-vms` * `--iteration-vms`
+    The total number of `VirtualMachines` created is `--iteration-vms` * `--iteration`
 
 #### Volume Access Mode
 
@@ -571,6 +571,49 @@ If not supported, the access mode may be changes by setting `--access-mode`. The
 In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
 By default, it stores the pair in a temporary directory.
 Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
+### DataVolume Clone
+
+Test the capacity and performance of creating multiple data volumes that are clones of a single data volume
+
+#### Test Sequence
+
+The test runs the following sequence:
+1. Create a `DataVolume` based on a container disk image
+2. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
+3. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
+4. Create `DataVolumes` based on the `DataSource`. The creation process is divided into iterations
+
+#### Tested StorageClass
+
+By default, the test will use the default `StorageClass`. To use a different one, use `--storage-class` to provide a different name.
+
+If `--use-snapshot` is explicitly set to `true` a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
+Otherwise, the test will check the `StorageProfile` for the `StorageClass` and act accordingly.
+
+#### Test Namespace
+
+All the resources are created in the same namespace.
+
+By default, the namespace is `dv-clone`. Set it by passing `--namespace` (or `-n`)
+
+#### Test Container Disk Image
+
+Users may set the container disk image used as a source to the base `DataVolume` using the `--container-disk` parameter.
+When setting `--container-disk`, make sure that it can fit to the default Volume Size `1Gi` or set a new size by passing `--datavolume-size`.
+
+If not passed, the test will use  `quay.io/yblum/tiny_image:latest` for the the container disk image.
+
+#### Test Size Parameters
+
+Users may control the workload sizes by passing the following arguments:
+- `--iteration` - Number of iterations to run in step 4
+- `--iteration-clones` - Number of `DataVolumes` to create in each iteration of step 4
+
+#### Volume Access Mode
+
+By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
+If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
 
 ## CUDN BGP Workload
 
