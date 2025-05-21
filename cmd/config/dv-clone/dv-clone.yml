@@ -1,0 +1,137 @@
+{{- $testNamespacesLabelKey := "kube-burner.io/test-name" -}}
+{{- $testNamespacesLabelValue := "dv-clone" -}}
+
+{{- $baseDataVolumeName := "master-image" -}}
+{{- $baseVolumeSnapshotName := "master-image" -}}
+{{- $baseDataSourceName := "master-image" -}}
+{{- $cloneDataVolumeName := "clone-image" -}}
+
+global:
+  measurements:
+  - name: dataVolumeLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: ./dv-clone-results
+
+jobs:
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+
+# Create the DV in a separate job to make sure it is ready before continuing
+- name: create-base-image-dv
+  jobType: create
+  jobIterations: 1
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ .testNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: false
+  podWait: true
+  maxWaitTimeout: 15m
+  # wait before job completes to allow metrics collection
+  jobPause: 10s
+  # Do not clean the namespaces
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  objects:
+  - objectTemplate: templates/baseImageDataVolume.yml
+    replicas: 1
+    inputVars:
+      baseDataVolumeName: {{ $baseDataVolumeName }}
+      storageClassName: {{ .storageClassName }}
+      accessMode: {{ .accessMode }}
+      imageUrl: "docker://{{ .containerDiskUrl }}"
+      baseDataVolumeSize: {{ .dataVolumeSize }}
+
+- name: create-data-source
+  jobType: create
+  jobIterations: 1
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ .testNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: false
+  podWait: true
+  # timeout time after waiting for all object creation
+  maxWaitTimeout: 15m
+  # wait before job completes to allow metrics collection
+  jobPause: 10s
+  # Do not clean the namespaces
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  objects:
+  {{ if .volumeSnapshotClassName | default false }}
+  - objectTemplate: templates/baseImageDataVolumeSnapshot.yml
+    replicas: 1
+    inputVars:
+      baseVolumeSnapshotName: {{ $baseVolumeSnapshotName }}
+      volumeSnapshotClassName: {{ .volumeSnapshotClassName }}
+      baseVolumeSnapshotPVCName: {{ $baseDataVolumeName }}
+  {{ end }}
+  - objectTemplate: templates/baseImageDataSource.yml
+    replicas: 1
+    inputVars:
+      baseDataSourceName: {{ $baseDataSourceName }}
+      namespace: {{ .testNamespace }}
+      baseDataSourcePVCName: {{ $baseDataVolumeName }}
+      baseDataSourceSnapshotName: {{ $baseVolumeSnapshotName }}
+      useSnapshot: {{ .volumeSnapshotClassName | default false }}
+    waitOptions:
+      customStatusPaths:
+      - key: '(.conditions.[] | select(.type == "Ready")).status'
+        value: "True"
+
+# Create the DV in a separate job to make sure it is ready before continuing
+- name: create-clone-dvs
+  jobType: create
+  jobIterations: {{ .iterations }}
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ .testNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: false
+  podWait: true
+  maxWaitTimeout: 2h
+  # wait before job completes to allow metrics collection
+  jobPause: 10s
+  # Do not clean the namespaces
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  objects:
+  - objectTemplate: templates/cloneImageDataVolume.yml
+    replicas: {{ .clonesPerIteration }}
+    inputVars:
+      dataVolumeName: {{ $cloneDataVolumeName }}
+      storageClassName: {{ .storageClassName }}
+      accessMode: {{ .accessMode }}
+      dataSourceName: {{ $baseDataSourceName }}
+      dataSourceNamespace: {{ .testNamespace }}
+      dataVolumeSize: {{ .dataVolumeSize }}
