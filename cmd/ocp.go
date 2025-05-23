@@ -18,6 +18,7 @@ import (
 	"embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	uid "github.com/google/uuid"
@@ -32,7 +33,11 @@ import (
 //go:embed config/*
 var ocpConfig embed.FS
 
-const configDir = "config"
+const (
+	rootDir            = "config"
+	metricsProfilesDir = rootDir + "/metrics-profiles"
+	alertsDir          = rootDir + "/alerts-profiles"
+)
 
 func openShiftCmd() *cobra.Command {
 	var workloadConfig workloads.Config
@@ -69,7 +74,7 @@ func openShiftCmd() *cobra.Command {
 		}
 		util.ConfigureLogging(cmd)
 		if extract {
-			if err := workloads.ExtractWorkload(ocpConfig, configDir, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
+			if err := workloads.ExtractWorkload(ocpConfig, rootDir, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
 				log.Fatal(err.Error())
 			}
 			os.Exit(0)
@@ -80,9 +85,8 @@ func openShiftCmd() *cobra.Command {
 		if checkHealth && (cmd.Name() != "cluster-health" || cmd.Name() == "index") {
 			ocp.ClusterHealthCheck()
 		}
-		workloadConfig.ConfigDir = configDir
 		kubeClientProvider := config.NewKubeClientProvider("", "")
-		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, kubeClientProvider)
+		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, filepath.Join(rootDir, cmd.Name()), metricsProfilesDir, alertsDir, kubeClientProvider)
 		envVars := map[string]string{
 			"UUID":       workloadConfig.UUID,
 			"QPS":        fmt.Sprintf("%d", QPS),
