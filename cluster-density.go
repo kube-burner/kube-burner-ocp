@@ -64,7 +64,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				}
 			}
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name())
+			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
