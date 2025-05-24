@@ -25,19 +25,19 @@ import (
 	"time"
 
 	"github.com/cloud-bulldozer/go-commons/v2/indexers"
+	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
 	"github.com/kube-burner/kube-burner/pkg/measurements/metrics"
 	"github.com/kube-burner/kube-burner/pkg/measurements/types"
-	routeadvertisementsv1 "github.com/ovn-org/ovn-kubernetes/go-controller/pkg/crd/routeadvertisements/v1"
-	routeadvertisementsclientset "github.com/ovn-org/ovn-kubernetes/go-controller/pkg/crd/routeadvertisements/v1/apis/clientset/versioned"
-	routeadvertisementsinformerfactory "github.com/ovn-org/ovn-kubernetes/go-controller/pkg/crd/routeadvertisements/v1/apis/informers/externalversions"
-	userdefinednetworkclientset "github.com/ovn-org/ovn-kubernetes/go-controller/pkg/crd/userdefinednetwork/v1/apis/clientset/versioned"
 	probing "github.com/prometheus-community/pro-bing"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -162,14 +162,26 @@ type raLatency struct {
 	exportDoneCh chan struct{}
 	// channel to notify closure of import workers
 	importDoneCh chan struct{}
-	udnclientset userdefinednetworkclientset.Interface
 	// channel wused between main thread and import threads. Main thread notifies import threads which routes to generate.
 	routeImportChan chan routeImport
 	wg              sync.WaitGroup
+	connector       k8sconnector.K8SConnector
 }
 
 type raLatencyMeasurementFactory struct {
 	measurements.BaseMeasurementFactory
+}
+
+var raGVR = schema.GroupVersionResource{
+	Group:    "k8s.ovn.org",
+	Version:  "v1",
+	Resource: "routeadvertisements",
+}
+
+var cudnGVR = schema.GroupVersionResource{
+	Group:    "k8s.ovn.org",
+	Version:  "v1",
+	Resource: "clusteruserdefinednetworks",
 }
 
 func NewRaLatencyMeasurementFactory(configSpec config.Spec, measurement types.Measurement, metadata map[string]any) (measurements.MeasurementFactory, error) {
@@ -246,27 +258,64 @@ func (r *raLatency) getPods() error {
 // Record RouteAdvertisement name and creation timestamp when routeadvertisement resource is detected by the API
 func (r *raLatency) handleAdd(obj any) {
 	var cudn []string
-	ra := obj.(*routeadvertisementsv1.RouteAdvertisements)
-	listOptions := metav1.ListOptions{}
-	selector, err := metav1.LabelSelectorAsSelector(&ra.Spec.NetworkSelector)
+	ra := obj.(*unstructured.Unstructured)
+	networkSelectors, found, err := unstructured.NestedSlice(ra.UnstructuredContent(), "spec", "networkSelectors")
 	if err != nil {
-		log.Errorf("Error parsing Router Advertisement NetworkSelector: %v", err)
+		log.Error(err)
 		return
 	}
-	listOptions.LabelSelector = selector.String()
-
-	udns, err := r.udnclientset.K8sV1().ClusterUserDefinedNetworks().List(context.Background(), listOptions)
+	if !found || len(networkSelectors) == 0 {
+		log.Errorf("No networkSelectors found")
+		return
+	}
+	networkSelector, ok := networkSelectors[0].(map[string]interface{})
+	if !ok {
+		log.Errorf("NetworkSelector doesn't exist")
+		return
+	}
+	labels, found, err := unstructured.NestedStringMap(networkSelector, "clusterUserDefinedNetworkSelector", "networkSelector", "matchLabels")
 	if err != nil {
-		log.Errorf("Error listing udns: %v", err.Error())
+		log.Error(err)
+		return
+	}
+	if !found {
+		log.Errorf("No labels found in networkSelector")
+		return
+	}
+
+	ls := &metav1.LabelSelector{}
+	err = metav1.Convert_Map_string_To_string_To_v1_LabelSelector(&labels, ls, nil)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	selector, err := metav1.LabelSelectorAsSelector(ls)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	listOptions := metav1.ListOptions{}
+	listOptions.LabelSelector = selector.String()
+	udns, err := r.connector.DynamicClient().Resource(cudnGVR).Namespace(metav1.NamespaceAll).List(context.TODO(), listOptions)
+	if err != nil {
+		log.Error(err)
 		return
 	}
 	for _, udn := range udns.Items {
-		cudn = append(cudn, udn.Name)
+		cname, _, _ := unstructured.NestedString(udn.UnstructuredContent(), "metadata", "name")
+		cudn = append(cudn, cname)
 	}
-	log.Debugf("RA %s created at: %v", ra.Name, time.Now().UTC())
-	r.metrics.LoadOrStore(ra.Name, raMetric{
-		Name:       ra.Name,
-		Timestamp:  ra.CreationTimestamp.Time.UTC(),
+	raName, _, _ := unstructured.NestedString(ra.UnstructuredContent(), "metadata", "name")
+	ts, _, _ := unstructured.NestedString(ra.UnstructuredContent(), "metadata", "creationTimestamp")
+	t, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+	log.Debugf("RA %s discovered at: %v created at: %v", raName, time.Now().UTC(), t.UTC())
+	r.metrics.LoadOrStore(raName, raMetric{
+		Name:       raName,
+		Timestamp:  t.UTC(),
 		Latency:    []float64{},
 		cudn:       cudn,
 		MetricName: raLatencyMeasurement,
@@ -585,19 +634,15 @@ func (r *raLatency) startExportScenario() error {
 		r.wg.Add(1)
 		go r.exportWorker()
 	}
-
 	log.Infof("Creating Router Advertisement latency watcher for %s", r.JobConfig.Name)
-	routeAdvertisementsClientset, err := routeadvertisementsclientset.NewForConfig(r.RestConfig)
+	connector, err := k8sconnector.NewK8SConnector(r.RestConfig)
 	if err != nil {
+		log.Error(err)
 		return err
 	}
-	udnclientset, err := userdefinednetworkclientset.NewForConfig(r.RestConfig)
-	if err != nil {
-		return err
-	}
-	r.udnclientset = udnclientset
-	raFactory := routeadvertisementsinformerfactory.NewSharedInformerFactory(routeAdvertisementsClientset, 30*time.Second)
-	raInformer := raFactory.K8s().V1().RouteAdvertisements().Informer()
+	r.connector = connector
+	raFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(r.connector.DynamicClient(), time.Minute, metav1.NamespaceAll, nil)
+	raInformer := raFactory.ForResource(raGVR).Informer()
 	raInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: r.handleAdd,
 	})
