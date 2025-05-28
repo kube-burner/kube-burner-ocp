@@ -32,7 +32,7 @@ jobs:
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: false
-    preLoadImages: false
+    preLoadImages: true
     waitWhenFinished: true
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
