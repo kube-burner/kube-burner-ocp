@@ -48,14 +48,41 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
+{{ if eq .MULTI_NETWORK_POLICY "true" }}
+      - objectTemplate: nncp.yml
+        replicas: {{.VLANS}}
+        runOnce: true
+
+      - objectTemplate: nad-vlan.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
+
+{{ if eq .VIRT "false" }}
       - objectTemplate: pod.yml
         replicas: {{.PODS_PER_NAMESPACE}}
+{{ else }}
+      - objectTemplate: vm-localnet.yml
+        replicas: {{.VMS_PER_NAMESPACE}}
+        inputVars:
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
 
+{{ if eq .MULTI_NETWORK_POLICY "false" }}
       - objectTemplate: np-deny-all.yml
         replicas: 1
+{{ else }}
+      - objectTemplate: mnp-deny-all.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
 
+{{ if eq .NETPOL_LATENCY "true" }}
       - objectTemplate: np-allow-from-proxy.yml
         replicas: 1
+{{ end }}
 
   - name: network-policy-perf
     namespace: network-policy-perf
@@ -75,31 +102,47 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
+{{ if eq .MULTI_NETWORK_POLICY "false" }}
       - objectTemplate: ingress-np.yml
+{{ else }}
+      - objectTemplate: ingress-mnp.yml
+{{ end }}
         replicas: {{.NETPOLS_PER_NAMESPACE}}
         inputVars:
+{{ if eq .MULTI_NETWORK_POLICY "false" }}
           namespaces: {{.JOB_ITERATIONS}}
           pods_per_namespace: {{.PODS_PER_NAMESPACE}}
-          netpols_per_namespace: {{.NETPOLS_PER_NAMESPACE}}
           local_pods: {{.LOCAL_PODS}}
+          peer_pods: {{.REMOTE_PODS}}
+{{ else }}
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
+          netpols_per_namespace: {{.NETPOLS_PER_NAMESPACE}}
           pod_selectors: {{.POD_SELECTORS}}
           single_ports: {{.SINGLE_PORTS}}
           port_ranges: {{.PORT_RANGES}}
           peer_namespaces: {{.REMOTE_NAMESPACES}}
-          peer_pods: {{.REMOTE_PODS}}
           cidr_rules: {{.CIDRS}}
 {{ if eq .NETPOL_LATENCY "false" }}
+{{ if eq .MULTI_NETWORK_POLICY "false" }}
       - objectTemplate: egress-np.yml
+{{ else }}
+      - objectTemplate: egress-mnp.yml
+{{ end }}
         replicas: {{.NETPOLS_PER_NAMESPACE}}
         inputVars:
+{{ if eq .MULTI_NETWORK_POLICY "false" }}
           namespaces: {{.JOB_ITERATIONS}}
           pods_per_namespace: {{.PODS_PER_NAMESPACE}}
-          netpols_per_namespace: {{.NETPOLS_PER_NAMESPACE}}
           local_pods: {{.LOCAL_PODS}}
+          peer_pods: {{.REMOTE_PODS}}
+{{ else }}
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
+          netpols_per_namespace: {{.NETPOLS_PER_NAMESPACE}}
           pod_selectors: {{.POD_SELECTORS}}
           single_ports: {{.SINGLE_PORTS}}
           port_ranges: {{.PORT_RANGES}}
           peer_namespaces: {{.REMOTE_NAMESPACES}}
-          peer_pods: {{.REMOTE_PODS}}
           cidr_rules: {{.CIDRS}}
 {{ end }}
