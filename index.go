@@ -102,8 +102,6 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 				metadata[k] = v
 			}
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
-			workloads.ConfigSpec.EmbedFSDir = wh.ConfigDir + "/metrics"
-			workloads.ConfigSpec.EmbedFS = &ocpConfig
 			metricsScraper := metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
 				ConfigSpec:      &workloads.ConfigSpec,
 				MetricsEndpoint: wh.MetricsEndpoint,
