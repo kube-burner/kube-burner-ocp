@@ -178,3 +178,18 @@ teardown_file() {
   check_quantile_recorded ./virt-ephemeral-restart-results start-vms dvLatency Ready
   check_quantile_recorded ./virt-ephemeral-restart-results start-vms vmiLatency VMReady
 }
+
+@test "dv-clone" {
+  local STORAGE_PARAMETER
+  if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
+    STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
+  fi
+  run_cmd ${KUBE_BURNER_OCP} dv-clone ${STORAGE_PARAMETER} --access-mode RWO --iterations 2 --iteration-clones 2
+  # Delete all resources before testing results to ensure they are deleted
+  run_cmd oc delete ns -l kube-burner.io/test-name=dv-clone
+  local jobs=("create-base-image-dv" "create-clone-dvs")
+  for job in "${jobs[@]}"; do
+    check_metric_recorded ./dv-clone-results ${job} dvLatency dvReadyLatency
+    check_quantile_recorded ./dv-clone-results ${job} dvLatency Ready
+  done
+}

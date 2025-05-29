@@ -133,6 +133,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewVirtCapacityBenchmark(&wh),
 		ocp.NewVirtClone(&wh),
 		ocp.NewVirtEphemeralRestart(&wh),
+		ocp.NewDVClone(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
