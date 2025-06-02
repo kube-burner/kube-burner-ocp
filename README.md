@@ -403,6 +403,7 @@ The different variants are:
 - [virt-capacity-benchmark](#virt-capacity-benchmark).
 - [virt-clone](#virt-clone)
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
+- [virt-migration](#virt-migration)
 
 ### Virt Density
 
@@ -571,6 +572,55 @@ If not supported, the access mode may be changes by setting `--access-mode`. The
 In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
 By default, it stores the pair in a temporary directory.
 Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
+### Virt Migration
+
+Test how the cluster and the storage backend handles mass migration of VMs
+
+#### Test Sequence
+
+The test runs the following sequence:
+1. Create `VirtualMachines` with a node affinity rule that ties them to a specific worker node
+2. Remove the node affinity rule to allow them to migrate
+3. Call `Migrate` on all `VirtualMachines`
+
+#### Tested StorageClass
+
+If not `--storage-class` is not set, the test will:
+
+1. Use the default `StorageClass` for Virtualization annotated with `storageclass.kubevirt.io/is-default-virt-class`
+2. If does not exist, use general default `StorageClass` annotated with `storageclass.kubernetes.io/is-default-class`
+3. If does not exist, fail the test before starting
+
+#### Test Size Parameters
+
+Users may control the workload sizes by passing the following arguments:
+- `--iterations` - How many iterations to use when creating `VirtualMachines` in step 1
+- `--iteration-vms` - How many `VirtualMachines` to create in each iteration in step 1
+- `--data-volume-count` - Number of data volumes for each VM
+
+!!! Note
+
+    The total number of `VirtualMachines` created is `--iteration` * `--iteration-vms`
+
+#### Initial Worker Node
+
+The worker node on which all VMs are scheduled and migrated from can be set by passing the `--worker-node` parameter.
+
+If not set, the test will randomly choose one
+
+#### Test Namespace
+
+All `VirtualMachines` are created in the same namespace.
+
+By default, the namespace is `virt-migation`. Set it by passing `--namespace` (or `-n`)
+
+#### Temporary SSH Keys
+
+In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
+By default, it stores the pair in a temporary directory.
+Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
 
 ### DataVolume Clone
 
