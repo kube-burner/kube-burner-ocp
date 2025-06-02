@@ -108,8 +108,8 @@ type raMetric struct {
 	UUID       string    `json:"uuid"`
 	JobName    string    `json:"jobName,omitempty"`
 	// route advertisement name
-	Name     string      `json:"routeAdvertisementName"`
-	Metadata interface{} `json:"metadata,omitempty"`
+	Name     string `json:"routeAdvertisementName"`
+	Metadata any    `json:"metadata,omitempty"`
 	// whether this metric represents route latency for import scenario or export scenario
 	Scenario string `json:"scenario,omitempty"`
 	// list of cudn advertised by this route advertisement
@@ -146,8 +146,8 @@ type raLatency struct {
 	measurements.BaseMeasurement
 
 	metrics          sync.Map
-	latencyQuantiles []interface{}
-	normLatencies    []interface{}
+	latencyQuantiles []any
+	normLatencies    []any
 	// list of cudn and their pods advertised by this route
 	cudnSubnet map[string]cudnPods
 	// timestamp when cudn is detected on external host and later events of ping tests
@@ -172,7 +172,7 @@ type raLatencyMeasurementFactory struct {
 	measurements.BaseMeasurementFactory
 }
 
-func NewRaLatencyMeasurementFactory(configSpec config.Spec, measurement types.Measurement, metadata map[string]interface{}) (measurements.MeasurementFactory, error) {
+func NewRaLatencyMeasurementFactory(configSpec config.Spec, measurement types.Measurement, metadata map[string]any) (measurements.MeasurementFactory, error) {
 	return raLatencyMeasurementFactory{
 		measurements.NewBaseMeasurementFactory(configSpec, measurement, metadata),
 	}, nil
@@ -244,7 +244,7 @@ func (r *raLatency) getPods() error {
 }
 
 // Record RouteAdvertisement name and creation timestamp when routeadvertisement resource is detected by the API
-func (r *raLatency) handleAdd(obj interface{}) {
+func (r *raLatency) handleAdd(obj any) {
 	var cudn []string
 	ra := obj.(*routeadvertisementsv1.RouteAdvertisements)
 	listOptions := metav1.ListOptions{}
@@ -329,7 +329,7 @@ func pingAllCudns(destCudnPods []string, srcAddr string) []float64 {
 			defer func() { <-sem }() // Release the slot when done
 
 			pingSuccess := false
-			for i := 0; i < pingAttempts; i++ {
+			for range pingAttempts {
 				if err := pingAddress(srcAddr, destCudnPod, importPingerTimeoutMsec); err == nil {
 					latency := float64(time.Since(importTimestamp).Milliseconds())
 
@@ -446,7 +446,7 @@ func (r *raLatency) exportWorker() {
 					if nlRouteVal, ok := val.(netlinkRoutes); ok {
 						pingSuccess := nlRouteVal.pingTimestamps
 						for _, pod := range cudnpods.pods {
-							for i := 0; i < pingAttempts; i++ {
+							for range pingAttempts {
 								if err := pingAddress("", pod, exportPingerTimeoutMsec); err == nil {
 									log.Debugf("Ping success to pod %s for the Netlink route: %s received for udn: %s at: %v", pod, update.Route.Dst.String(), cudnpods.cudn, time.Now().UTC())
 									pingSuccess = append(pingSuccess, time.Now().UTC())
@@ -530,7 +530,6 @@ Then it starts all import threads. All import threads simultaneously read from t
 */
 func (r *raLatency) startImportScenario() error {
 	var err error
-	var i int
 	podsToPingDuingImport := []string{}
 	for _, cpods := range r.cudnSubnet {
 		podsToPingDuingImport = append(podsToPingDuingImport, cpods.pods[0])
@@ -538,7 +537,7 @@ func (r *raLatency) startImportScenario() error {
 	if len(podsToPingDuingImport) == 0 {
 		return nil
 	}
-	for i = 0; i < numDummyIfaces; i++ {
+	for i := range numDummyIfaces {
 		err = r.createDummyInterface(i)
 		if err != nil {
 			return err
@@ -546,8 +545,8 @@ func (r *raLatency) startImportScenario() error {
 	}
 	importRoutesCount = numAddressOnDummyIface * numDummyIfaces
 	r.routeImportChan = make(chan routeImport, importRoutesCount)
-	for i = 0; i < numAddressOnDummyIface; i++ {
-		for j := 0; j < numDummyIfaces; j++ {
+	for i := range numAddressOnDummyIface {
+		for j := range numDummyIfaces {
 			mm := routeImport{
 				link: fmt.Sprintf("dummy%d", j),
 				addr: fmt.Sprintf("20.%d.%d.1/24", j, i+1),
@@ -558,7 +557,7 @@ func (r *raLatency) startImportScenario() error {
 	}
 	close(r.routeImportChan)
 	// Start import worker goroutines
-	for i = 0; i < importWorkerCount; i++ {
+	for range importWorkerCount {
 		r.wg.Add(1)
 		go r.importWorker()
 	}
@@ -582,7 +581,7 @@ func (r *raLatency) startExportScenario() error {
 	}
 
 	// Start export worker goroutines
-	for i := 0; i < exportWorkerCount; i++ {
+	for range exportWorkerCount {
 		r.wg.Add(1)
 		go r.exportWorker()
 	}
@@ -729,7 +728,7 @@ func (r *raLatency) Stop() error {
 	r.wg.Wait()
 
 	// cleanup dummy interfaces
-	for i := 0; i < numDummyIfaces; i++ {
+	for i := range numDummyIfaces {
 		err = r.deleteDummyInterface(i)
 	}
 	r.normalizeMetrics()
@@ -746,7 +745,7 @@ func (r *raLatency) Stop() error {
 
 // index sends metrics to the configured indexer
 func (r *raLatency) Index(jobName string, indexerList map[string]indexers.Indexer) {
-	metricMap := map[string][]interface{}{
+	metricMap := map[string][]any{
 		raLatencyMeasurement:          r.normLatencies,
 		raLatencyQuantilesMeasurement: r.latencyQuantiles,
 	}
@@ -758,7 +757,7 @@ func (r *raLatency) GetMetrics() *sync.Map {
 }
 
 func (r *raLatency) normalizeMetrics() bool {
-	r.metrics.Range(func(key, value interface{}) bool {
+	r.metrics.Range(func(key, value any) bool {
 		m := value.(raMetric)
 		if m.Scenario == "ExportRoutes" {
 			for _, udn := range m.cudn {
@@ -796,7 +795,7 @@ func (r *raLatency) normalizeMetrics() bool {
 }
 
 func (r *raLatency) calcQuantiles() {
-	getLatency := func(normLatency interface{}) map[string]float64 {
+	getLatency := func(normLatency any) map[string]float64 {
 		raMetric := normLatency.(raMetric)
 		return map[string]float64{
 			"MinReadyLatency":        float64(raMetric.MinReadyLatency),

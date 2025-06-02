@@ -108,7 +108,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Infof("skipResizeJob is set to true")
 			}
 
-			additionalVars := map[string]interface{}{
+			additionalVars := map[string]any{
 				"privateKey":          privateKeyPath,
 				"publicKey":           publicKeyPath,
 				"vmCount":             fmt.Sprint(vmsPerIteration),
