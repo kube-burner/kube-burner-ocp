@@ -21,6 +21,8 @@ import (
 	"os"
 	"time"
 
+	"maps"
+
 	"github.com/cloud-bulldozer/go-commons/v2/indexers"
 	"github.com/cloud-bulldozer/go-commons/v2/version"
 	"github.com/kube-burner/kube-burner/pkg/burner"
@@ -44,7 +46,7 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 	var prometheusURL, prometheusToken string
 	var tarballName string
 	var indexer config.MetricsEndpoint
-	var clusterMetadataMap map[string]interface{}
+	var clusterMetadataMap map[string]any
 	cmd := &cobra.Command{
 		Use:          "index",
 		Short:        "Runs index sub-command",
@@ -95,12 +97,10 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 				}
 			}
 
-			metadata := make(map[string]interface{})
+			metadata := make(map[string]any)
 			jsonData, _ := json.Marshal(clusterMetadata)
 			json.Unmarshal(jsonData, &clusterMetadataMap)
-			for k, v := range clusterMetadataMap {
-				metadata[k] = v
-			}
+			maps.Copy(metadata, clusterMetadataMap)
 			workloads.ConfigSpec.MetricsEndpoints = append(workloads.ConfigSpec.MetricsEndpoints, indexer)
 			workloads.ConfigSpec.EmbedFSDir = wh.ConfigDir + "/metrics"
 			workloads.ConfigSpec.EmbedFS = &ocpConfig

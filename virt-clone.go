@@ -63,7 +63,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
 			}
 
-			additionalVars := map[string]interface{}{
+			additionalVars := map[string]any{
 				"privateKey":              privateKeyPath,
 				"publicKey":               publicKeyPath,
 				"storageClassName":        storageClassName,

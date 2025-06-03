@@ -48,9 +48,9 @@ func getEgressIPCidrNodeIPs() ([]string, string) {
 		// Add gateway ip to nodeIPs to get excluded while creating egress ip list
 		gwconfig, exist := worker.ObjectMeta.Annotations["k8s.ovn.org/l3-gateway-config"]
 		if exist {
-			var item map[string]interface{}
+			var item map[string]any
 			json.Unmarshal([]byte(gwconfig), &item)
-			defaultgw := item["default"].(map[string]interface{})
+			defaultgw := item["default"].(map[string]any)
 			nodeIPs = append(nodeIPs, defaultgw["next-hop"].(string))
 		}
 		// For cloud based OCP deployedments, egress IP cidr is added as part of cloud.network.openshift.io/egress-ipconfig annotation
@@ -58,14 +58,14 @@ func getEgressIPCidrNodeIPs() ([]string, string) {
 		if egressIPCidr == "" {
 			eipconfig, exist := worker.ObjectMeta.Annotations["cloud.network.openshift.io/egress-ipconfig"]
 			if exist {
-				var items []map[string]interface{}
+				var items []map[string]any
 				json.Unmarshal([]byte(eipconfig), &items)
-				ifaddr := items[0]["ifaddr"].(map[string]interface{})
+				ifaddr := items[0]["ifaddr"].(map[string]any)
 				egressIPCidr = ifaddr["ipv4"].(string)
 			} else {
 				nodeAddr, exist := worker.ObjectMeta.Annotations["k8s.ovn.org/node-primary-ifaddr"]
 				if exist {
-					var ifaddr map[string]interface{}
+					var ifaddr map[string]any
 					json.Unmarshal([]byte(nodeAddr), &ifaddr)
 					egressIPCidr = ifaddr["ipv4"].(string)
 				}
@@ -88,7 +88,7 @@ func getFirstUsableAddr(cidr string) uint32 {
 	// Get the network address by performing a bitwise AND
 	ipBytes := ip.To4()
 	networkBytes := make([]byte, 4)
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		networkBytes[i] = ipBytes[i] & ipNet.Mask[i]
 	}
 
@@ -129,7 +129,7 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 	// Generate ip addresses from CIDR by excluding nodeIPs
 	// Extra iterations needed in for loop if we come across node IPs while generating egress IP list
 	var newAddr uint32
-	for i := 0; i < ((numJobIterations * addressesPerIteration) + len(nodeIPs)); i++ {
+	for i := range (numJobIterations * addressesPerIteration) + len(nodeIPs) {
 		newAddr = baseAddrInt + uint32(i)
 		if !nodeMap[newAddr] {
 			addrSlice = append(addrSlice, ipconv.IntToIPv4(newAddr).String())
