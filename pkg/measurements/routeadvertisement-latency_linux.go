@@ -745,11 +745,8 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 
 // Stop stops raLatency measurement
 func (r *raLatency) Stop() error {
-	var desiredCount uint64
-	if r.JobConfig.SkipIndexing {
-		return nil
-	}
 	var err error
+	var desiredCount uint64
 
 	// Wait till all CUDNs exported using RAs i.e wait for export scenario validation
 	// We are assuming all CUDN's will be exported using RAs
@@ -774,16 +771,11 @@ func (r *raLatency) Stop() error {
 	// cleanup dummy interfaces
 	for i := range numDummyIfaces {
 		err = r.deleteDummyInterface(i)
+		if err != nil {
+			log.Error("Error deleting dummy interfaces: %w", err)
+		}
 	}
-	r.normalizeMetrics()
-	r.calcQuantiles()
-	if len(r.Config.LatencyThresholds) > 0 {
-		err = metrics.CheckThreshold(r.Config.LatencyThresholds, r.latencyQuantiles)
-	}
-	for _, q := range r.latencyQuantiles {
-		pq := q.(metrics.LatencyQuantiles)
-		log.Infof("%s: %v 99th: %v max: %v avg: %v", r.JobConfig.Name, pq.QuantileName, pq.P99, pq.Max, pq.Avg)
-	}
+	err = r.StopMeasurement(r.normalizeMetrics, r.getLatency)
 	return err
 }
 
@@ -791,7 +783,7 @@ func (r *raLatency) GetMetrics() *sync.Map {
 	return &r.metrics
 }
 
-func (r *raLatency) normalizeMetrics() bool {
+func (r *raLatency) normalizeMetrics() float64 {
 	r.metrics.Range(func(key, value any) bool {
 		m := value.(raMetric)
 		if m.Scenario == "ExportRoutes" {
@@ -824,22 +816,18 @@ func (r *raLatency) normalizeMetrics() bool {
 
 		r.normLatencies = append(r.normLatencies, m)
 		return true
-
 	})
-	return true
+	return 0
 }
 
-func (r *raLatency) calcQuantiles() {
-	getLatency := func(normLatency any) map[string]float64 {
-		raMetric := normLatency.(raMetric)
-		return map[string]float64{
-			"MinReadyLatency":        float64(raMetric.MinReadyLatency),
-			"MaxReadyLatency":        float64(raMetric.MaxReadyLatency),
-			"P99ReadyLatency":        float64(raMetric.P99ReadyLatency),
-			"MinNetlinkRouteLatency": float64(raMetric.MinNetlinkRouteLatency),
-			"MaxNetlinkRouteLatency": float64(raMetric.MaxNetlinkRouteLatency),
-			"P99NetlinkRouteLatency": float64(raMetric.P99NetlinkRouteLatency),
-		}
+func (r *raLatency) getLatency(normLatency any) map[string]float64 {
+	raMetric := normLatency.(raMetric)
+	return map[string]float64{
+		"MinReadyLatency":        float64(raMetric.MinReadyLatency),
+		"MaxReadyLatency":        float64(raMetric.MaxReadyLatency),
+		"P99ReadyLatency":        float64(raMetric.P99ReadyLatency),
+		"MinNetlinkRouteLatency": float64(raMetric.MinNetlinkRouteLatency),
+		"MaxNetlinkRouteLatency": float64(raMetric.MaxNetlinkRouteLatency),
+		"P99NetlinkRouteLatency": float64(raMetric.P99NetlinkRouteLatency),
 	}
-	r.CalculateQuantiles(getLatency)
 }
