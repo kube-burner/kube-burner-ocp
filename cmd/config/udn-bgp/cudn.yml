@@ -18,7 +18,7 @@ spec:
     - key: kubernetes.io/metadata.name
       operator: In
       values: {{$nsNames}}
-  {{- $firstOctet := add (div $.Iteration 255) 10 }}
+  {{- $firstOctet := add (div $.Iteration 255) 40 }}
   {{- $secondOctet := mod $.Iteration 255 }}
   {{- $cudnCidr := print $firstOctet "." $secondOctet ".0.0/16" }}
   network:

@@ -10,7 +10,6 @@ require (
 	github.com/kube-burner/kube-burner v1.16.0
 	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
 	github.com/openshift/client-go v0.0.0-20240821135114-75c118605d5f
-	github.com/ovn-org/ovn-kubernetes/go-controller v0.0.0-20250307193230-744ecedf57b6
 	github.com/praserx/ipconv v1.2.1
 	github.com/prometheus-community/pro-bing v0.7.0
 	github.com/sirupsen/logrus v1.9.3
