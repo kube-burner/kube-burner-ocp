@@ -24,7 +24,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/cloud-bulldozer/go-commons/v2/indexers"
 	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/measurements"
@@ -192,7 +191,7 @@ func NewRaLatencyMeasurementFactory(configSpec config.Spec, measurement types.Me
 
 func (plmf raLatencyMeasurementFactory) NewMeasurement(jobConfig *config.Job, clientSet kubernetes.Interface, restConfig *rest.Config) measurements.Measurement {
 	return &raLatency{
-		BaseMeasurement: plmf.NewBaseLatency(jobConfig, clientSet, restConfig),
+		BaseMeasurement: plmf.NewBaseLatency(jobConfig, clientSet, restConfig, raLatencyMeasurement, raLatencyQuantilesMeasurement),
 	}
 }
 
@@ -788,15 +787,6 @@ func (r *raLatency) Stop() error {
 	return err
 }
 
-// index sends metrics to the configured indexer
-func (r *raLatency) Index(jobName string, indexerList map[string]indexers.Indexer) {
-	metricMap := map[string][]any{
-		raLatencyMeasurement:          r.normLatencies,
-		raLatencyQuantilesMeasurement: r.latencyQuantiles,
-	}
-	measurements.IndexLatencyMeasurement(r.Config, jobName, metricMap, indexerList)
-}
-
 func (r *raLatency) GetMetrics() *sync.Map {
 	return &r.metrics
 }
@@ -851,5 +841,5 @@ func (r *raLatency) calcQuantiles() {
 			"P99NetlinkRouteLatency": float64(raMetric.P99NetlinkRouteLatency),
 		}
 	}
-	r.latencyQuantiles = measurements.CalculateQuantiles(r.Uuid, r.JobConfig.Name, r.Metadata, r.normLatencies, getLatency, raLatencyQuantilesMeasurement)
+	r.CalculateQuantiles(getLatency)
 }

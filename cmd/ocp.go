@@ -86,7 +86,8 @@ func openShiftCmd() *cobra.Command {
 			ocp.ClusterHealthCheck()
 		}
 		kubeClientProvider := config.NewKubeClientProvider("", "")
-		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, filepath.Join(rootDir, cmd.Name()), metricsProfilesDir, alertsDir, kubeClientProvider)
+		workloadDir := filepath.Join(rootDir, cmd.Name())
+		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, workloadDir, metricsProfilesDir, alertsDir, workloadDir, kubeClientProvider)
 		envVars := map[string]string{
 			"UUID":       workloadConfig.UUID,
 			"QPS":        fmt.Sprintf("%d", QPS),
