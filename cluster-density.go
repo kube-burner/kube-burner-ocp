@@ -56,7 +56,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			os.Setenv("INGRESS_DOMAIN", ingressDomain)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if cmd.Name() == "cluster-density-v2" {
+			if cmd.Name() + ".yml" == "cluster-density-v2" {
 				kubeClientProvider := config.NewKubeClientProvider("", "")
 				clientSet, _ := kubeClientProvider.ClientSet(0, 0)
 				if err := isClusterImageRegistryAvailable(clientSet); err != nil {
@@ -64,7 +64,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				}
 			}
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = wh.Run(cmd.Name() + ".yml" + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

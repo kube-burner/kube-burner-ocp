@@ -103,4 +103,4 @@ require (
 
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // Replacements are not inherited from dependencies, this replacement is required by kubevirt.io/client-go prevents updating this module accidentally
 
-replace github.com/kube-burner/kube-burner => github.com/rsevilla87/kube-burner v1.15.1-0.20250605131901-6b3d1fc074d4
+replace github.com/kube-burner/kube-burner => github.com/kube-burner/kube-burner v1.16.1-0.20250606075608-05653d8c99ac
