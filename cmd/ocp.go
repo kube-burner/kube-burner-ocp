@@ -37,6 +37,7 @@ const (
 	rootDir            = "config"
 	metricsProfilesDir = rootDir + "/metrics-profiles"
 	alertsDir          = rootDir + "/alerts-profiles"
+	scriptsDir         = rootDir + "/scripts"
 )
 
 func openShiftCmd() *cobra.Command {
@@ -87,7 +88,7 @@ func openShiftCmd() *cobra.Command {
 		}
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		workloadDir := filepath.Join(rootDir, cmd.Name())
-		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, workloadDir, metricsProfilesDir, alertsDir, workloadDir, kubeClientProvider)
+		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, workloadDir, metricsProfilesDir, alertsDir, scriptsDir, kubeClientProvider)
 		envVars := map[string]string{
 			"UUID":       workloadConfig.UUID,
 			"QPS":        fmt.Sprintf("%d", QPS),
