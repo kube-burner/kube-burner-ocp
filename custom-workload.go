@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -67,8 +66,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 			if _, err := os.Stat(configFile); err != nil {
 				log.Fatalf("Error reading custom configuration file: %v", err.Error())
 			}
-			configFileName := strings.Split(configFile, ".")[0]
-			rc = wh.Run(configFileName)
+			rc = wh.Run(configFile)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
