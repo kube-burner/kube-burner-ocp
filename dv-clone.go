@@ -76,7 +76,7 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name() + ".yml", additionalVars, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

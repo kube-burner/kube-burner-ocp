@@ -43,7 +43,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name() + ".yml", nil, additionalMeasurementFactoryMap)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", nil, additionalMeasurementFactoryMap)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
