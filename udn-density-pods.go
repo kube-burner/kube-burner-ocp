@@ -62,7 +62,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			if churn {
 				log.Info("Churn is enabled, there will not be a pause after UDN creation")
 			}
-			rc = wh.Run("udn-density-pods")
+			rc = wh.Run("udn-density-pods.yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
