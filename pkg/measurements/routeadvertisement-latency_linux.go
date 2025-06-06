@@ -746,11 +746,10 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 // Stop stops raLatency measurement
 func (r *raLatency) Stop() error {
 	var err error
-	var desiredCount uint64
 
 	// Wait till all CUDNs exported using RAs i.e wait for export scenario validation
 	// We are assuming all CUDN's will be exported using RAs
-	desiredCount = uint64(len(r.cudnSubnet))
+	desiredCount := uint64(len(r.cudnSubnet))
 	r.waitForSceanrioCompletion(desiredCount, exportScenarioMaxTimeout, "export")
 	// stop export workers
 	close(r.exportDoneCh)
@@ -775,8 +774,7 @@ func (r *raLatency) Stop() error {
 			log.Error("Error deleting dummy interfaces: %w", err)
 		}
 	}
-	err = r.StopMeasurement(r.normalizeMetrics, r.getLatency)
-	return err
+	return r.StopMeasurement(r.normalizeMetrics, r.getLatency)
 }
 
 func (r *raLatency) GetMetrics() *sync.Map {
