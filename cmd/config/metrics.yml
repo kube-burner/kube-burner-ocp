@@ -187,3 +187,14 @@
 
 - query: rate ( node_vmstat_pgmajfault[1m] )
   metricName: nodeMajorFaults
+
+# OVS 5m CPU usage average
+- query: avg by (instance) (rate(container_cpu_usage_seconds_total{id=~"/system.slice/ovs-vswitchd.service"}[5m])) * 100
+  metricName: ovsCPUUsagePercent
+  instant: true
+  captureStart: true
+
+# OVS 5m Memory usage average
+- query: avg_over_time(container_memory_usage_bytes{id=~"/system.slice/ovs-vswitchd.service"}[5m])
+  metricName: ovsMemory
+  instant: true
