@@ -60,7 +60,7 @@ jobs:
     waitWhenFinished: true
     preLoadImages: false
     preLoadPeriod: 15s
-    jobPause: {{.JOB_PAUSE}}
+    skipIndexing: true
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -99,6 +99,7 @@ jobs:
     churnDelay: {{.CHURN_DELAY}}
     churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
     jobPause: 5m
+    metricsClosing: afterJobPause
     cleanup: false
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
