@@ -29,6 +29,7 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/measurements"
 	"github.com/kube-burner/kube-burner/pkg/measurements/metrics"
 	"github.com/kube-burner/kube-burner/pkg/measurements/types"
+	"github.com/kube-burner/kube-burner/pkg/util/fileutils"
 	probing "github.com/prometheus-community/pro-bing"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -189,9 +190,9 @@ func NewRaLatencyMeasurementFactory(configSpec config.Spec, measurement types.Me
 	}, nil
 }
 
-func (plmf raLatencyMeasurementFactory) NewMeasurement(jobConfig *config.Job, clientSet kubernetes.Interface, restConfig *rest.Config) measurements.Measurement {
+func (plmf raLatencyMeasurementFactory) NewMeasurement(jobConfig *config.Job, clientSet kubernetes.Interface, restConfig *rest.Config, embedCfg *fileutils.EmbedConfiguration) measurements.Measurement {
 	return &raLatency{
-		BaseMeasurement: plmf.NewBaseLatency(jobConfig, clientSet, restConfig, raLatencyMeasurement, raLatencyQuantilesMeasurement),
+		BaseMeasurement: plmf.NewBaseLatency(jobConfig, clientSet, restConfig, raLatencyMeasurement, raLatencyQuantilesMeasurement, embedCfg),
 	}
 }
 
