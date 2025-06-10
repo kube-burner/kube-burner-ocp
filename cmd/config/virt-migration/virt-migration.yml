@@ -1,0 +1,99 @@
+{{- $testName := "virt-migration" }}
+{{- $testNamespacesLabelKey := "kube-burner.io/test-name" -}}
+{{- $vmName := $testName -}}
+{{- $sshPublicKeySecretName := $testName -}}
+{{- $createMigratingVMsJobName := "create-migrating-vms" -}}
+---
+global:
+  measurements:
+  - name: vmiLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: ./virt-migration-results
+
+jobs:
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testName }}
+
+- name: {{ $createMigratingVMsJobName }}
+  jobType: create
+  jobIterations: {{ .vmCreateIterations }}
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ .testNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testName }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # interval between jobs execution
+  jobIterationDelay: 20s
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: false
+  podWait: true
+  # timeout time after waiting for all object creation
+  maxWaitTimeout: 2h
+  jobPause: 10s
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  objects:
+
+  - objectTemplate: templates/secret_ssh_public.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $sshPublicKeySecretName }}
+      publicKeyPath: {{ .publicKey }}
+
+  - objectTemplate: templates/vm.yml
+    replicas: {{ .vmCreatePerIteration }}
+    inputVars:
+      name: {{ $vmName }}
+      rootDiskImage: quay.io/containerdisks/fedora:41
+      storageClassName: {{ .storageClassName }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      dataVolumeCounters:
+      {{ range .dataVolumeCounters }}
+      - {{ . }}
+      {{ end }}
+      affinity: "In"
+      workerNodeName: {{ .workerNodeName }}
+
+- name: remove-affinity-rule
+  jobType: patch
+  jobIterations: 1
+  executionMode: sequential
+  qps: 20
+  burst: 20
+  objects:
+    - apiVersion: kubevirt.io/v1
+      kind: VirtualMachine
+      labelSelector:
+        kube-burner-job: {{ $createMigratingVMsJobName }}
+      patchType: "application/merge-patch+json"
+      objectTemplate: templates/remove_affinity_patch.yml
+
+- name: migrate-vms
+  jobType: kubevirt
+  qps: 20
+  burst: 20
+  jobIterations: 1
+  maxWaitTimeout: 1h
+  waitWhenFinished: true
+  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  objects:
+  - kubeVirtOp: migrate
+    labelSelector:
+      kube-burner-job: {{ $createMigratingVMsJobName }}

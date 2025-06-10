@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -313,4 +314,33 @@ func cleanupTestNamespaces(ctx context.Context, labelSelector string) {
 	deleteVolumeSnapshotContentForNamespaces(ctx, k8sConnector, namespaceNamesMap)
 	deletePVsForNamespaces(ctx, k8sConnector, namespaceNamesMap)
 
+}
+
+func verifyOrGetRandomWorkerNodeName(workerNodeName string) string {
+	k8sConnector := getK8SConnector()
+
+	nodes, err := k8sConnector.ClientSet().CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/worker"})
+	if err != nil {
+		log.Fatalf("Error getting nodes: %v", err)
+		return ""
+	}
+
+	workerNodeNamesMap := make(map[string]struct{}, len(nodes.Items))
+	for _, node := range nodes.Items {
+		workerNodeNamesMap[node.Name] = struct{}{}
+	}
+
+	if workerNodeName != "" {
+		if _, ok := workerNodeNamesMap[workerNodeName]; !ok {
+			log.Fatalf("Provided worker node %s does not exist", workerNodeName)
+		}
+		return workerNodeName
+	}
+
+	workerNodeNamesArray := make([]string, 0, len(workerNodeNamesMap))
+	for k := range workerNodeNamesMap {
+		workerNodeNamesArray = append(workerNodeNamesArray, k)
+	}
+
+	return workerNodeNamesArray[rand.Intn(len(workerNodeNamesArray))]
 }

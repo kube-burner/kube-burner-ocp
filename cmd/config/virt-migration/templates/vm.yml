@@ -1,0 +1,102 @@
+{{- $storageClassName := .storageClassName -}}
+{{- $dataVolumeLabels := .dataVolumeLabels -}}
+{{- $name := .name -}}
+{{- $counter := .counter -}}
+{{- $replica := .Replica }}
+{{- $iteration := .Iteration }}
+
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: "{{ $name }}-{{ $iteration }}-{{ $replica }}"
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: "{{ $name }}-{{ $iteration }}-{{ $replica }}-root"
+    spec:
+      source:
+        registry:
+          url: "docker://{{ .rootDiskImage }}"
+      storage:
+        accessModes:
+        - "ReadWriteMany"
+        storageClassName: {{ .storageClassName }}
+        resources:
+          requests:
+            storage: "10Gi"
+  {{ range $dataVolumeIndex := .dataVolumeCounters }}
+  - metadata:
+      name: "{{ $name }}-{{ $iteration }}-{{ $replica }}-data-{{ $dataVolumeIndex }}"
+    spec:
+      source:
+        blank: {}
+      storage:
+        accessModes:
+        - "ReadWriteMany"
+        storageClassName: {{ $storageClassName }}
+        resources:
+          requests:
+            storage: "1Gi"
+  {{ end }}
+  runStrategy: RerunOnFailure
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: {{ .affinity }}
+                values:
+                - {{ .workerNodeName }}
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: "{{ .sshPublicKeySecret }}"
+      architecture: amd64
+      domain:
+        resources:
+          requests:
+            memory: {{ default "512Mi" .vmMemory }}
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+            bootOrder: 1
+          {{ range $dataVolumeIndex := .dataVolumeCounters }}
+          - disk:
+              bus: virtio
+            name: "data-{{ $dataVolumeIndex }}"
+          {{ end }}
+          interfaces:
+          - name: default
+            masquerade: {}
+            bootOrder: 2
+        machine:
+          type: pc-q35-rhel9.4.0
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: "{{ .name }}-{{ $iteration }}-{{ .Replica }}-root"
+        name: rootdisk
+      {{ range $dataVolumeIndex := .dataVolumeCounters }}
+      - dataVolume:
+          name: "{{ $name }}-{{ $iteration }}-{{ $replica }}-data-{{ $dataVolumeIndex }}"
+        name: "data-{{ . }}"
+      {{ end }}
+      - cloudInitNoCloud:
+          userData: |
+            #cloud-config
+            chpasswd:
+              expire: false
+            password: {{ uuidv4 }}
+            user: fedora
+            runcmd: []
+        name: cloudinitdisk
