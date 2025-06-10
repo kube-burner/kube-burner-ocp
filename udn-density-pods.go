@@ -28,6 +28,7 @@ import (
 func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
 	var churn, l3, simple, pprof bool
+	var jobPause time.Duration
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var churnDeletionStrategy string
 	var metricsProfiles []string
@@ -68,6 +69,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&l3, "layer3", true, "Layer3 UDN test")
+	cmd.Flags().DurationVar(&jobPause, "job-pause", 0, "Time to pause after finishing the job that creates the UDN")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
 	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
