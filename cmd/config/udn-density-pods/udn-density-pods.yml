@@ -60,7 +60,8 @@ jobs:
     waitWhenFinished: true
     preLoadImages: false
     preLoadPeriod: 15s
-    skipIndexing: true
+    jobPause: {{.JOB_PAUSE}}
+    metricsClosing: afterJobPause
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
