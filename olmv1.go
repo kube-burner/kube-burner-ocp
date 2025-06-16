@@ -57,7 +57,7 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 				log.Fatal(err.Error())
 			}
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name())
+			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
