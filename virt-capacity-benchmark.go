@@ -39,7 +39,7 @@ var (
 
 // NewVirtCapacityBenchmark holds the virt-capacity-benchmark workload
 func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
-	var storageClassName string
+	var storageClasses []string
 	var sshKeyPairPath string
 	var maxIterations int
 	var vmsPerIteration int
@@ -66,14 +66,24 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatalf("Failed to run virtctl. Check that it is installed, in PATH and working")
 			}
 
-			storageClassName, _ = getStorageAndSnapshotClasses(storageClassName, true, true)
-			if !skipResizeJob {
-				supported, err := k8sstorage.StorageClassSupportsVolumeExpansion(getK8SConnector(), storageClassName)
-				if err != nil {
-					log.Fatal(err)
+			if storageClasses == nil {
+				storageClassName, _ := getStorageAndSnapshotClasses("", true, true)
+				storageClasses = []string{storageClassName}
+			} else {
+				for _, storageClassName := range storageClasses {
+					_, _ = getStorageAndSnapshotClasses(storageClassName, true, true)
 				}
-				if !supported {
-					log.Fatalf("Storage Class [%s] does not support volume expansion", storageClassName)
+			}
+
+			if !skipResizeJob {
+				for _, storageClassName := range storageClasses {
+					supported, err := k8sstorage.StorageClassSupportsVolumeExpansion(getK8SConnector(), storageClassName)
+					if err != nil {
+						log.Fatal(err)
+					}
+					if !supported {
+						log.Fatalf("Storage Class [%s] does not support volume expansion", storageClassName)
+					}
 				}
 			}
 		},
@@ -112,7 +122,6 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				"privateKey":          privateKeyPath,
 				"publicKey":           publicKeyPath,
 				"vmCount":             fmt.Sprint(vmsPerIteration),
-				"storageClassName":    storageClassName,
 				"testNamespace":       testNamespace,
 				"dataVolumeCounters":  generateLoopCounterSlice(dataVolumeCount, 1),
 				"skipMigrationJob":    skipMigrationJob,
@@ -121,14 +130,15 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				"volumeSizeIncrement": volumeSizeIncrement,
 				"skipResizeJob":       skipResizeJob,
 			}
-
 			setMetrics(cmd, metricsProfiles)
-
-			log.Infof("Running tests with Storage Class [%s]", storageClassName)
 
 			log.Infof("Running tests in Namespace [%s]", testNamespace)
 			counter := 0
 			for {
+				storageClassName := storageClasses[counter%len(storageClasses)]
+				log.Infof("Running loop %d with Storage Class [%s]", counter, storageClassName)
+				additionalVars["storageClassName"] = storageClassName
+
 				os.Setenv("counter", fmt.Sprint(counter))
 				rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 				if rc != 0 {
@@ -150,7 +160,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().StringVar(&storageClassName, "storage-class", "", "Name of the Storage Class to test")
+	cmd.Flags().StringSliceVar(&storageClasses, "storage-class", nil, "Comma separated list of storage classes to use")
 	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generarated SSH keys - default to a temporary location")
 	cmd.Flags().IntVar(&maxIterations, "max-iterations", 0, "Maximum times to run the test sequence. Default - run until failure (0)")
 	cmd.Flags().IntVar(&vmsPerIteration, "vms", 5, "Number of VMs to test in each iteration")
