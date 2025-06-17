@@ -36,8 +36,6 @@ jobs:
   # verify object count after running each job
   verifyObjects: true
   errorOnVerify: true
-  # interval between jobs execution
-  jobIterationDelay: 20s
   # wait all VMI be in the Ready Condition
   waitWhenFinished: false
   podWait: true
@@ -75,6 +73,7 @@ jobs:
   jobType: patch
   jobIterations: 1
   executionMode: sequential
+  waitWhenFinished: false
   qps: 20
   burst: 20
   objects:
