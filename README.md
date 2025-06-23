@@ -444,6 +444,9 @@ By default, the test will search for the `StorageClass` to use:
 
 To use a different one, use `--storage-class` to provide a different name.
 
+In addition, multiple `StorageClasses` can be used by passing a comma separated list names.
+The test will then choose a different `StorageClass` for each loop in round robin.
+
 Please note that regardless to which `StorageClass` is used, it must:
 - Support Volume Expansion: `allowVolumeExpansion: true`.
 - Have a corresponding `VolumeSnapshotClass` using the same provisioner
