@@ -34,7 +34,10 @@ spec:
       containers:
       - name: client-app
         image: quay.io/cloud-bulldozer/curl:latest
-        command: ["sleep", "inf"]
+        command:
+            - "/bin/sh"
+            - "-c"
+            - "while true; do echo $(date +'%Y-%m-%d %H:%M:%S'): INFO curl on ${SERVICE_ENDPOINT} and ${ROUTE_ENDPOINT}; curl --fail -sS ${SERVICE_ENDPOINT} -o /dev/null && curl --fail -sSk ${ROUTE_ENDPOINT} -o /dev/null; sleep 120; done"
         resources:
           requests:
             memory: "10Mi"
@@ -42,7 +45,7 @@ spec:
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: false
-        readinessProbe:
+        startupProbe:
           exec:
             command:
             - "/bin/sh"
