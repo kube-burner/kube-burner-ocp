@@ -444,6 +444,9 @@ By default, the test will search for the `StorageClass` to use:
 
 To use a different one, use `--storage-class` to provide a different name.
 
+In addition, multiple `StorageClasses` can be used by passing a comma separated list names.
+The test will then choose a different `StorageClass` for each loop in round robin.
+
 Please note that regardless to which `StorageClass` is used, it must:
 - Support Volume Expansion: `allowVolumeExpansion: true`.
 - Have a corresponding `VolumeSnapshotClass` using the same provisioner
@@ -601,7 +604,20 @@ Users may control the workload sizes by passing the following arguments:
 
 !!! Note
 
-    The total number of `VirtualMachines` created is `--iteration` * `--iteration-vms`
+    The total number of `VirtualMachines` created is `--iterations` * `--iteration-vms`
+
+#### Addition `VirtualMachines` load
+
+The test can create additional `VirtualMachines` that will not be migrated to simulate load on the other nodes as well.
+By default, no additional `VirtualMachines` are created.
+
+Set the following arguments to create load `VirtualMachines`:
+- `--load-iterations` - Number of iterations to create load VMs
+- `--load-per-iteration` - Number of VMs to create in each load VM iteration
+
+!!! Note
+
+    The total number of load `VirtualMachines` created is `--load-vms-iterations` * `--iteration-load-vms`
 
 #### Initial Worker Node
 

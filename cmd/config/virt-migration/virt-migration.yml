@@ -3,6 +3,7 @@
 {{- $vmName := $testName -}}
 {{- $sshPublicKeySecretName := $testName -}}
 {{- $createMigratingVMsJobName := "create-migrating-vms" -}}
+{{- $createLoadVMsJobName := "create-load-vms" -}}
 ---
 global:
   measurements:
@@ -68,6 +69,46 @@ jobs:
       {{ end }}
       affinity: "In"
       workerNodeName: {{ .workerNodeName }}
+
+{{- if gt .loadVMsPerIteration 0 }}
+- name: {{ $createLoadVMsJobName }}
+  jobType: create
+  jobIterations: {{ .loadVMsIterations }}
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ .testNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testName }}
+  # verify object count after running each job
+  verifyObjects: true
+  errorOnVerify: true
+  # wait all VMI be in the Ready Condition
+  waitWhenFinished: false
+  podWait: true
+  # timeout time after waiting for all object creation
+  maxWaitTimeout: 2h
+  jobPause: 10s
+  cleanup: false
+  # Set missing key as empty to allow using default values
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  objects:
+
+  - objectTemplate: templates/vm.yml
+    replicas: {{ .loadVMsPerIteration }}
+    inputVars:
+      name: {{ $vmName }}-load
+      rootDiskImage: quay.io/containerdisks/fedora:41
+      storageClassName: {{ .storageClassName }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      dataVolumeCounters:
+      {{ range .dataVolumeCounters }}
+      - {{ . }}
+      {{ end }}
+      affinity: "NotIn"
+      workerNodeName: {{ .workerNodeName }}
+{{- end }}
 
 - name: remove-affinity-rule
   jobType: patch

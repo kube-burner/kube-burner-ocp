@@ -31,9 +31,11 @@ const (
 	virtMigrationTmpDirPattern  = "kube-burner-virt-migration-*"
 	virtMigrationTestName       = "virt-migration"
 	// Defaults
-	virtMigrationDefaultDataVolumeCount = 1
-	virtMigrationDefaultVMsPerIteration = 10
-	virtMigrationDefaultIteration       = 2
+	virtMigrationDefaultDataVolumeCount     = 1
+	virtMigrationDefaultVMsPerIteration     = 10
+	virtMigrationDefaultIteration           = 2
+	virtMigrationDefaultLoadVMsIteration    = 0
+	virtMigrationDefaultLoadVMsPerIteration = 0
 )
 
 // Returns virt-density workload
@@ -46,6 +48,8 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	var dataVolumeCount int
 	var workerNodeName string
 	var metricsProfiles []string
+	var loadVMsIterations int
+	var loadVMsPerIteration int
 
 	var rc int
 	cmd := &cobra.Command{
@@ -77,10 +81,12 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 				"vmCreatePerIteration": vmsPerIteration,
 				"dataVolumeCounters":   generateLoopCounterSlice(dataVolumeCount, 1),
 				"workerNodeName":       workerNodeName,
+				"loadVMsIterations":    loadVMsIterations,
+				"loadVMsPerIteration":  loadVMsPerIteration,
 			}
 
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name(), additionalVars, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -93,6 +99,8 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", virtMigrationDefaultIteration, "How many iterations of VM creations. The total number of VMs is iterations*iteration-vms")
 	cmd.Flags().IntVar(&vmsPerIteration, "iteration-vms", virtMigrationDefaultVMsPerIteration, "How many VMs to create in each iteration. The total number of VMs is iterations*iteration-vms")
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", virtMigrationDefaultDataVolumeCount, "Number of data volumes per VM")
+	cmd.Flags().IntVar(&loadVMsIterations, "load-iterations", virtMigrationDefaultLoadVMsIteration, "Number of iterations to create load VMs")
+	cmd.Flags().IntVar(&loadVMsPerIteration, "load-per-iteration", virtMigrationDefaultLoadVMsPerIteration, "Number of VMs to create in each load VM iteration")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }
