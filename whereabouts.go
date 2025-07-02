@@ -15,7 +15,6 @@
 package ocp
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -37,14 +36,17 @@ func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs whereabouts workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-			os.Setenv("CONTAINER_IMAGE", containerImage)
-			os.Setenv("FAST", fmt.Sprint(fast))
+			additionalVars := map[string]any{
+				"JOB_ITERATIONS":      iterations,
+				"POD_READY_THRESHOLD": podReadyThreshold,
+				"CONTAINER_IMAGE":     containerImage,
+				"FAST":                fast,
+			}
+			wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", nil, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

@@ -15,9 +15,7 @@
 package ocp
 
 import (
-	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -34,21 +32,19 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: "Runs custom workload",
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("CHURN", fmt.Sprint(churn))
-			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
-			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
-			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
-			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
-			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
+		Run: func(cmd *cobra.Command, args []string) {
+			var jobIterations int
+			if _, err := os.Stat(configFile); err != nil {
+				log.Fatalf("Error reading custom configuration file: %v", err.Error())
+			}
+
 			ingressDomain, err := wh.MetadataAgent.GetDefaultIngressDomain()
 			if err != nil {
 				log.Fatal("Error obtaining default ingress domain: ", err.Error())
 			}
-			os.Setenv("INGRESS_DOMAIN", ingressDomain)
-			os.Setenv("ITERATIONS_PER_NAMESPACE", fmt.Sprint(iterationsPerNamespace))
+
 			if iterations > 0 {
-				os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
+				jobIterations = iterations
 			}
 			if podsPerNode > 0 {
 				totalPods := clusterMetadata.WorkerNodesCount * podsPerNode
@@ -56,17 +52,24 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				if err != nil {
 					log.Fatal(err)
 				}
-				os.Setenv("JOB_ITERATIONS", fmt.Sprint((totalPods-podCount)/2))
+				jobIterations = (totalPods - podCount) / 2
 			}
-			os.Setenv("NAMESPACED_ITERATIONS", fmt.Sprint(namespacedIterations))
-			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-			os.Setenv("SVC_LATENCY", strconv.FormatBool(svcLatency))
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			if _, err := os.Stat(configFile); err != nil {
-				log.Fatalf("Error reading custom configuration file: %v", err.Error())
+
+			additionalVars := map[string]any{
+				"CHURN":                    churn,
+				"CHURN_CYCLES":             churnCycles,
+				"CHURN_DURATION":           churnDuration,
+				"CHURN_DELAY":              churnDelay,
+				"CHURN_PERCENT":            churnPercent,
+				"CHURN_DELETION_STRATEGY":  churnDeletionStrategy,
+				"INGRESS_DOMAIN":           ingressDomain,
+				"ITERATIONS_PER_NAMESPACE": iterationsPerNamespace,
+				"JOB_ITERATIONS":           jobIterations,
+				"NAMESPACED_ITERATIONS":    namespacedIterations,
+				"POD_READY_THRESHOLD":      podReadyThreshold,
+				"SVC_LATENCY":              svcLatency,
 			}
-			rc = wh.Run(configFile)
+			rc = wh.RunWithAdditionalVars(configFile, additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
