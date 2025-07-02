@@ -38,35 +38,36 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		Use:          "virt-udn-density",
 		Short:        "Runs virt-density-udn workload",
 		SilenceUsage: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("JOB_PAUSE", jobPause)
-			os.Setenv("CHURN", fmt.Sprint(churn))
-			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
-			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
-			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
-			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
-			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("VMI_RUNNING_THRESHOLD", fmt.Sprintf("%v", vmiRunningThreshold))
-			os.Setenv("VM_IMAGE", vmImage)
-			os.Setenv("UDN_BINDING_METHOD", bindingMethod)
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if bindingMethod != "passt" && bindingMethod != "l2bridge" {
 				fmt.Println("Invalid value for --binding-method. Allowed values are 'passt' or 'l2bridge'.")
 				os.Exit(1)
 			}
 			setMetrics(cmd, metricsProfiles)
+
+			additionalVars := map[string]any{
+				"JOB_PAUSE":               jobPause,
+				"CHURN":                   churn,
+				"CHURN_CYCLES":            churnCycles,
+				"CHURN_DURATION":          churnDuration,
+				"CHURN_DELAY":             churnDelay,
+				"CHURN_PERCENT":           churnPercent,
+				"CHURN_DELETION_STRATEGY": churnDeletionStrategy,
+				"JOB_ITERATIONS":          iterations,
+				"VMI_RUNNING_THRESHOLD":   vmiRunningThreshold,
+				"VM_IMAGE":                vmImage,
+				"UDN_BINDING_METHOD":      bindingMethod,
+				"ENABLE_LAYER_3":          l3,
+			}
+
 			if l3 {
 				log.Info("Layer 3 is enabled")
-				os.Setenv("ENABLE_LAYER_3", "true")
 				AddVirtMetadata(wh, vmImage, "layer3", bindingMethod)
 			} else {
 				log.Info("Layer 2 is enabled")
-				os.Setenv("ENABLE_LAYER_3", "false")
 				AddVirtMetadata(wh, vmImage, "layer2", bindingMethod)
 			}
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

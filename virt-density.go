@@ -15,7 +15,6 @@
 package ocp
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -42,14 +41,17 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(totalVMs-vmCount))
-			os.Setenv("VMI_RUNNING_THRESHOLD", fmt.Sprintf("%v", vmiRunningThreshold))
-			os.Setenv("VM_IMAGE", vmImage)
+			additionalVars := map[string]any{
+				"JOB_ITERATIONS":        totalVMs - vmCount,
+				"VMI_RUNNING_THRESHOLD": vmiRunningThreshold,
+				"VM_IMAGE":              vmImage,
+			}
+			wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
 			AddVirtMetadata(wh, vmImage, "", "")
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", nil, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

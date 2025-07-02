@@ -107,7 +107,7 @@ func getFirstUsableAddr(cidr string) uint32 {
 }
 
 // egress IPs and node IPs will be in same cidr. So we need to exclude node IPs from CIDR to generate list of available egress IPs.
-func generateEgressIPs(numJobIterations int, addressesPerIteration int, externalServerIP string) {
+func generateEgressIPs(numJobIterations int, addressesPerIteration int, externalServerIP string) []string {
 
 	nodeIPs, egressIPCidr := getEgressIPCidrNodeIPs()
 	// Add external server ip to nodeIPs to get excluded while creating egress ip list
@@ -141,7 +141,7 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 	}
 
 	// combine all addresses to a string and export as an environment variable
-	os.Setenv("EIP_ADDRESSES", strings.Join(addrSlice, " "))
+	return addrSlice
 }
 
 // NewClusterDensity holds cluster-density workload
@@ -154,16 +154,17 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-			os.Setenv("ADDRESSES_PER_ITERATION", fmt.Sprint(addressesPerIteration))
-			os.Setenv("EXTERNAL_SERVER_IP", externalServerIP)
-			generateEgressIPs(iterations, addressesPerIteration, externalServerIP)
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			eipAddresses := strings.Join(generateEgressIPs(iterations, addressesPerIteration, externalServerIP), " ")
+			additionalVars := map[string]any{
+				"JOB_ITERATIONS":          iterations,
+				"POD_READY_THRESHOLD":     podReadyThreshold,
+				"ADDRESSES_PER_ITERATION": addressesPerIteration,
+				"EXTERNAL_SERVER_IP":      externalServerIP,
+				"EIP_ADDRESSES":           eipAddresses,
+			}
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

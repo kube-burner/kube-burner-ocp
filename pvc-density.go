@@ -50,11 +50,7 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		Use:          "pvc-density",
 		Short:        "Runs pvc-density workload",
 		SilenceUsage: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("CONTAINER_IMAGE", containerImage)
-			os.Setenv("CLAIM_SIZE", fmt.Sprint(claimSize))
-
+		Run: func(cmd *cobra.Command, args []string) {
 			for key := range dynamicStorageProvisioners {
 				storageProvisioners = append(storageProvisioners, key)
 			}
@@ -63,11 +59,14 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal(fmt.Errorf("%s does not match one of %s", provisioner, storageProvisioners))
 			}
 
-			os.Setenv("STORAGE_PROVISIONER", fmt.Sprint(dynamicStorageProvisioners[provisioner]))
-		},
-		Run: func(cmd *cobra.Command, args []string) {
+			additionalVars := map[string]any{
+				"JOB_ITERATIONS":      iterations,
+				"CONTAINER_IMAGE":     containerImage,
+				"CLAIM_SIZE":          claimSize,
+				"STORAGE_PROVISIONER": dynamicStorageProvisioners[provisioner],
+			}
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
