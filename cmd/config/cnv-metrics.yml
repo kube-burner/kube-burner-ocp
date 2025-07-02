@@ -4,7 +4,9 @@
 ## metadata
 - query: kubevirt_hyperconverged_operator_health_status{}
   metricName: hco-operator-health
-  instant: true
+
+- query: kubevirt_hco_system_health_status{}
+  metricName: hco-system-health
 
 - query: sum(kubevirt_number_of_vms)
   metricName: total-vm-created
@@ -109,16 +111,12 @@
 ## vmi migration reated metrics
 - query: sum(kubevirt_vmi_migration_succeeded)
   metricName: migration-succeeded
-  instant: true
 
 - query: sum(kubevirt_vmi_migrations_in_scheduling_phase)
   metricName: migration-in-scheduling-phase
-  instant: true
 
 - query: sum(kubevirt_vmi_migrations_in_running_phase)
   metricName: migration-in-running-phase
-  instant: true
 
 - query: sum(kubevirt_vmi_migrations_in_pending_phase)
   metricName: migration-in-pending-phase
-  instant: true
