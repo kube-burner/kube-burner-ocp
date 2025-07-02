@@ -60,9 +60,9 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 				"POD_READY_THRESHOLD":      podReadyThreshold,
 			}
 			if variant == "node-density" {
-				additionalVars["JOB_ITERATIONS"] = fmt.Sprint(totalPods - podCount)
+				additionalVars["JOB_ITERATIONS"] = totalPods - podCount
 			} else {
-				additionalVars["JOB_ITERATIONS"] = fmt.Sprint((totalPods - podCount) / 2)
+				additionalVars["JOB_ITERATIONS"] = (totalPods - podCount) / 2
 			}
 			setMetrics(cmd, metricsProfiles)
 			wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
