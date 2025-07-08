@@ -747,6 +747,9 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 // Stop stops raLatency measurement
 func (r *raLatency) Stop() error {
 	var err error
+	if r.JobConfig.SkipIndexing {
+		return nil
+	}
 
 	// Wait till all CUDNs exported using RAs i.e wait for export scenario validation
 	// We are assuming all CUDN's will be exported using RAs
