@@ -145,9 +145,6 @@ type netlinkRoutes struct {
 type raLatency struct {
 	measurements.BaseMeasurement
 
-	metrics          sync.Map
-	latencyQuantiles []any
-	normLatencies    []any
 	// list of cudn and their pods advertised by this route
 	cudnSubnet map[string]cudnPods
 	// timestamp when cudn is detected on external host and later events of ping tests
@@ -313,7 +310,7 @@ func (r *raLatency) handleAdd(obj any) {
 		return
 	}
 	log.Debugf("RA %s discovered at: %v created at: %v", raName, time.Now().UTC(), t.UTC())
-	r.metrics.LoadOrStore(raName, raMetric{
+	r.Metrics.LoadOrStore(raName, raMetric{
 		Name:       raName,
 		Timestamp:  t.UTC(),
 		Latency:    []float64{},
@@ -458,7 +455,7 @@ func (r *raLatency) importWorker() {
 				JobName:         r.JobConfig.Name,
 				Scenario:        "ImportRoutes",
 			}
-			r.metrics.LoadOrStore(mc.addr, m)
+			r.Metrics.LoadOrStore(mc.addr, m)
 			atomic.AddUint64(&r.verifiedImportRouteCount, 1)
 
 		case <-r.importDoneCh:
@@ -680,8 +677,8 @@ func (r *raLatency) setInputVars() {
 func (r *raLatency) Start(measurementWg *sync.WaitGroup) error {
 	// Reset latency slices, required in multi-job benchmarks
 	var err error
-	r.latencyQuantiles, r.normLatencies = nil, nil
-	r.metrics = sync.Map{}
+	r.LatencyQuantiles, r.NormLatencies = nil, nil
+	r.Metrics = sync.Map{}
 
 	defer measurementWg.Done()
 
@@ -781,12 +778,8 @@ func (r *raLatency) Stop() error {
 	return r.StopMeasurement(r.normalizeMetrics, r.getLatency)
 }
 
-func (r *raLatency) GetMetrics() *sync.Map {
-	return &r.metrics
-}
-
 func (r *raLatency) normalizeMetrics() float64 {
-	r.metrics.Range(func(key, value any) bool {
+	r.Metrics.Range(func(key, value any) bool {
 		m := value.(raMetric)
 		if m.Scenario == "ExportRoutes" {
 			for _, udn := range m.cudn {
@@ -816,7 +809,7 @@ func (r *raLatency) normalizeMetrics() float64 {
 			m.P99NetlinkRouteLatency = nrLatencySummary.P99
 		}
 
-		r.normLatencies = append(r.normLatencies, m)
+		r.NormLatencies = append(r.NormLatencies, m)
 		return true
 	})
 	return 0
