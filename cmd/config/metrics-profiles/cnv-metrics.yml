@@ -1,0 +1,122 @@
+---
+# OpenShift virtualization
+# elapsed is the job duration time
+## metadata
+- query: kubevirt_hyperconverged_operator_health_status{}
+  metricName: hco-operator-health
+
+- query: kubevirt_hco_system_health_status{}
+  metricName: hco-system-health
+
+- query: sum(kubevirt_number_of_vms)
+  metricName: total-vm-created
+  instant: true
+
+- query: sum(cnv:vmi_status_running:count)
+  metricName: total-vmi-running
+  instant: true
+
+- query: cluster:vmi_request_cpu_cores:sum
+  metricName: total-cpu-request
+  instant: true
+
+- query: sum(kubevirt_vm_resource_requests)
+  metricName: total-mem-request
+  instant: true
+
+- query: sum(up{namespace="openshift-cnv",pod=~"virt-api-.*"}) or vector(0)
+  metricName: virt-api-pod-count
+  instant: true
+
+- query: sum(kubevirt_memory_delta_from_requested_bytes)
+  metricName: virt-infra-pod-total-mem-usage-request-delta
+  instant: true
+
+- query: sum(kubevirt_vmi_launcher_memory_overhead_bytes{}) / count (kubevirt_vmi_launcher_memory_overhead_bytes{})
+  metricName: avg-virt-launcher-mem-overhead
+  instant: true
+
+## CPU and Memory related metircs
+- query: avg(avg_over_time(rate(container_cpu_usage_seconds_total{name!="", namespace="openshift-cnv", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
+  metricName: avg-infra-pod-cpu-usage
+  instant: true
+
+- query: max(max_over_time(rate(container_cpu_usage_seconds_total{name!="", namespace="openshift-cnv", container!="POD"}[2m])[{{.elapsed}}:])) by (container)
+  metricName: max-infra-pod-cpu-usage
+  instant: true
+
+- query: avg(avg_over_time(container_memory_rss{name!="", namespace="openshift-cnv", container!="POD"}[{{.elapsed}}:])) by (container)
+  metricName: avg-infra-pod-memory-usage
+  instant: true
+
+- query: max(max_over_time(container_memory_rss{name!="", namespace="openshift-cnv", container!="POD"}[{{.elapsed}}:])) by (container)
+  metricName: max-infra-pod-memory-usage
+  instant: true
+
+- query: avg(avg_over_time(kubevirt_memory_delta_from_requested_bytes[{{.elapsed}}:])) by (container)
+  metricName: avg-infra-container-request-usage-delta
+  instant: true
+
+- query: max(max_over_time(kubevirt_memory_delta_from_requested_bytes[{{.elapsed}}:])) by (container)
+  metricName: max-infra-container-request-usage-delta
+  instant: true
+
+- query: avg_over_time(label_replace(sum(container_memory_rss{pod=~"virt-launcher.*"}) by (pod), "vmi", "$1", "pod", "virt-launcher-(.*)-[^-]+$")[{{.elapsed}}:]) 
+  metricName: avg-mem-usage-by-vmi
+  instant: true
+
+- query: avg_over_time(label_replace(sum(rate(container_cpu_usage_seconds_total{pod=~"virt-launcher.*"}[2m])) by (pod),"vmi", "$1", "pod", "virt-launcher-(.*)-[^-]+$")[{{.elapsed}}:])
+  metricName: avg-cpu-usage-by-vmi
+  instant: true
+
+## storage related metrics
+- query: avg(avg_over_time(rate(kubevirt_vmi_storage_iops_read_total[60s])[{{.elapsed}}:])) by (name) 
+  metricName: avg-vmi-read-iops
+  instant: true
+
+- query: avg(avg_over_time(rate(kubevirt_vmi_storage_iops_write_total[60s])[{{.elapsed}}:])) by (name)
+  metricName: avg-vmi-write-iops
+  instant: true
+
+- query: avg(avg_over_time(rate(kubevirt_vmi_storage_read_traffic_bytes_total[60s])[{{.elapsed}}:])) by (name)
+  metricName: avg-vmi-storage-read-traffic
+  instant: true
+
+- query: avg(avg_over_time((rate(kubevirt_vmi_storage_write_traffic_bytes_total[60s])[{{.elapsed}}:]))) by (name) 
+  metricName: avg-vmi-storage-write-traffic
+  instant: true
+
+## network related metrics
+- query: avg(avg_over_time(rate(kubevirt_vmi_network_receive_bytes_total[60s])[{{.elapsed}}:])) by (name)
+  metricName: avg-vmi-traffic-received
+  instant: true
+
+- query: avg(avg_over_time(rate(kubevirt_vmi_network_transmit_bytes_total[60s])[{{.elapsed}}:])) by (name) 
+  metricName: avg-vmi-traffic-transmitted
+  instant: true
+
+## Virt API reated metrics
+- query: avg_over_time(sum(rate(apiserver_request_total{group=~".*kubevirt.*", verb=~"LIST|GET"}[1m]))[{{.elapsed}}:]) 
+  metricName: avg-virt-api-read-request-rate
+  instant: true
+
+- query: avg_over_time(sum(rate(apiserver_request_total{group=~".*kubevirt.*", verb=~"POST|PUT|PATCH|DELETE"}[1m]))[{{.elapsed}}:]) 
+  metricName: avg-virt-api-write-request-rate
+  instant: true
+
+- query: avg_over_time(sum(rate(apiserver_request_total{group=~".*kubevirt.*", code!~"2.."}[1m]))[{{.elapsed}}:]) 
+  metricName: avg-virt-api-error-rate
+  instant: true
+
+## vmi migration reated metrics
+- query: sum(kubevirt_vmi_migration_succeeded)
+  metricName: migration-succeeded
+
+- query: sum(kubevirt_vmi_migrations_in_scheduling_phase)
+  metricName: migration-in-scheduling-phase
+
+- query: sum(kubevirt_vmi_migrations_in_running_phase)
+  metricName: migration-in-running-phase
+
+- query: sum(kubevirt_vmi_migrations_in_pending_phase)
+  metricName: migration-in-pending-phase
