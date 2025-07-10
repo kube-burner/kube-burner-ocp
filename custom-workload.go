@@ -55,21 +55,20 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				jobIterations = (totalPods - podCount) / 2
 			}
 
-			additionalVars := map[string]any{
-				"CHURN":                    churn,
-				"CHURN_CYCLES":             churnCycles,
-				"CHURN_DURATION":           churnDuration,
-				"CHURN_DELAY":              churnDelay,
-				"CHURN_PERCENT":            churnPercent,
-				"CHURN_DELETION_STRATEGY":  churnDeletionStrategy,
-				"INGRESS_DOMAIN":           ingressDomain,
-				"ITERATIONS_PER_NAMESPACE": iterationsPerNamespace,
-				"JOB_ITERATIONS":           jobIterations,
-				"NAMESPACED_ITERATIONS":    namespacedIterations,
-				"POD_READY_THRESHOLD":      podReadyThreshold,
-				"SVC_LATENCY":              svcLatency,
-			}
-			rc = wh.RunWithAdditionalVars(configFile, additionalVars, nil)
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
+			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
+			AdditionalVars["JOB_ITERATIONS"] = jobIterations
+			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["SVC_LATENCY"] = svcLatency
+
+			rc = wh.RunWithAdditionalVars(configFile, AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

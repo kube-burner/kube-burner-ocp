@@ -3,7 +3,7 @@ global:
   gc: true
   gcMetrics: false
   measurements:
-{{ if eq .NETPOL_LATENCY "true" }}  
+{{ if .NETPOL_LATENCY }}
     - name: netpolLatency
       thresholds:
         - conditionType: Ready
@@ -20,7 +20,7 @@ metricsEndpoints:
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
-{{ if eq .LOCAL_INDEXING "true" }}
+{{ if .LOCAL_INDEXING }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
     indexer:
@@ -88,7 +88,7 @@ jobs:
           peer_namespaces: {{.REMOTE_NAMESPACES}}
           peer_pods: {{.REMOTE_PODS}}
           cidr_rules: {{.CIDRS}}
-{{ if eq .NETPOL_LATENCY "false" }}
+{{ if not .NETPOL_LATENCY }}
       - objectTemplate: egress-np.yml
         replicas: {{.NETPOLS_PER_NAMESPACE}}
         inputVars:

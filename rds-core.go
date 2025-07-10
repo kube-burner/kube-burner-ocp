@@ -42,21 +42,19 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal("Error obtaining default ingress domain: ", err.Error())
 			}
-			additionalVars := map[string]any{
-				"CHURN":                   churn,
-				"CHURN_CYCLES":            churnCycles,
-				"CHURN_DURATION":          churnDuration,
-				"CHURN_DELAY":             churnDelay,
-				"CHURN_PERCENT":           churnPercent,
-				"CHURN_DELETION_STRATEGY": churnDeletionStrategy,
-				"DPDK_CORES":              dpdkCores,
-				"JOB_ITERATIONS":          iterations,
-				"PERF_PROFILE":            perfProfile,
-				"POD_READY_THRESHOLD":     podReadyThreshold,
-				"SVC_LATENCY":             svcLatency,
-				"INGRESS_DOMAIN":          ingressDomain,
-			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["DPDK_CORES"] = dpdkCores
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["PERF_PROFILE"] = perfProfile
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["SVC_LATENCY"] = svcLatency
+			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

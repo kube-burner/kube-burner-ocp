@@ -64,19 +64,17 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			log.Infof("DataVolume size set to [%v]", dataVolumeSize)
 			log.Infof("Clone DataVolumes will be created in [%v] iterations of [%v] each", iterations, clonesPerIteration)
 
-			additionalVars := map[string]any{
-				"storageClassName":        storageClassName,
-				"volumeSnapshotClassName": volumeSnapshotClassName,
-				"testNamespace":           testNamespace,
-				"containerDiskUrl":        containerDiskUrl,
-				"dataVolumeSize":          dataVolumeSize,
-				"accessMode":              accessModeTranslator[volumeAccessMode],
-				"iterations":              iterations,
-				"clonesPerIteration":      clonesPerIteration,
-			}
+			AdditionalVars["storageClassName"] = storageClassName
+			AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
+			AdditionalVars["testNamespace"] = testNamespace
+			AdditionalVars["containerDiskUrl"] = containerDiskUrl
+			AdditionalVars["dataVolumeSize"] = dataVolumeSize
+			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
+			AdditionalVars["iterations"] = iterations
+			AdditionalVars["clonesPerIteration"] = clonesPerIteration
 
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

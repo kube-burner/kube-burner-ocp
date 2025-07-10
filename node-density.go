@@ -17,7 +17,6 @@ package ocp
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -44,28 +43,27 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			additionalVars := map[string]any{
-				"CHURN":                    churn,
-				"CHURN_CYCLES":             churnCycles,
-				"CHURN_DURATION":           churnDuration,
-				"CHURN_DELAY":              churnDelay,
-				"CHURN_PERCENT":            churnPercent,
-				"CHURN_DELETION_STRATEGY":  churnDeletionStrategy,
-				"PROBES_PERIOD":            probesPeriod.Seconds(),
-				"CONTAINER_IMAGE":          containerImage,
-				"SVC_LATENCY":              strconv.FormatBool(svcLatency),
-				"NAMESPACED_ITERATIONS":    namespacedIterations,
-				"ITERATIONS_PER_NAMESPACE": iterationsPerNamespace,
-				"PPROF":                    pprof,
-				"POD_READY_THRESHOLD":      podReadyThreshold,
-			}
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
+			AdditionalVars["CONTAINER_IMAGE"] = containerImage
+			AdditionalVars["SVC_LATENCY"] = svcLatency
+			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
+			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+
 			if variant == "node-density" {
-				additionalVars["JOB_ITERATIONS"] = totalPods - podCount
+				AdditionalVars["JOB_ITERATIONS"] = totalPods - podCount
 			} else {
-				additionalVars["JOB_ITERATIONS"] = (totalPods - podCount) / 2
+				AdditionalVars["JOB_ITERATIONS"] = (totalPods - podCount) / 2
 			}
 			setMetrics(cmd, metricsProfiles)
-			wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

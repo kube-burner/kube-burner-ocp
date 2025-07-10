@@ -7,7 +7,7 @@ global:
     # - name: pprof
     - name: nodeLatency
 
-{{ if eq .PPROF "true" }}
+{{ if .PPROF }}
     - name: pprof
       pprofInterval: 2m
       pprofDirectory: pprof-data
@@ -32,7 +32,7 @@ metricsEndpoints:
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
-{{ if eq .LOCAL_INDEXING "true" }}
+{{ if .LOCAL_INDEXING }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
     indexer:

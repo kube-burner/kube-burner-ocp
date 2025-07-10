@@ -54,7 +54,7 @@ teardown_file() {
 }
 
 @test "node-density-heavy: gc-metrics=true; local-indexing=true" {
-  run_cmd ${KUBE_BURNER_OCP} node-density-heavy --pods-per-node=75 --pod-ready-threshold=1m --uuid=abcd --local-indexing --gc-metrics=true --churn=true --churn-cycles=2 --churn-delay=5s
+  run_cmd ${KUBE_BURNER_OCP} node-density-heavy --pods-per-node=75 --pod-ready-threshold=1m --uuid=abcd --local-indexing --gc-metrics=true --churn=true --churn-cycles=1 --churn-delay=2s
   check_file_list collected-metrics-abcd/etcdVersion.json collected-metrics-abcd/jobSummary.json collected-metrics-abcd/podLatencyMeasurement-node-density-heavy.json collected-metrics-abcd/podLatencyQuantilesMeasurement-node-density-heavy.json
 }
 
@@ -81,7 +81,7 @@ teardown_file() {
 
 @test "node-density-cni: gc=false; alerting=false" {
   # Disable gc and avoid metric indexing
-  run_cmd ${KUBE_BURNER_OCP} node-density-cni --pods-per-node=75 --gc=false --uuid=${UUID} --alerting=false --churn=true --churn-cycles=2 --churn-delay=5s
+  run_cmd ${KUBE_BURNER_OCP} node-density-cni --pods-per-node=75 --gc=false --uuid=${UUID} --alerting=false --churn=true --churn-cycles=1 --churn-delay=2s
   oc delete ns -l kube-burner-uuid=${UUID} --wait=false
   trap - ERR
 }

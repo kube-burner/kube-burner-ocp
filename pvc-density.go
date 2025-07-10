@@ -59,14 +59,13 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal(fmt.Errorf("%s does not match one of %s", provisioner, storageProvisioners))
 			}
 
-			additionalVars := map[string]any{
-				"JOB_ITERATIONS":      iterations,
-				"CONTAINER_IMAGE":     containerImage,
-				"CLAIM_SIZE":          claimSize,
-				"STORAGE_PROVISIONER": dynamicStorageProvisioners[provisioner],
-			}
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["CONTAINER_IMAGE"] = containerImage
+			AdditionalVars["CLAIM_SIZE"] = claimSize
+			AdditionalVars["STORAGE_PROVISIONER"] = dynamicStorageProvisioners[provisioner]
+
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

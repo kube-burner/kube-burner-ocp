@@ -45,20 +45,18 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 			setMetrics(cmd, metricsProfiles)
 
-			additionalVars := map[string]any{
-				"JOB_PAUSE":               jobPause,
-				"CHURN":                   churn,
-				"CHURN_CYCLES":            churnCycles,
-				"CHURN_DURATION":          churnDuration,
-				"CHURN_DELAY":             churnDelay,
-				"CHURN_PERCENT":           churnPercent,
-				"CHURN_DELETION_STRATEGY": churnDeletionStrategy,
-				"JOB_ITERATIONS":          iterations,
-				"VMI_RUNNING_THRESHOLD":   vmiRunningThreshold,
-				"VM_IMAGE":                vmImage,
-				"UDN_BINDING_METHOD":      bindingMethod,
-				"ENABLE_LAYER_3":          l3,
-			}
+			AdditionalVars["JOB_PAUSE"] = jobPause
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
+			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["UDN_BINDING_METHOD"] = bindingMethod
+			AdditionalVars["ENABLE_LAYER_3"] = l3
 
 			if l3 {
 				log.Info("Layer 3 is enabled")
@@ -67,7 +65,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Info("Layer 2 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer2", bindingMethod)
 			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

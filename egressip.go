@@ -37,8 +37,7 @@ func getEgressIPCidrNodeIPs() ([]string, string) {
 	clientSet, _ := kubeClientProvider.ClientSet(0, 0)
 	workers, err := clientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		log.Errorf("Error retrieving workers: %v", err)
-		os.Exit(1)
+		log.Fatalf("Error retrieving workers: %v", err)
 	}
 
 	nodeIPs := []string{}
@@ -81,8 +80,7 @@ func getFirstUsableAddr(cidr string) uint32 {
 	// Parse the IP address and subnet mask
 	ip, ipNet, err := net.ParseCIDR(cidr)
 	if err != nil {
-		fmt.Println("Error parsing CIDR notation:", err)
-		os.Exit(1)
+		log.Fatal("Error parsing CIDR notation:", err)
 	}
 
 	// Get the network address by performing a bitwise AND
@@ -121,7 +119,7 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 	for _, nodeip := range nodeIPs {
 		nodeipuint32, err := ipconv.IPv4ToInt(net.ParseIP(nodeip))
 		if err != nil {
-			log.Fatal("Error: ", err)
+			log.Fatal(err.Error())
 		}
 		nodeMap[nodeipuint32] = true
 	}
@@ -157,14 +155,12 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
 			eipAddresses := strings.Join(generateEgressIPs(iterations, addressesPerIteration, externalServerIP), " ")
-			additionalVars := map[string]any{
-				"JOB_ITERATIONS":          iterations,
-				"POD_READY_THRESHOLD":     podReadyThreshold,
-				"ADDRESSES_PER_ITERATION": addressesPerIteration,
-				"EXTERNAL_SERVER_IP":      externalServerIP,
-				"EIP_ADDRESSES":           eipAddresses,
-			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["ADDRESSES_PER_ITERATION"] = addressesPerIteration
+			AdditionalVars["EXTERNAL_SERVER_IP"] = externalServerIP
+			AdditionalVars["EIP_ADDRESSES"] = eipAddresses
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

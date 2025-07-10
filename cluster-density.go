@@ -50,20 +50,19 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			if err != nil {
 				log.Fatal("Error obtaining default ingress domain: ", err.Error())
 			}
-			additionalVars := map[string]any{
-				"JOB_ITERATIONS":          iterations,
-				"PPROF":                   pprof,
-				"CHURN":                   churn,
-				"CHURN_CYCLES":            churnCycles,
-				"CHURN_DURATION":          churnDuration,
-				"CHURN_DELAY":             churnDelay,
-				"CHURN_PERCENT":           churnPercent,
-				"CHURN_DELETION_STRATEGY": churnDeletionStrategy,
-				"POD_READY_THRESHOLD":     podReadyThreshold,
-				"SVC_LATENCY":             svcLatency,
-				"INGRESS_DOMAIN":          ingressDomain,
-			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["SVC_LATENCY"] = svcLatency
+			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
+
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

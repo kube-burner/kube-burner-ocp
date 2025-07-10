@@ -32,10 +32,9 @@ func NewCrdScale(wh *workloads.WorkloadHelper) *cobra.Command {
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			additionalVars := map[string]any{
-				"JOB_ITERATIONS": iterations,
-			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

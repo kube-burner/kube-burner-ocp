@@ -36,18 +36,17 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			additionalVars := map[string]any{
-				"BFD":                 bfd,
-				"BRIDGE":              bridge,
-				"CRD":                 crd,
-				"ICNI":                icni,
-				"LIMITCOUNT":          limitcount,
-				"POD_READY_THRESHOLD": podReadyThreshold,
-				"PROBE":               probe,
-				"SCALE":               scale,
-				"SRIOV":               sriov,
-			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			AdditionalVars["BFD"] = bfd
+			AdditionalVars["BRIDGE"] = bridge
+			AdditionalVars["CRD"] = crd
+			AdditionalVars["ICNI"] = icni
+			AdditionalVars["LIMITCOUNT"] = limitcount
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["PROBE"] = probe
+			AdditionalVars["SCALE"] = scale
+			AdditionalVars["SRIOV"] = sriov
+
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

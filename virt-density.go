@@ -35,23 +35,18 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		Use:          "virt-density",
 		Short:        "Runs virt-density workload",
 		SilenceUsage: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			totalVMs := clusterMetadata.WorkerNodesCount * vmsPerNode
 			vmCount, err := wh.MetadataAgent.GetCurrentVMICount()
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			additionalVars := map[string]any{
-				"JOB_ITERATIONS":        totalVMs - vmCount,
-				"VMI_RUNNING_THRESHOLD": vmiRunningThreshold,
-				"VM_IMAGE":              vmImage,
-			}
-			wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
-		},
-		Run: func(cmd *cobra.Command, args []string) {
+			AdditionalVars["JOB_ITERATIONS"] = totalVMs - vmCount
+			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
+			AdditionalVars["VM_IMAGE"] = vmImage
 			setMetrics(cmd, metricsProfiles)
 			AddVirtMetadata(wh, vmImage, "", "")
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", nil, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

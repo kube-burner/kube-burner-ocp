@@ -44,20 +44,19 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 				log.Fatal(err.Error())
 			}
 			setMetrics(cmd, metricsProfiles)
-			additionalVars := map[string]any{
-				"JOB_ITERATIONS":           iterations,
-				"CATALOG_IMAGE":            catalogImage,
-				"PPROF":                    pprof,
-				"NAMESPACED_ITERATIONS":    namespacedIterations,
-				"ITERATIONS_PER_NAMESPACE": iterationsPerNamespace,
-				"CHURN":                    churn,
-				"CHURN_CYCLES":             churnCycles,
-				"CHURN_DURATION":           churnDuration,
-				"CHURN_DELAY":              churnDelay,
-				"CHURN_PERCENT":            churnPercent,
-				"CHURN_DELETION_STRATEGY":  churnDeletionStrategy,
-			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["CATALOG_IMAGE"] = catalogImage
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
+			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

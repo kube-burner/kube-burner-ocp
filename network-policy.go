@@ -35,21 +35,20 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			additionalVars := map[string]any{
-				"JOB_ITERATIONS":         iterations,
-				"PODS_PER_NAMESPACE":     podsPerNamespace,
-				"NETPOLS_PER_NAMESPACE":  netpolPerNamespace,
-				"LOCAL_PODS":             localPods,
-				"POD_SELECTORS":          podSelectors,
-				"SINGLE_PORTS":           singlePorts,
-				"PORT_RANGES":            portRanges,
-				"REMOTE_NAMESPACES":      remoteNamespaces,
-				"REMOTE_PODS":            remotePods,
-				"CIDRS":                  cidrs,
-				"NETPOL_LATENCY":         netpolLatency,
-				"NETPOL_READY_THRESHOLD": netpolReadyThreshold,
-			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["PODS_PER_NAMESPACE"] = podsPerNamespace
+			AdditionalVars["NETPOLS_PER_NAMESPACE"] = netpolPerNamespace
+			AdditionalVars["LOCAL_PODS"] = localPods
+			AdditionalVars["POD_SELECTORS"] = podSelectors
+			AdditionalVars["SINGLE_PORTS"] = singlePorts
+			AdditionalVars["PORT_RANGES"] = portRanges
+			AdditionalVars["REMOTE_NAMESPACES"] = remoteNamespaces
+			AdditionalVars["REMOTE_PODS"] = remotePods
+			AdditionalVars["CIDRS"] = cidrs
+			AdditionalVars["NETPOL_LATENCY"] = netpolLatency
+			AdditionalVars["NETPOL_READY_THRESHOLD"] = netpolReadyThreshold
+
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

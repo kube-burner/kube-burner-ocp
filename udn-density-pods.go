@@ -48,21 +48,19 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Info("Churn is enabled, there will not be a pause after UDN creation")
 			}
 
-			additionalVars := map[string]any{
-				"PPROF":                   pprof,
-				"SIMPLE":                  simple,
-				"CHURN":                   churn,
-				"CHURN_CYCLES":            churnCycles,
-				"CHURN_DURATION":          churnDuration,
-				"CHURN_DELAY":             churnDelay,
-				"CHURN_PERCENT":           churnPercent,
-				"CHURN_DELETION_STRATEGY": churnDeletionStrategy,
-				"JOB_ITERATIONS":          iterations,
-				"POD_READY_THRESHOLD":     podReadyThreshold,
-				"ENABLE_LAYER_3":          l3,
-			}
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["SIMPLE"] = simple
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["ENABLE_LAYER_3"] = l3
 
-			rc = wh.RunWithAdditionalVars("udn-density-pods.yml", additionalVars, nil)
+			rc = wh.RunWithAdditionalVars("udn-density-pods.yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
