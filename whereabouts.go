@@ -35,18 +35,15 @@ func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 		Use:          "whereabouts",
 		Short:        "Runs whereabouts workload",
 		SilenceUsage: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			additionalVars := map[string]any{
 				"JOB_ITERATIONS":      iterations,
 				"POD_READY_THRESHOLD": podReadyThreshold,
 				"CONTAINER_IMAGE":     containerImage,
 				"FAST":                fast,
 			}
-			wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
-		},
-		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", nil, nil)
+			wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
