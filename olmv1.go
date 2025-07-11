@@ -37,19 +37,6 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("CATALOG_IMAGE", fmt.Sprint(catalogImage))
-			os.Setenv("PPROF", fmt.Sprint(pprof))
-			os.Setenv("NAMESPACED_ITERATIONS", fmt.Sprint(namespacedIterations))
-			os.Setenv("ITERATIONS_PER_NAMESPACE", fmt.Sprint(iterationsPerNamespace))
-			os.Setenv("CHURN", fmt.Sprint(churn))
-			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
-			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
-			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
-			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
-			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			kubeClientProvider := config.NewKubeClientProvider("", "")
 			clientSet, _ := kubeClientProvider.ClientSet(0, 0)
@@ -57,7 +44,19 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 				log.Fatal(err.Error())
 			}
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["CATALOG_IMAGE"] = catalogImage
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
+			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
