@@ -14,10 +14,10 @@
 
 # Containers & pod metrics
 
-- query: (sum(irate(container_cpu_usage_seconds_total{name!="",container!~"POD|",namespace=~"openshift-(etcd|.*apiserver|monitoring|user-workload-monitoring|ovn-kubernetes|network-node-identity|multus|sdn|ingress|.*controller-manager|.*scheduler)|cilium|stackrox|calico.*|tigera.*"}[2m]) * 100) by (container, pod, namespace, node)) > 0
+- query: (sum(irate(container_cpu_usage_seconds_total{name!="",container!~"POD|",namespace=~"openshift-.*|cilium|stackrox|calico.*|tigera.*"}[2m]) * 100) by (container, pod, namespace, node)) > 0
   metricName: containerCPU
 
-- query: sum(container_memory_rss{name!="",container!~"POD|",namespace=~"openshift-(etcd|.*apiserver|user-workload-monitoring|monitoring|ovn-kubernetes|network-node-identity|multus|sdn|ingress|.*controller-manager|.*scheduler)|cilium|stackrox|calico.*|tigera.*"}) by (container, pod, namespace, node)
+- query: sum(container_memory_rss{name!="",container!~"POD|",namespace=~"openshift-.*|cilium|stackrox|calico.*|tigera.*"}) by (container, pod, namespace, node)
   metricName: containerMemory
 
 # Kubelet & CRI-O runtime metrics
@@ -187,3 +187,11 @@
 
 - query: rate ( node_vmstat_pgmajfault[1m] )
   metricName: nodeMajorFaults
+
+# cgroup CPU instantaneous per-second rate of increase over the last 2 minutes
+- query: sum (  irate( container_cpu_usage_seconds_total { id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }[2m])  )  by   (   id , instance )
+  metricName: cgroupCPU
+
+# RSS Memory 
+- query: sum( container_memory_rss { id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice"}) by (id, instance)
+  metricName: cgroupMemoryRSS

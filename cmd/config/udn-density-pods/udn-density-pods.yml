@@ -8,7 +8,7 @@ global:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
-{{ if eq .PPROF "true" }}
+{{ if .PPROF }}
     - name: pprof
       pprofInterval: 2m
       pprofDirectory: pprof-data
@@ -36,7 +36,7 @@ metricsEndpoints:
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
-{{ if eq .LOCAL_INDEXING "true" }}
+{{ if .LOCAL_INDEXING }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
     indexer:
@@ -45,8 +45,8 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
-  {{ if eq .CHURN "false" }}
-  {{ if eq .ENABLE_LAYER_3 "true" }}
+  {{ if not .CHURN }}
+  {{ if .ENABLE_LAYER_3 }}
   - name: create-udn-l3
   {{ else }}
   - name: create-udn-l2
@@ -69,7 +69,7 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
-      {{ if eq .ENABLE_LAYER_3 "true"}}
+      {{ if .ENABLE_LAYER_3 }}
       - objectTemplate: udn_l3.yml
         replicas: 1
       {{ else }}
@@ -79,7 +79,7 @@ jobs:
   {{ end }}
 
 
-  {{ if eq .ENABLE_LAYER_3 "true"}}
+  {{ if .ENABLE_LAYER_3 }}
   - name: udn-density-l3-pods
   {{ else }}
   - name: udn-density-l2-pods
@@ -109,8 +109,8 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
-      {{ if eq .CHURN "true"}}
-      {{ if eq .ENABLE_LAYER_3 "true"}}
+      {{ if .CHURN }}
+      {{ if .ENABLE_LAYER_3 }}
       - objectTemplate: udn_l3.yml
         replicas: 1
       {{ else }}
@@ -119,7 +119,7 @@ jobs:
       {{ end }}
       {{ end }}
 
-      {{ if ne .SIMPLE "true"}}
+      {{ if not .SIMPLE}}
       - objectTemplate: np-deny-all.yml
         replicas: 1
 
