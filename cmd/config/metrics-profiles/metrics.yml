@@ -187,3 +187,13 @@
 
 - query: rate ( node_vmstat_pgmajfault[1m] )
   metricName: nodeMajorFaults
+
+# OVS 2m CPU usage average
+- query: sum (  irate( container_cpu_usage_seconds_total {  id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }[2m])  )  by   (   id , instance )
+  metricName: cgroupOVSCPUUsagePercent
+
+# OVS Memory usage average
+- query: sum(container_memory_rss{id=~"/system.slice/ovs-vswitchd.service"}) by (id)
+  metricName: ovsMemory
+  instant: true
+  captureStart: true
