@@ -15,9 +15,7 @@
 package ocp
 
 import (
-	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -38,27 +36,25 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 		Use:          "rds-core",
 		Short:        "Runs rds-core workload",
 		SilenceUsage: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("CHURN", fmt.Sprint(churn))
-			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
-			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
-			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
-			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
-			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
-			os.Setenv("DPDK_CORES", fmt.Sprint(dpdkCores))
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("PERF_PROFILE", perfProfile)
-			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-			os.Setenv("SVC_LATENCY", strconv.FormatBool(svcLatency))
+		Run: func(cmd *cobra.Command, args []string) {
+			setMetrics(cmd, metricsProfiles)
 			ingressDomain, err := wh.MetadataAgent.GetDefaultIngressDomain()
 			if err != nil {
 				log.Fatal("Error obtaining default ingress domain: ", err.Error())
 			}
-			os.Setenv("INGRESS_DOMAIN", ingressDomain)
-		},
-		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["DPDK_CORES"] = dpdkCores
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["PERF_PROFILE"] = perfProfile
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["SVC_LATENCY"] = svcLatency
+			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

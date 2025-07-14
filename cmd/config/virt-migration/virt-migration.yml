@@ -127,8 +127,8 @@ jobs:
 
 - name: migrate-vms
   jobType: kubevirt
-  qps: 20
-  burst: 20
+  qps: {{ .migrationQPS }}
+  burst: {{ .migrationQPS }}
   jobIterations: 1
   maxWaitTimeout: 1h
   waitWhenFinished: true

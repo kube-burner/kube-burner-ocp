@@ -18,7 +18,7 @@ metricsEndpoints:
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
-{{ if eq .LOCAL_INDEXING "true" }}
+{{ if .LOCAL_INDEXING }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
     indexer:
@@ -26,7 +26,7 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 jobs:
-  {{ if eq .ENABLE_LAYER_3 "true" }}
+  {{ if .ENABLE_LAYER_3 }}
   - name: create-udn-l3
   {{ else }}
   - name: create-udn-l2
@@ -54,7 +54,7 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
-      {{ if eq .ENABLE_LAYER_3 "true"}}
+      {{ if .ENABLE_LAYER_3 }}
       - objectTemplate: udn_l3.yml
         replicas: 1
       {{ else }}

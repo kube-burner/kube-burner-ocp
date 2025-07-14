@@ -118,18 +118,17 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Infof("skipResizeJob is set to true")
 			}
 
-			additionalVars := map[string]any{
-				"privateKey":          privateKeyPath,
-				"publicKey":           publicKeyPath,
-				"vmCount":             fmt.Sprint(vmsPerIteration),
-				"testNamespace":       testNamespace,
-				"dataVolumeCounters":  generateLoopCounterSlice(dataVolumeCount, 1),
-				"skipMigrationJob":    skipMigrationJob,
-				"rootVolumeSize":      rootVolumeSize,
-				"dataVolumeSize":      dataVolumeSize,
-				"volumeSizeIncrement": volumeSizeIncrement,
-				"skipResizeJob":       skipResizeJob,
-			}
+			AdditionalVars["privateKey"] = privateKeyPath
+			AdditionalVars["publicKey"] = publicKeyPath
+			AdditionalVars["vmCount"] = fmt.Sprint(vmsPerIteration)
+			AdditionalVars["testNamespace"] = testNamespace
+			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
+			AdditionalVars["skipMigrationJob"] = skipMigrationJob
+			AdditionalVars["rootVolumeSize"] = rootVolumeSize
+			AdditionalVars["dataVolumeSize"] = dataVolumeSize
+			AdditionalVars["volumeSizeIncrement"] = volumeSizeIncrement
+			AdditionalVars["skipResizeJob"] = skipResizeJob
+
 			setMetrics(cmd, metricsProfiles)
 
 			log.Infof("Running tests in Namespace [%s]", testNamespace)
@@ -137,10 +136,10 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			for {
 				storageClassName := storageClasses[counter%len(storageClasses)]
 				log.Infof("Running loop %d with Storage Class [%s]", counter, storageClassName)
-				additionalVars["storageClassName"] = storageClassName
+				AdditionalVars["storageClassName"] = storageClassName
 
 				os.Setenv("counter", fmt.Sprint(counter))
-				rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+				rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 				if rc != 0 {
 					log.Infof("Capacity failed in loop #%d", counter)
 					break
