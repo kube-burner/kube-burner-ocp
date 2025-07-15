@@ -11,14 +11,14 @@ global:
       pprofInterval: 2m
       pprofDirectory: pprof-data
       pprofTargets:
-        - name: catalogd
-          namespace: "openshift-catalogd"
-          labelSelector: {control-plane: catalogd-controller-manager}
-          url: http://localhost:8083/debug/pprof/profile?seconds=30
-        - name: operator-controller
-          namespace: "openshift-operator-controller"
-          labelSelector: {control-plane: operator-controller-controller-manager}
-          url: http://localhost:8082/debug/pprof/profile?seconds=30
+      - name: catalogd
+        namespace: "openshift-catalogd"
+        labelSelector: {control-plane: catalogd-controller-manager}
+        url: http://localhost:8083/debug/pprof/profile?seconds=30
+      - name: operator-controller
+        namespace: "openshift-operator-controller"
+        labelSelector: {control-plane: operator-controller-controller-manager}
+        url: http://localhost:8082/debug/pprof/profile?seconds=30
 {{ end }}
 
 metricsEndpoints:
