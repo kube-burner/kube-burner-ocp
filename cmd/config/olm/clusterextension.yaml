@@ -1,0 +1,12 @@
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: {{ .NAME_PREFIX }}-{{ .Iteration }}
+spec:
+  description: "Benchmark extension for testing"
+  displayName: "BenchmarkExtension{{ .Iteration }}"
+  installMode: AllNamespaces
+  priority: -100
+  catalog: benchmark-cc{{ .Iteration }}
+  package: test-package
+  channel: stable
