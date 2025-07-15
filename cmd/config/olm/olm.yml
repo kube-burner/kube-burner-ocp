@@ -4,6 +4,7 @@ global:
   gcMetrics: {{.GC_METRICS}}
   measurements:
     - name: podLatency
+    # - name: pprof
     - name: nodeLatency
 
 {{ if .PPROF }}
@@ -11,6 +12,7 @@ global:
       pprofInterval: 2m
       pprofDirectory: pprof-data
       pprofTargets:
+      # the --pprof-bind-address was disabled as default, you can enable it by following https://github.com/openshift/operator-framework-operator-controller/blob/main/docs/draft/howto/profiling_with_pprof.md
       - name: catalogd
         namespace: "openshift-catalogd"
         labelSelector: {control-plane: catalogd-controller-manager}
