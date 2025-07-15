@@ -18,7 +18,7 @@ metricsEndpoints:
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
-{{ if eq .LOCAL_INDEXING "true" }}
+{{ if .LOCAL_INDEXING }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
     indexer:
@@ -40,11 +40,11 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
-{{ if eq .FAST "true" }}
+{{ if .FAST }}
         - objectTemplate: ipam-fast.yml
           replicas: 1
 {{ end }}
-{{ if eq .FAST "false" }}
+{{ if not .FAST }}
         - objectTemplate: ipam.yml
           replicas: 1
 {{ end }}

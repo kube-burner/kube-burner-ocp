@@ -34,20 +34,19 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("BFD", fmt.Sprint(bfd))
-			os.Setenv("BRIDGE", fmt.Sprint(bridge))
-			os.Setenv("CRD", fmt.Sprintf("%v", crd))
-			os.Setenv("ICNI", fmt.Sprint(icni))
-			os.Setenv("LIMITCOUNT", fmt.Sprint(limitcount))
-			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-			os.Setenv("PROBE", fmt.Sprint(probe))
-			os.Setenv("SCALE", fmt.Sprint(scale))
-			os.Setenv("SRIOV", fmt.Sprint(sriov))
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			AdditionalVars["BFD"] = bfd
+			AdditionalVars["BRIDGE"] = bridge
+			AdditionalVars["CRD"] = crd
+			AdditionalVars["ICNI"] = icni
+			AdditionalVars["LIMITCOUNT"] = limitcount
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["PROBE"] = probe
+			AdditionalVars["SCALE"] = scale
+			AdditionalVars["SRIOV"] = sriov
+
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

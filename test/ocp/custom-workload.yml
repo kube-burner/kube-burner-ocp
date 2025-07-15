@@ -16,7 +16,7 @@ metricsEndpoints:
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
-{{ if eq .LOCAL_INDEXING "true" }}
+{{ if .LOCAL_INDEXING }}
   - indexer:
       type: local
       metricsDirectory: collected-metrics-{{.UUID}}

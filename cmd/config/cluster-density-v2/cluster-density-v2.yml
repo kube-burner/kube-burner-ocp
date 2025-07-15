@@ -8,7 +8,7 @@ global:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
-{{ if eq .PPROF "true" }}
+{{ if .PPROF }}
     - name: pprof
       pprofInterval: 2m
       pprofDirectory: pprof-data
@@ -26,7 +26,7 @@ global:
         labelSelector: {app: ovnkube-control-plane}
         url: http://localhost:29108/debug/pprof/profile?seconds=30
 {{ end }}
-{{ if eq .SVC_LATENCY "true" }}
+{{ if .SVC_LATENCY }}
     - name: serviceLatency
       svcTimeout: 10s
 {{ end }}
@@ -40,7 +40,7 @@ metricsEndpoints:
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
-{{ if eq .LOCAL_INDEXING "true" }}
+{{ if .LOCAL_INDEXING }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
     indexer:

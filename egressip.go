@@ -37,8 +37,7 @@ func getEgressIPCidrNodeIPs() ([]string, string) {
 	clientSet, _ := kubeClientProvider.ClientSet(0, 0)
 	workers, err := clientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		log.Errorf("Error retrieving workers: %v", err)
-		os.Exit(1)
+		log.Fatalf("Error retrieving workers: %v", err)
 	}
 
 	nodeIPs := []string{}
@@ -81,8 +80,7 @@ func getFirstUsableAddr(cidr string) uint32 {
 	// Parse the IP address and subnet mask
 	ip, ipNet, err := net.ParseCIDR(cidr)
 	if err != nil {
-		fmt.Println("Error parsing CIDR notation:", err)
-		os.Exit(1)
+		log.Fatal("Error parsing CIDR notation:", err)
 	}
 
 	// Get the network address by performing a bitwise AND
@@ -107,7 +105,7 @@ func getFirstUsableAddr(cidr string) uint32 {
 }
 
 // egress IPs and node IPs will be in same cidr. So we need to exclude node IPs from CIDR to generate list of available egress IPs.
-func generateEgressIPs(numJobIterations int, addressesPerIteration int, externalServerIP string) {
+func generateEgressIPs(numJobIterations int, addressesPerIteration int, externalServerIP string) []string {
 
 	nodeIPs, egressIPCidr := getEgressIPCidrNodeIPs()
 	// Add external server ip to nodeIPs to get excluded while creating egress ip list
@@ -121,7 +119,7 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 	for _, nodeip := range nodeIPs {
 		nodeipuint32, err := ipconv.IPv4ToInt(net.ParseIP(nodeip))
 		if err != nil {
-			log.Fatal("Error: ", err)
+			log.Fatal(err.Error())
 		}
 		nodeMap[nodeipuint32] = true
 	}
@@ -141,7 +139,7 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 	}
 
 	// combine all addresses to a string and export as an environment variable
-	os.Setenv("EIP_ADDRESSES", strings.Join(addrSlice, " "))
+	return addrSlice
 }
 
 // NewClusterDensity holds cluster-density workload
@@ -154,16 +152,15 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-			os.Setenv("ADDRESSES_PER_ITERATION", fmt.Sprint(addressesPerIteration))
-			os.Setenv("EXTERNAL_SERVER_IP", externalServerIP)
-			generateEgressIPs(iterations, addressesPerIteration, externalServerIP)
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			eipAddresses := strings.Join(generateEgressIPs(iterations, addressesPerIteration, externalServerIP), " ")
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["ADDRESSES_PER_ITERATION"] = addressesPerIteration
+			AdditionalVars["EXTERNAL_SERVER_IP"] = externalServerIP
+			AdditionalVars["EIP_ADDRESSES"] = eipAddresses
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

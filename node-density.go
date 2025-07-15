@@ -17,7 +17,6 @@ package ocp
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -38,34 +37,33 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, args []string) {
 			totalPods := clusterMetadata.WorkerNodesCount * podsPerNode
 			podCount, err := wh.MetadataAgent.GetCurrentPodCount()
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			os.Setenv("CHURN", fmt.Sprint(churn))
-			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
-			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
-			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
-			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
-			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
+			AdditionalVars["CONTAINER_IMAGE"] = containerImage
+			AdditionalVars["SVC_LATENCY"] = svcLatency
+			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
+			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+
 			if variant == "node-density" {
-				os.Setenv("JOB_ITERATIONS", fmt.Sprint(totalPods-podCount))
+				AdditionalVars["JOB_ITERATIONS"] = totalPods - podCount
 			} else {
-				os.Setenv("JOB_ITERATIONS", fmt.Sprint((totalPods-podCount)/2))
+				AdditionalVars["JOB_ITERATIONS"] = (totalPods - podCount) / 2
 			}
-			os.Setenv("NAMESPACED_ITERATIONS", fmt.Sprint(namespacedIterations))
-			os.Setenv("ITERATIONS_PER_NAMESPACE", fmt.Sprint(iterationsPerNamespace))
-			os.Setenv("PPROF", fmt.Sprint(pprof))
-			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-			os.Setenv("PROBES_PERIOD", fmt.Sprint(probesPeriod.Seconds()))
-			os.Setenv("CONTAINER_IMAGE", containerImage)
-			os.Setenv("SVC_LATENCY", strconv.FormatBool(svcLatency))
-		},
-		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

@@ -15,7 +15,6 @@
 package ocp
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -37,32 +36,31 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 		Use:          "udn-density-pods",
 		Short:        "Runs node-density-udn workload",
 		SilenceUsage: true,
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("PPROF", fmt.Sprint(pprof))
-			os.Setenv("SIMPLE", fmt.Sprint(simple))
-			os.Setenv("CHURN", fmt.Sprint(churn))
-			os.Setenv("CHURN_CYCLES", fmt.Sprintf("%v", churnCycles))
-			os.Setenv("CHURN_DURATION", fmt.Sprintf("%v", churnDuration))
-			os.Setenv("CHURN_DELAY", fmt.Sprintf("%v", churnDelay))
-			os.Setenv("CHURN_PERCENT", fmt.Sprint(churnPercent))
-			os.Setenv("CHURN_DELETION_STRATEGY", churnDeletionStrategy)
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("POD_READY_THRESHOLD", fmt.Sprintf("%v", podReadyThreshold))
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
 			// Disable l3 when the user chooses l2
 			if l3 {
 				log.Info("Layer 3 is enabled")
-				os.Setenv("ENABLE_LAYER_3", "true")
 			} else {
 				log.Info("Layer 2 is enabled")
-				os.Setenv("ENABLE_LAYER_3", "false")
 			}
 			if churn {
 				log.Info("Churn is enabled, there will not be a pause after UDN creation")
 			}
-			rc = wh.Run("udn-density-pods.yml")
+
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["SIMPLE"] = simple
+			AdditionalVars["CHURN"] = churn
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["ENABLE_LAYER_3"] = l3
+
+			rc = wh.RunWithAdditionalVars("udn-density-pods.yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

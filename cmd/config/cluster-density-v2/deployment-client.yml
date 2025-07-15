@@ -34,7 +34,10 @@ spec:
       containers:
       - name: client-app
         image: quay.io/cloud-bulldozer/curl:latest
-        command: ["sleep", "inf"]
+        command:
+            - "/bin/sh"
+            - "-c"
+            - "while true; do echo curl on ${ROUTE_ENDPOINT}; curl --fail -sSk ${ROUTE_ENDPOINT} -o /dev/null; sleep 120; done"
         resources:
           requests:
             memory: "10Mi"
@@ -47,7 +50,7 @@ spec:
             command:
             - "/bin/sh"
             - "-c"
-            - "curl --fail -sS ${SERVICE_ENDPOINT} -o /dev/null && curl --fail -sSk ${ROUTE_ENDPOINT} -o /dev/null"
+            - "if [ ! -f /tmp/ready.log ]; then curl --fail -sS ${SERVICE_ENDPOINT} -o /dev/null && curl --fail -sSk ${ROUTE_ENDPOINT} -o /dev/null && touch /tmp/ready.log; else curl --fail -sS ${SERVICE_ENDPOINT} -o /dev/null; fi"
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3

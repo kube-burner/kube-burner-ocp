@@ -619,6 +619,15 @@ Set the following arguments to create load `VirtualMachines`:
 
     The total number of load `VirtualMachines` created is `--load-vms-iterations` * `--iteration-load-vms`
 
+#### Limiting migration requests load
+
+By default, the test will be limited to 20 concurrent migrate request calls.
+Users can set a different value by passing `--migration-qps`.
+
+!!! Note
+
+    This parameter limits the concurrent migration requests, not actual concurrent migrations
+
 #### Initial Worker Node
 
 The worker node on which all VMs are scheduled and migrated from can be set by passing the `--worker-node` parameter.
