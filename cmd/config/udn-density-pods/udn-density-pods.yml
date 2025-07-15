@@ -119,7 +119,7 @@ jobs:
       {{ end }}
       {{ end }}
 
-      {{ if ne .SIMPLE "true"}}
+      {{ if not .SIMPLE}}
       - objectTemplate: np-deny-all.yml
         replicas: 1
 
