@@ -10,3 +10,4 @@ spec:
   catalog: benchmark-cc{{ .Iteration }}
   package: test-package
   channel: stable
+
