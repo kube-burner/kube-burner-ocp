@@ -74,22 +74,20 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
 			}
 
-			additionalVars := map[string]any{
-				"privateKey":           privateKeyPath,
-				"publicKey":            publicKeyPath,
-				"storageClassName":     storageClassName,
-				"testNamespace":        testNamespace,
-				"vmCreateIterations":   iterations,
-				"vmCreatePerIteration": vmsPerIteration,
-				"dataVolumeCounters":   generateLoopCounterSlice(dataVolumeCount, 1),
-				"workerNodeName":       workerNodeName,
-				"loadVMsIterations":    loadVMsIterations,
-				"loadVMsPerIteration":  loadVMsPerIteration,
-				"migrationQPS":         migrationQPS,
-			}
+			AdditionalVars["privateKey"] = privateKeyPath
+			AdditionalVars["publicKey"] = publicKeyPath
+			AdditionalVars["storageClassName"] = storageClassName
+			AdditionalVars["testNamespace"] = testNamespace
+			AdditionalVars["vmCreateIterations"] = iterations
+			AdditionalVars["vmCreatePerIteration"] = vmsPerIteration
+			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
+			AdditionalVars["workerNodeName"] = workerNodeName
+			AdditionalVars["loadVMsIterations"] = loadVMsIterations
+			AdditionalVars["loadVMsPerIteration"] = loadVMsPerIteration
+			AdditionalVars["migrationQPS"] = migrationQPS
 
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

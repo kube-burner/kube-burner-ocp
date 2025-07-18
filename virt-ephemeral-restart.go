@@ -64,19 +64,17 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
 			}
 
-			additionalVars := map[string]any{
-				"privateKey":              privateKeyPath,
-				"publicKey":               publicKeyPath,
-				"storageClassName":        storageClassName,
-				"volumeSnapshotClassName": volumeSnapshotClassName,
-				"testNamespace":           testNamespace,
-				"vmsPerIteration":         vmsPerIteration,
-				"accessMode":              accessModeTranslator[volumeAccessMode],
-				"vmGroups":                generateLoopCounterSlice(iterations, 0),
-			}
+			AdditionalVars["privateKey"] = privateKeyPath
+			AdditionalVars["publicKey"] = publicKeyPath
+			AdditionalVars["storageClassName"] = storageClassName
+			AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
+			AdditionalVars["testNamespace"] = testNamespace
+			AdditionalVars["vmsPerIteration"] = vmsPerIteration
+			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
+			AdditionalVars["vmGroups"] = generateLoopCounterSlice(iterations, 0)
 
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", additionalVars, nil)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

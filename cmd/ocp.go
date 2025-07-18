@@ -16,7 +16,6 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -89,26 +88,26 @@ func openShiftCmd() *cobra.Command {
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		workloadDir := filepath.Join(rootDir, cmd.Name())
 		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, workloadDir, metricsProfilesDir, alertsDir, scriptsDir, kubeClientProvider)
-		envVars := map[string]string{
-			"UUID":       workloadConfig.UUID,
-			"QPS":        fmt.Sprintf("%d", QPS),
-			"BURST":      fmt.Sprintf("%d", burst),
-			"GC":         fmt.Sprintf("%v", gc),
-			"GC_METRICS": fmt.Sprintf("%v", gcMetrics),
+
+		// Set common variables that all workloads can use
+		ocp.AdditionalVars = map[string]any{
+			"UUID":           workloadConfig.UUID,
+			"QPS":            QPS,
+			"BURST":          burst,
+			"GC":             gc,
+			"GC_METRICS":     gcMetrics,
+			"LOCAL_INDEXING": localIndexing,
 		}
-		envVars["LOCAL_INDEXING"] = fmt.Sprintf("%v", localIndexing)
 		if alerting {
-			envVars["ALERTS"] = "alerts.yml"
+			ocp.AdditionalVars["ALERTS"] = "alerts.yml"
 		} else {
-			envVars["ALERTS"] = ""
+			ocp.AdditionalVars["ALERTS"] = ""
 		}
 		if workloadConfig.MetricsEndpoint == "" {
-			envVars["ES_SERVER"] = esServer
-			envVars["ES_INDEX"] = esIndex
+			ocp.AdditionalVars["ES_SERVER"] = esServer
+			ocp.AdditionalVars["ES_INDEX"] = esIndex
 		}
-		for k, v := range envVars {
-			os.Setenv(k, v)
-		}
+
 		if err := ocp.GatherMetadata(&wh, alerting); err != nil {
 			log.Fatal(err.Error())
 		}

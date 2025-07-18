@@ -17,7 +17,6 @@ package ocp
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -34,23 +33,22 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
-		PreRun: func(cmd *cobra.Command, args []string) {
-			os.Setenv("JOB_ITERATIONS", fmt.Sprint(iterations))
-			os.Setenv("PODS_PER_NAMESPACE", fmt.Sprint(podsPerNamespace))
-			os.Setenv("NETPOLS_PER_NAMESPACE", fmt.Sprint(netpolPerNamespace))
-			os.Setenv("LOCAL_PODS", fmt.Sprint(localPods))
-			os.Setenv("POD_SELECTORS", fmt.Sprint(podSelectors))
-			os.Setenv("SINGLE_PORTS", fmt.Sprint(singlePorts))
-			os.Setenv("PORT_RANGES", fmt.Sprint(portRanges))
-			os.Setenv("REMOTE_NAMESPACES", fmt.Sprint(remoteNamespaces))
-			os.Setenv("REMOTE_PODS", fmt.Sprint(remotePods))
-			os.Setenv("CIDRS", fmt.Sprint(cidrs))
-			os.Setenv("NETPOL_LATENCY", strconv.FormatBool(netpolLatency))
-			os.Setenv("NETPOL_READY_THRESHOLD", fmt.Sprintf("%v", netpolReadyThreshold))
-		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.Run(cmd.Name() + ".yml")
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["PODS_PER_NAMESPACE"] = podsPerNamespace
+			AdditionalVars["NETPOLS_PER_NAMESPACE"] = netpolPerNamespace
+			AdditionalVars["LOCAL_PODS"] = localPods
+			AdditionalVars["POD_SELECTORS"] = podSelectors
+			AdditionalVars["SINGLE_PORTS"] = singlePorts
+			AdditionalVars["PORT_RANGES"] = portRanges
+			AdditionalVars["REMOTE_NAMESPACES"] = remoteNamespaces
+			AdditionalVars["REMOTE_PODS"] = remotePods
+			AdditionalVars["CIDRS"] = cidrs
+			AdditionalVars["NETPOL_LATENCY"] = netpolLatency
+			AdditionalVars["NETPOL_READY_THRESHOLD"] = netpolReadyThreshold
+
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
