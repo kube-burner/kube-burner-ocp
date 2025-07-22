@@ -90,34 +90,6 @@ jobs:
         replicas: 1
         inputVars:
           NAME_PREFIX: "benchmark-ce"
-          PACKAGE_NAME: test-package
+          PACKAGE_NAME: strimzi-kafka-operator
           CHANNEL_NAME: stable
-          CATALOG_NAME_PREFIX: benchmark-cc
-
-  - name: create-bundleunpacks
-    namespace: olmv1
-    jobIterations: {{.JOB_ITERATIONS}}
-    maxWaitTimeout: 30m
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    namespacedIterations: {{.NAMESPACED_ITERATIONS}}
-    iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
-    churn: {{.CHURN}}
-    churnCycles: {{.CHURN_CYCLES}}
-    churnDuration: {{.CHURN_DURATION}}
-    churnPercent: {{.CHURN_PERCENT}}
-    churnDelay: {{.CHURN_DELAY}}
-    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
-    podWait: true
-    waitWhenFinished: true
-    preLoadImages: true
-    preLoadPeriod: 15s
-    objects:
-      - objectTemplate: bundleunpack.yml
-        replicas: 1
-        inputVars:
-          NAME_PREFIX: "benchmark-bu"
-          BUNDLE_PATH: {{.CATALOG_IMAGE}}
-          PACKAGE_NAME: test-package
-          CHANNEL_NAME: stable
-          CATALOG_NAME_PREFIX: benchmark-cc
+          CATALOG_NAME_PREFIX: community-operators

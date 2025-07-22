@@ -7,7 +7,6 @@ spec:
   displayName: "BenchmarkExtension{{ .Iteration }}"
   installMode: AllNamespaces
   priority: -100
-  catalog: benchmark-cc{{ .Iteration }}
-  package: test-package
-  channel: stable
-
+  catalog: {{ .CATALOG_NAME_PREFIX }}{{ .Iteration }}
+  package: {{ .PACKAGE_NAME }}
+  channel: {{ .CHANNEL_NAME }}
