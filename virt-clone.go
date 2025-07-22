@@ -37,7 +37,8 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var volumeSnapshotClassName string
 	var sshKeyPairPath string
 	var useSnapshot bool
-	var vmCount int
+	var iterations int
+	var clonesPerIteration int
 	var testNamespaceBaseName string
 	var metricsProfiles []string
 	var volumeAccessMode string
@@ -68,8 +69,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["storageClassName"] = storageClassName
 			AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
 			AdditionalVars["testNamespaceBaseName"] = testNamespaceBaseName
-			AdditionalVars["cloneVMCount"] = vmCount
 			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
+			AdditionalVars["iterations"] = iterations
+			AdditionalVars["clonesPerIteration"] = clonesPerIteration
 
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
@@ -81,7 +83,8 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&storageClassName, "storage-class", "", "Name of the Storage Class to test")
 	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generarated SSH keys")
 	cmd.Flags().BoolVar(&useSnapshot, "use-snapshot", true, "Clone from snapshot")
-	cmd.Flags().IntVar(&vmCount, "vms", 10, "Number of clone VMs to create")
+	cmd.Flags().IntVar(&iterations, "iterations", 1, "Number of iterations to create VirtualMachines. The total number of VirtualMachines is iterations*iteration-clones")
+	cmd.Flags().IntVar(&clonesPerIteration, "iteration-clones", 10, "How many VirtualMachines to create per iteration. The total number of VirtualMachines is iterations*iteration-clones")
 	cmd.Flags().StringVarP(&testNamespaceBaseName, "namespace", "n", virtCloneTestName, "Base name for the namespace to run the test in")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
