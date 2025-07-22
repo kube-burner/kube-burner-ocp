@@ -108,7 +108,7 @@ jobs:
   # timeout time after waiting for all object creation
   maxWaitTimeout: 15m
   # wait before job completes to allow metrics collection
-  jobPause: 1m
+  jobPause: 10s
   # Do not clean the namespaces
   cleanup: false
   # Set missing key as empty to allow using default values
@@ -145,7 +145,7 @@ jobs:
   # timeout time after waiting for all object creation
   maxWaitTimeout: 15m
   # wait before job completes to allow metrics collection
-  jobPause: 1m
+  jobPause: 10s
   # Do not clean the namespaces
   cleanup: false
   # Set missing key as empty to allow using default values
@@ -179,7 +179,7 @@ jobs:
 
 - name: {{ $createCloneVMJobName }}
   jobType: create
-  jobIterations: 1
+  jobIterations: {{ .iterations }}
   qps: 20
   burst: 20
   namespacedIterations: false
@@ -208,7 +208,7 @@ jobs:
       publicKeyPath: {{ .publicKey }}
 
   - objectTemplate: templates/vm.yml
-    replicas: {{ .cloneVMCount }}
+    replicas: {{ .clonesPerIteration }}
     inputVars:
       vmName: "{{ $cloneVMName }}"
       rootdiskVolumeSourceRef:
