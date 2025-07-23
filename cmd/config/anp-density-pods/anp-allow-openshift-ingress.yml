@@ -1,0 +1,15 @@
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: anp-allow-openshift-ingress
+spec:
+  priority: 3
+  subject:
+    namespaces: {}
+  ingress:
+  - name: "allow-ingress-from-ingress"
+    action: "Allow"
+    from:
+    - namespaces:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-ingress
