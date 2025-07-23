@@ -48,6 +48,29 @@ Available Commands:
   web-burner-init            Runs web-burner-init workload
   web-burner-node-density    Runs web-burner-node-density workload
   whereabouts                Runs whereabouts workload
+  anp-density-pods               Runs anp-density-pods workload
+  cluster-density-ms             Runs cluster-density-ms workload
+  cluster-density-v2             Runs cluster-density-v2 workload
+  cluster-health                 Checks for ocp cluster health
+  completion                     Generate the autocompletion script for the specified shell
+  crd-scale                      Runs crd-scale workload
+  help                           Help about any command
+  index                          Runs index sub-command
+  init                           Runs custom workload
+  networkpolicy-matchexpressions Runs networkpolicy-matchexpressions workload
+  networkpolicy-matchlabels      Runs networkpolicy-matchlabels workload
+  networkpolicy-multitenant      Runs networkpolicy-multitenant workload
+  node-density                   Runs node-density workload
+  node-density-cni               Runs node-density-cni workload
+  node-density-heavy             Runs node-density-heavy workload
+  pvc-density                    Runs pvc-density workload
+  udn-density-l3-pods            Runs udn-density-l3-pods workload
+  version                        Print the version number of kube-burner
+  virt-capacity-benchmark        Runs capacity-benchmark workload
+  virt-density                   Runs virt-density workload
+  web-burner-cluster-density     Runs web-burner-cluster-density workload
+  web-burner-init                Runs web-burner-init workload
+  web-burner-node-density        Runs web-burner-node-density workload
 
 Flags:
       --alerting                  Enable alerting (default true)
@@ -194,6 +217,10 @@ Note: this workload calculates the number of iterations to create from the numbe
 ### udn-density-l3-pods
 
 For User-Defined Network (UDN) L3 segmentation testing. It creates two deployments, a client/curl and a server/nxing.
+
+### anp-density-pods
+
+For AdminNetworkPolicy testing. It creates three deployments in each namespace, three namespaces as a tenant, it will create 1 BaselineAdminNetworkPolicy, 1 NodeSelector AdminNetworkPolicy, 7 PodSelector AdminNetworkPolicy, N - CIDR Selector AdminNetworkPolicy.
 
 ## Network Policy workloads
 
