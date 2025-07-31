@@ -187,3 +187,11 @@
 
 - query: rate ( node_vmstat_pgmajfault[1m] )
   metricName: nodeMajorFaults
+
+# cgroup CPU instantaneous per-second rate of increase over the last 2 minutes
+- query: sum (  irate( container_cpu_usage_seconds_total { id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }[2m])  )  by   (   id , instance )
+  metricName: cgroupCPU
+
+# RSS Memory
+- query: sum( container_memory_rss { id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice"}) by (id, instance)
+  metricName: cgroupMemoryRSS
