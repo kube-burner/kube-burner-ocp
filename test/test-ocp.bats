@@ -125,6 +125,10 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iteration 2 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
+@test "udn-density-l3-pods: churning=false" {
+  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --churn=false ${COMMON_FLAGS} --uuid=${UUID}
+}
+
 @test "cluster-health" {
   run_cmd ${KUBE_BURNER_OCP} cluster-health
 }
