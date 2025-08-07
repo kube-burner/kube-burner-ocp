@@ -3,6 +3,11 @@ kind: Build
 apiVersion: build.openshift.io/v1
 metadata:
   name: {{.JobName}}-{{.Replica}}
+  labels:
+    name: {{.JobName}}-{{.Replica}}
+    kube-burner-job: "{{.JobName}}"
+    kube-burner-uuid: "{{.UUID}}"
+    kube-burner-runid: "{{.RunID}}"
 spec:
   resources:
     requests:
