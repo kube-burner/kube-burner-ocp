@@ -507,7 +507,7 @@ The test runs the following sequence:
 3. Create a `DataVolume` in namespace B using the rootdisk of the `VirtualMachine` as the source
 4. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
 5. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
-6. Create `VirtualMachine` in namespace B based in the `DataSource`
+6. Create `VirtualMachines` in namespace B based in the `DataSource`
 
 #### Tested StorageClass
 
@@ -525,7 +525,8 @@ By default, the `baseName` is `virt-clone`. Set it by passing `--namespace` (or 
 #### Test Size Parameters
 
 Users may control the workload sizes by passing the following arguments:
-- `--vms` - Number of `VirtualMachines` to create in step 6
+- `--iteration` - Number of iterations to run in step 6. Default is 1
+- `--iteration-clones` - Number of `VirtualMachines` to create in each iteration of step 6. Default is 10
 
 #### Volume Access Mode
 
