@@ -148,3 +148,50 @@ check_quantile_recorded() {
     return 1
   fi
 }
+
+get_worker_node_count() {
+  kubectl get nodes -l node-role.kubernetes.io/worker -o json | jq '.items|length'
+}
+
+get_running_pods_on_workers() {
+  local worker_nodes
+  local total_pods=0
+  local pod_count
+
+  # Get list of worker node names using jsonpath and jq
+  worker_nodes=$(kubectl get nodes -l node-role.kubernetes.io/worker -o json | jq -r '.items.[].metadata.name')
+
+  # Iterate over each worker node and count running pods
+  while IFS= read -r node_name; do
+    if [[ -n "${node_name}" ]]; then
+      pod_count=$(kubectl get pods --all-namespaces --field-selector=spec.nodeName="${node_name}",status.phase=Running -o json | jq '.items|length')
+      total_pods=$((total_pods + pod_count))
+    fi
+  done <<< "${worker_nodes}"
+
+  echo "${total_pods}"
+}
+
+calculate_pods_per_node() {
+  local worker_count
+  local current_pods
+  local calculated_value
+
+  worker_count=$(get_worker_node_count)
+  current_pods=$(get_running_pods_on_workers)
+
+  if [[ ${worker_count} -eq 0 ]]; then
+    echo "75"  # Default fallback
+    return
+  fi
+
+  # Calculate: (current_pods / worker_count) + 10
+  calculated_value=$(( (current_pods / worker_count) + 10 ))
+
+  # Return the maximum of 75 or calculated_value
+  if [[ ${calculated_value} -gt 75 ]]; then
+    echo "${calculated_value}"
+  else
+    echo "75"
+  fi
+}
