@@ -422,7 +422,9 @@ Similar to node-density, fills with VirtualMachines the worker nodes of the clus
 
 ### Virt Density Udn
 
-Similar to udn-density-pods scenario. Creates two VMs, one Nginx server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
+Similar to udn-density-pods scenario. Creates VMs, one Nginx server and several clients (the number depends on the `vms-per-node` variable) reaching it, on the same UDN per iteration. Each UDN-namespace has the same number of VMs, the number of clients deployed per UDN is computed as following: 
+```Nb of client per UDN = (Nb of worker * vms-per-node / Nb of UDN) -1 //-1  because the server is always deployed.```
+This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
 
 ### Virt Capacity Benchmark
 
