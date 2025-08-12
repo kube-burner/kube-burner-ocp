@@ -50,9 +50,11 @@ jobs:
 
     - name: Install Virtctl
       run: |
-        export VERSION=$(curl https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt)
-        wget https://github.com/kubevirt/kubevirt/releases/download/${VERSION}/virtctl-${VERSION}-linux-amd64 -O /tmp/virtctl
+        KUBEVIRT_VERSION=$(gh release view --repo kubevirt/kubevirt --json tagName -q '.tagName')
+        wget https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VERSION}/virtctl-${KUBEVIRT_VERSION}-linux-amd64 -O /tmp/virtctl
         chmod +x /tmp/virtctl
+      env:
+        GH_TOKEN: ${{ github.token }}
 
     - name: Execute Tests
       run: |
