@@ -49,6 +49,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 
 			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["JOB_PAUSE"] = jobPause
 			AdditionalVars["SIMPLE"] = simple
 			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
