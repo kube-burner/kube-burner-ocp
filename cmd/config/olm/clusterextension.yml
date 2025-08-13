@@ -1,0 +1,12 @@
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterExtension
+metadata:
+  name: "ce-{{.Iteration}}"
+spec:
+  namespace: "{{.prefixNamespace}}-{{.Iteration}}"
+  serviceAccount:
+    name: "ins-sa-{{.Iteration}}"
+  source:
+    sourceType: Catalog
+    catalog:
+      packageName: "{{.prefixPkgName}}{{.Iteration}}"
