@@ -217,7 +217,7 @@ For User-Defined Network (UDN) L3 segmentation testing. It creates two deploymen
 
 ### anp-density-pods
 
-For AdminNetworkPolicy testing. It creates three deployments in each namespace, three namespace as a tenant, it will create 1 BaselineAdminNetworkPolicy, 1 NodeSelector AdminNetworkPolicy, 7 PodSelector AdminNetworkPolicy, N - CIDR Selector AdminNetworkPolicy.
+For AdminNetworkPolicy testing. It creates three deployments in each namespace, three namespaces as a tenant, it will create 1 BaselineAdminNetworkPolicy, 1 NodeSelector AdminNetworkPolicy, 7 PodSelector AdminNetworkPolicy, N - CIDR Selector AdminNetworkPolicy.
 
 ## Network Policy workloads
 
