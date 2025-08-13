@@ -49,13 +49,17 @@ teardown_file() {
 }
 
 @test "node-density: es-indexing=true" {
-  run_cmd ${KUBE_BURNER_OCP} node-density --pods-per-node=75 --pod-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS} --churn=true --churn-duration=1m --churn-delay=5s
+  PODS_PER_NODE=$(calculate_pods_per_node)
+  echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
+  run_cmd ${KUBE_BURNER_OCP} node-density --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS} --churn=true --churn-duration=1m --churn-delay=5s
   check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "node-density-heavy: gc-metrics=true; local-indexing=true" {
   unset UUID
-  run_cmd ${KUBE_BURNER_OCP} node-density-heavy --pods-per-node=75 --pod-ready-threshold=1m --uuid=abcd --local-indexing --gc-metrics=true --churn=true --churn-cycles=1 --churn-delay=2s
+  PODS_PER_NODE=$(calculate_pods_per_node)
+  echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
+  run_cmd ${KUBE_BURNER_OCP} node-density-heavy --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m --uuid=abcd --local-indexing --gc-metrics=true --churn=true --churn-cycles=1 --churn-delay=2s
   check_file_list collected-metrics-abcd/etcdVersion.json collected-metrics-abcd/jobSummary.json collected-metrics-abcd/podLatencyMeasurement-node-density-heavy.json collected-metrics-abcd/podLatencyQuantilesMeasurement-node-density-heavy.json
 }
 
@@ -82,7 +86,9 @@ teardown_file() {
 
 @test "node-density-cni: gc=false; alerting=false" {
   # Disable gc and avoid metric indexing
-  run_cmd ${KUBE_BURNER_OCP} node-density-cni --pods-per-node=75 --gc=false --uuid=${UUID} --alerting=false --churn=true --churn-cycles=1 --churn-delay=2s
+  PODS_PER_NODE=$(calculate_pods_per_node)
+  echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
+  run_cmd ${KUBE_BURNER_OCP} node-density-cni --pods-per-node=${PODS_PER_NODE} --gc=false --uuid=${UUID} --alerting=false --churn=true --churn-cycles=1 --churn-delay=2s
   oc delete ns -l kube-burner-uuid=${UUID} --wait=false
   trap - ERR
 }
@@ -125,6 +131,10 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iteration 2 ${COMMON_FLAGS} --uuid=${UUID}
 }
 
+@test "udn-density-l3-pods: churning=false" {
+  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --churn=false ${COMMON_FLAGS} --uuid=${UUID}
+}
+
 @test "cluster-health" {
   run_cmd ${KUBE_BURNER_OCP} cluster-health
 }
@@ -149,7 +159,7 @@ teardown_file() {
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
     STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
   fi
-  run_cmd ${KUBE_BURNER_OCP} virt-clone ${STORAGE_PARAMETER} --access-mode RWO --vms 2
+  run_cmd ${KUBE_BURNER_OCP} virt-clone ${STORAGE_PARAMETER} --access-mode RWO --iterations 2 --iteration-clones 2
   local jobs=("create-base-vm" "create-clone-vms")
   for job in "${jobs[@]}"; do
     check_metric_recorded ./virt-clone-results ${job} dvLatency dvReadyLatency

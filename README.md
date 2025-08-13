@@ -15,46 +15,57 @@ Usage:
   kube-burner-ocp [command]
 
 Available Commands:
-  cluster-density-ms             Runs cluster-density-ms workload
-  cluster-density-v2             Runs cluster-density-v2 workload
-  cluster-health                 Checks for ocp cluster health
-  completion                     Generate the autocompletion script for the specified shell
-  crd-scale                      Runs crd-scale workload
-  help                           Help about any command
-  index                          Runs index sub-command
-  init                           Runs custom workload
-  networkpolicy-matchexpressions Runs networkpolicy-matchexpressions workload
-  networkpolicy-matchlabels      Runs networkpolicy-matchlabels workload
-  networkpolicy-multitenant      Runs networkpolicy-multitenant workload
-  node-density                   Runs node-density workload
-  node-density-cni               Runs node-density-cni workload
-  node-density-heavy             Runs node-density-heavy workload
-  pvc-density                    Runs pvc-density workload
-  udn-density-l3-pods            Runs udn-density-l3-pods workload
-  version                        Print the version number of kube-burner
-  virt-capacity-benchmark        Runs capacity-benchmark workload
-  virt-density                   Runs virt-density workload
-  web-burner-cluster-density     Runs web-burner-cluster-density workload
-  web-burner-init                Runs web-burner-init workload
-  web-burner-node-density        Runs web-burner-node-density workload
+  cluster-density-ms         Runs cluster-density-ms workload
+  cluster-density-v2         Runs cluster-density-v2 workload
+  cluster-health             Checks for ocp cluster health
+  completion                 Generate the autocompletion script for the specified shell
+  crd-scale                  Runs crd-scale workload
+  dv-clone                   Runs dv-clone workload
+  egressip                   Runs egressip workload
+  help                       Help about any command
+  index                      Runs index sub-command
+  init                       Runs custom workload
+  network-policy             Runs network-policy workload
+  node-density               Runs node-density workload
+  node-density-cni           Runs node-density-cni workload
+  node-density-heavy         Runs node-density-heavy workload
+  olm                        Runs olm workload
+  pvc-density                Runs pvc-density workload
+  rds-core                   Runs rds-core workload
+  udn-bgp                    Runs udn-bgp workload
+  udn-density-pods           Runs node-density-udn workload
+  version                    Print the version number of kube-burner
+  virt-capacity-benchmark    Runs capacity-benchmark workload
+  virt-clone                 Runs virt-clone workload
+  virt-density               Runs virt-density workload
+  virt-ephemeral-restart     Runs virt-ephemeral-restart workload
+  virt-migration             Runs virt-migration workload
+  virt-udn-density           Runs virt-density-udn workload
+  web-burner-cluster-density Runs web-burner-cluster-density workload
+  web-burner-init            Runs web-burner-init workload
+  web-burner-node-density    Runs web-burner-node-density workload
+  whereabouts                Runs whereabouts workload
 
 Flags:
       --alerting                  Enable alerting (default true)
       --burst int                 Burst (default 20)
+      --check-health              Check cluster health before job (default true)
+      --enable-file-logging       Enable file logging (default true)
       --es-index string           Elastic Search index
       --es-server string          Elastic Search endpoint
       --extract                   Extract workload in the current directory
       --gc                        Garbage collect created resources (default true)
       --gc-metrics                Collect metrics during garbage collection
+  -h, --help                      help for kube-burner-ocp
       --local-indexing            Enable local indexing
-      --metrics-endpoint string   YAML file with a list of metric endpoints
+      --log-level string          Allowed values: debug, info, warn, error, fatal (default "info")
+      --metrics-endpoint string   YAML file with a list of metric endpoints, overrides the es-server and es-index flags
       --profile-type string       Metrics profile to use, supported options are: regular, reporting or both (default "both")
       --qps int                   QPS (default 20)
       --timeout duration          Benchmark timeout (default 4h0m0s)
       --user-metadata string      User provided metadata file, in YAML format
-      --uuid string               Benchmark UUID (default "0827cb6a-9367-4f0b-b11c-75030c69479e")
-      --log-level string          Allowed values: debug, info, warn, error, fatal (default "info")
-  -h, --help                      help for kube-burner-ocp
+      --uuid string               Benchmark UUID (default "e5d2e34e-724d-4ba9-9eac-0379839d2e0a")
+
 ```
 
 ## Documentation
@@ -496,7 +507,7 @@ The test runs the following sequence:
 3. Create a `DataVolume` in namespace B using the rootdisk of the `VirtualMachine` as the source
 4. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
 5. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
-6. Create `VirtualMachine` in namespace B based in the `DataSource`
+6. Create `VirtualMachines` in namespace B based in the `DataSource`
 
 #### Tested StorageClass
 
@@ -514,7 +525,8 @@ By default, the `baseName` is `virt-clone`. Set it by passing `--namespace` (or 
 #### Test Size Parameters
 
 Users may control the workload sizes by passing the following arguments:
-- `--vms` - Number of `VirtualMachines` to create in step 6
+- `--iteration` - Number of iterations to run in step 6. Default is 1
+- `--iteration-clones` - Number of `VirtualMachines` to create in each iteration of step 6. Default is 10
 
 #### Volume Access Mode
 
