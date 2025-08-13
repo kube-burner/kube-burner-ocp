@@ -140,6 +140,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewVirtEphemeralRestart(&wh),
 		ocp.NewDVClone(&wh),
 		ocp.NewVirtMigration(&wh),
+		ocp.NewANPDensityPods(&wh, "anp-density-pods"),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd

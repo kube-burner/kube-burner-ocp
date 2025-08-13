@@ -1,0 +1,16 @@
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: anp-allow-openshift-dns
+spec:
+  priority: 2
+  subject:
+    namespaces: {}
+  egress:
+  - name: "allow-egress-to-dns"
+    action: "Allow"
+    to:
+    - namespaces:
+          matchLabels:
+            kubernetes.io/metadata.name: openshift-dns    
+
