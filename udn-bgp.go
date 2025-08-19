@@ -51,6 +51,5 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.MarkFlagRequired("iterations")
 	return cmd
 }
