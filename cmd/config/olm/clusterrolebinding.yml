@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: "ins-admin-clusterrole-binding-{{.Iteration}}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: "ins-admin-clusterrole-{{.Iteration}}"
+subjects:
+  - kind: ServiceAccount
+    name: "ins-sa-{{.Iteration}}"
+    namespace: "{{.prefixNamespace}}-{{.Iteration}}"

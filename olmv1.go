@@ -28,7 +28,7 @@ import (
 // NewOLMv1 holds OLMv1 workload
 func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations int
-	var catalogImage, churnDeletionStrategy string
+	var catalogImage, churnDeletionStrategy, namespace, prefixPkgName string
 	var metricsProfiles []string
 	var rc, iterationsPerNamespace, churnCycles, churnPercent int
 	var pprof, namespacedIterations, churn bool
@@ -55,6 +55,8 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
 			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["NAMESPACE"] = namespace
+			AdditionalVars["PREFIX_PKG_NAME_V1"] = prefixPkgName
 
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -74,6 +76,8 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().StringVar(&catalogImage, "catalogImage", "registry.redhat.io/redhat/redhat-operator-index:v4.18", "the ClusterCatalog ref image")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().StringVar(&namespace, "namespace", "olmv1", "Namespace to run the workload in")
+	cmd.Flags().StringVar(&prefixPkgName, "prefix-pkg-name", "benchmark-cc", "Prefix for package names")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }
