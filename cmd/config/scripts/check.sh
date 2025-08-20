@@ -44,9 +44,20 @@ remote_command() {
     local command=$5
 
     local output
-    output=$(virtctl ssh ${LOCAL_SSH} --local-ssh-opts="-o StrictHostKeyChecking=no"  --local-ssh-opts="-o UserKnownHostsFile=/dev/null" -n "${namespace}" -i "${identity_file}" -c "${command}" --username "${remote_user}"  "${vm_name}" 2>/dev/null)
+    local error_output
+    local temp_error_file
+    temp_error_file=$(mktemp)
+
+    output=$(virtctl ssh ${LOCAL_SSH} --local-ssh-opts="-o StrictHostKeyChecking=no"  --local-ssh-opts="-o UserKnownHostsFile=/dev/null" -n "${namespace}" -i "${identity_file}" -c "${command}" --username "${remote_user}"  vm/"${vm_name}" 2>"${temp_error_file}")
     local ret=$?
+
+    error_output=$(cat "${temp_error_file}")
+    rm -f "${temp_error_file}"
+
     if [ $ret -ne 0 ]; then
+        if [ -n "${error_output}" ]; then
+            echo "${error_output}" >&2
+        fi
         return 1
     fi
     echo "${output}"
@@ -54,8 +65,23 @@ remote_command() {
 
 check_vm_running() {
     local vm=$1
-    remote_command "${NAMESPACE}" "${IDENTITY_FILE}" "${REMOTE_USER}" "${vm}" "ls"
-    return $?
+    local output
+    local error_output
+    local temp_error_file
+    temp_error_file=$(mktemp)
+
+    output=$(remote_command "${NAMESPACE}" "${IDENTITY_FILE}" "${REMOTE_USER}" "${vm}" "ls" 2>"${temp_error_file}")
+    local ret=$?
+
+    error_output=$(cat "${temp_error_file}")
+    rm -f "${temp_error_file}"
+
+    if [ $ret -eq 0 ]; then
+        echo "${output}"
+    elif [ -n "${error_output}" ]; then
+            echo "${error_output}" >&2
+    fi
+    return $ret
 }
 
 check_resize() {
@@ -85,23 +111,42 @@ check_resize() {
     return 0
 }
 
-VMS=$(get_vms "${NAMESPACE}" "${LABEL_KEY}" "${LABEL_VALUE}")
+main() {
+    local VMS
+    VMS=$(get_vms "${NAMESPACE}" "${LABEL_KEY}" "${LABEL_VALUE}")
 
-for vm in ${VMS}; do
-    for attempt in $(seq 1 $MAX_RETRIES); do
-        if ${COMMAND} "${vm}"; then
-            break
-        fi
-        if [ "${attempt}" -lt $MAX_RETRIES ]; then
-            if [ "${attempt}" -lt $MAX_SHORT_WAITS ]; then
-                sleep "${SHORT_WAIT}"
-            else
-                sleep "${LONG_WAIT}"
+    for vm in ${VMS}; do
+        for attempt in $(seq 1 $MAX_RETRIES); do
+            local command_error
+            local temp_error_file
+            temp_error_file=$(mktemp)
+
+            ${COMMAND} "${vm}" 2>"${temp_error_file}"
+            local ret=$?
+
+            command_error=$(cat "${temp_error_file}")
+            rm -f "${temp_error_file}"
+
+            if [ $ret -eq 0 ]; then
+                break
             fi
-        else
-            echo "Failed waiting on ${COMMAND} for ${vm}" >&2
-            exit 1
-        fi
+            if [ "${attempt}" -lt $MAX_RETRIES ]; then
+                if [ "${attempt}" -lt $MAX_SHORT_WAITS ]; then
+                    sleep "${SHORT_WAIT}"
+                else
+                    sleep "${LONG_WAIT}"
+                fi
+            else
+                if [ -n "${command_error}" ]; then
+                    echo "Failed waiting on ${COMMAND} for ${vm}: ${command_error}" >&2
+                else
+                    echo "Failed waiting on ${COMMAND} for ${vm}" >&2
+                fi
+                exit 1
+            fi
+        done
+        echo "${COMMAND} finished successfully for ${vm}"
     done
-    echo "${COMMAND} finished successfully for ${vm}"
-done
+}
+
+main
