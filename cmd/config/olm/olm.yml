@@ -113,6 +113,8 @@ jobs:
 
       - objectTemplate: sa.yml
         replicas: 1
+        inputVars:
+          prefixNamespace: {{.NAMESPACE}}
 
       - objectTemplate: clusterrolebinding.yml
         replicas: 1
