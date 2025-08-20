@@ -81,7 +81,7 @@ jobs:
     objects:
 
       - objectTemplate: vm-client.yml
-        replicas: 1
+        replicas: {{.VMS_PER_ITERATION}}
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
           vmImage: {{.VM_IMAGE}}
