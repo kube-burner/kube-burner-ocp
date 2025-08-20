@@ -91,7 +91,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().IntVar(&iterations, "iteration", 1, "iterations")
-	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 100, "VMs per node")
+	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 50, "VMs per node")
 	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 60*time.Second, "VMI ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
