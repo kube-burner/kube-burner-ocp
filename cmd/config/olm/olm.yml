@@ -96,11 +96,10 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
     objects:
 
-      - objectTemplate: clustercatalog.yml
+      - objectTemplate: catalogd.yml
         replicas: 1
         inputVars:
-          NAME_PREFIX: "benchmark-ce"
-          catalogImage: {{.CATALOG_IMAGE}}
+          prefixImageName: {{.PREFIX_IMG_NAME}}
         waitOptions:
           customStatusPaths:
             - key: ".conditions[].type"

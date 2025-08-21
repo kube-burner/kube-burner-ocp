@@ -3,7 +3,7 @@ kind: ClusterExtension
 metadata:
   name: "ce-{{.Iteration}}"
 spec:
-  namespace: "{{.prefixNamespace}}-{{.Iteration}}"
+  namespace: "{{.prefixNamespace}}"
   serviceAccount:
     name: "ins-sa-{{.Iteration}}"
   source:

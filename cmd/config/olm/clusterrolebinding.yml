@@ -9,4 +9,4 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: "ins-sa-{{.Iteration}}"
-    namespace: "{{.prefixNamespace}}-{{.Iteration}}"
+    namespace: "{{.prefixNamespace}}"
