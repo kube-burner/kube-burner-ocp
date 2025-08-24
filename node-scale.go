@@ -21,7 +21,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 
 	"github.com/spf13/cobra"
