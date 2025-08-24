@@ -15,10 +15,13 @@
 package ocp
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io"
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 
 	"github.com/spf13/cobra"
@@ -37,6 +40,26 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			// Read and encode KUBECONFIG file
+			kubeconfigPath := os.Getenv("KUBECONFIG")
+			if kubeconfigPath != "" {
+				kubeconfigFile, err := os.Open(kubeconfigPath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error opening KUBECONFIG file %s: %v\n", kubeconfigPath, err)
+					os.Exit(1)
+				}
+				defer kubeconfigFile.Close()
+
+				kubeconfigContent, err := io.ReadAll(kubeconfigFile)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error reading KUBECONFIG file %s: %v\n", kubeconfigPath, err)
+					os.Exit(1)
+				}
+
+				kubeconfigB64 := base64.StdEncoding.EncodeToString(kubeconfigContent)
+				AdditionalVars["KubeconfigB64"] = kubeconfigB64
+			}
+
 			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
