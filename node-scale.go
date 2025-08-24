@@ -30,9 +30,9 @@ import (
 func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var rc int
 	var metricsProfiles []string
-	var iterations, churnCycles, churnPercent int
+	var iterations, churnCycles, churnPercent, cpu, memory int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
-	var churnDeletionStrategy string
+	var churnDeletionStrategy, tag string
 	var churn bool
 	cmd := &cobra.Command{
 		Use:          variant,
@@ -68,6 +68,9 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["CPU"] = cpu
+			AdditionalVars["MEMORY"] = memory
+			AdditionalVars["TAG"] = tag
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -80,8 +83,11 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "gvr", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&tag, "version", "v1.33.0", "Image tag version of the kubemark container")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
+	cmd.Flags().IntVar(&cpu, "cpu", 1, "CPU capacity of each hollow node")
+	cmd.Flags().IntVar(&memory, "memory", 4, "Memory (G) of each hollow node")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
