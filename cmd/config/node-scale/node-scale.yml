@@ -27,8 +27,64 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+
+  - name: namespace
+    jobType: create
+    jobIterations: 1
+    qps: {{ .QPS }}
+    burst: {{ .BURST }}
+    cleanup: false
+    podWait: false
+    waitWhenFinished: false
+    verifyObjects: true
+    errorOnVerify: true
+    jobIterationDelay: 0s
+    jobPause: 0s
+    preLoadImages: false
+    objects:
+      - objectTemplate: namespace.yml
+        replicas: 1
+
+  - name: role-binding
+    jobType: create
+    jobIterations: 1
+    qps: {{ .QPS }}
+    burst: {{ .BURST }}
+    cleanup: false
+    namespace: kubemark
+    podWait: false
+    waitWhenFinished: false
+    verifyObjects: true
+    errorOnVerify: true
+    jobIterationDelay: 0s
+    jobPause: 0s
+    preLoadImages: false
+    objects:
+      - objectTemplate: rolebinding.yml
+        replicas: 1
+
+  - name: secret-kubeconfig
+    jobType: create
+    jobIterations: 1
+    qps: {{ .QPS }}
+    burst: {{ .BURST }}
+    cleanup: false
+    namespace: kubemark
+    podWait: false
+    waitWhenFinished: false
+    verifyObjects: true
+    errorOnVerify: true
+    jobIterationDelay: 0s
+    jobPause: 0s
+    preLoadImages: false
+    objects:
+      - objectTemplate: secret-kubeconfig.yml
+        replicas: 1
+        inputVars:
+          KubeconfigB64: "{{ $.KubeconfigB64 }}"
+
   - name: node-scale
-    namespace: node-scale
+    namespace: kubemark
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
