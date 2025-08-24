@@ -12,10 +12,10 @@ spec:
         - --v=3
         - --morph=kubelet
         - --name=kubemark-node-{{.Iteration}}
-        - --extended-resources=cpu=1,memory=4G
+        - --extended-resources=cpu={{.cpu}},memory={{.memory}}G
       command:
         - /kubemark
-      image: quay.io/cluster-api-provider-kubemark/kubemark:v1.26.7
+      image: "quay.io/cluster-api-provider-kubemark/kubemark:{{.tag}}"
       name: hollow-node
       securityContext:
         privileged: true

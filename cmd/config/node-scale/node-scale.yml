@@ -28,7 +28,7 @@ metricsEndpoints:
 
 jobs:
 
-  - name: namespace
+  - name: pre-reqs
     jobType: create
     jobIterations: 1
     qps: {{ .QPS }}
@@ -44,40 +44,8 @@ jobs:
     objects:
       - objectTemplate: namespace.yml
         replicas: 1
-
-  - name: role-binding
-    jobType: create
-    jobIterations: 1
-    qps: {{ .QPS }}
-    burst: {{ .BURST }}
-    cleanup: false
-    namespace: kubemark
-    podWait: false
-    waitWhenFinished: false
-    verifyObjects: true
-    errorOnVerify: true
-    jobIterationDelay: 0s
-    jobPause: 0s
-    preLoadImages: false
-    objects:
       - objectTemplate: rolebinding.yml
         replicas: 1
-
-  - name: secret-kubeconfig
-    jobType: create
-    jobIterations: 1
-    qps: {{ .QPS }}
-    burst: {{ .BURST }}
-    cleanup: false
-    namespace: kubemark
-    podWait: false
-    waitWhenFinished: false
-    verifyObjects: true
-    errorOnVerify: true
-    jobIterationDelay: 0s
-    jobPause: 0s
-    preLoadImages: false
-    objects:
       - objectTemplate: secret-kubeconfig.yml
         replicas: 1
         inputVars:
@@ -104,8 +72,9 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
-
       - objectTemplate: pod.yml
         replicas: 1
         inputVars:
-          containerImage: registry.k8s.io/pause:3.1
+          cpu: "{{ $.CPU }}"
+          memory: "{{ $.MEMORY }}"
+          tag: "{{ $.TAG }}"
