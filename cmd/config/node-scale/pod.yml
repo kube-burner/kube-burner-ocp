@@ -13,6 +13,7 @@ spec:
         - --morph=kubelet
         - --name=kubemark-node-{{.Iteration}}
         - --extended-resources=cpu={{.cpu}},memory={{.memory}}G
+        - --max-pods={{.maxPods}}
       command:
         - /kubemark
       image: "quay.io/cluster-api-provider-kubemark/kubemark:{{.tag}}"

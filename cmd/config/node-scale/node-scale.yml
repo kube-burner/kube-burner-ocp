@@ -78,3 +78,4 @@ jobs:
           cpu: "{{ $.CPU }}"
           memory: "{{ $.MEMORY }}"
           tag: "{{ $.TAG }}"
+          maxPods: "{{ $.MAX_PODS }}"
