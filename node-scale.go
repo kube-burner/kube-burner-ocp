@@ -30,7 +30,7 @@ import (
 func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var rc int
 	var metricsProfiles []string
-	var iterations, churnCycles, churnPercent, cpu, memory int
+	var iterations, churnCycles, churnPercent, cpu, memory, maxPods int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
 	var churnDeletionStrategy, tag string
 	var churn bool
@@ -71,6 +71,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CPU"] = cpu
 			AdditionalVars["MEMORY"] = memory
 			AdditionalVars["TAG"] = tag
+			AdditionalVars["MAX_PODS"] = maxPods
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -88,6 +89,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
 	cmd.Flags().IntVar(&cpu, "cpu", 1, "CPU capacity of each hollow node")
 	cmd.Flags().IntVar(&memory, "memory", 4, "Memory (G) of each hollow node")
+	cmd.Flags().IntVar(&maxPods, "max-pods", 250, "Max number of pods of each hollow node")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
