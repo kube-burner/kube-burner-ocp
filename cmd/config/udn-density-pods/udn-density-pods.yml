@@ -94,7 +94,7 @@ jobs:
     churnDuration: {{.CHURN_DURATION}}
     churnPercent: {{.CHURN_PERCENT}}
     churnDelay: {{.CHURN_DELAY}}
-    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
+    deletionStrategy: {{.DELETION_STRATEGY}}
     jobPause: 5m
     metricsClosing: afterJobPause
     cleanup: false

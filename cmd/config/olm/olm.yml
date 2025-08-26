@@ -55,7 +55,7 @@ jobs:
     churnDuration: {{.CHURN_DURATION}}
     churnPercent: {{.CHURN_PERCENT}}
     churnDelay: {{.CHURN_DELAY}}
-    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
+    deletionStrategy: {{.DELETION_STRATEGY}}
     podWait: true
     waitWhenFinished: true
     preLoadImages: true
@@ -84,7 +84,7 @@ jobs:
     churnDuration: {{.CHURN_DURATION}}
     churnPercent: {{.CHURN_PERCENT}}
     churnDelay: {{.CHURN_DELAY}}
-    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
+    churnDeletionStrategy: {{.DELETION_STRATEGY}}
     executionMode: parallel
     verifyObjects: true
     errorOnVerify: true
