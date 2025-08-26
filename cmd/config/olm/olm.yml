@@ -100,15 +100,13 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
     objects:
 
-      - objectTemplate: catalogd.yml
+      - objectTemplate: clustercatalog-iteration.yml
         replicas: 1
         inputVars:
           prefixImageName: {{.PREFIX_IMG_NAME}}
         waitOptions:
           customStatusPaths:
-            - key: ".conditions[].type"
-              value: "Serving"
-            - key: ".conditions[].status"
+            - key: ".conditions[] | select(.type==\"Installed\") | .status"
               value: "True"
 
       - objectTemplate: clusterrole.yml
@@ -131,9 +129,5 @@ jobs:
           prefixPkgName: {{.PREFIX_PKG_NAME_V1}}
         waitOptions:
           customStatusPaths:
-            - key: ".conditions[].type"
-              value: "Installed"
-            - key: ".conditions[].status"
-              value: "True"
             - key: ".conditions[] | select(.type==\"Installed\") | .status"
               value: "True"
