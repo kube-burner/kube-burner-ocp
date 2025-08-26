@@ -66,6 +66,10 @@ jobs:
         inputVars:
           NAME_PREFIX: "benchmark-cc"
           catalogImage: {{.CATALOG_IMAGE}}
+        waitOptions:
+          customStatusPaths:
+            - key: ".conditions[] | select(.type==\"Serving\") | .status"
+              value: "True"
 
   - name: create-clusterextensions
     namespace: {{.NAMESPACE}}
@@ -130,4 +134,6 @@ jobs:
             - key: ".conditions[].type"
               value: "Installed"
             - key: ".conditions[].status"
+              value: "True"
+            - key: ".conditions[] | select(.type==\"Installed\") | .status"
               value: "True"
