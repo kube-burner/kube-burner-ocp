@@ -49,7 +49,7 @@ jobs:
       - objectTemplate: secret-kubeconfig.yml
         replicas: 1
         inputVars:
-          KubeconfigB64: "{{ $.KubeconfigB64 }}"
+          kubeconfigB64: "{{ $.KUBECONFIGB64 }}"
 
   - name: node-scale
     namespace: kubemark
