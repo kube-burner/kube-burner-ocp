@@ -106,7 +106,7 @@ jobs:
           prefixImageName: {{.PREFIX_IMG_NAME}}
         waitOptions:
           customStatusPaths:
-            - key: ".conditions[] | select(.type==\"Installed\") | .status"
+            - key: ".conditions[] | select(.type==\"Serving\") | .status"
               value: "True"
 
       - objectTemplate: clusterrole.yml
