@@ -56,7 +56,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 				}
 
 				kubeconfigB64 := base64.StdEncoding.EncodeToString(kubeconfigContent)
-				AdditionalVars["KubeconfigB64"] = kubeconfigB64
+				AdditionalVars["KUBECONFIGB64"] = kubeconfigB64
 			}
 
 			AdditionalVars["CHURN"] = churn
