@@ -37,6 +37,25 @@
 - query: irate(container_runtime_crio_operations_latency_microseconds{operation_type="network_setup_pod"}[2m]) > 0
   metricName: containerNetworkSetupLatency
 
+# Node metrics: Network
+- query: sum by (instance) ( irate(node_network_receive_bytes_total[5m]) + irate(node_network_transmit_bytes_total[5m]))
+  metricName: nodeNetworkTotal
+
+- query: sum by (instance) ( irate(node_network_drop_total[5m]) )
+  metricName: nodeNetworkDropTotal
+
+- query: sum by (instance) ( irate(node_network_errs_total[5m]) )
+  metricName: nodeNetworkErrTotal
+
+- query: sum by (instance, device) (irate(node_network_receive_bytes_total[5m]) + irate(node_network_transmit_bytes_total[5m]))
+  metricName: nodeNetworkDeviceTotal
+
+- query: sum by (instance, device) ( irate(node_network_drop_total[5m]) )
+  metricName: nodeNetworkDeviceDropTotal
+
+- query: sum by (instance, device) ( irate(node_network_errs_total[5m]) )
+  metricName: nodeNetworkDeviceErrTotal
+
 # Node metrics: CPU & Memory
 
 - query: (sum(irate(node_cpu_seconds_total[2m])) by (mode,instance) and on (instance) label_replace(kube_node_role{role="worker"}, "instance", "$1", "node", "(.+)")) > 0
