@@ -1,0 +1,17 @@
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata:
+  name: "cluster-queue"
+spec:
+  namespaceSelector: {} # match all.
+  resourceGroups:
+  - coveredResources: ["cpu", "memory", "pods"]
+    flavors:
+    - name: "default"
+      resources:
+      - name: "cpu"
+        nominalQuota: {{.CPU_QUOTA}}
+      - name: "memory"
+        nominalQuota: {{.MEMORY_QUOTA}}
+      - name: "pods"
+        nominalQuota: {{.PODS_QUOTA}}
