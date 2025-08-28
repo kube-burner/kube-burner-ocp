@@ -1,0 +1,64 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      insecureSkipVerify: true
+      esServers: [{{.ES_SERVER}}]
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch      
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+  
+jobs:
+
+  - name: prereqs
+    jobIterations: 1
+    namespace: kueue-scale
+    preLoadImages: false
+    namespacedIterations: false
+    cleanup: true
+    skipIndexing: true
+    qps: 5
+    burst: 5
+    objects:
+      - objectTemplate: cluster-queue.yml
+        replicas: 1
+        inputVars:
+          CPU_QUOTA: {{.CPU_QUOTA}}
+          MEMORY_QUOTA: {{.MEMORY_QUOTA}}
+          PODS_QUOTA: {{.PODS_QUOTA}}
+      - objectTemplate: resource-flavor.yml
+        replicas: 1
+
+  - name: kueue-scale
+    namespace: kueue-scale
+    jobIterations: {{.ITERATIONS}}
+    preLoadImages: false #todo
+    namespacedIterations: false
+    cleanup: true
+    namespaceLabels:
+      kueue.openshift.io/managed: "true"
+    qps: 5
+    burst: 5
+    objects:
+      - objectTemplate: local-queue.yml
+        replicas: 1
+      - objectTemplate: pod.yml
+        replicas: {{.PODS_QUOTA}}
