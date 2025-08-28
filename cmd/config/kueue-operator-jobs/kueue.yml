@@ -1,0 +1,17 @@
+# for manual installation only, as it requires openshift/client-go
+apiVersion: kueue.openshift.io/v1
+kind: Kueue
+metadata:
+  name: cluster
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: kueue-operator
+  namespace: openshift-kueue-operator
+spec:
+  config:
+    integrations:
+      frameworks:
+        - BatchJob
+  logLevel: Normal
+  operatorLogLevel: Normal
+  managementState: Managed
