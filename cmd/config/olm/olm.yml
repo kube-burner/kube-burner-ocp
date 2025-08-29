@@ -22,6 +22,7 @@ global:
         labelSelector: {control-plane: operator-controller-controller-manager}
         url: http://localhost:8082/debug/pprof/profile?seconds=30
 {{ end }}
+
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
@@ -65,3 +66,68 @@ jobs:
         inputVars:
           NAME_PREFIX: "benchmark-cc"
           catalogImage: {{.CATALOG_IMAGE}}
+        waitOptions:
+          customStatusPaths:
+            - key: ".conditions[] | select(.type==\"Serving\") | .status"
+              value: "True"
+
+  - name: create-clusterextensions
+    namespace: {{.NAMESPACE}}
+    jobIterations: {{.JOB_ITERATIONS}}
+    maxWaitTimeout: 2h
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: {{.NAMESPACED_ITERATIONS}}
+    iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
+    executionMode: parallel
+    verifyObjects: true
+    errorOnVerify: true
+    skipIndexing: false
+    podWait: true
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 2m
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+
+      - objectTemplate: clustercatalog-iteration.yml
+        replicas: 1
+        inputVars:
+          prefixImageName: {{.PREFIX_IMG_NAME}}
+        waitOptions:
+          customStatusPaths:
+            - key: ".conditions[] | select(.type==\"Serving\") | .status"
+              value: "True"
+
+      - objectTemplate: clusterrole.yml
+        replicas: 1
+
+      - objectTemplate: sa.yml
+        replicas: 1
+        inputVars:
+          prefixNamespace: {{.NAMESPACE}}
+
+      - objectTemplate: clusterrolebinding.yml
+        replicas: 1
+        inputVars:
+          prefixNamespace: {{.NAMESPACE}}
+
+      - objectTemplate: clusterextension.yml
+        replicas: 1
+        inputVars:
+          prefixNamespace: {{.NAMESPACE}}
+          prefixPkgName: {{.PREFIX_PKG_NAME_V1}}
+        waitOptions:
+          customStatusPaths:
+            - key: ".conditions[] | select(.type==\"Installed\") | .status"
+              value: "True"
