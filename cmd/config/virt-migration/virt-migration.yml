@@ -35,6 +35,9 @@ jobs:
   namespace: {{ .testNamespace }}
   namespaceLabels:
     {{ $testNamespacesLabelKey }}: {{ $testName }}
+  {{ if .udnLayer2 }}
+    k8s.ovn.org/primary-user-defined-network: ""
+  {{ end }}
   # verify object count after running each job
   verifyObjects: true
   errorOnVerify: true
@@ -47,8 +50,16 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
+  {{ if not .udnLayer2 }}
   beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ end }}
   objects:
+
+  {{ if .udnLayer2 }}
+  - objectTemplate: udn_l2.yml
+    runOnce: true
+    replicas: 1
+  {{ end }}
 
   - objectTemplate: templates/secret_ssh_public.yml
     runOnce: true
@@ -63,6 +74,7 @@ jobs:
       name: {{ $vmName }}
       rootDiskImage: quay.io/containerdisks/fedora:41
       storageClassName: {{ .storageClassName }}
+      udnLayer2: {{ .udnLayer2 }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       dataVolumeCounters:
       {{ range .dataVolumeCounters }}
@@ -93,7 +105,9 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
+  {{ if not .udnLayer2 }}
   beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ end }}
   objects:
 
   - objectTemplate: templates/vm.yml
@@ -133,7 +147,9 @@ jobs:
   jobIterations: 1
   maxWaitTimeout: 1h
   waitWhenFinished: true
+  {{ if not .udnLayer2 }}
   beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ end }}
   objects:
   - kubeVirtOp: migrate
     labelSelector:
