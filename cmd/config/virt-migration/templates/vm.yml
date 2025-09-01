@@ -74,14 +74,25 @@ spec:
             name: "data-{{ $dataVolumeIndex }}"
           {{ end }}
           interfaces:
+          {{ if .udnLayer2 }}
+          - name: primary-udn-net
+            binding:
+              name: l2bridge
+          {{ else }}
           - name: default
             masquerade: {}
+          {{ end }}
             bootOrder: 2
         machine:
           type: pc-q35-rhel9.4.0
       networks:
+      {{ if .udnLayer2 }}
+      - name: primary-udn-net
+        pod: {}
+      {{ else }}
       - name: default
         pod: {}
+      {{ end }}
       volumes:
       - dataVolume:
           name: "{{ .name }}-{{ $iteration }}-{{ .Replica }}-root"
