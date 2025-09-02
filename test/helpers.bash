@@ -170,7 +170,7 @@ verify_object_count(){
   local namespace=$3
   local selector=$4
   local fieldSelector=$5
-  local CMD="oc get $1 --no-headers"
+  local CMD="kubectl get $1 -o json"
   if [[ -n ${namespace} ]]; then
     CMD+=" -n ${namespace}"
   else
@@ -183,7 +183,7 @@ verify_object_count(){
     CMD+=" --field-selector ${fieldSelector}"
   fi
   echo "${CMD}"
-  counted=$(${CMD} | wc -l)
+  counted=$(${CMD} | jq '.items | length')
   if [[ ${counted} != "${count}" ]]; then
     echo "Expected ${count} ${resource}(s), seen ${counted}"
     return 1
