@@ -2,6 +2,7 @@
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
   measurements:
     - name: podLatency
     # - name: pprof
@@ -55,7 +56,6 @@ jobs:
     churnDuration: {{.CHURN_DURATION}}
     churnPercent: {{.CHURN_PERCENT}}
     churnDelay: {{.CHURN_DELAY}}
-    deletionStrategy: {{.DELETION_STRATEGY}}
     podWait: true
     waitWhenFinished: true
     preLoadImages: true
@@ -84,7 +84,6 @@ jobs:
     churnDuration: {{.CHURN_DURATION}}
     churnPercent: {{.CHURN_PERCENT}}
     churnDelay: {{.CHURN_DELAY}}
-    churnDeletionStrategy: {{.DELETION_STRATEGY}}
     executionMode: parallel
     verifyObjects: true
     errorOnVerify: true
