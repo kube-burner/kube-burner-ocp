@@ -50,7 +50,8 @@ jobs:
   - name: kueue-scale
     namespace: kueue-scale
     jobIterations: {{.ITERATIONS}}
-    preLoadImages: false #todo
+    preLoadImages: true
+    preLoadPeriod: 10s
     namespacedIterations: false
     cleanup: true
     namespaceLabels:
