@@ -37,8 +37,4 @@ spec:
     name: kueue-scale
     args:
       - 10s
-    resources:
-      requests:
-        memory: "10Mi"
-        cpu: "10m"
     imagePullPolicy: IfNotPresent

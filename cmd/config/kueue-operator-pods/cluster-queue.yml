@@ -5,13 +5,9 @@ metadata:
 spec:
   namespaceSelector: {} # match all.
   resourceGroups:
-  - coveredResources: ["cpu", "memory", "pods"]
+  - coveredResources: [pods]
     flavors:
     - name: "default"
       resources:
-      - name: "cpu"
-        nominalQuota: {{.CPU_QUOTA}}
-      - name: "memory"
-        nominalQuota: {{.MEMORY_QUOTA}}
       - name: "pods"
         nominalQuota: {{.PODS_QUOTA}}

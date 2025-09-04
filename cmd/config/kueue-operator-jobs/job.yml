@@ -17,9 +17,5 @@ spec:
         image: gcr.io/k8s-staging-perf-tests/sleep:v0.1.0
         args:
           - {{.runtime}}
-        resources:
-          requests:
-            cpu: "50m"
-            memory: "100Mi"          
         imagePullPolicy: IfNotPresent
       restartPolicy: Never

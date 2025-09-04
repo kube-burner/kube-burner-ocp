@@ -28,21 +28,27 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	var rc int
 	var metricsProfiles []string
 	var iterations int
-	var memoryQuota, workloadRuntime string
-	var cpuQuota, podsQuota, parallelism int
-	var defaultPodsQuota, defaultIterations int
-
+	var workloadRuntime string
+	var defaultJobReplicas, jobReplicas, defaultIterations, parallelism int
+	var QPS, burst int
+	var podsQuota int
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			AdditionalVars["CPU_QUOTA"] = cpuQuota
-			AdditionalVars["MEMORY_QUOTA"] = memoryQuota
+			podsQuota = jobReplicas * parallelism
+			if cmd.Name() == "kueue-operator-jobs-shared" {
+				// We set the pod quota to the 75% pods deployed in each iteration to ensure the clusterqueue share resouces with others
+				podsQuota = int(float64(jobReplicas*parallelism) * 0.75)
+			}
 			AdditionalVars["PODS_QUOTA"] = podsQuota
+			AdditionalVars["JOB_REPLICAS"] = jobReplicas
 			AdditionalVars["PARALLELISM"] = parallelism
 			AdditionalVars["ITERATIONS"] = iterations
 			AdditionalVars["WORKLOAD_RUNTIME"] = workloadRuntime
+			AdditionalVars["QPS"] = QPS
+			AdditionalVars["BURST"] = burst
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -50,22 +56,21 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			os.Exit(rc)
 		},
 	}
-	defaultPodsQuota = 2000
+
+	defaultJobReplicas = 2000
 	defaultIterations = 1
 	if variant == "kueue-operator-jobs" || variant == "kueue-operator-jobs-shared" {
 		cmd.Flags().IntVar(&parallelism, "parallelism", 5, "Number of jobs or pods to run in parallel")
 		cmd.Flags().StringVar(&workloadRuntime, "workload-runtime", "10s", "Workload runtime")
 		if variant == "kueue-operator-jobs-shared" {
-			defaultPodsQuota = 400
+			defaultJobReplicas = 400
 			defaultIterations = 10
 		}
-	}
-	if variant == "kueue-operator-jobs" || variant == "kueue-operator-pods" {
-		cmd.Flags().IntVar(&cpuQuota, "cpu-quota", 150, "CPU quota per Kueue")
-		cmd.Flags().StringVar(&memoryQuota, "memory-quota", "480Gi", "Memory quota per Kueue")
+		cmd.Flags().IntVar(&jobReplicas, "job-replicas", defaultJobReplicas, "Jobs per iteration")
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", defaultIterations, "Number of iterations/namespaces")
-	cmd.Flags().IntVar(&podsQuota, "pods-quota", defaultPodsQuota, "Pods quota per Kueue")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"kueue-metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.PersistentFlags().IntVar(&QPS, "qps", 10, "QPS")
+	cmd.PersistentFlags().IntVar(&burst, "burst", 10, "Burst")
 	return cmd
 }

@@ -7,7 +7,6 @@ global:
       thresholds:
         - conditionType: Ready
           metric: P99
-          threshold: {{.POD_READY_THRESHOLD}}
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
@@ -41,8 +40,6 @@ jobs:
       - objectTemplate: cluster-queue.yml
         replicas: 1
         inputVars:
-          CPU_QUOTA: {{.CPU_QUOTA}}
-          MEMORY_QUOTA: {{.MEMORY_QUOTA}}
           PODS_QUOTA: {{.PODS_QUOTA}}
       - objectTemplate: resource-flavor.yml
         replicas: 1
@@ -56,8 +53,8 @@ jobs:
     cleanup: true
     namespaceLabels:
       kueue.openshift.io/managed: "true"
-    qps: 5
-    burst: 5
+    qps: {{.QPS}}
+    burst: {{.BURST}}
     objects:
       - objectTemplate: local-queue.yml
         replicas: 1

@@ -36,13 +36,11 @@ jobs:
       - objectTemplate: cluster-queue.yml
         replicas: 1
         inputVars:
-          CPU_QUOTA: {{.CPU_QUOTA}}
-          MEMORY_QUOTA: {{.MEMORY_QUOTA}}
           PODS_QUOTA: {{.PODS_QUOTA}}
       - objectTemplate: resource-flavor.yml
         replicas: 1
 
-  - name: kueue-scale
+  - name: kueue-scale-jobs
     namespace: kueue-scale
     jobIterations: {{.ITERATIONS}}
     preLoadImages: true
@@ -51,13 +49,13 @@ jobs:
     cleanup: true
     namespaceLabels:
       kueue.openshift.io/managed: "true"
-    qps: 5
-    burst: 5
+    qps: {{.QPS}}
+    burst: {{.BURST}}
     objects:
       - objectTemplate: local-queue.yml
         replicas: 1
       - objectTemplate: job.yml
-        replicas: {{div .PODS_QUOTA .PARALLELISM}}
+        replicas: {{.JOB_REPLICAS}}
         inputVars:
           parallelism: {{.PARALLELISM}}
           runtime: {{.WORKLOAD_RUNTIME}}
