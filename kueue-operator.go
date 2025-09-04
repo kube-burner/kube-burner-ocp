@@ -23,6 +23,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const kueueOperatorJobsShared = "kueue-operator-jobs-shared"
+
 // NewKueueOperator holds kueue-operator workload
 func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var rc int
@@ -38,8 +40,8 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			podsQuota = jobReplicas * parallelism
-			if cmd.Name() == "kueue-operator-jobs-shared" {
-				// We set the pod quota to the 75% pods deployed in each iteration to ensure the clusterqueue share resouces with others
+			if cmd.Name() == kueueOperatorJobsShared {
+				// We set the pod quota to the 75% pods deployed in each iteration to ensure the clusterqueue share resources with others
 				podsQuota = int(float64(jobReplicas*parallelism) * 0.75)
 			}
 			AdditionalVars["PODS_QUOTA"] = podsQuota
@@ -59,10 +61,10 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 
 	defaultJobReplicas = 2000
 	defaultIterations = 1
-	if variant == "kueue-operator-jobs" || variant == "kueue-operator-jobs-shared" {
+	if variant == "kueue-operator-jobs" || variant == kueueOperatorJobsShared {
 		cmd.Flags().IntVar(&parallelism, "parallelism", 5, "Number of jobs or pods to run in parallel")
 		cmd.Flags().StringVar(&workloadRuntime, "workload-runtime", "10s", "Workload runtime")
-		if variant == "kueue-operator-jobs-shared" {
+		if variant == kueueOperatorJobsShared {
 			defaultJobReplicas = 400
 			defaultIterations = 10
 		}

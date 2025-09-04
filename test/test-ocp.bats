@@ -214,3 +214,15 @@ teardown_file() {
   oc delete crd -l kube-burner-job=crd-scale
   git clean -fd
 }
+
+@test "kueue-operator: jobs" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --job-replicas=10 --parallelism=10 --uuid=${UUID}
+  verify_object_count pods 100 "kueue-scale" kube-burner-job=kueue-scale-jobs
+  check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement
+}
+
+@test "kueue-operator: jobs-shared" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --uuid=${UUID} --iterations=2 --parallelism=5
+  verify_object_count pods 100 "" kube-burner-job=kueue-scale-jobs-shared
+  check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement
+}
