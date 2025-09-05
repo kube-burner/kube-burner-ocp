@@ -25,6 +25,9 @@ Available Commands:
   help                       Help about any command
   index                      Runs index sub-command
   init                       Runs custom workload
+  kueue-operator-pods        Runs kueue-operator-pods workload
+  kueue-operator-jobs        Runs kueue-operator-jobs workload
+  kueue-operator-jobs-shared Runs kueue-operator-jobs-shared workload
   network-policy             Runs network-policy workload
   node-density               Runs node-density workload
   node-density-cni           Runs node-density-cni workload
@@ -869,6 +872,24 @@ optimization of the OLMv1 stack.
 ### Environment Requirements
 
 OCP 4.18(OLMv1 GA) and above
+
+## Kueue Operator workloads
+
+The workloads of this family are used to exercise the Kueue Operator by creating pods or jobs depending on the workload. In order to run these jobs, Kueue Operator and Kueue CR should be installed on the target cluster.
+
+### kueue-operator-jobs
+
+This workload creates jobs in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time, job start and completion latencies.
+
+### kueue-operator-jobs-shared
+
+This workload creates jobs in multiple namespaces that are handled by 10 shared ClusterQueues with pre-defined pod quotas. Key measurements are Kueue admission wait time, job start and completion latencies.
+
+
+### kueue-operator-pods
+
+This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
+
 
 ## Custom Workload: Bring your own workload
 

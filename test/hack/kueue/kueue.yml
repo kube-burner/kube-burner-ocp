@@ -1,0 +1,15 @@
+kind: Kueue
+apiVersion: kueue.openshift.io/v1
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: kueue-operator
+  name: cluster
+  namespace: openshift-kueue-operator
+spec:
+  config:
+    integrations:
+      frameworks:
+        - BatchJob
+        - Pod
+  managementState: Managed

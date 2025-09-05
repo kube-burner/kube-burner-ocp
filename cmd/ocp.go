@@ -140,6 +140,9 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewVirtEphemeralRestart(&wh),
 		ocp.NewDVClone(&wh),
 		ocp.NewVirtMigration(&wh),
+		ocp.NewKueueOperator(&wh, "kueue-operator-pods"),
+		ocp.NewKueueOperator(&wh, "kueue-operator-jobs"),
+		ocp.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd

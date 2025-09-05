@@ -1,0 +1,37 @@
+# Jobs
+
+- query: count(kube_job_info{namespace=~"kueue-scale-.+"})
+  metricName: totalJobs
+
+- query: sum(kube_pod_status_phase{namespace=~"kueue-scale-.+"}) by (phase)
+  metricName: podStatusCount
+
+# Pod CPU & memory
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-kube-apiserver"}[2m]))[{{.elapsed}}:])
+  metricName: cpu-kube-apiserver-avg
+  instant: true
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{name!="", namespace=~"openshift-kueue-operator|kueue-system"}[2m]))[{{.elapsed}}:])
+  metricName: cpu-kueue-avg
+  instant: true
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-etcd"}[2m]))[{{.elapsed}}:])
+  metricName: cpu-etcd-avg
+  instant: true
+
+- query: max(max_over_time(sum(container_memory_working_set_bytes{name!="", namespace="openshift-kube-apiserver"})[{{.elapsed}}:]))
+  metricName: max-memory-kube-apiserver-aggregated
+  instant: true
+
+- query: max(max_over_time(sum(container_memory_working_set_bytes{pod=~"kueue-controller-manager-.*", name="", namespace=~"openshift-kueue-operator|kueue-system"})[{{.elapsed}}:]))
+  metricName: max-memory-kueue-aggregated
+
+- query: max(max_over_time(sum(container_memory_rss{name!="", namespace="openshift-etcd"})[{{.elapsed}}:]))
+  metricName: max-memory-etcd-aggregated
+  instant: true
+
+# Kueue
+
+- query: histogram_quantile(0.99, rate(kueue_admission_wait_time_seconds_bucket[2m]))
+  metricName: P99KueueAdmissionWaitTime
