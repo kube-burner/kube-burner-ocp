@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anp-reqegress-{{.Iteration}}-{{.Replica}}
+  labels:
+    app: egress-traffic-app
+spec:
+  replicas: {{.podReplicas}}
+  selector:
+    matchLabels:
+      type: anp-reqegress-{{.Iteration}}-{{.Replica}}
+      tenant: {{.tenant}}
+  template:
+    metadata:
+      labels:
+        type: anp-reqegress-{{.Iteration}}-{{.Replica}}
+        tenant: {{.tenant}}        
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist  
+      containers:
+      - name: keepalive
+        image: quay.io/openshift-psap-qe/ubi9-minimal
+        imagePullPolicy: Always
+        env:
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+               fieldPath: status.hostIP           
+        securityContext:
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL 
+        ports:
+        - containerPort: 8080
+        imagePullPolicy: Always            
+        command: [ "/bin/bash", "-c", "--" ]
+        args:
+        - while true;
+          do  
+              echo "Checking Egress connectivity to $NODE_IP for Node IP Selector Request";
+              nc -vz $NODE_IP 9001 -w 5;
+              sleep 2;
+              nc -vz $NODE_IP 9100 -w 5;
+              echo "Checking connectivity to internet for Egress Firewall Test";               
+              sleep 2;
+              curl -Is http://www.google.com | head -n 1;
+              sleep 2;
+              ping -c 5 8.8.8.8;
+              sleep 2;
+              curl -Is https://www.redhat.com/ | head -n 1;
+              sleep 2;
+              ping -c 5 8.8.4.4;
+              echo "Checking connectivity to Egress Request Across NS for Pod IP/CIDR Selector Request";
+              curl -s http://pod-reader-service.anp-pod-reader.svc.cluster.local:8080/podinfo.txt | sort | uniq | grep -E '9100|9091'| awk '{print $2}'| tr ":" " ">/tmp/targetPods.lst;
+              max=` wc -l /tmp/targetPods.lst|awk '{print $1}'`;
+              for((i=1;i<=$max;i++));
+              do 
+                  pod=`sed -n ${i}p /tmp/targetPods.lst`;
+                  echo nc -vz $pod -w 3;
+                  echo "--------------------------------------------------------";
+                  nc -vz $pod -w 3;
+                  sleep 2;
+              done;
+          done
