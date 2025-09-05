@@ -1,0 +1,9 @@
+apiVersion: olm.operatorframework.io/v1
+kind: ClusterCatalog
+metadata:
+  name: "clustercatalog-{{.Iteration}}"
+spec:
+  source:
+    type: Image
+    image:
+      ref: "{{.prefixImageName}}{{.Iteration}}"
