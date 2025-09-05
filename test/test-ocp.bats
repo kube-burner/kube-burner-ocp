@@ -204,3 +204,13 @@ teardown_file() {
     check_quantile_recorded ./dv-clone-results ${job} dvLatency Ready
   done
 }
+
+@test "extract and customize crd-scale" {
+  run_cmd ${KUBE_BURNER_OCP} crd-scale --extract
+  # Disable garbage-collection through using the config file
+  sed -i 's/gc: {{.GC}}/gc: false/g' crd-scale.yml
+  run_cmd ${KUBE_BURNER_OCP} crd-scale --iterations=5
+  verify_object_count crd 5 "" "kube-burner-job=crd-scale"
+  oc delete crd -l kube-burner-job=crd-scale
+  git clean -fd
+}
