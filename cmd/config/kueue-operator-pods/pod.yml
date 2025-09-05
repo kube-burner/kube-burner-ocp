@@ -35,5 +35,5 @@ spec:
         type: RuntimeDefault
     name: kueue-scale
     args:
-      - 10s
+      - {{.runtime}}
     imagePullPolicy: IfNotPresent

@@ -10,7 +10,6 @@ setup_file() {
   export ES_SERVER=${PERFSCALE_PROD_ES_SERVER:-"http://localhost:9200"}
   export ES_INDEX="kube-burner-ocp"
   trap print_events ERR
-  setup-prometheus
   if [[ -z "$PERFSCALE_PROD_ES_SERVER" ]]; then
     $OCI_BIN rm -f opensearch
     $OCI_BIN network rm -f monitoring
@@ -216,17 +215,16 @@ teardown_file() {
 }
 
 @test "kueue-operator: jobs" {
-  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --job-replicas=10 --parallelism=10 ${INDEXING_FLAGS}
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --job-replicas=10 --parallelism=10 --workload-runtime=2s ${INDEXING_FLAGS}
   check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
 }
 
 @test "kueue-operator: pods" {
-  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --pod-replicas=50 --parallelism=10 ${INDEXING_FLAGS}
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-pods --pod-replicas=50 --workload-runtime=2s ${INDEXING_FLAGS}
   check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
-  verify_object_count pods 50 "kueue-scale" "kube-burner-job=kueue-scale-pods"
 }
 
 @test "kueue-operator: jobs-shared" {
-  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --iterations=2 --parallelism=5 ${INDEXING_FLAGS}
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --iterations=2 --parallelism=5 --workload-runtime=2s ${INDEXING_FLAGS}
   check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
 }

@@ -44,7 +44,7 @@ jobs:
     namespace: kueue-scale
     jobIterations: {{.ITERATIONS}}
     preLoadImages: true
-    preLoadPeriod: 10s
+    preLoadPeriod: 5s
     namespacedIterations: false
     cleanup: true
     namespaceLabels:

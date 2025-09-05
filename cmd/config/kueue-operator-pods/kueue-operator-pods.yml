@@ -45,7 +45,7 @@ jobs:
     namespace: kueue-scale
     jobIterations: {{.ITERATIONS}}
     preLoadImages: true
-    preLoadPeriod: 10s
+    preLoadPeriod: 5s
     namespacedIterations: false
     cleanup: true
     namespaceLabels:
@@ -57,3 +57,5 @@ jobs:
         replicas: 1
       - objectTemplate: pod.yml
         replicas: {{.POD_REPLICAS}}
+        inputVars:
+          runtime: {{.WORKLOAD_RUNTIME}}

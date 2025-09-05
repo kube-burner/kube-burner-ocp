@@ -62,9 +62,9 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 
 	defaultJobReplicas = 2000
 	defaultIterations = 1
+	cmd.Flags().StringVar(&workloadRuntime, "workload-runtime", "10s", "Workload runtime")
 	if variant == "kueue-operator-jobs" || variant == kueueOperatorJobsShared {
 		cmd.Flags().IntVar(&parallelism, "parallelism", 5, "Number of jobs or pods to run in parallel")
-		cmd.Flags().StringVar(&workloadRuntime, "workload-runtime", "10s", "Workload runtime")
 		if variant == kueueOperatorJobsShared {
 			defaultJobReplicas = 400
 			defaultIterations = 10
