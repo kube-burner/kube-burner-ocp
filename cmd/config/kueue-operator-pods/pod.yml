@@ -5,7 +5,7 @@ metadata:
     app: kueue-scale
   annotations:
     kueue.x-k8s.io/queue-name: kueue-scale
-  name: kueue-scale-{{.JobName}}-{{.Replica}}
+  name: {{.JobName}}-{{.Replica}}
 spec:
   topologySpreadConstraints:
   - maxSkew: 1 
@@ -31,7 +31,6 @@ spec:
       allowPrivilegeEscalation: false
       capabilities:
         drop: ["ALL"]
-      runAsNonRoot: true
       seccompProfile:
         type: RuntimeDefault
     name: kueue-scale

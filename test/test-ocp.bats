@@ -220,6 +220,12 @@ teardown_file() {
   check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
 }
 
+@test "kueue-operator: pods" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --pod-replicas=50 --parallelism=10 ${INDEXING_FLAGS}
+  check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
+  verify_object_count pods 50 "kueue-scale" "kube-burner-job=kueue-scale-pods"
+}
+
 @test "kueue-operator: jobs-shared" {
   run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --iterations=2 --parallelism=5 ${INDEXING_FLAGS}
   check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime

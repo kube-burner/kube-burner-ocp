@@ -31,7 +31,7 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	var metricsProfiles []string
 	var iterations int
 	var workloadRuntime string
-	var defaultJobReplicas, jobReplicas, defaultIterations, parallelism int
+	var defaultJobReplicas, podReplicas, jobReplicas, defaultIterations, parallelism int
 	var QPS, burst int
 	var podsQuota int
 	cmd := &cobra.Command{
@@ -46,6 +46,7 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			}
 			AdditionalVars["PODS_QUOTA"] = podsQuota
 			AdditionalVars["JOB_REPLICAS"] = jobReplicas
+			AdditionalVars["POD_REPLICAS"] = podReplicas
 			AdditionalVars["PARALLELISM"] = parallelism
 			AdditionalVars["ITERATIONS"] = iterations
 			AdditionalVars["WORKLOAD_RUNTIME"] = workloadRuntime
@@ -69,6 +70,9 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			defaultIterations = 10
 		}
 		cmd.Flags().IntVar(&jobReplicas, "job-replicas", defaultJobReplicas, "Jobs per iteration")
+	}
+	if variant == "kueue-operator-pods" {
+		cmd.Flags().IntVar(&podReplicas, "pod-replicas", defaultJobReplicas, "Jobs per iteration")
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", defaultIterations, "Number of iterations/namespaces")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"kueue-metrics.yml"}, "Comma separated list of metrics profiles to use")

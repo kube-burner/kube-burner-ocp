@@ -4,9 +4,6 @@ global:
   gcMetrics: {{.GC_METRICS}}
   measurements:
     - name: podLatency
-      thresholds:
-        - conditionType: Ready
-          metric: P99
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
@@ -40,11 +37,11 @@ jobs:
       - objectTemplate: cluster-queue.yml
         replicas: 1
         inputVars:
-          PODS_QUOTA: {{.PODS_QUOTA}}
+          PODS_QUOTA: {{.POD_REPLICAS}}
       - objectTemplate: resource-flavor.yml
         replicas: 1
 
-  - name: kueue-scale
+  - name: kueue-scale-pods
     namespace: kueue-scale
     jobIterations: {{.ITERATIONS}}
     preLoadImages: true
@@ -59,4 +56,4 @@ jobs:
       - objectTemplate: local-queue.yml
         replicas: 1
       - objectTemplate: pod.yml
-        replicas: {{.PODS_QUOTA}}
+        replicas: {{.POD_REPLICAS}}
