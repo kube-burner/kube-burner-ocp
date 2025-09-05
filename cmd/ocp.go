@@ -74,7 +74,7 @@ func openShiftCmd() *cobra.Command {
 		}
 		util.ConfigureLogging(cmd)
 		if extract {
-			if err := workloads.ExtractWorkload(ocpConfig, rootDir, cmd.Name(), "alerts.yml", "metrics.yml", "metrics-aggregated.yml", "metrics-report.yml"); err != nil {
+			if err := workloads.ExtractWorkload(ocpConfig, rootDir, []string{cmd.Name(), "alerts-profiles", "metrics-profiles"}); err != nil {
 				log.Fatal(err.Error())
 			}
 			os.Exit(0)
@@ -141,6 +141,9 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewVirtEphemeralRestart(&wh),
 		ocp.NewDVClone(&wh),
 		ocp.NewVirtMigration(&wh),
+		ocp.NewKueueOperator(&wh, "kueue-operator-pods"),
+		ocp.NewKueueOperator(&wh, "kueue-operator-jobs"),
+		ocp.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd

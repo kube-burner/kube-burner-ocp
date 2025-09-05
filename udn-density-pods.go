@@ -29,7 +29,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churn, l3, simple, pprof bool
 	var jobPause time.Duration
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var churnDeletionStrategy string
+	var deletionStrategy string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -56,7 +56,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
-			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
@@ -76,7 +76,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Iterations")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")

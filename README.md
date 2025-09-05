@@ -25,6 +25,9 @@ Available Commands:
   help                       Help about any command
   index                      Runs index sub-command
   init                       Runs custom workload
+  kueue-operator-pods        Runs kueue-operator-pods workload
+  kueue-operator-jobs        Runs kueue-operator-jobs workload
+  kueue-operator-jobs-shared Runs kueue-operator-jobs-shared workload
   network-policy             Runs network-policy workload
   node-density               Runs node-density workload
   node-density-cni           Runs node-density-cni workload
@@ -427,7 +430,9 @@ Similar to node-density, fills with VirtualMachines the worker nodes of the clus
 
 ### Virt Density Udn
 
-Similar to udn-density-pods scenario. Creates two VMs, one Nginx server and one client reaching it, on the same UDN per iteration. This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
+Similar to udn-density-pods scenario. Creates VMs, one Nginx server and several clients (the number depends on the `vms-per-node` variable) reaching it, on the same UDN per iteration. Each UDN-namespace has the same number of VMs, the number of clients deployed per UDN is computed as following: 
+```Nb of client per UDN = (Nb of worker * vms-per-node / Nb of UDN) -1 //-1  because the server is always deployed.```
+This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
 
 ### Virt Capacity Benchmark
 
@@ -872,6 +877,24 @@ optimization of the OLMv1 stack.
 ### Environment Requirements
 
 OCP 4.18(OLMv1 GA) and above
+
+## Kueue Operator workloads
+
+The workloads of this family are used to exercise the Kueue Operator by creating pods or jobs depending on the workload. In order to run these jobs, Kueue Operator and Kueue CR should be installed on the target cluster.
+
+### kueue-operator-jobs
+
+This workload creates jobs in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time, job start and completion latencies.
+
+### kueue-operator-jobs-shared
+
+This workload creates jobs in multiple namespaces that are handled by 10 shared ClusterQueues with pre-defined pod quotas. Key measurements are Kueue admission wait time, job start and completion latencies.
+
+
+### kueue-operator-pods
+
+This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
+
 
 ## Custom Workload: Bring your own workload
 

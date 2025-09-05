@@ -1,7 +1,7 @@
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
-  name: virt-client-{{.Iteration}}
+  name: virt-client-{{.Iteration}}-{{.Replica}}
   labels:
     kubevirt.io/os: fedora
 spec:
