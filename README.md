@@ -534,7 +534,7 @@ The test runs the following sequence:
 3. Create a `DataVolume` in namespace B using the rootdisk of the `VirtualMachine` as the source
 4. If the `dataImportCronSourceFormat` field of the `StorageProfile` `status` is set to `snapshot`, or `--use-snapshot` is set to `true`, create a `VolumeSnapshot` of the DataVolume
 5. Create a `DataSource`, setting the `source` field to either the `VolumeSnapshot` (if was created) or the `DataVolume`
-6. Create `VirtualMachine` in namespace B based in the `DataSource`
+6. Create `VirtualMachines` in namespace B based in the `DataSource`
 
 #### Tested StorageClass
 
@@ -552,7 +552,8 @@ By default, the `baseName` is `virt-clone`. Set it by passing `--namespace` (or 
 #### Test Size Parameters
 
 Users may control the workload sizes by passing the following arguments:
-- `--vms` - Number of `VirtualMachines` to create in step 6
+- `--iteration` - Number of iterations to run in step 6. Default is 1
+- `--iteration-clones` - Number of `VirtualMachines` to create in each iteration of step 6. Default is 10
 
 #### Volume Access Mode
 
@@ -874,8 +875,21 @@ One document, such as the following, is indexed per each internal (through Route
 
 ## OLMv1 Benchmark
 
-To evaluate the performance of `Operator Lifecycle Manager v1` (OLMv1), it initiates the creation of a series of `ClusterCatalog` custom resources. These resources serve as a representative workload to simulate realistic catalog management operations within the cluster. During the test execution, the system actively monitors and collects detailed resource usage metrics — specifically CPU and memory consumption — for the pods running in both the `openshift-catalogd` and `openshift-operator-controller` namespaces. These namespaces are critical components of the OLMv1 infrastructure, responsible for catalog resolution and operator deployment, respectively.
-In addition to standard resource metrics, the performance test is also capable of gathering pprof profiling data, which provides in-depth runtime insights such as goroutine activity, heap allocations, and CPU profiles. This profiling capability is contingent on the user explicitly enabling pprof endpoints within the OLMv1 components prior to test execution. Once enabled, the test can automatically scrape and archive the profiling data for further analysis, facilitating root cause investigation and performance optimization of the OLMv1 stack.
+To evaluate the performance of `Operator Lifecycle Manager v1` (OLMv1), this benchmark initiates the creation of a series of
+`ClusterCatalog` and `ClusterExtension` custom resources. These resources serve as a representative workload to simulate realistic
+catalog and operator deployment operations within the cluster. Each `ClusterExtension` internally triggers the resolution and
+unpacking of an operator bundle through the configured catalog.
+
+During the test execution, the system actively monitors and collects detailed resource usage metrics — specifically CPU and memory
+consumption — for the pods running in both the `openshift-catalogd` and `openshift-operator-controller` namespaces. These
+namespaces are critical components of the OLMv1 infrastructure, responsible for catalog resolution and operator deployment,
+respectively.
+
+In addition to standard resource metrics, the performance test is also capable of gathering pprof profiling data, which provides
+in-depth runtime insights such as goroutine activity, heap allocations, and CPU profiles. This profiling capability is contingent on
+the user explicitly enabling pprof endpoints within the OLMv1 components prior to test execution. Once enabled, the test can
+automatically scrape and archive the profiling data for further analysis, facilitating root cause investigation and performance
+optimization of the OLMv1 stack.
 
 ### Environment Requirements
 

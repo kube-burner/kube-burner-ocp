@@ -38,44 +38,12 @@ setup-opensearch() {
   $OCI_BIN wait --condition=healthy opensearch
 }
 
-check_ns() {
-  echo "Checking the number of namespaces labeled with \"${1}\" is \"${2}\""
-  if [[ $(kubectl get ns -l "${1}" -o name | wc -l) != "${2}" ]]; then
-    echo "Number of namespaces labeled with ${1} less than expected"
-    return 1
-  fi
-}
-
 check_destroyed_ns() {
   echo "Checking namespace \"${1}\" has been destroyed"
   if [[ $(kubectl get ns -l "${1}" -o name | wc -l) != 0 ]]; then
     echo "Namespaces labeled with \"${1}\" not destroyed"
     return 1
   fi
-}
-
-check_destroyed_pods() {
-  echo "Checking pods have been destroyed in namespace ${1}"
-  if [[ $(kubectl get pod -n "${1}" -l "${2}" -o name | wc -l) != 0 ]]; then
-    echo "Pods in namespace ${1} not destroyed"
-    return 1
-  fi
-}
-
-check_running_pods() {
-  running_pods=$(kubectl get pod -A -l ${1} --field-selector=status.phase==Running --no-headers | wc -l)
-  if [[ "${running_pods}" != "${2}" ]]; then
-    echo "Running pods in cluster labeled with ${1} different from expected: Expected=${2}, observed=${running_pods}"
-    return 1
-  fi
-}
-
-check_running_pods_in_ns() {
-    running_pods=$(kubectl get pod -n "${1}" -l kube-burner-job=namespaced | grep -c Running)
-    if [[ "${running_pods}" != "${2}" ]]; then
-      echo "Running pods in namespace $1 different from expected. Expected=${2}, observed=${running_pods}"
-      return 1
-    fi
 }
 
 check_file_list() {
@@ -193,5 +161,31 @@ calculate_pods_per_node() {
     echo "${calculated_value}"
   else
     echo "75"
+  fi
+}
+
+verify_object_count(){
+  local resource=$1
+  local count=$2
+  local namespace=$3
+  local selector=$4
+  local fieldSelector=$5
+  local CMD="kubectl get $1 -o json"
+  if [[ -n ${namespace} ]]; then
+    CMD+=" -n ${namespace}"
+  else
+    CMD+=" -A"
+  fi
+  if [[ -n ${selector} ]]; then
+    CMD+=" -l ${selector}"
+  fi
+  if [[ -n ${fieldSelector} ]]; then
+    CMD+=" --field-selector ${fieldSelector}"
+  fi
+  echo "${CMD}"
+  counted=$(${CMD} | jq '.items | length')
+  if [[ ${counted} != "${count}" ]]; then
+    echo "Expected ${count} ${resource}(s), seen ${counted}"
+    return 1
   fi
 }

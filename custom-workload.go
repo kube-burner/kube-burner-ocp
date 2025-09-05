@@ -26,7 +26,7 @@ import (
 func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churn, namespacedIterations, svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var configFile, churnDeletionStrategy string
+	var configFile, deletionStrategy string
 	var iterations, churnPercent, churnCycles, iterationsPerNamespace, podsPerNode int
 	var rc int
 	cmd := &cobra.Command{
@@ -60,7 +60,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
-			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
 			AdditionalVars["JOB_ITERATIONS"] = jobIterations
@@ -78,7 +78,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
-	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 5*time.Minute, "Churn duration")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations. Mutually exclusive with '--pods-per-node'")

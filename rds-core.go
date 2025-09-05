@@ -29,7 +29,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, churnPercent, churnCycles, dpdkCores int
 	var churn, svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var churnDeletionStrategy, perfProfile string
+	var deletionStrategy, perfProfile string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -47,7 +47,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
-			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["DPDK_CORES"] = dpdkCores
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PERF_PROFILE"] = perfProfile
@@ -65,7 +65,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&churnDeletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().IntVar(&dpdkCores, "dpdk-cores", 2, "Number of cores per DPDK pod")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
