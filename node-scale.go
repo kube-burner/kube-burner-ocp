@@ -64,7 +64,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
-			AdditionalVars["CHURN_DELETION_STRATEGY"] = churnDeletionStrategy
+			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
