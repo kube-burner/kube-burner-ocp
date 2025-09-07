@@ -2,6 +2,7 @@
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
   measurements:
     - name: podLatency
       thresholds:
@@ -41,6 +42,7 @@ jobs:
     jobIterationDelay: 0s
     jobPause: 0s
     preLoadImages: false
+    skipIndexing: true
     objects:
       - objectTemplate: namespace.yml
         replicas: 1
@@ -49,7 +51,7 @@ jobs:
       - objectTemplate: secret-kubeconfig.yml
         replicas: 1
         inputVars:
-          kubeconfigB64: "{{ $.KUBECONFIGB64 }}"
+          kubeconfig: {{ .KUBECONFIG }}
 
   - name: node-scale
     namespace: kubemark
@@ -61,7 +63,6 @@ jobs:
     churnDuration: {{.CHURN_DURATION}}
     churnPercent: {{.CHURN_PERCENT}}
     churnDelay: {{.CHURN_DELAY}}
-    churnDeletionStrategy: {{.CHURN_DELETION_STRATEGY}}
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
@@ -75,7 +76,7 @@ jobs:
       - objectTemplate: pod.yml
         replicas: 1
         inputVars:
-          cpu: "{{ $.CPU }}"
-          memory: "{{ $.MEMORY }}"
-          tag: "{{ $.TAG }}"
-          maxPods: "{{ $.MAX_PODS }}"
+          cpu: {{ .CPU }}
+          maxPods: {{ .MAX_PODS }}
+          memory: {{ .MEMORY }}
+          tag: {{ .TAG }}

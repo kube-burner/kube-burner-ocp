@@ -15,9 +15,7 @@
 package ocp
 
 import (
-	"encoding/base64"
 	"fmt"
-	"io"
 	"os"
 	"time"
 
@@ -32,33 +30,13 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var metricsProfiles []string
 	var iterations, churnCycles, churnPercent, cpu, memory, maxPods int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
-	var churnDeletionStrategy, tag string
+	var deletionStrategy, kubeconfig, tag string
 	var churn bool
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			// Read and encode KUBECONFIG file
-			kubeconfigPath := os.Getenv("KUBECONFIG")
-			if kubeconfigPath != "" {
-				kubeconfigFile, err := os.Open(kubeconfigPath)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error opening KUBECONFIG file %s: %v\n", kubeconfigPath, err)
-					os.Exit(1)
-				}
-				defer kubeconfigFile.Close()
-
-				kubeconfigContent, err := io.ReadAll(kubeconfigFile)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error reading KUBECONFIG file %s: %v\n", kubeconfigPath, err)
-					os.Exit(1)
-				}
-
-				kubeconfigB64 := base64.StdEncoding.EncodeToString(kubeconfigContent)
-				AdditionalVars["KUBECONFIGB64"] = kubeconfigB64
-			}
-
 			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
@@ -66,6 +44,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["KUBECONFIG"] = kubeconfig
 			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["CPU"] = cpu
