@@ -1,0 +1,42 @@
+---
+global:
+  gc: false
+  gcMetrics: false
+  deletionStrategy: default
+  measurements:
+    - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: 180s
+metricsEndpoints:
+  - indexer:
+      type: local
+      metricsDirectory: collected-metrics-build-farm
+
+jobs:
+  - name: build-farm
+    namespace: build-farm-workload
+    jobIterations: 10000
+    qps: 20
+    burst: 50
+    namespacedIterations: true
+    iterationsPerNamespace: 250
+    podWait: true
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 5s
+    churn: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+
+      - objectTemplate: cmd/config/build-farm/build-job-large.yml
+        replicas: 1
+        inputVars:
+          buildImage: "quay.io/konflux-ci/buildah-task:latest"
+          buildPlatform: "linux/x86_64"
+          targetImage: "registry.local/build-farm/test-image"
