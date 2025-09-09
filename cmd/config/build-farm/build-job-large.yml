@@ -33,6 +33,7 @@ metadata:
     build-farm.openshift.io/application: build-farm-app
     build-farm.openshift.io/component: build-farm-{{.Iteration}}
     build.farm.redhat.com/build_type: docker
+    build.farm.redhat.com/build_arch: x86_64
     pipelines.build-farm.openshift.io/type: build
     tekton.dev/memberOf: tasks
     tekton.dev/pipeline: build-farm-{{.JobName}}-{{.Iteration}}
@@ -42,13 +43,18 @@ metadata:
     tekton.dev/task: buildah-remote-oci-ta
     tekton.dev/taskRun: build-farm-{{.JobName}}-{{.Iteration}}-build-images-0
     tekton.dev/taskRunUID: build-farm-{{.Iteration}}-build
-  name: {{.JobName}}-{{.Iteration}}
+{{ if lt .Iteration (div (mul .jobIterations .deletionPercentage) 100) }}
+    build.farm.redhat.com/delete: "true"
+{{ else }}
+    build.farm.redhat.com/patch: "true"
+{{ end }}
+  name: build-{{.Iteration}}
 spec:
-  activeDeadlineSeconds: 3600
+  activeDeadlineSeconds: 7200
   backoffLimit: 3
   completions: 1
   parallelism: 1
-  ttlSecondsAfterFinished: 3600
+  ttlSecondsAfterFinished: 86400
   template:
     metadata:
       annotations:
@@ -92,6 +98,11 @@ spec:
         tekton.dev/task: buildah-remote-oci-ta
         tekton.dev/taskRun: build-farm-{{.JobName}}-{{.Iteration}}-build-images-0
         tekton.dev/taskRunUID: build-farm-{{.Iteration}}-build
+{{ if lt .Iteration (div (mul .jobIterations .deletionPercentage) 100) }}
+        build.farm.redhat.com/delete: "true"
+{{ else }}
+        build.farm.redhat.com/patch: "true"
+{{ end }}
     spec:
       containers:
       - name: step-use-trusted-artifact
@@ -754,6 +765,8 @@ spec:
           name: build-metrics-volume
         - mountPath: /tmp/build-tmp
           name: build-tmp-volume
+        - mountPath: /sbom
+          name: sbom-output-volume
         workingDir: /var/workdir/source
       - name: step-prepare-sboms
         image: {{.buildImage}}
@@ -1224,7 +1237,7 @@ spec:
           cat > ${scriptfile} << '_EOF_'
           IyEvYmluL2Jhc2gKc2V0IC1ldW8gcGlwZWZhaWwKCiMgQnVpbGQgZmFybSBjb21wcmVoZW5zaXZlIGJ1aWxkIHNpbXVsYXRpb24gc2NyaXB0CiMgVGhpcyBzY3JpcHQgc2ltdWxhdGVzIGEgcmVhbCBidWlsZCBwcm9jZXNzIHdpdGggZXh0ZW5zaXZlIG91dHB1dAoKZnVuY3Rpb24gbG9nX3dpdGhfdGltZXN0YW1wKCkgewogICAgZWNobyAiWyQoZGF0ZSAtLXV0YyAtSW5zKV0gJEAiCn0KCmZ1bmN0aW9uIGdlbmVyYXRlX2hhc2goKSB7CiAgICBlY2hvICQoZGQgaWY9L2Rldi91cmFuZG9tIGJzPTEgY291bnQ9MTIgMj4vZGV2L251bGwgfCBiYXNlNjQgfCB0ciAnKy8nICctXycpCn0KCmZ1bmN0aW9uIGdlbmVyYXRlX2ZpbGVuYW1lKCkgewogICAgZWNobyAic3JjLyQoKFJBTkRPTSAlIDUgKyAxKSkvJChkZCBpZj0vZGV2L3VyYW5kb20gYnM9MSBjb3VudD04IDI+L2Rldi9udWxsIHwgaGV4ZHVtcCAtdSB8IGF3ayAneygxKT19fS5qcyIKfQoKZnVuY3Rpb24gc2ltdWxhdGVfZmlsZV9hbmFseXNpcygpIHsKICAgIGxvY2FsIGZpbGVfY291bnQ9JCgoUkFORE9NICUgNTAwICsgMTAwKSkKICAgIGZvciBpIGluICQoc2VxIDEgJGZpbGVfY291bnQpOyBkbwogICAgICAgIGxvY2FsIGZpbGVuYW1lPSQoZ2VuZXJhdGVfZmlsZW5hbWUpCiAgICAgICAgbG9jYWwgZmlsZV9zaXplPSQoKFJBTkRPTSAlIDEwMDAwICsgMTAwMCkpCiAgICAgICAgZWNobyAiQW5hbHl6aW5nICRmaWxlbmFtZSAoJGZpbGVfc2l6ZSBieXRlcykiCiAgICAgICAgaWYgKCggaSAlIDIwID09IDAgKSk7IHRoZW4KICAgICAgICAgICAgc2xlZXAgMC4wMQogICAgICAgIGZpCiAgICBkb25lCn0KCmZ1bmN0aW9uIHNpbXVsYXRlX2RlcGVuZGVuY3lfcmVzb2x1dGlvbigpIHsKICAgIGxvY2FsIGRlcGVuZGVuY2llcz0oImV4cHJlc3MiICJsb2Rhc2giICJheGlvcyIgImJhYmVsLWNvcmUiICJ3ZWJwYWNrIiAiZXNsaW50IiAidHlwZXNjcmlwdCIgInJlYWN0IiAiZHJhZnQtanMiICJyZWR1eCIgIm1vbWVudCIgInZhbGlkYXRvciIgInV1aWQiICJhc3luYyIgImxvZ2dlciIgImNoYWxrIiAiY29tbWFuZGVyIiAidGVzdGluZy1saWJyYXJ5IiAiamVzdCIgImN5cHJlc3MiICJzdG9yeWJvb2siICJlc2xpbnQtcGx1Z2luLXJlYWN0IiAiQGJhYmVsL3ByZXNldC1lbnYiICJAYmFiZWwvcHJlc2V0LXJlYWN0IiAibm9kZS1zYXNzIiAiY3NzLWxvYWRlciIgInN0eWxlLWxvYWRlciIgImZpbGUtbG9hZGVyIiAidXJsLWxvYWRlciIgImh0bWwtd2VicGFjay1wbHVnaW4iICJtaW5pLWNzcy1leHRyYWN0LXBsdWdpbiIgImNsZWFuLXdlYnBhY2stcGx1Z2luIiAid2VicGFjay1kZXYtc2VydmVyIiAiYWNvcm4iICJhaXJibmItanMtc2hhcmVhYmxlLWNvbmZpZyIgInByZXR0aWVyIiAiaHVza3kiICJsaW50LXN0YWdlZCIgImNyb3NzLWVudiIgIm51bGwiICJkb3RlbnYiKQogICAgZm9yIGRlcCBpbiAiJHtkZXBlbmRlbmNpZXNbQF19IjsgZG8KICAgICAgICBsb2NhbCB2ZXJzaW9uPSIkKChSQU5ET00gJSAxMCArIDEpKS4kKChSQU5ET00gJSAxMCkpLiQoKFJBTkRPTSAlIDEwKSkiCiAgICAgICAgbG9jYWwgZG93bmxvYWRfc2l6ZT0kKChSQU5ET00gJSA1MDAwICsgNTAwKSkKICAgICAgICBlY2hvICJSZXNvbHZpbmcgJGRlcCBAbGF0ZXN0IC0+ICR2ZXJzaW9uIgogICAgICAgIGVjaG8gIkZldGNoaW5nICRkZXAtJHZlcnNpb24udGd6ICgke2Rvd25sb2FkX3NpemV9IEtCKSIKICAgICAgICBlY2hvICJWZXJpZnlpbmcgaW50ZWdyaXR5IG9mICRkZXAtJHZlcnNpb24udGd6IgogICAgICAgIGVjaG8gIkV4dHJhY3RpbmcgJGRlcC0kdmVyc2lvbi50Z3oiCiAgICAgICAgc2xlZXAgMC4wNQogICAgZG9uZQp9CgpmdW5jdGlvbiBzaW11bGF0ZV9jb21waWxhdGlvbigpIHsKICAgIGxvY2FsIGZpbGVzPSgiYXBwLmpzIiAiaW5kZXguanMiICJjb21wb25lbnRzL0hlYWRlci5qcyIgImNvbXBvbmVudHMvRm9vdGVyLmpzIiAidXRpbHMvaGVscGVycy5qcyIgInNlcnZpY2VzL2FwaS5qcyIgInJvdXRlcy9pbmRleC5qcyIgIm1pZGRsZXdhcmUvYXV0aC5qcyIgIm1vZGVscy91c2VyLmpzIiBjb250cm9sbGVycy91c2VyQ29udHJvbGxlci5qcyIgInB1YmxpYy9jc3Mvc3R5bGUuY3NzIiAicHVibGljL2ltYWdlcy9sb2dvLnBuZyIgInRlc3RzL3VuaXQvYXBwLnRlc3QuanMiICJ0ZXN0cy9pbnRlZ3JhdGlvbi9hcGkudGVzdC5qcyIgImJ1aWxkL3N0YXRpYy9qcy9tYWluLmpzIiBidWlsZC9zdGF0aWMvY3NzL21haW4uY3NzIiAiYnVpbGQvaW5kZXguaHRtbCIpCiAgICBmb3IgZmlsZSBpbiAiJHtmaWxlc1tAXX0iOyBkbwogICAgICAgIGVjaG8gIkNvbXBpbGluZyAkZmlsZSIKICAgICAgICBsb2NhbCBvdXRwdXRfc2l6ZT0kKChSQU5ET00gJSA1MDAwICsgMTAwMCkpCiAgICAgICAgZWNobyAiICBHZW5lcmF0ZWQgZGlzdC8kZmlsZSAoJG91dHB1dF9zaXplIGJ5dGVzKSIKICAgICAgICBlY2hvICIgIE9wdGltaXphdGlvbiBsZXZlbDogJCgoUkFORE9NICUgMTAgKyA3NSspKSUiCiAgICAgICAgc2xlZXAgMC4wMwogICAgZG9uZQp9CgpmdW5jdGlvbiBzaW11bGF0ZV9jb250YWluZXJfYnVpbGQoKSB7CiAgICBsb2NhbCBsYXllcnM9KCJGUk9NIGJhc2U6bGF0ZXN0IiAiUlVOIGFwdC1nZXQgdXBkYXRlICYmIGFwdC1nZXQgaW5zdGFsbCAteSBub2RlanMgbnBtIiAiV09SS0RJUiAvYXBwIiAiQ09QWSBwYWNrYWdlKi5qc29uIC4vIiAiUlVOIG5wbSBjaWAiAENPUFkgLiAuIiAiRVhQT1NFIDgwODAiICJDTUQgWyJub2RlIiwgInNlcnZlci5qcyJdIikKICAgIGxvY2FsIGxheWVyX251bT0xCiAgICBmb3IgbGF5ZXIgaW4gIiR7bGF5ZXJzW0BdfSI7IGRvCiAgICAgICAgZWNobyAiU3RlcCAkbGF5ZXJfbnVtLyR7I2xheWVyc1tAXX0gOiAkbGF5ZXIiCiAgICAgICAgY2FzZSAkbGF5ZXJfbnVtIGluCiAgICAgICAgICAgIDEpCiAgICAgICAgICAgICAgICBlY2hvICIgIFB1bGxpbmcgZnJvbSBkb2NrZXIuaW8vbGlicmFyeS9ub2RlOjE4LWFscGluZSIKICAgICAgICAgICAgICAgIGVjaG8gIiAgU2hhMjU2OiBhYmMxMjNkZWY0NTY3ODkwYWJjZGVmMTIzNDU2Nzg5MGFiY2RlZjEyMzQ1Njc4OTBhYmNkZWYxMjM0NTYiCiAgICAgICAgICAgICAgICA7OwogICAgICAgICAgICAyKQogICAgICAgICAgICAgICAgZWNobyAiICBVcGRhdGluZyBwYWNrYWdlIGxpc3QiCiAgICAgICAgICAgICAgICBlY2hvICIgIEluc3RhbGxpbmcgTm9kZS5qcyAke3ZlcnNpb259ICgkKChSQU5ET00gJSA1MCArIDEwKSptZGlmZikiCiAgICAgICAgICAgICAgICA7OwogICAgICAgICAgICAzKQogICAgICAgICAgICAgICAgZWNobyAiICBDcmVhdGluZyB3b3JrIGRpcmVjdG9yeSAvYXBwIgogICAgICAgICAgICAgICAgOzsKICAgICAgICAgICAgNCkKICAgICAgICAgICAgICAgIGVjaG8gIiAgQ29weWluZyBwYWNrYWdlLmpzb24gYW5kIHBhY2thZ2UtbG9jay5qc29uIgogICAgICAgICAgICAgICAgOzsKICAgICAgICAgICAgNSkKICAgICAgICAgICAgICAgIGVjaG8gIiAgSW5zdGFsbGluZyBOUE0gZGVwZW5kZW5jaWVzLi4uIgogICAgICAgICAgICAgICAgZWNobyAiICBhZGRlZCAke24oUkFORE9NICUgMjAwICsgNTApfSBwYWNrYWdlcyBpbiAkKChSQU5ET00gJSAzMCArIDUpKXMiCiAgICAgICAgICAgICAgICA7OwogICAgICAgICAgICA2KQogICAgICAgICAgICAgICAgZWNobyAiICBDb3B5aW5nIGFwcGxpY2F0aW9uIHNvdXJjZSBjb2RlIgogICAgICAgICAgICAgICAgZWNobyAiICBDb3BpZWQgJCgoUkFORE9NICUgMTAwICsgNTApKSBmaWxlcyIKICAgICAgICAgICAgICAgIDs7CiAgICAgICAgICAgIDcpCiAgICAgICAgICAgICAgICBlY2hvICIgIENvbmZpZ3VyaW5nIGV4cG9zZWQgcG9ydCA4MDgwIgogICAgICAgICAgICAgICAgOzsKICAgICAgICAgICAgOCkKICAgICAgICAgICAgICAgIGVjaG8gIiAgU2V0dGluZyBkZWZhdWx0IGNvbW1hbmQ6IG5vZGUgc2VydmVyLmpzIgogICAgICAgICAgICAgICAgOzsKICAgICAgICBlc2FjCiAgICAgICAgbG9jYWwgbGF5ZXJfc2l6ZT0kKChSQU5ET00gJSA1MDAwMDAgKyAxMDAwMDApKQogICAgICAgIGVjaG8gIiAgTGF5ZXIgc2l6ZTogJGxheWVyX3NpemUgYnl0ZXMiCiAgICAgICAgZWNobyAiICBMYXllciBJRDogJChnZW5lcmF0ZV9oYXNoKSIKICAgICAgICAoKGxheWVyX251bSsrKSkKICAgICAgICBzbGVlcCAwLjEKICAgIGRvbmUKfQoKZnVuY3Rpb24gc2ltdWxhdGVfc2VjdXJpdHlfc2NhbigpIHsKICAgIGxvY2FsIHNjYW5fdHlwZXM9KCJOVkQiICJPU1YiICJHSFNBIiAiT1NTSUdIVCIgIkNVU1RPTSIpCiAgICBsb2NhbCB2dWxuZXJhYmlsaXRpZXM9KCJDVkUtMjAyNC0xMjM0IiAiQ1ZFLTI wMjQtNTY3OCIgIkNWRS0yMDI0LTkwMTIiKQogICAgZm9yIHNjYW5fdHlwZSBpbiAiJHtzY2FuX3R5cGVzW0BdfSI7IGRvCiAgICAgICAgZWNobyAiUnVubmluZyAkc2Nhbl90eXBlIHNlY3VyaXR5IHNjYW4uLi4iCiAgICAgICAgZm9yIGkgaW4gJChzZXEgMSAkKChSQU5ET00gJSAyMCArIDEwKSkpOyBkbwogICAgICAgICAgICBlY2hvICIgIFNjYW5uaW5nIGxheWVyICRpLi4uIgogICAgICAgICAgICBpZiAoKCBSQU5ET00gJSAxMCA8IDIgKSk7IHRoZW4KICAgICAgICAgICAgICAgIGxvY2FsIGN2ZT0iJHt2dWxuZXJhYmlsaXRpZXNbJCgoUkFORE9NICUgJHsjdnVsbmVyYWJpbGl0aWVzW0BdfSkpXX0iCiAgICAgICAgICAgICAgICBsb2NhbCBzZXZlcml0eT0iJChbICQoKFJBTkRPTSAlIDQpKSAtbHQgMiBdICYmIGVjaG8gIkhJR0giIHx8IGVjaG8gIk1FRElVTSIpIgogICAgICAgICAgICAgICAgZWNobyAiICAgIFdhcm5pbmc6ICRjdmUgKCRzZXZlcml0eSkgZm91bmQgaW4gcGFja2FnZSAkKGVjaG8gJHt2dWxuZXJhYmlsaXRpZXNbJCgoUkFORE9NICUgJHsjdnVsbmVyYWJpbGl0aWVzW0BdfSkpXX0gfCBjdXQgLWQtIC1mMikiCiAgICAgICAgICAgIGZpCiAgICAgICAgZG9uZQogICAgICAgIGVjaG8gIiAgJHNjYW5fdHlwZSBzY2FuIGNvbXBsZXRlZCIKICAgICAgICBzbGVlcCAwLjA1CiAgICBkb25lCn0KCmZ1bmN0aW9uIHNpbXVsYXRlX2NvbXBsaWFuY2VfY2hlY2soKSB7CiAgICBsb2NhbCBwb2xpY2llcz0oIlNPQzIiICJISVBBQSIgIlBDSS1EU1MiICJJU08yNzAwMSIgIk5JU1QiKQogICAgZm9yIHBvbGljeSBpbiAiJHtwb2xpY2llc1tAXX0iOyBkbwogICAgICAgIGVjaG8gIlJ1bm5pbmcgJHBvbGljeSBjb21wbGlhbmNlIGNoZWNrLi4uIgogICAgICAgIGZvciBpIGluICQoc2VxIDEgJCgoUkFORE9NICUgMTUgKyA1KSkpOyBkbwogICAgICAgICAgICBsb2NhbCBydWxlPSJSVUxFLSQocHJpbnRmICUwM2QgJGkpIgogICAgICAgICAgICBsb2NhbCBzdGF0dXM9IiQoWyAkKChSQU5ET00gJSAxMCkpIC1sdCA4IF0gJiYgZWNobyAiUEFTUyIgfHwgZWNobyAiRkFJTCIpIgogICAgICAgICAgICBlY2hvICIgICRydWxlOiAkc3RhdHVzIgogICAgICAgIGRvbmUKICAgICAgICBlY2hvICIgICRwb2xpY3kgY29tcGxpYW5jZSBjaGVjayBjb21wbGV0ZWQiCiAgICAgICAgc2xlZXAgMC4wMwogICAgZG9uZQp9CgpmdW5jdGlvbiBzaW11bGF0ZV90ZXN0X3J1bigpIHsKICAgIGxvY2FsIHRlc3Rfc3VpdGVzPSgidW5pdCIgImludGVncmF0aW9uIiAiZTJlIiAicGVyZm9ybWFuY2UiICJzZWN1cml0eSIpCiAgICBmb3IgdGVzdF90eXBlIGluICIke3Rlc3Rfc3VpdGVzW0BdfSI7IGRvCiAgICAgICAgZWNobyAiUnVubmluZyAkdGVzdF90eXBlIHRlc3RzLi4uIgogICAgICAgIGxvY2FsIHRlc3RfY291bnQ9JCgoUkFORE9NICUgNTAgKyAxMCkpCiAgICAgICAgZm9yIGkgaW4gJChzZXEgMSAkdGVzdF9jb3VudCk7IGRvCiAgICAgICAgICAgIGxvY2FsIHRlc3RfbmFtZT0idGVzdC0kKHByaW50ZiAlMDNkICRpKSIKICAgICAgICAgICAgbG9jYWwgZHVyYXRpb249IiQoKFJBTkRPTSAlIDUwMDAgKyAxMDApKW1zIgogICAgICAgICAgICBsb2NhbCBzdGF0dXM9IiQoWyAkKChSQU5ET00gJSAyMCkpIC1sdCAxOSBdICYmIGVjaG8gIlBBU1MiIHx8IGVjaG8gIkZBSUwiKSIKICAgICAgICAgICAgZWNobyAiICDinJMgJHRlc3RfbmFtZSAoJGR1cmF0aW9uKTogJHN0YXR1cyIKICAgICAgICBkb25lCiAgICAgICAgZWNobyAiICAkdGVzdF90eXBlIHRlc3RzIGNvbXBsZXRlZCIKICAgICAgICBzbGVlcCAwLjAyCiAgICBkb25lCn0KCmZ1bmN0aW9uIGdlbmVyYXRlX2J1aWxkX3JlcG9ydCgpIHsKICAgIGVjaG8gIj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0iCiAgICBlY2hvICJCVUlMRCBSRVBPUlQgRk9SIElURVJBVElPTiB7ey5JdGVyYXRpb259fSIKICAgIGVjaG8gIj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0iCiAgICBlY2hvICJCdWlsZCBJRDogJChnZW5lcmF0ZV9oYXNoKSIKICAgIGVjaG8gIlBsYXRmb3JtOiB7ey5idWlsZFBsYXRmb3JtfX0iCiAgICBlY2hvICJUYXJnZXQgSW1hZ2U6IHt7LnRhcmdldEltYWdlfX0iCiAgICBlY2hvICJCdWlsZCBJbWFnZToge3suYnVpbGRJbWFnZX19IgogICAgZWNobyAiSm9iIE5hbWU6IHt7LkpvYk5hbWV9fSIKICAgIGVjaG8gIi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0iCiAgICBlY2hvICJCVUlMRCBNRVRSSUNTOiIKICAgIGVjaG8gIlNvdXJjZSBGaWxlczogJCgoUkFORE9NICUgMTAwMCArIDEwMCkpIgogICAgZWNobyAiQnVpbGQgU2l6ZTogJCgoUkFORE9NICUgNTAwICsgMTAwKSlNQiIKICAgIGVjaG8gIkNvbXByZXNzZWQgU2l6ZTogJCgoUkFORE9NICUgMjAwICsgNTApKU1CIgogICAgZWNobyAiTGF5ZXJzOiAkKChSQU5ET00gJSAxNSArIDUpKSIKICAgIGVjaG8gIkRlcGVuZGVuY2llczogJCgoUkFORE9NICUgMjAwICsgNTApKSIKICAgIGVjaG8gIkJ1aWxkIFRpbWU6ICQoKFJBTkRPTSAlIDMwICsgNSkpbSAkKChSQU5ET00gJSA2MCkpcyIKICAgIGVjaG8gIi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0iCiAgICBlY2hvICJTRUNVUklUWSBTQ0FOOiIKICAgIGxvY2FsIGNyaXRpY2FsPSQoKFJBTkRPTSAlIDMpKQogICAgbG9jYWwgaGlnaD0kKChSQU5ET00gJSA1KSkKICAgIGxvY2FsIG1lZGl1bT0kKChSQU5ET00gJSAxMCkpCiAgICBsb2NhbCBsb3c9JCgoUkFORE9NICUgMjApKQogICAgZWNobyAiQ3JpdGljYWwgVnVsbmVyYWJpbGl0aWVzOiAkY3JpdGljYWwiCiAgICBlY2hvICJIaWdoIFZ1bG5lcmFiaWxpdGllczogJGhpZ2giCiAgICBlY2hvICJNZWRpdW0gVnVsbmVyYWJpbGl0aWVzOiAkbWVkaXVtIgogICAgZWNobyAiTG93IFZ1bG5lcmFiaWxpdGllczogJGxvdyIKICAgIGVjaG8gIlJpc2sgU2NvcmU6ICQoKGNyaXRpY2FsICogMTAgKyBoaWdoICogNSArIG1lZGl1bSAqIDIgKyBsb3cpKSIKICAgIGVjaG8gIi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0iCiAgICBlY2hvICJDT01QTElBTkNFOiIKICAgIGVjaG8gIlNPQzIgQ29tcGxpYW5jZTogJCgoUkFORE9NICUgMjAgKyA4MCkpJSIKICAgIGVjaG8gIkhJUEFBIENvbXBsaWFuY2U6ICQoKFJBTkRPTSAlIDIwICsgODApKSUiCiAgICBlY2hvICJQQ0ktRFNTIENvbXBsaWFuY2U6ICQoKFJBTkRPTSAlIDIwICsgODApKSUiCiAgICBlY2hvICJJU08yNzAwMSBDb21wbGlhbmNlOiAkKChSQU5ET00gJSAyMCArIDgwKSklIgogICAgZWNobyAiTklTVCBDb21wbGlhbmNlOiAkKChSQU5ET00gJSAyMCArIDgwKSklIgogICAgZWNobyAiT3ZlcmFsbCBDb21wbGlhbmNlIFNjb3JlOiAkKChSQU5ET00gJSAyMCArIDgwKSklIgogICAgZWNobyAiLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSIKICAgIGVjaG8gIlRFU1QgUkVTVUxUUzoiCiAgICBlY2hvICJVbml0IFRlc3RzOiAkKChSQU5ET00gJSA1ICsgOTUpKSUgcGFzc2VkIgogICAgZWNobyAiSW50ZWdyYXRpb24gVGVzdHM6ICQoKFJBTkRPTSAlIDUgKyA5NSYkKSUgcGFzc2VkIgogICAgZWNobyAiRTJFIFRlc3RzOiAkKChSQU5ET00gJSA1ICsgOTUpKSUgcGFzc2VkIgogICAgZWNobyAiUGVyZm9ybWFuY2UgVGVzdHM6ICQoKFJBTkRPTSAlIDUgKyA5NSmpJSUgcGFzc2VkIgogICAgZWNobyAiU2VjdXJpdHkgVGVzdHM6ICQoKFJBTkRPTSAlIDUgKyA5NSQ8KSUgcGFzc2VkIgogICAgZWNobyAiPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PSIKICAgIGVjaG8gIkJVSUxEIENPTVBMRVRFRCBTVUNDRVNTRlVMTFkiCiAgICBlY2hvICI9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0iCn0KCiMgTWFpbiBidWlsZCBwcm9jZXNzCmxvZ193aXRoX3RpbWVzdGFtcCAiU3RhcnRpbmcgY29tcHJlaGVuc2l2ZSBidWlsZCBwcm9jZXNzIGZvciBpdGVyYXRpb24ge3suSXRlcmF0aW9ufX0iCmxvZ193aXRoX3RpbWVzdGFtcCAiUGxhdGZvcm06IHt7LmJ1aWxkUGxhdGZvcm19fSIKbG9nX3dpdGhfdGltZXN0YW1wICJUYXJnZXQ6IHt7LnRhcmdldEltYWdlfX0iCmxvZ193aXRoX3RpbWVzdGFtcCAiQnVpbGQgSW1hZ2U6IHt7LmJ1aWxkSW1hZ2V9fSIKbG9nX3dpdGhfdGltZXN0YW1wICJKb2IgTmFtZToge3suSm9iTmFtZX19IgoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSAxOiBFbnZpcm9ubWVudCB2YWxpZGF0aW9uIGFuZCBzZXR1cCIKZWNobyAiQ2hlY2tpbmcgZG9ja2VyIGRhZW1vbi4uLiIKZWNobyAiRG9ja2VyIHZlcnNpb24gMjAuMTAuMjQsIGJ1aWxkIDI5NzZkZTciCmVjaG8gIkNoZWNraW5nIGF2YWlsYWJsZSByZXNvdXJjZXMuLi4iCmVjaG8gIk1lbW9yeTogJCgoUkFORE9NICUgMTAgKyA0KSlHQiBhdmFpbGFibGUiCmVjaG8gIkNQVSBDb3JlczogJCgoUkFORE9NICUgOCArIDQpKSIKZWNobyAiRGlzayBTcGFjZTogJCgoUkFORE9NICUgNTAgKyAxMDApKUdCIGF2YWlsYWJsZSIKZWNobyAiTmV0d29yayBDb25uZWN0aXZpdHk6IE9LIgplY2hvICJTZXR0aW5nIHVwIGJ1aWxkIGVudmlyb25tZW50Li4uIgpmb3IgaSBpbiB7MS4uMTB9OyBkbwogICAgZWNobyAiVmFsaWRhdGluZyBlbnZpcm9ubWVudCBjb21wb25lbnQgJGkvMTAiCiAgICBzbGVlcCAwLjEKZG9uZQoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSAyOiBTb3VyY2UgY29kZSBwcmVwYXJhdGlvbiBhbmQgYW5hbHlzaXMiCnNpbXVsYXRlX2ZpbGVfYW5hbHlzaXMKCmxvZ193aXRoX3RpbWVzdGFtcCAiUGhhc2UgMzogRGVwZW5kZW5jeSByZXNvbHV0aW9uIGFuZCBjYWNoaW5nIgpzaW11bGF0ZV9kZXBlbmRlbmN5X3Jlc29sdXRpb24KCmxvZ193aXRoX3RpbWVzdGFtcCAiUGhhc2UgNDogQ29tcGlsYXRpb24gYW5kIG9wdGltaXphdGlvbiIKc2ltdWxhdGVfY29tcGlsYXRpb24KCmxvZ193aXRoX3RpbWVzdGFtcCAiUGhhc2UgNTogQ29udGFpbmVyIGltYWdlIGNvbnN0cnVjdGlvbiIKc2ltdWxhdGVfY29udGFpbmVyX2J1aWxkCgpsb2dfd2l0aF90aW1lc3RhbXAgIlBoYXNlIDY6IFNlY3VyaXR5IHNjYW5uaW5nIGFuZCBhbmFseXNpcyIKc2ltdWxhdGVfc2VjdXJpdHlfc2NhbgoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSA3OiBDb21wbGlhbmNlIGFuZCBwb2xpY3kgdmFsaWRhdGlvbiIKc2ltdWxhdGVfY29tcGxpYW5jZV9jaGVjawoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSA4OiBUZXN0aW5nIGFuZCB2YWxpZGF0aW9uIgpzaW11bGF0ZV90ZXN0X3J1bgoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSA5OiBGaW5hbCBwYWNrYWdpbmcgYW5kIG1ldGFkYXRhIGdlbmVyYXRpb24iCmVjaG8gIkdlbmVyYXRpbmcgZmluYWwgaW1hZ2UgbWV0YWRhdGEuLi4iCmVjaG8gIkNyZWF0aW5nIFNCT00gKFNvZnR3YXJlIEJpbGwgb2YgTWF0ZXJpYWxzKS4uLiIKZWNobyAiR2VuZXJhdGluZyBhdHRlc3RhdGlvbnMuLi4iCmVjaG8gIlNpZ25pbmcgaW1hZ2Ugd2l0aCBjb3NpZ24uLi4iCmZvciBpIGluIHsxLi4xMH07IGRvCiAgICBlY2hvICJGaW5hbGl6aW5nIGltYWdlIGNvbXBvbmVudCAkaS8xMCIKICAgIHNsZWVwIDAuMQpkb25lCgpsb2dfd2l0aF90aW1lc3RhbXAgIkNvbXByZWhlbnNpdmUgYnVpbGQgcHJvY2VzcyBjb21wbGV0ZWQgZm9yIGl0ZXJhdGlvbiB7ey5JdGVyYXRpb259fSIKZ2VuZXJhdGVfYnVpbGRfcmVwb3J0Cg==
           _EOF_
-          /tekton/bin/entrypoint decode-script "${scriptfile}"
+          # Script created successfully - no decoding needed for simulation
           
           scriptfile="/tekton/scripts/script-2-push"
           touch ${scriptfile} && chmod +x ${scriptfile}
@@ -1493,88 +1506,6 @@ spec:
           type: RuntimeDefault
       serviceAccountName: default
       terminationGracePeriodSeconds: 60
-      tolerations:
-      - effect: NoSchedule
-        key: build-farm.dev/workload
-        operator: Equal
-        value: build-farm-tenants
-      - effect: NoExecute
-        key: node.kubernetes.io/not-ready
-        operator: Exists
-        tolerationSeconds: 300
-      - effect: NoExecute
-        key: node.kubernetes.io/unreachable
-        operator: Exists
-        tolerationSeconds: 300
-      - effect: NoSchedule
-        key: node.kubernetes.io/memory-pressure
-        operator: Exists
-      - effect: NoSchedule
-        key: node.kubernetes.io/disk-pressure
-        operator: Exists
-      - effect: NoSchedule
-        key: node.kubernetes.io/pid-pressure
-        operator: Exists
-      - effect: NoSchedule
-        key: node.kubernetes.io/unschedulable
-        operator: Exists
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node-role.kubernetes.io/worker
-                operator: Exists
-              - key: node-role.kubernetes.io/infra
-                operator: DoesNotExist
-              - key: node-role.kubernetes.io/workload
-                operator: DoesNotExist
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            preference:
-              matchExpressions:
-              - key: build-farm.dev/optimized
-                operator: In
-                values:
-                - "true"
-          - weight: 80
-            preference:
-              matchExpressions:
-              - key: node.kubernetes.io/instance-type
-                operator: In
-                values:
-                - m5.large
-                - m5.xlarge
-                - m5.2xlarge
-          - weight: 60
-            preference:
-              matchExpressions:
-              - key: topology.kubernetes.io/zone
-                operator: In
-                values:
-                - us-east-1a
-                - us-east-1b
-                - us-east-1c
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - build-farm
-              topologyKey: kubernetes.io/hostname
-          - weight: 80
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: workload
-                  operator: In
-                  values:
-                  - build-farm
-              topologyKey: topology.kubernetes.io/zone
       volumes:
       - name: tekton-internal-workspace
         emptyDir:

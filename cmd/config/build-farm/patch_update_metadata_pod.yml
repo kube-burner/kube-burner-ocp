@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: "{{randAlphaNum 8}}"
+  annotations:
+    my-annotation: "{{randAlphaNum 12}}"
