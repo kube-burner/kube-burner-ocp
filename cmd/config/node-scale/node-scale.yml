@@ -50,8 +50,6 @@ jobs:
         replicas: 1
       - objectTemplate: secret-kubeconfig.yml
         replicas: 1
-        inputVars:
-          kubeconfig: {{ .KUBECONFIG }}
 
   - name: node-scale
     namespace: kubemark

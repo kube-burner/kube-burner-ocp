@@ -30,7 +30,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var metricsProfiles []string
 	var iterations, churnCycles, churnPercent, cpu, memory, maxPods int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
-	var deletionStrategy, kubeconfig, tag string
+	var deletionStrategy, tag string
 	var churn bool
 	cmd := &cobra.Command{
 		Use:          variant,
@@ -44,7 +44,6 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["JOB_ITERATIONS"] = iterations
-			AdditionalVars["KUBECONFIG"] = kubeconfig
 			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["CPU"] = cpu
