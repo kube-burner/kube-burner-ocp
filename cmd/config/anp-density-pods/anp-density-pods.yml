@@ -1,0 +1,259 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ if .PPROF }}
+    - name: pprof
+      pprofInterval: 2m
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=30
+      - name: ovn-controller
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29105/debug/pprof/profile?seconds=30
+      - name: ovnk-control-plane
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=30
+{{ end }}
+{{ if .SVC_LATENCY }}
+    - name: serviceLatency
+      svcTimeout: 10s
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  - name: create-pod-reader
+    jobType: create
+    namespace: anp-pod-reader
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 30s
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      tenant: anp-cidr
+    objects:
+      - objectTemplate: pod-reader-cluster-role.yml
+        replicas: 1
+
+      - objectTemplate: pod-reader-cluster-role-binding.yml
+        replicas: 1
+
+      - objectTemplate: pod-reader-sa.yml
+        replicas: 1
+
+      - objectTemplate: pod-reader-pod.yml
+        replicas: 1       
+
+      - objectTemplate: pod-reader-service.yml
+        replicas: 1
+
+  - name: anp-restricted-pods
+    namespace: anp-restricted
+    jobIterations: 3
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 30s
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      tenant: anp-restricted
+    objects:
+
+      - objectTemplate: postgres-deployment.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-restricted"
+      - objectTemplate: postgres-service.yml
+        replicas: 1
+
+      - objectTemplate: perfapp-deployment.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-restricted"
+
+      - objectTemplate: perfapp-clusterip-service.yml
+        replicas: 1
+
+      - objectTemplate: egress-traffic-app.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-restricted"          
+
+  - name: anp-open-pods
+    namespace: anp-open
+    jobIterations: 3
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 30s
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      tenant: anp-open 
+    objects:
+
+      - objectTemplate: postgres-deployment.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-open"
+      - objectTemplate: postgres-service.yml
+        replicas: 1
+
+      - objectTemplate: perfapp-deployment.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-open"
+
+      - objectTemplate: perfapp-clusterip-service.yml
+        replicas: 1
+
+      - objectTemplate: egress-traffic-app.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-open" 
+
+  - name: anp-cidr-pods
+    namespace: anp-cidr
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 30s
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      tenant: anp-cidr    
+    objects:
+
+      - objectTemplate: postgres-deployment.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-cidr"
+      - objectTemplate: postgres-service.yml
+        replicas: 1
+
+      - objectTemplate: perfapp-deployment.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-cidr"
+
+      - objectTemplate: perfapp-clusterip-service.yml
+        replicas: 1
+
+      - objectTemplate: egress-traffic-app.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          tenant: "anp-cidr"
+          
+  - name: anp-create-policy
+    jobType: create
+    namespace: default
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    podWait: false
+    churn: {{.CHURN}}    
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 30s
+    objects:
+      - objectTemplate: banp-default-deny-traffic.yml
+        replicas: 1
+
+      - objectTemplate: anp-node-selector-two-worker-group.yml
+        replicas: 1
+
+      - objectTemplate: anp-pod-selector-policy-rules-restricted-and-open.yml
+        replicas: 1
+
+      - objectTemplate: anp-pod-selector-no-traffic-open-from-cidr.yml
+        replicas: 1
+
+      - objectTemplate: anp-pod-selector-no-traffic-restricted-from-cidr.yml
+        replicas: 1
+
+      - objectTemplate: anp-allow-openshift-dns.yml
+        replicas: 1
+
+      - objectTemplate: anp-allow-openshift-ingress.yml
+        replicas: 1
+
+      - objectTemplate: anp-allow-openshift-kubeapi.yml
+        replicas: 1
+

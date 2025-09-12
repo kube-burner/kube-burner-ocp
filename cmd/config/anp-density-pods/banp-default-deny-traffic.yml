@@ -1,0 +1,40 @@
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: BaselineAdminNetworkPolicy
+metadata:
+  name: default
+spec:
+  subject:
+    namespaces:
+      matchExpressions:
+      - key: tenant
+        operator: In
+        values: ["anp-cidr","anp-restricted"]          
+  ingress:
+  - name: "deny-all-ingress-from-any-ns"
+    action: "Deny"
+    from:
+    - namespaces: {}         
+  egress:
+  - name: egress-deny-all-traffic-to-any-network
+    action: Deny
+    to:
+    - networks:
+      - 0.0.0.0/0
+  - action: Deny
+    name: egress-deny-all-traffic-to-any-node
+    to:
+    - nodes:
+        matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: Exists
+  - name: "egress-deny-all-to-anp-open"
+    action: "Deny"
+    to:
+    - pods:
+        namespaceSelector:
+          matchLabels:
+            tenant: anp-open
+        podSelector:
+          matchLabels:
+            tenant: anp-open
+    

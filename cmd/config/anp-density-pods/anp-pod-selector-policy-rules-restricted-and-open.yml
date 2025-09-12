@@ -1,0 +1,36 @@
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: anp-pod-selector-policy-rules-restricted-and-open-p11
+spec:
+  priority: 11
+  subject:
+    pods:
+      namespaceSelector:
+        matchLabels:
+          tenant: anp-restricted
+      podSelector:
+        matchLabels:
+          tenant: anp-restricted
+  ingress:
+  - name: "deny-all-ingress-from-anp-open"
+    action: "Deny"
+    from:
+    - pods:
+        namespaceSelector:
+          matchLabels:
+            tenant: anp-open
+        podSelector:
+          matchLabels:
+            tenant: anp-open
+  egress:
+  - name: "allow-all-egress-to-anp-open"
+    action: "Allow"
+    to:
+    - pods:
+        namespaceSelector:
+          matchLabels:
+            tenant: anp-open
+        podSelector:
+          matchLabels:
+            tenant: anp-open
