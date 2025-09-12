@@ -1,0 +1,80 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+
+  - name: pre-reqs
+    jobType: create
+    jobIterations: 1
+    qps: {{ .QPS }}
+    burst: {{ .BURST }}
+    cleanup: false
+    podWait: false
+    waitWhenFinished: false
+    verifyObjects: true
+    errorOnVerify: true
+    jobIterationDelay: 0s
+    jobPause: 0s
+    preLoadImages: false
+    skipIndexing: true
+    objects:
+      - objectTemplate: namespace.yml
+        replicas: 1
+      - objectTemplate: rolebinding.yml
+        replicas: 1
+      - objectTemplate: secret-kubeconfig.yml
+        replicas: 1
+
+  - name: node-scale
+    namespace: kubemark
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 10s
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: pod.yml
+        replicas: 1
+        inputVars:
+          cpu: {{ .CPU }}
+          maxPods: {{ .MAX_PODS }}
+          memory: {{ .MEMORY }}
+          tag: {{ .TAG }}

@@ -1,0 +1,36 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  labels:
+    name: node-scale-{{.Iteration}}
+    app: hollow-node
+  name: kubemark-node-{{.Iteration}}
+  namespace: kubemark
+spec:
+  containers:
+    - args:
+        - --v=3
+        - --morph=kubelet
+        - --name=kubemark-node-{{.Iteration}}
+        - --extended-resources=cpu={{.cpu}},memory={{.memory}}G
+        - --max-pods={{.maxPods}}
+      command:
+        - /kubemark
+      image: "quay.io/cluster-api-provider-kubemark/kubemark:{{.tag}}"
+      name: hollow-node
+      securityContext:
+        privileged: true
+      volumeMounts:
+        - mountPath: /kubeconfig
+          name: kubeconfig
+        - mountPath: /run/containerd/containerd.sock
+          name: containerd-sock
+  volumes:
+    - name: kubeconfig
+      secret:
+        defaultMode: 420
+        secretName: kubeconfig
+    - hostPath:
+        path: /run/crio/crio.sock
+        type: Socket
+      name: containerd-sock

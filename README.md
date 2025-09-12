@@ -32,6 +32,7 @@ Available Commands:
   node-density               Runs node-density workload
   node-density-cni           Runs node-density-cni workload
   node-density-heavy         Runs node-density-heavy workload
+  node-scale                 Runs node-scale workload
   olm                        Runs olm workload
   pvc-density                Runs pvc-density workload
   rds-core                   Runs rds-core workload
@@ -190,6 +191,10 @@ Note: This workload calculates the number of iterations to create from the numbe
 Creates two deployments, a postgresql database, and a simple client that performs periodic insert queries (configured through liveness and readiness probes) on the previous database and a service that is used by the client to reach the database.
 
 Note: this workload calculates the number of iterations to create from the number of nodes and desired pods per node.  In order to keep the test scalable and performant, chunks of 1000 iterations will by broken into separate namespaces, using the config variable `iterationsPerNamespace`.
+
+### node-scale
+
+Leverages [Kubemark](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-scalability/kubemark-guide.md) to create a number of hollow nodes and allow to run experiments on simulated clusters. The primary use case is scalability testing, as simulated clusters can be much bigger than the real ones. The objective is to expose problems with the master components (API server, controller manager or scheduler) that appear only on bigger clusters (e.g. small memory leaks).
 
 ### udn-density-l3-pods
 
