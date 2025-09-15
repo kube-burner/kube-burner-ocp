@@ -67,24 +67,23 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
+      {{- $serviceReplicas := randInt 2 11}}
+      {{- $routeReplicas := randInt 1 $serviceReplicas}}
 
       - objectTemplate: imagestream.yml
         replicas: 1
 
-      - objectTemplate: build.yml
-        replicas: 1
-
       - objectTemplate: service.yml
-        replicas: 5
+        replicas: {{$serviceReplicas}}
         
       - objectTemplate: route.yml
-        replicas: 2
+        replicas: {{$routeReplicas}}
 
       - objectTemplate: secret.yml
-        replicas: 10
+        replicas: {{randInt 4 11}}
 
       - objectTemplate: configmap.yml
-        replicas: 10
+        replicas: {{randInt 4 11}}
 
       - objectTemplate: np-deny-all.yml
         replicas: 1
@@ -96,12 +95,14 @@ jobs:
         replicas: 1
 
       - objectTemplate: deployment-server.yml
-        replicas: 3
+        replicas: {{randInt 3 6}}
         inputVars:
           podReplicas: 2
 
       - objectTemplate: deployment-client.yml
-        replicas: 2
+        replicas: {{randInt 3 6}}
         inputVars:
           podReplicas: 2
           ingressDomain: {{.INGRESS_DOMAIN}}
+          serviceReplicas: {{$serviceReplicas}}
+          routeReplicas: {{$routeReplicas}}

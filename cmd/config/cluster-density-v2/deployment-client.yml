@@ -83,9 +83,9 @@ spec:
         - name: ENVVAR4
           value: "{{randAlphaNum 250}}"
         - name: ROUTE_ENDPOINT
-          value: "https://cluster-density-{{.Replica}}-cluster-density-v2-{{.Iteration}}.{{ .ingressDomain }}/256.html"
+          value: "https://cluster-density-{{randInt 1 .routeReplicas}}-cluster-density-v2-{{.Iteration}}.{{ .ingressDomain }}/256.html"
         - name: SERVICE_ENDPOINT
-          value: "http://cluster-density-{{randInt 1 6}}/256.html"
+          value: "http://cluster-density-{{randInt 1 .serviceReplicas}}/256.html"
       volumes:
       - name: secret-1
         secret:
