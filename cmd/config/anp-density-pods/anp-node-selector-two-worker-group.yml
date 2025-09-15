@@ -1,0 +1,68 @@
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: allow-traffic-egress-node-labeled-ns-to-two-worker-group-p10
+spec:
+  priority: 10
+  subject:
+    namespaces:
+      matchLabels:
+          tenant: "anp-node"
+  egress:
+  - name: "allow egress"
+    action: "Allow"
+    to:
+    - nodes:
+        matchExpressions:
+        - key: node-role.kubernetes.io/worker
+          operator: Exists
+    ports:
+    - portNumber:
+        port: 10256
+        protocol: TCP
+    - portNumber:
+        protocol: TCP
+        port: 53
+    - portNumber:
+        protocol: UDP
+        port: 53
+    - portNumber:
+        port: 8081
+        protocol: TCP
+    - portNumber:
+        port: 9100
+        protocol: TCP
+    - portNumber:
+        port: 8798
+        protocol: TCP
+    - portNumber:
+        port: 8443
+        protocol: TCP
+    - portNumber:
+        port: 8444
+        protocol: TCP
+    - portRange:
+        start: 30001
+        end: 30003
+        protocol: TCP
+  - name: "pass egress"
+    action: "Pass"
+    to:
+    - nodes:
+        matchExpressions:
+        - key: node-role.kubernetes.io/worker
+          operator: Exists
+    ports:
+    - portNumber:
+        port: 10250
+        protocol: TCP
+    - portNumber:
+        port: 9443
+        protocol: TCP
+  - name: "deny egress"
+    action: "Deny"
+    to:
+    - nodes:
+        matchExpressions:
+        - key: node-role.kubernetes.io/worker
+          operator: Exists

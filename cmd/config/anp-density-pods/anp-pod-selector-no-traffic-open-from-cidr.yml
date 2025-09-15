@@ -1,0 +1,36 @@
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: anp-pod-selector-no-traffic-open-from-cidr-p12
+spec:
+  priority: 12
+  subject:
+    pods:
+      namespaceSelector:
+        matchLabels:
+          tenant: anp-open
+      podSelector:
+        matchLabels:
+          tenant: anp-open
+  ingress:
+  - name: "deny-all-ingress-from-anp-cidr"
+    action: "Deny"
+    from:
+    - pods:
+        namespaceSelector:
+          matchLabels:
+            tenant: anp-cidr
+        podSelector:
+          matchLabels:
+            tenant: anp-cidr
+  egress:
+  - name: "deny-all-egress-to-anp-cidr"
+    action: "Deny"
+    to:
+    - pods:
+        namespaceSelector:
+          matchLabels:
+            tenant: anp-cidr
+        podSelector:
+          matchLabels:
+            tenant: anp-cidr
