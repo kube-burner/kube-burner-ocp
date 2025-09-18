@@ -1,7 +1,0 @@
-apiVersion: batch/v1
-kind: Job
-metadata:
-  labels:
-    app: "{{randAlphaNum 8}}"
-  annotations:
-    my-annotation: "{{randAlphaNum 12}}"

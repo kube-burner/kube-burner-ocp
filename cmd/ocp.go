@@ -143,6 +143,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewKueueOperator(&wh, "kueue-operator-pods"),
 		ocp.NewKueueOperator(&wh, "kueue-operator-jobs"),
 		ocp.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
+		ocp.NewBuildFarm(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
