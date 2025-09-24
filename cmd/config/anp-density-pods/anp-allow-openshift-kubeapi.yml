@@ -1,0 +1,22 @@
+apiVersion: policy.networking.k8s.io/v1alpha1
+kind: AdminNetworkPolicy
+metadata:
+  name: anp-allow-openshift-kubeapi
+spec:
+  priority: 4
+  subject:
+    namespaces: {}
+  egress:
+  - name: "allow-egress-to-kube-apiserver"
+    action: "Allow"
+    ports:
+    - portNumber:
+        port: 6443
+        protocol: TCP
+    - portNumber:
+        port: 443
+        protocol: TCP           
+    to:
+    - namespaces:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-kube-apiserver
