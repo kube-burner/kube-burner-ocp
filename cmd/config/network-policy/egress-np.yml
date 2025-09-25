@@ -75,6 +75,12 @@ spec:
   - to:
     - ipBlock:
         cidr: {{GetSubnet24 (int $subnetIdx) }}
+        {{- if gt $.except_rules 0 }}
+        except:
+        {{- range $j, $ex := until $.except_rules }}
+          - {{GetSubnet24 (int (add $subnetIdx $j))}}
+        {{- end }}
+        {{- end }}
     ports:
       {{- $single_port := 1000 }}
       {{- range $i, $e := until $.single_ports }}
