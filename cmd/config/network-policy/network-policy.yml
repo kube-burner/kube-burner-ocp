@@ -88,6 +88,7 @@ jobs:
           peer_namespaces: {{.REMOTE_NAMESPACES}}
           peer_pods: {{.REMOTE_PODS}}
           cidr_rules: {{.CIDRS}}
+          except_rules: {{.EXCEPT_RULES}}
 {{ if not .NETPOL_LATENCY }}
       - objectTemplate: egress-np.yml
         replicas: {{.NETPOLS_PER_NAMESPACE}}
@@ -102,4 +103,5 @@ jobs:
           peer_namespaces: {{.REMOTE_NAMESPACES}}
           peer_pods: {{.REMOTE_PODS}}
           cidr_rules: {{.CIDRS}}
+          except_rules: {{.EXCEPT_RULES}}
 {{ end }}
