@@ -430,7 +430,7 @@ Similar to node-density, fills with VirtualMachines the worker nodes of the clus
 
 ### Virt Density Udn
 
-Similar to udn-density-pods scenario. Creates VMs, one Nginx server and several clients (the number depends on the `vms-per-node` variable) reaching it, on the same UDN per iteration. Each UDN-namespace has the same number of VMs, the number of clients deployed per UDN is computed as following: 
+Similar to udn-density-pods scenario. Creates VMs, one Nginx server and several clients (the number depends on the `vms-per-node` variable) reaching it, on the same UDN per iteration. Each UDN-namespace has the same number of VMs, the number of clients deployed per UDN is computed as following:
 ```Nb of client per UDN = (Nb of worker * vms-per-node / Nb of UDN) -1 //-1  because the server is always deployed.```
 This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
 
@@ -537,6 +537,17 @@ By default, the `baseName` is `virt-clone`. Set it by passing `--namespace` (or 
 Users may control the workload sizes by passing the following arguments:
 - `--iteration` - Number of iterations to run in step 6. Default is 1
 - `--iteration-clones` - Number of `VirtualMachines` to create in each iteration of step 6. Default is 10
+
+#### Verification of cloned `VirtualMachines` creation
+
+By default, the test waits for all `VirtualMachines` created in an iteration to reach the `Ready` condition.
+Users may configure the test to run differently.
+
+- `--verify-each-iteration` - Whether the test should verify the cloned `VirtualMachines` on each iteration. Default `true`. If set to `false` verification will be postpone to the end of the job
+- `--job-iteration-delay` - Time in `Duration` for the test to wait between iterations. Default is `0`
+- `--verify-max-wait-time` - Time in `Duration` to wait for `VirtualMachines` to become ready either for each iteration or at the end.
+
+For example, to change the test to wait for a minute between iterations instead of the `VirtualMachines` to become `Ready` set: `--verify-each-iteration=false --job-iteration-delay=1m`
 
 #### Volume Access Mode
 
