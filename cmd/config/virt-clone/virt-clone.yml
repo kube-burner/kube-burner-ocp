@@ -188,10 +188,12 @@ jobs:
   verifyObjects: true
   errorOnVerify: true
   # wait all VMI be in the Ready Condition
-  waitWhenFinished: false
-  podWait: true
+  waitWhenFinished: {{ not .verifyEachIteration }}
+  podWait: {{ .verifyEachIteration }}
+  # time between job iterations
+  jobIterationDelay: {{ .jobIterationDelay }}
   # timeout time after waiting for all object creation
-  maxWaitTimeout: 1h
+  maxWaitTimeout: {{ .verifyMaxWaitTime }}
   jobPause: 10s
   # cleanup cleans previous execution (not deleted or failed)
   cleanup: false

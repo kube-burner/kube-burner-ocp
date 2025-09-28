@@ -16,6 +16,7 @@ package ocp
 
 import (
 	"os"
+	"time"
 
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
 	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
@@ -42,6 +43,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var testNamespaceBaseName string
 	var metricsProfiles []string
 	var volumeAccessMode string
+	var verifyEachIteration bool
+	var jobIterationDelay time.Duration
+	var verifyMaxWaitTime time.Duration
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtCloneTestName,
@@ -72,6 +76,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
 			AdditionalVars["iterations"] = iterations
 			AdditionalVars["clonesPerIteration"] = clonesPerIteration
+			AdditionalVars["verifyEachIteration"] = verifyEachIteration
+			AdditionalVars["jobIterationDelay"] = jobIterationDelay
+			AdditionalVars["verifyMaxWaitTime"] = verifyMaxWaitTime
 
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
@@ -87,6 +94,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&clonesPerIteration, "iteration-clones", 10, "How many VirtualMachines to create per iteration. The total number of VirtualMachines is iterations*iteration-clones")
 	cmd.Flags().StringVarP(&testNamespaceBaseName, "namespace", "n", virtCloneTestName, "Base name for the namespace to run the test in")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
+	cmd.Flags().BoolVar(&verifyEachIteration, "verify-each-iteration", true, "Wait for each iteration to complete and verify before starting the next one")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&verifyMaxWaitTime, "verify-max-wait-time", 1*time.Hour, "Max wait time for clone creation waiting")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }

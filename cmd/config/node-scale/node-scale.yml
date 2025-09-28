@@ -28,44 +28,53 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
-  - name: cluster-density-ms
-    namespace: cluster-density-ms
+
+  - name: pre-reqs
+    jobType: create
+    jobIterations: 1
+    qps: {{ .QPS }}
+    burst: {{ .BURST }}
+    cleanup: false
+    podWait: false
+    waitWhenFinished: false
+    verifyObjects: true
+    errorOnVerify: true
+    jobIterationDelay: 0s
+    jobPause: 0s
+    preLoadImages: false
+    skipIndexing: true
+    objects:
+      - objectTemplate: namespace.yml
+        replicas: 1
+      - objectTemplate: rolebinding.yml
+        replicas: 1
+      - objectTemplate: secret-kubeconfig.yml
+        replicas: 1
+
+  - name: node-scale
+    namespace: kubemark
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
-    namespacedIterations: true
-    podWait: false
-    waitWhenFinished: true
-    preLoadImages: true
-    preLoadPeriod: 10s
     churn: {{.CHURN}}
     churnCycles: {{.CHURN_CYCLES}}
     churnDuration: {{.CHURN_DURATION}}
     churnPercent: {{.CHURN_PERCENT}}
     churnDelay: {{.CHURN_DELAY}}
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    preLoadPeriod: 10s
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
-
-      - objectTemplate: imagestream.yml
+      - objectTemplate: pod.yml
         replicas: 1
-
-      - objectTemplate: service.yml
-        replicas: 2
-        
-      - objectTemplate: route.yml
-        replicas: 1
-
-      - objectTemplate: secret.yml
-        replicas: 20
-
-      - objectTemplate: configmap.yml
-        replicas: 10
-
-      - objectTemplate: deployment.yml
-        replicas: 4
         inputVars:
-          podReplicas: 2
+          cpu: {{ .CPU }}
+          maxPods: {{ .MAX_PODS }}
+          memory: {{ .MEMORY }}
+          tag: {{ .TAG }}

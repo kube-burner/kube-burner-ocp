@@ -1,4 +1,4 @@
-// Copyright 2024 The Kube-burner Authors.
+// Copyright 2025 The Kube-burner Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,42 +15,28 @@
 package ocp
 
 import (
+	"fmt"
 	"os"
 	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/spf13/cobra"
 )
 
-// NewUDNDensityPods holds udn-density-pods workload
-func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
-	var churnPercent, churnCycles, iterations int
-	var churn, l3, simple, pprof bool
-	var jobPause time.Duration
-	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var deletionStrategy string
-	var metricsProfiles []string
+// NewNodeScale holds node-scale workload
+func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var rc int
+	var metricsProfiles []string
+	var iterations, churnCycles, churnPercent, cpu, memory, maxPods int
+	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
+	var deletionStrategy, tag string
+	var churn bool
 	cmd := &cobra.Command{
-		Use:          "udn-density-pods",
-		Short:        "Runs node-density-udn workload",
+		Use:          variant,
+		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			setMetrics(cmd, metricsProfiles)
-			// Disable l3 when the user chooses l2
-			if l3 {
-				log.Info("Layer 3 is enabled")
-			} else {
-				log.Info("Layer 2 is enabled")
-			}
-			if churn {
-				log.Info("Churn is enabled, there will not be a pause after UDN creation")
-			}
-
-			AdditionalVars["PPROF"] = pprof
-			AdditionalVars["JOB_PAUSE"] = jobPause
-			AdditionalVars["SIMPLE"] = simple
 			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
@@ -58,28 +44,31 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
-			AdditionalVars["ENABLE_LAYER_3"] = l3
-
-			rc = wh.RunWithAdditionalVars("udn-density-pods.yml", AdditionalVars, nil)
+			AdditionalVars["CPU"] = cpu
+			AdditionalVars["MEMORY"] = memory
+			AdditionalVars["TAG"] = tag
+			AdditionalVars["MAX_PODS"] = maxPods
+			setMetrics(cmd, metricsProfiles)
+			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().BoolVar(&l3, "layer3", true, "Layer3 UDN test")
-	cmd.Flags().DurationVar(&jobPause, "job-pause", 0, "Time to pause after finishing the job that creates the UDN")
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
-	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
 	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
+	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "gvr", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&tag, "version", "v1.33.0", "Image tag version of the kubemark container")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
-	cmd.Flags().IntVar(&iterations, "iterations", 0, "Iterations")
-	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
+	cmd.Flags().IntVar(&cpu, "cpu", 1, "CPU capacity of each hollow node")
+	cmd.Flags().IntVar(&memory, "memory", 4, "Memory (G) of each hollow node")
+	cmd.Flags().IntVar(&maxPods, "max-pods", 250, "Max number of pods of each hollow node")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.MarkFlagRequired("iterations")
 	return cmd
 }
