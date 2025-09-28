@@ -22,7 +22,7 @@ setup_file() {
 setup() {
   export UUID; UUID=$(uuidgen)
   export RATE="--qps=10 --burst=10"
-  export COMMON_FLAGS="--es-server=${ES_SERVER} --es-index=${ES_INDEX} --alerting=true ${RATE}"
+  export INDEXING_FLAGS="--es-server=${ES_SERVER} --es-index=${ES_INDEX} --alerting=true ${RATE} --uuid=${UUID}"
 }
 
 teardown() {
@@ -51,7 +51,7 @@ teardown_file() {
 @test "node-density: es-indexing=true" {
   PODS_PER_NODE=$(calculate_pods_per_node)
   echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
-  run_cmd ${KUBE_BURNER_OCP} node-density --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS} --churn=true --churn-duration=1m --churn-delay=5s
+  run_cmd ${KUBE_BURNER_OCP} node-density --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m ${INDEXING_FLAGS} --churn=true --churn-duration=1m --churn-delay=5s
   check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
@@ -69,26 +69,26 @@ teardown_file() {
 }
 
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=2 --churn-duration=1m --churn-delay=5s --profile-type=both ${COMMON_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=2 --churn-cycles=1 --churn-delay=5s --profile-type=both ${INDEXING_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID}
   check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion
 }
 
 @test "cluster-density-v2: churn-deletion-strategy=gvr; custom-metrics=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=2 --churn=true --churn-duration=1m --churn-delay=5s --churn-deletion-strategy=gvr --metrics-profile=custom-metrics.yml ${COMMON_FLAGS} --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=2 --churn=true --churn-duration=1m --churn-delay=5s --churn-deletion-strategy=gvr --metrics-profile=custom-metrics.yml ${INDEXING_FLAGS} --uuid=${UUID}
   check_metric_value prometheusRSS jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
 @test "cluster-density-v2: indexing=false; churning=false" {
   # Ensure indexing variables are not set
   unset ES_SERVER ES_INDEX
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=2 --churn=false --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=2 --churn=false
 }
 
 @test "node-density-cni: gc=false; alerting=false" {
   # Disable gc and avoid metric indexing
   PODS_PER_NODE=$(calculate_pods_per_node)
   echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
-  run_cmd ${KUBE_BURNER_OCP} node-density-cni --pods-per-node=${PODS_PER_NODE} --gc=false --uuid=${UUID} --alerting=false --churn=true --churn-cycles=1 --churn-delay=2s
+  run_cmd ${KUBE_BURNER_OCP} node-density-cni --pods-per-node=${PODS_PER_NODE} --gc=false --uuid=${UUID} --alerting=false
   oc delete ns -l kube-burner-uuid=${UUID} --wait=false
   trap - ERR
 }
@@ -107,11 +107,11 @@ teardown_file() {
 }
 
 @test "networkpolicy" {
-  run_cmd ${KUBE_BURNER_OCP} network-policy --iterations 2 ${COMMON_FLAGS} --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} network-policy --iterations 2 ${INDEXING_FLAGS}
 }
 
 @test "whereabouts" {
-  run_cmd ${KUBE_BURNER_OCP} whereabouts --iterations 2 --pod-ready-threshold=1m ${COMMON_FLAGS} --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} whereabouts --iterations 2 --pod-ready-threshold=1m ${INDEXING_FLAGS}
 }
 
 @test "crd-scale; alerting=false" {
@@ -119,20 +119,20 @@ teardown_file() {
 }
 
 @test "virt-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-density --vms-per-node=5 --vmi-ready-threshold=1m --uuid=${UUID} ${COMMON_FLAGS}
+  run_cmd ${KUBE_BURNER_OCP} virt-density --vms-per-node=5 --vmi-ready-threshold=1m ${INDEXING_FLAGS}
   check_metric_value jobSummary vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
 }
 
 @test "virt-udn-l2-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iteration 5 --layer3=false --binding-method=l2bridge ${COMMON_FLAGS} --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iteration 5 --layer3=false --binding-method=l2bridge ${INDEXING_FLAGS}
 }
 
 @test "virt-udn-l3-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iteration 2 ${COMMON_FLAGS} --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iteration 2 ${INDEXING_FLAGS}
 }
 
 @test "udn-density-l3-pods: churning=false" {
-  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --churn=false ${COMMON_FLAGS} --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --churn=false ${INDEXING_FLAGS}
 }
 
 @test "cluster-health" {
@@ -213,4 +213,19 @@ teardown_file() {
   verify_object_count crd 5 "" "kube-burner-job=crd-scale"
   oc delete crd -l kube-burner-job=crd-scale
   git clean -fd
+}
+
+@test "kueue-operator: jobs" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --job-replicas=10 --parallelism=10 --workload-runtime=2s ${INDEXING_FLAGS}
+  check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
+}
+
+@test "kueue-operator: pods" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-pods --pod-replicas=50 --workload-runtime=2s ${INDEXING_FLAGS}
+  check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
+}
+
+@test "kueue-operator: jobs-shared" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --iterations=2 --parallelism=5 --workload-runtime=2s ${INDEXING_FLAGS}
+  check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
 }

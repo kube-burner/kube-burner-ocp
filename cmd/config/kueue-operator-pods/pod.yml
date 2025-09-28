@@ -1,0 +1,39 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  labels:
+    app: kueue-scale
+  annotations:
+    kueue.x-k8s.io/queue-name: kueue-scale
+  name: {{.JobName}}-{{.Replica}}
+spec:
+  topologySpreadConstraints:
+  - maxSkew: 1 
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway 
+    labelSelector: 
+      matchLabels:
+        app: kueue-scale
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.kubernetes.io/worker
+            operator: Exists
+          - key: node-role.kubernetes.io/infra
+            operator: DoesNotExist
+          - key: node-role.kubernetes.io/workload
+            operator: DoesNotExist
+  containers:
+  - image: registry.k8s.io/pause:3.1
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      seccompProfile:
+        type: RuntimeDefault
+    name: kueue-scale
+    args:
+      - {{.runtime}}
+    imagePullPolicy: IfNotPresent

@@ -1,0 +1,61 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+   - name: jobLatency
+metricsEndpoints:
+
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      insecureSkipVerify: true
+      esServers: [{{.ES_SERVER}}]
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch      
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+  
+jobs:
+
+  - name: prereqs
+    jobIterations: 1
+    preLoadImages: true
+    namespacedIterations: false
+    skipIndexing: true
+    qps: 5
+    burst: 5
+    objects:
+      - objectTemplate: cluster-queue.yml
+        replicas: 1
+        inputVars:
+          PODS_QUOTA: {{.PODS_QUOTA}}
+      - objectTemplate: resource-flavor.yml
+        replicas: 1
+
+  - name: kueue-scale-jobs
+    namespace: kueue-scale
+    jobIterations: {{.ITERATIONS}}
+    preLoadImages: true
+    preLoadPeriod: 5s
+    namespacedIterations: false
+    cleanup: true
+    namespaceLabels:
+      kueue.openshift.io/managed: "true"
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    objects:
+      - objectTemplate: local-queue.yml
+        replicas: 1
+      - objectTemplate: job.yml
+        replicas: {{.JOB_REPLICAS}}
+        inputVars:
+          parallelism: {{.PARALLELISM}}
+          runtime: {{.WORKLOAD_RUNTIME}}
