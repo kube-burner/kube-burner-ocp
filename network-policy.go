@@ -16,9 +16,11 @@ package ocp
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +36,18 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		Run: func(cmd *cobra.Command, args []string) {
+			// Register template functions used only by network-policy templates
+			util.AddRenderingFunction("GetSubnet16", func(subnetIdx int) string {
+				first := byte((subnetIdx >> 8) + 1)
+				second := byte(subnetIdx & 0xFF)
+				return netip.AddrFrom4([4]byte{first, second, 0, 0}).String() + "/16"
+			})
+			util.AddRenderingFunction("GetSubnet24In16", func(subnetIdx, offset int) string {
+				first := byte((subnetIdx >> 8) + 1)
+				second := byte(subnetIdx & 0xFF)
+				third := byte(offset)
+				return netip.AddrFrom4([4]byte{first, second, third, 0}).String() + "/24"
+			})
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PODS_PER_NAMESPACE"] = podsPerNamespace

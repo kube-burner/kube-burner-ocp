@@ -78,7 +78,7 @@ spec:
         {{- if gt $.except_rules 0 }}
         except:
         {{- range $j, $ex := until $.except_rules }}
-          - {{GetSubnet24 (int $subnetIdx) $j}}
+          - {{GetSubnet24In16 (int $subnetIdx) $j}}
         {{- end }}
         {{- end }}
     ports:
