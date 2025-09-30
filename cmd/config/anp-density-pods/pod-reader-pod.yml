@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-reader
+  labels:
+    app: pod-reader
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pod-reader
+  template:
+    metadata:
+      labels:
+        app: pod-reader
+    spec:
+      serviceAccountName: pod-reader
+      initContainers:
+      - name: query-podinfo
+        image: quay.io/openshift-psap-qe/alpine/curl-jq
+        volumeMounts:
+        - name: vol-www-data
+          mountPath: /usr/share/nginx/html
+        command:
+          - /bin/sh
+          - -c
+          - |
+            NAMESPACE="openshift-monitoring";
+
+            PODS_JSON=$(curl --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+            -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+            -s https://kubernetes.default.svc/api/v1/namespaces/${NAMESPACE}/pods);
+
+            echo "$PODS_JSON" | jq -r '.items[] | .metadata.name as $name | .status.podIP as $ip | (.spec.containers[] | select(.ports != null) | .name as $cname | .ports[] | "\($name): \($ip):\(.containerPort)")'>/usr/share/nginx/html/podinfo.txt;
+            echo "Fetch `cat /usr/share/nginx/html/podinfo.txt|wc -l` pod name, ip and port in openshift-monitoring";
+      containers:     
+      - name: pod-reader
+        image: quay.io/openshift-psap-qe/pod-reader
+        imagePullPolicy: Always
+        volumeMounts:
+          - name: vol-www-data
+            mountPath: /usr/share/nginx/html      
+        securityContext:
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+          allowPrivilegeEscalation: false
+          #runAsUser: 1000800000
+          capabilities:
+            drop:
+            - ALL
+        ports:
+          - name: http-port
+            containerPort: 8080
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+      volumes:
+        - name: vol-www-data
+          emptyDir: {}
