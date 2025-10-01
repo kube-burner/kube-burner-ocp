@@ -74,7 +74,13 @@ spec:
       {{- $subnetIdx := add $subnetStartIdx $i }}
   - from:
     - ipBlock:
-        cidr: {{GetSubnet24 (int $subnetIdx) }}
+        cidr: {{GetSubnet16 (int $subnetIdx) }}
+        {{- if gt $.except_rules 0 }}
+        except:
+        {{- range $j, $ex := until $.except_rules }}
+          - {{GetSubnet24In16 (int $subnetIdx) $j}}
+        {{- end }}
+        {{- end }}
     ports:
       {{- $single_port := 1000 }}
       {{- range $i, $e := until $.single_ports }}
