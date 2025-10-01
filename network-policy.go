@@ -16,16 +16,18 @@ package ocp
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
 )
 
 // NewNetworkPolicy holds network-policy workload
 func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
-	var iterations, podsPerNamespace, netpolPerNamespace, localPods, podSelectors, singlePorts, portRanges, remoteNamespaces, remotePods, cidrs int
+	var iterations, podsPerNamespace, netpolPerNamespace, localPods, podSelectors, singlePorts, portRanges, remoteNamespaces, remotePods, cidrs, exceptRules int
 	var netpolLatency bool
 	var metricsProfiles []string
 	var netpolReadyThreshold time.Duration
@@ -34,6 +36,18 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		Run: func(cmd *cobra.Command, args []string) {
+			// Register template functions used only by network-policy templates
+			util.AddRenderingFunction("GetSubnet16", func(subnetIdx int) string {
+				first := byte((subnetIdx >> 8) + 1)
+				second := byte(subnetIdx & 0xFF)
+				return netip.AddrFrom4([4]byte{first, second, 0, 0}).String() + "/16"
+			})
+			util.AddRenderingFunction("GetSubnet24In16", func(subnetIdx, offset int) string {
+				first := byte((subnetIdx >> 8) + 1)
+				second := byte(subnetIdx & 0xFF)
+				third := byte(offset)
+				return netip.AddrFrom4([4]byte{first, second, third, 0}).String() + "/24"
+			})
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PODS_PER_NAMESPACE"] = podsPerNamespace
@@ -45,6 +59,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			AdditionalVars["REMOTE_NAMESPACES"] = remoteNamespaces
 			AdditionalVars["REMOTE_PODS"] = remotePods
 			AdditionalVars["CIDRS"] = cidrs
+			AdditionalVars["EXCEPT_RULES"] = exceptRules
 			AdditionalVars["NETPOL_LATENCY"] = netpolLatency
 			AdditionalVars["NETPOL_READY_THRESHOLD"] = netpolReadyThreshold
 
@@ -65,6 +80,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd.Flags().IntVar(&remoteNamespaces, "remotes-namespaces", 2, "Number of remote namespaces to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().IntVar(&remotePods, "remotes-pods", 2, "Number of pods in remote namespaces to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().IntVar(&cidrs, "cidrs", 2, "Number of cidrs to accept traffic from or send traffic to in ingress and egress rules")
+	cmd.Flags().IntVar(&exceptRules, "except-rules", 3, "Number of except rules to exclude traffic from ingress and egress cidr blocks")
 	cmd.Flags().BoolVar(&netpolLatency, "networkpolicy-latency", true, "Enable network policy latency measurement")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
