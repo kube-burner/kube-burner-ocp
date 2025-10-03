@@ -571,6 +571,7 @@ By default, the `baseName` is `virt-clone`. Set it by passing `--namespace` (or 
 Users may control the workload sizes by passing the following arguments:
 - `--iteration` - Number of iterations to run in step 6. Default is 1
 - `--iteration-clones` - Number of `VirtualMachines` to create in each iteration of step 6. Default is 10
+- `--data-volume-count` - Number of empty data volumes for each cloned `VirtualMachine`. Default is 0
 
 #### Verification of cloned `VirtualMachines` creation
 

@@ -30,6 +30,8 @@ const (
 	virtCloneSSHKeyFileName = "ssh"
 	virtCloneTmpDirPattern  = "kube-burner-virt-clone-*"
 	virtCloneTestName       = "virt-clone"
+	// Defaults
+	virtCloneDefaultDataVolumeCount = 0
 )
 
 // Returns virt-density workload
@@ -46,6 +48,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var verifyEachIteration bool
 	var jobIterationDelay time.Duration
 	var verifyMaxWaitTime time.Duration
+	var dataVolumeCount int
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtCloneTestName,
@@ -79,6 +82,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["verifyEachIteration"] = verifyEachIteration
 			AdditionalVars["jobIterationDelay"] = jobIterationDelay
 			AdditionalVars["verifyMaxWaitTime"] = verifyMaxWaitTime
+			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
 
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
@@ -97,6 +101,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&verifyEachIteration, "verify-each-iteration", true, "Wait for each iteration to complete and verify before starting the next one")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
 	cmd.Flags().DurationVar(&verifyMaxWaitTime, "verify-max-wait-time", 1*time.Hour, "Max wait time for clone creation waiting")
+	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", virtCloneDefaultDataVolumeCount, "Number of data volumes per VM")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }
