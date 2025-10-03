@@ -159,7 +159,7 @@ teardown_file() {
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
     STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
   fi
-  run_cmd ${KUBE_BURNER_OCP} virt-clone ${STORAGE_PARAMETER} --access-mode RWO --iterations 2 --iteration-clones 2
+  run_cmd ${KUBE_BURNER_OCP} virt-clone ${STORAGE_PARAMETER} --access-mode RWO --iterations 2 --iteration-clones 2 --data-volume-count 1
   local jobs=("create-base-vm" "create-clone-vms")
   for job in "${jobs[@]}"; do
     check_metric_recorded ./virt-clone-results ${job} dvLatency dvReadyLatency
