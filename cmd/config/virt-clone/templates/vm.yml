@@ -20,6 +20,20 @@ spec:
         resources:
           requests:
             storage: {{ default "6Gi" .rootVolumeSize }}
+  {{ range $dataVolumeIndex := .dataVolumeCounters }}
+  - metadata:
+      name: "{{ $.vmName }}-{{ $.Iteration }}-{{ $.Replica }}-data-{{ $dataVolumeIndex }}"
+    spec:
+      source:
+        blank: {}
+      storage:
+        accessModes:
+        - {{ $.accessMode }}
+        storageClassName: {{ $.storageClassName }}
+        resources:
+          requests:
+            storage: "1Gi"
+  {{ end }}
   runStrategy: RerunOnFailure
   template:
     spec:
@@ -41,6 +55,11 @@ spec:
               bus: virtio
             name: rootdisk
             bootOrder: 1
+          {{ range $dataVolumeIndex := .dataVolumeCounters }}
+          - disk:
+              bus: virtio
+            name: "data-{{ $dataVolumeIndex }}"
+          {{ end }}
           interfaces:
           - name: default
             masquerade: {}
@@ -54,6 +73,11 @@ spec:
       - dataVolume:
           name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
         name: rootdisk
+      {{ range $dataVolumeIndex := .dataVolumeCounters }}
+      - dataVolume:
+          name: "{{ $.vmName }}-{{ $.Iteration }}-{{ $.Replica }}-data-{{ $dataVolumeIndex }}"
+        name: "data-{{ $dataVolumeIndex }}"
+      {{ end }}
       - cloudInitNoCloud:
           userData: |
             #cloud-config
