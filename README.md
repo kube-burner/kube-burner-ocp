@@ -95,6 +95,8 @@ Flags:
 
 ```
 
+| NOTE: `qps` and `burst` are binded variables this means they can be read from Env. Precedence (highest first) is: flag, env var, config file, default
+
 ## Documentation
 
 Documentation is [available here](https://kube-burner.github.io/kube-burner-ocp/)

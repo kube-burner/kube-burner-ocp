@@ -27,6 +27,7 @@ import (
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 //go:embed config/*
@@ -44,7 +45,6 @@ func openShiftCmd() *cobra.Command {
 	var wh workloads.WorkloadHelper
 	var metricsProfileType string
 	var esServer, esIndex string
-	var QPS, burst int
 	var gc, gcMetrics, alerting, checkHealth, localIndexing, extract, enableFileLogging bool
 	ocpCmd := &cobra.Command{
 		Use:  "kube-burner-ocp",
@@ -58,8 +58,8 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().BoolVar(&checkHealth, "check-health", true, "Check cluster health before job")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UUID, "uuid", uid.NewString(), "Benchmark UUID")
 	ocpCmd.PersistentFlags().DurationVar(&workloadConfig.Timeout, "timeout", 4*time.Hour, "Benchmark timeout")
-	ocpCmd.PersistentFlags().IntVar(&QPS, "qps", 20, "QPS")
-	ocpCmd.PersistentFlags().IntVar(&burst, "burst", 20, "Burst")
+	ocpCmd.PersistentFlags().Int("qps", 20, "QPS")
+	ocpCmd.PersistentFlags().Int("burst", 20, "Burst")
 	ocpCmd.PersistentFlags().BoolVar(&gc, "gc", true, "Garbage collect created resources")
 	ocpCmd.PersistentFlags().BoolVar(&gcMetrics, "gc-metrics", false, "Collect metrics during garbage collection")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UserMetadata, "user-metadata", "", "User provided metadata file, in YAML format")
@@ -68,6 +68,9 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().BoolVar(&enableFileLogging, "enable-file-logging", true, "Enable file logging")
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
 	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "metrics-endpoint")
+	_ = viper.BindPFlag("qps", ocpCmd.PersistentFlags().Lookup("qps"))
+	_ = viper.BindPFlag("burst", ocpCmd.PersistentFlags().Lookup("burst"))
+	viper.AutomaticEnv()
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		if cmd.Name() == "version" {
 			return
@@ -92,8 +95,8 @@ func openShiftCmd() *cobra.Command {
 		// Set common variables that all workloads can use
 		ocp.AdditionalVars = map[string]any{
 			"UUID":           workloadConfig.UUID,
-			"QPS":            QPS,
-			"BURST":          burst,
+			"QPS":            viper.GetInt("qps"),
+			"BURST":          viper.GetInt("burst"),
 			"GC":             gc,
 			"GC_METRICS":     gcMetrics,
 			"LOCAL_INDEXING": localIndexing,
