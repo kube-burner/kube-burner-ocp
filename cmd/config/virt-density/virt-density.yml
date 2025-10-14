@@ -45,3 +45,12 @@ jobs:
         replicas: 1
         inputVars:
           vmImage: {{.VM_IMAGE}}
+  - name: virt-stop
+    namespace: virt-density
+    jobType: kubevirt
+    jobIterations: 1
+    waitWhenFinished: true
+    objects:
+
+      - kubeVirtOp: stop
+        labelSelector: {kube-burner-job: virt-density}
