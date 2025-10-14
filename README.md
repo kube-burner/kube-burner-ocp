@@ -49,6 +49,29 @@ Available Commands:
   web-burner-init            Runs web-burner-init workload
   web-burner-node-density    Runs web-burner-node-density workload
   whereabouts                Runs whereabouts workload
+  anp-density-pods               Runs anp-density-pods workload
+  cluster-density-ms             Runs cluster-density-ms workload
+  cluster-density-v2             Runs cluster-density-v2 workload
+  cluster-health                 Checks for ocp cluster health
+  completion                     Generate the autocompletion script for the specified shell
+  crd-scale                      Runs crd-scale workload
+  help                           Help about any command
+  index                          Runs index sub-command
+  init                           Runs custom workload
+  networkpolicy-matchexpressions Runs networkpolicy-matchexpressions workload
+  networkpolicy-matchlabels      Runs networkpolicy-matchlabels workload
+  networkpolicy-multitenant      Runs networkpolicy-multitenant workload
+  node-density                   Runs node-density workload
+  node-density-cni               Runs node-density-cni workload
+  node-density-heavy             Runs node-density-heavy workload
+  pvc-density                    Runs pvc-density workload
+  udn-density-l3-pods            Runs udn-density-l3-pods workload
+  version                        Print the version number of kube-burner
+  virt-capacity-benchmark        Runs capacity-benchmark workload
+  virt-density                   Runs virt-density workload
+  web-burner-cluster-density     Runs web-burner-cluster-density workload
+  web-burner-init                Runs web-burner-init workload
+  web-burner-node-density        Runs web-burner-node-density workload
 
 Flags:
       --alerting                  Enable alerting (default true)
@@ -199,6 +222,10 @@ Leverages [Kubemark](https://github.com/kubernetes/community/blob/master/contrib
 ### udn-density-l3-pods
 
 For User-Defined Network (UDN) L3 segmentation testing. It creates two deployments, a client/curl and a server/nxing.
+
+### anp-density-pods
+
+For AdminNetworkPolicy testing. It creates three deployments in each namespace, three namespaces as a tenant, it will create 1 BaselineAdminNetworkPolicy, 1 NodeSelector AdminNetworkPolicy, 7 PodSelector AdminNetworkPolicy, N - CIDR Selector AdminNetworkPolicy.
 
 ## Network Policy workloads
 
@@ -424,6 +451,26 @@ The different variants are:
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
 - [virt-migration](#virt-migration)
 
+### Environment Requirements
+
+#### Virtctl
+
+The tests listed below verify that the `VirtualMachine` completed their boot using `virtctl ssh`.
+Therefore, `virtctl` must be installed and available in the `PATH`.
+
+- [virt-capacity-benchmark](#virt-capacity-benchmark).
+- [virt-clone](#virt-clone)
+- [virt-ephemeral-restart](#virt-ephemeral-restart)
+- [virt-migration](#virt-migration)
+
+See the [Temporary SSH Keys](#temporary-ssh-keys) for details on the SSH keys used for the test
+
+#### Temporary SSH Keys
+
+The test generated the SSH keys automatically.
+By default, it stores the pair in a temporary directory.
+Users may choose the store the key in a specified directory by setting `--ssh-key-path`
+
 ### Virt Density
 
 Similar to node-density, fills with VirtualMachines the worker nodes of the cluster (**kubevirt/OpenShift Virtualization is required** to run this workload). Meant to detect issues derived from spinning up high amounts VMs in a short amount of time and to track runningthe latencies of the different VM bootstrap stages.
@@ -437,13 +484,6 @@ This scenario is meant to test how many UDNs can be deployed in parallel and how
 ### Virt Capacity Benchmark
 
 Test the capacity of Virtual Machines and Volumes supported by the cluster and a specific storage class.
-
-#### Environment Requirements
-
-In order to verify that the `VirtualMachine` completed their boot and that volume resize propagated successfully, the test uses `virtctl ssh`.
-Therefore, `virtctl` must be installed and available in the `PATH`.
-
-See the [Temporary SSH Keys](#temporary-ssh-keys) for details on the SSH keys used for the test
 
 #### Test Sequence
 
@@ -486,12 +526,6 @@ Users may control the workload sizes by passing the following arguments:
 - `--data-volume-count` - Number of data volumes for each VM (default 9)
 - `--min-vol-size` - Set the minimal volume size supported by the storage class
 - `--min-vol-inc-size` - Set the minimal volume size increment supported by the storage class
-
-#### Temporary SSH Keys
-
-The test generated the SSH keys automatically.
-By default, it stores the pair in a temporary directory.
-Users may choose the store the key in a specified directory by setting `--ssh-key-path`
 
 #### Skip test parts
 
@@ -537,6 +571,7 @@ By default, the `baseName` is `virt-clone`. Set it by passing `--namespace` (or 
 Users may control the workload sizes by passing the following arguments:
 - `--iteration` - Number of iterations to run in step 6. Default is 1
 - `--iteration-clones` - Number of `VirtualMachines` to create in each iteration of step 6. Default is 10
+- `--data-volume-count` - Number of empty data volumes for each cloned `VirtualMachine`. Default is 0
 
 #### Verification of cloned `VirtualMachines` creation
 
@@ -553,12 +588,6 @@ For example, to change the test to wait for a minute between iterations instead 
 
 By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
 If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
-
-#### Temporary SSH Keys
-
-In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
-By default, it stores the pair in a temporary directory.
-Users may choose the store the key in a specified directory by setting `--ssh-key-path`
 
 ### Virt Ephemeral Restart
 
@@ -602,12 +631,6 @@ Users may control the workload sizes by passing the following arguments:
 
 By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
 If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
-
-#### Temporary SSH Keys
-
-In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
-By default, it stores the pair in a temporary directory.
-Users may choose the store the key in a specified directory by setting `--ssh-key-path`
 
 ### Virt Migration
 
@@ -672,13 +695,6 @@ If not set, the test will randomly choose one
 All `VirtualMachines` are created in the same namespace.
 
 By default, the namespace is `virt-migation`. Set it by passing `--namespace` (or `-n`)
-
-#### Temporary SSH Keys
-
-In order to verify that the VMs actually completed booting, the test generates an SSH key pair.
-By default, it stores the pair in a temporary directory.
-Users may choose the store the key in a specified directory by setting `--ssh-key-path`
-
 
 ### DataVolume Clone
 
