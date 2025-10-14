@@ -50,13 +50,11 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-<<<<<<< HEAD
-  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
-=======
-  {{ if not .udnLayer2 }}
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ if .udnLayer2 }}
+  beforeCleanup: "./check-udn.sh kube-burner-job/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ else }}
+  beforeCleanup: "./check.sh check_vm_running kube-burner-job/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
   {{ end }}
->>>>>>> 0ae56d0 (Adding --udn-layer-2 option in virt-migration scenario)
   objects:
 
   {{ if .udnLayer2 }}
@@ -109,13 +107,11 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-<<<<<<< HEAD
-  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
-=======
-  {{ if not .udnLayer2 }}
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ if .udnLayer2 }}
+  beforeCleanup: "./check-udn.sh kube-burner-job/job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ else }}
+  beforeCleanup: "./check.sh check_vm_running kube-burner-job/job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
   {{ end }}
->>>>>>> 0ae56d0 (Adding --udn-layer-2 option in virt-migration scenario)
   objects:
 
   - objectTemplate: templates/vm.yml
@@ -155,13 +151,11 @@ jobs:
   jobIterations: 1
   maxWaitTimeout: 1h
   waitWhenFinished: true
-<<<<<<< HEAD
-  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
-=======
-  {{ if not .udnLayer2 }}
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ if .udnLayer2 }}
+  beforeCleanup: "./check-udn.sh kube-burner-job/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  {{ else }}
+  beforeCleanup: "./check.sh check_vm_running kube-burner-job/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
   {{ end }}
->>>>>>> 0ae56d0 (Adding --udn-layer-2 option in virt-migration scenario)
   objects:
   - kubeVirtOp: migrate
     labelSelector:
