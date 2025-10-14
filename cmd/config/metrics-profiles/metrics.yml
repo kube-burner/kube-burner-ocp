@@ -41,6 +41,12 @@
 - query: sum by (instance) ( irate(node_network_receive_bytes_total[5m]) + irate(node_network_transmit_bytes_total[5m]))
   metricName: nodeNetworkTotal
 
+- query: sum by (instance) ( irate(node_network_receive_bytes_total[5m]))
+  metricName: nodeRxNetwork
+
+- query: sum by (instance) ( irate(node_network_transmit_bytes_total[5m]))
+  metricName: nodeTxNetwork
+
 - query: sum by (instance) ( irate(node_network_drop_total[5m]) )
   metricName: nodeNetworkDropTotal
 
@@ -49,6 +55,12 @@
 
 - query: sum by (instance, device) (irate(node_network_receive_bytes_total[5m]) + irate(node_network_transmit_bytes_total[5m]))
   metricName: nodeNetworkDeviceTotal
+
+- query: sum by (instance, device) (irate(node_network_receive_bytes_total[5m]))
+  metricName: nodeRxNetworkDevice
+
+- query: sum by (instance, device) (irate(node_network_transmit_bytes_total[5m]))
+  metricName: nodeTxNetworkDevice
 
 - query: sum by (instance, device) ( irate(node_network_drop_total[5m]) )
   metricName: nodeNetworkDeviceDropTotal
