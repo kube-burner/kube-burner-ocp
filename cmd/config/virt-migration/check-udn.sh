@@ -38,16 +38,14 @@ set_up_ssh() {
 
     local host_ip
     local node_port
-    #ssh agent
+    #ssh agent for remote command
     ssh-add -q "${identity_file}"
-    #UID=$(oc get -n "${namespace}" vmi/${vmi_name} -o jsonpath='{.status.activePods}'  | awk -F'"' '{print $2}')
-    #POD=$(oc get pods -n "${namespace}" -o jsonpath='{range .items[?(@.metadata.uid=="${UID}")]}{.metadata.name}{"\n"}{end}')
-    #NodePort on port 32322
-    kubectl apply -f <(kubectl create svc nodeport ${SSH_SERVICE} --tcp=22 -o yaml --dry-run=client) -n ${namespace} >/dev/null 2>&1
-    node_port=$(kubectl get svc ${SSH_SERVICE} -n ${namespace} -o jsonpath='{.spec.ports[0].nodePort}')
-    kubectl label pod "${virt_handler_pod_name}" -n ${namespace} app=${SSH_SERVICE} --overwrite  >/dev/null 2>&1
-    host_ip=$(kubectl get pod "${virt_handler_pod_name}" -n ${namespace} -o jsonpath='{.status.hostIP}')
-    ssh -A -i ${identity_file} ${remote_user}@${host_ip} -p ${node_port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ls >/dev/null 2>&1
+    #Create a nodeport service for the ssh
+    kubectl apply -f <(kubectl create svc nodeport ${SSH_SERVICE} --tcp=22 -o yaml --dry-run=client) -n "${namespace}" >/dev/null 2>&1
+    node_port=$(kubectl get svc ${SSH_SERVICE} -n "${namespace}" -o jsonpath='{.spec.ports[0].nodePort}')
+    kubectl label pod "${virt_handler_pod_name}" -n "${namespace}" app=${SSH_SERVICE} --overwrite  >/dev/null 2>&1
+    host_ip=$(kubectl get pod "${virt_handler_pod_name}" -n "${namespace}" -o jsonpath='{.status.hostIP}')
+    ssh -A -i "${identity_file}" "${remote_user}"@"${host_ip}" -p "${node_port}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ls >/dev/null 2>&1
     echo "${host_ip} ${node_port}"
 }
 
@@ -59,7 +57,7 @@ remote_command() {
     local command=$5
 
     local output
-    output=$(ssh ${remote_user}@${host_ip} -p ${node_port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -A  -i "${identity_file}" "${command}")
+    output=$(ssh "${remote_user}"@"${host_ip}" -p "${node_port}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -A  -i "${identity_file}" "${command}")
     local ret=$?
     if [ $ret -ne 0 ]; then
         return 1
@@ -93,4 +91,4 @@ for pod in ${VIRT_PODS}; do
     echo "${COMMAND} finished successfully for ${pod}"
 done
 #Cleanup
-kubectl delete svc ${SSH_SERVICE} -n ${NAMESPACE}
+kubectl delete svc ${SSH_SERVICE} -n "${NAMESPACE}"

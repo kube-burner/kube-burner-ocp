@@ -61,6 +61,8 @@ jobs:
   - objectTemplate: udn_l2.yml
     runOnce: true
     replicas: 1
+    inputVars:
+      udnSubnets: {{ .udnSubnets }}
   {{ end }}
 
   - objectTemplate: templates/secret_ssh_public.yml
