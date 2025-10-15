@@ -1,0 +1,105 @@
+---
+global:
+  gc: true
+  gcMetrics: false
+  deletionStrategy: default
+  measurements:
+    - name: podLatency
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [metrics.yml]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  - name: build-farm-controller
+    namespace: build-farm-controllers
+    jobIterations: 1
+    namespacedIterations: false
+    preLoadImages: false
+    objects:
+      - objectTemplate: config/build-farm/build-farm-controller-sa.yml
+        replicas: 1
+      - objectTemplate: config/build-farm/build-farm-controller-role.yml
+        replicas: 1
+      - objectTemplate: config/build-farm/build-farm-controller-rolebinding.yml
+        replicas: 1
+      - objectTemplate: config/build-farm/build-farm-controller-deployment.yml
+        replicas: 1
+        inputVars:
+          numControllers: 4
+          numThreads: "4"
+          enableJobWatcher: true
+          enablePodWatcher: true
+          enableJobsListing: true
+          enableSecretsListing: false
+          watcherRestartInterval: "600s"
+          sleepBeforeRestart: "60s"
+          logLevel: "Info"
+          secretsListInterval: "5s"
+          jobsListInterval: "5s"
+          namespaceFilterRegEx: ""
+  - name: build-farm-create
+    namespace: build-farm-tenant
+    jobIterations: {{ .JOB_ITERATIONS }}
+    namespacedIterations: {{ .NAMESPACED_ITERATIONS }}
+    iterationsPerNamespace: 1
+    preLoadImages: false
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    churnConfig:
+      cycles: 5
+      percent: 80
+      delay: 1m
+      mode: objects
+    objects:
+      - objectTemplate: config/build-farm/build-job-sa.yml
+        replicas: 1
+        churn: false
+      - objectTemplate: config/build-farm/build-job-role.yml
+        replicas: 1
+        churn: false
+      - objectTemplate: config/build-farm/build-job-rolebinding.yml
+        replicas: 1
+        churn: false
+      - objectTemplate: config/build-farm/build-job-secret.yml
+        replicas: {{ div (mul .ITERATIONS_PER_NAMESPACE 3) 2 }}
+        churn: false
+      - objectTemplate: config/build-farm/build-job-configmap.yml
+        replicas: {{ div .ITERATIONS_PER_NAMESPACE 2 }}
+        churn: false
+      - objectTemplate: config/build-farm/build-job-small.yml
+        replicas: {{ div (mul .ITERATIONS_PER_NAMESPACE 4) 5 }}
+        churn: true
+        inputVars:
+          iterationsPerNamespace: {{ .ITERATIONS_PER_NAMESPACE }}
+          metadataIterations: "2"
+          metadataIterationsDelay: "5s"
+          numWatchers: "32"
+          buildImage: "quay.io/prometheus/busybox"
+          buildPlatform: "linux/x86_64"
+          targetImage: "registry.local/build-farm/test-image"
+      - objectTemplate: config/build-farm/build-job-large.yml
+        replicas: {{ div .ITERATIONS_PER_NAMESPACE 5 }}
+        churn: true
+        inputVars:
+          iterationsPerNamespace: {{ .ITERATIONS_PER_NAMESPACE }}
+          buildImage: "quay.io/prometheus/busybox"
+          buildPlatform: "linux/x86_64"
+          targetImage: "registry.local/build-farm/test-image"
+          metadataIterations: "2"
+          metadataIterationsDelay: "5s"
+          numWatchers: "32"
