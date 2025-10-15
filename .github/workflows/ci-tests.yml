@@ -19,7 +19,6 @@ jobs:
     uses: ./.github/workflows/build-matrix.yml
 
   build:
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'ok-to-test') }}
     uses: ./.github/workflows/builders.yml
 
   tests:
