@@ -32,9 +32,15 @@ jobs:
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
-    namespacedIterations: false
+    namespacedIterations: {{.NAMESPACED_ITERATIONS}}
+    iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
     preLoadImages: true
     waitWhenFinished: true
+    churn: {{.CHURN}}
+    churnCycles: {{.CHURN_CYCLES}}
+    churnDuration: {{.CHURN_DURATION}}
+    churnPercent: {{.CHURN_PERCENT}}
+    churnDelay: {{.CHURN_DELAY}}
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
