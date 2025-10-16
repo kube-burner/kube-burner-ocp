@@ -99,6 +99,18 @@ Flags:
 
 Documentation is [available here](https://kube-burner.github.io/kube-burner-ocp/)
 
+## Quick start
+
+Install latest stable version with:
+
+```shell
+curl -Ls https://raw.githubusercontent.com/kube-burner/kube-burner-ocp/refs/heads/main/hack/install.sh | sh
+```
+
+> [!NOTE]
+> Default installation path is `${HOME}/.local/bin/`, you can change it by setting `INSTALL_DIR` environment variable
+> before running the script
+
 ## Usage
 
 Some of the benefits the OCP wrapper provides are:
