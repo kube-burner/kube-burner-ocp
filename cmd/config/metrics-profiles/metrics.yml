@@ -38,35 +38,24 @@
   metricName: containerNetworkSetupLatency
 
 # Node metrics: Network
-- query: sum by (instance) ( irate(node_network_receive_bytes_total[5m]) + irate(node_network_transmit_bytes_total[5m]))
-  metricName: nodeNetworkTotal
-
-- query: sum by (instance) ( irate(node_network_receive_bytes_total[5m]))
+- query: sum by (instance, device) ( irate(node_network_receive_bytes_total{device!~"lo|ovs-system"}[2m]) > 0 )
   metricName: nodeRxNetwork
 
-- query: sum by (instance) ( irate(node_network_transmit_bytes_total[5m]))
+- query: sum by (instance, device) ( irate(node_network_transmit_bytes_total{device!~"lo|ovs-system"}[2m]) > 0 )
   metricName: nodeTxNetwork
 
-- query: sum by (instance) ( irate(node_network_drop_total[5m]) )
-  metricName: nodeNetworkDropTotal
+- query: sum by (instance, device) ( irate(node_network_receive_errs_total{device!~"lo|ovs-system"}[2m]) > 0 )
+  metricName: nodeNetworkErrRXTotal
 
-- query: sum by (instance) ( irate(node_network_errs_total[5m]) )
-  metricName: nodeNetworkErrTotal
+- query: sum by (instance, device) ( irate(node_network_transmit_errs_total{device!~"lo|ovs-system"}[2m]) > 0 )
+  metricName: nodeNetworkErrTXTotal
 
-- query: sum by (instance, device) (irate(node_network_receive_bytes_total[5m]) + irate(node_network_transmit_bytes_total[5m]))
-  metricName: nodeNetworkDeviceTotal
+- query: sum by (instance, device) (irate(node_network_transmit_drop{device!~"lo|ovs-system"}[2m]) > 0 )
+  metricName: nodeNetworkDeviceDropTXTotal
 
-- query: sum by (instance, device) (irate(node_network_receive_bytes_total[5m]))
-  metricName: nodeRxNetworkDevice
+- query: sum by (instance, device) ( irate(node_network_receive_drop_total{device!~"lo|ovs-system"}[2m]) > 0 )
+  metricName: nodeNetworkDeviceDropRXTotal
 
-- query: sum by (instance, device) (irate(node_network_transmit_bytes_total[5m]))
-  metricName: nodeTxNetworkDevice
-
-- query: sum by (instance, device) ( irate(node_network_drop_total[5m]) )
-  metricName: nodeNetworkDeviceDropTotal
-
-- query: sum by (instance, device) ( irate(node_network_errs_total[5m]) )
-  metricName: nodeNetworkDeviceErrTotal
 
 # Node metrics: CPU & Memory
 
