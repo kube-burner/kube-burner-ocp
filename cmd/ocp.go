@@ -69,7 +69,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
 	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "metrics-endpoint")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		if cmd.Name() == "version" {
+		if cmd.Name() == "version" || cmd.Name() == "help" || (cmd.HasParent() && cmd.Parent().Name() == "completion") {
 			return
 		}
 		util.ConfigureLogging(cmd)
