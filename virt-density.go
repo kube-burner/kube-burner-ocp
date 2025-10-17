@@ -27,7 +27,7 @@ import (
 // Returns virt-density workload
 func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var vmsPerNode int
-	var vmImage string
+	var vmImage, deletionStrategy string
 	var vmiRunningThreshold time.Duration
 	var metricsProfiles []string
 	var rc int
@@ -44,6 +44,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = totalVMs - vmCount
 			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			setMetrics(cmd, metricsProfiles)
 			AddVirtMetadata(wh, vmImage, "", "")
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
@@ -55,6 +56,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 245, "VMs per node")
 	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 25*time.Second, "VMI ready timeout threshold")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", "gvr", "Deletion strategy to use, values: 'gvr' (object delete) or 'default' (namespace delete)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }
