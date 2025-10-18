@@ -116,5 +116,6 @@ jobs:
         inputVars:
           podReplicas: 1
           dpdk_cores: {{.DPDK_CORES}}
+          dpdk_hugepages: {{.DPDK_HUGEPAGES}}
           perf_profile: {{.PERF_PROFILE}}
 

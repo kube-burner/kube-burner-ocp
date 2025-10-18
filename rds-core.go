@@ -29,7 +29,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, churnPercent, churnCycles, dpdkCores int
 	var churn, svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var deletionStrategy, perfProfile string
+	var deletionStrategy, perfProfile, dpdkHugepages string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -49,6 +49,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["DPDK_CORES"] = dpdkCores
+			AdditionalVars["DPDK_HUGEPAGES"] = dpdkHugepages
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PERF_PROFILE"] = perfProfile
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
@@ -67,6 +68,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().IntVar(&dpdkCores, "dpdk-cores", 2, "Number of cores per DPDK pod")
+	cmd.Flags().StringVar(&dpdkHugepages, "dpdk-hugepages", "16Gi", "Number of hugepages per DPDK pod. Must be a multiple of 1Gi")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&perfProfile, "perf-profile", "default", "Performance profile implemented in the cluster")
