@@ -34,11 +34,11 @@ spec:
             requests:
               cpu: {{.dpdk_cores}}
               memory: 1024M
-              hugepages-1Gi: 16Gi
+              hugepages-1Gi: {{.dpdk_hugepages}}
             limits:
               cpu: {{.dpdk_cores}}
               memory: 1024M
-              hugepages-1Gi: 16Gi
+              hugepages-1Gi: {{.dpdk_hugepages}}
           env:
             - name: stress_cpu
               value: "4"
