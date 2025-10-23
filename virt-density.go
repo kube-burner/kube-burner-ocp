@@ -71,7 +71,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", "gvr", "Deletion strategy to use, values: 'gvr' (object delete) or 'default' (namespace delete)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
+	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
