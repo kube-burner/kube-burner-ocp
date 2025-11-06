@@ -29,7 +29,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, churnPercent, churnCycles, dpdkCores int
 	var churn, svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var deletionStrategy, perfProfile, dpdkHugepages, dpdkDevicepool, netDevicepool string
+	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
