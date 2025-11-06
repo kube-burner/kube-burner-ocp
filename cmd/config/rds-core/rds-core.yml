@@ -90,9 +90,13 @@ jobs:
 
       - objectTemplate: sriov-network.yml
         replicas: 1
+        inputVars:
+          netDevicepool: {{ .NET_DEVICEPOOL }}
 
       - objectTemplate: sriov-dpdk-network.yml
         replicas: 2
+        inputVars:
+          dpdkDevicepool: {{ .DPDK_DEVICEPOOL }}
 
       - objectTemplate: service.yml
         replicas: 20
