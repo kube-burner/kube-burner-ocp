@@ -53,7 +53,7 @@ spec:
           value: "1"
         - name: REQ_TIMEOUT_SEC
           value: "3"
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         securityContext:
           privileged: false
         volumeMounts:
