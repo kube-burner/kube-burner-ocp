@@ -16,6 +16,6 @@ spec:
   logLevel: info #debug
   spoofChk: "off"
   trust: "on"
-  resourceName: {{ .netDevicepool }}
+  resourceName: {{ .sriovNetDevicepool }}
   networkNamespace: rds-{{ .Iteration }}
   #capabilities: '{ "dpdk": true }'
