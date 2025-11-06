@@ -17,6 +17,6 @@ spec:
   logLevel: info #debug
   spoofChk: "off"
   trust: "on"
-  resourceName: dpdkvfs
+  resourceName: {{ .dpdkDevicepool }}
   networkNamespace: rds-{{ .Iteration }}
   #capabilities: '{ "dpdk": true }'
