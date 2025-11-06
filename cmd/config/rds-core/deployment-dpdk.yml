@@ -28,7 +28,7 @@ spec:
       containers:
         - name: dpdk
           image: ghcr.io/abraham2512/fedora-stress-ng:master
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           # Request and Limits must be identical for the Pod to be assigned to the QoS Guarantee
           resources:
             requests:

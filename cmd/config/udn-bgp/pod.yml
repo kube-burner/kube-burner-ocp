@@ -10,7 +10,7 @@ spec:
       requests:
         memory: "10Mi"
         cpu: "10m"
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
     ports:
      - containerPort: 8080
        protocol: TCP

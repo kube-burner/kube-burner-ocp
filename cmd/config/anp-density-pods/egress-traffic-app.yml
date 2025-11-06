@@ -30,7 +30,7 @@ spec:
       containers:
       - name: keepalive
         image: quay.io/openshift-psap-qe/ubi9-minimal
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: NODE_IP
           valueFrom:
@@ -46,7 +46,7 @@ spec:
             - ALL 
         ports:
         - containerPort: 8080
-        imagePullPolicy: Always            
+        imagePullPolicy: IfNotPresent
         command: [ "/bin/bash", "-c", "--" ]
         args:
         - while true;
