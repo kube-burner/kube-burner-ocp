@@ -89,6 +89,9 @@ jobs:
         replicas: 1
 
       - objectTemplate: sriov-network.yml
+        replicas: 1
+
+      - objectTemplate: sriov-dpdk-network.yml
         replicas: 2
 
       - objectTemplate: service.yml
