@@ -1,0 +1,363 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    build.farm.redhat.com/build_type: docker
+    build.farm.redhat.com/component: build-farm-{{.Iteration}}
+    build.farm.redhat.com/application: build-farm-app
+    build.farm.redhat.com/version: v1.0.0
+    build.farm.redhat.com/runtime: tekton
+  labels:
+    app.kubernetes.io/managed-by: kube-burner
+    app.kubernetes.io/version: "1.0"
+    app.kubernetes.io/component: build-farm
+    app.kubernetes.io/part-of: build-farm-workload
+    app.kubernetes.io/instance: build-farm-{{.Iteration}}
+    build-farm-watcher: "watcher{{mod .Replica .numWatchers | add1}}"
+  name: build-small-{{.Replica}}
+spec:
+  activeDeadlineSeconds: 7200
+  backoffLimit: 3
+  completions: 1
+  parallelism: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      annotations:
+        build.farm.redhat.com/build_type: docker
+        build.farm.redhat.com/component: build-farm-{{.Iteration}}
+        build.farm.redhat.com/application: build-farm-app
+        build.farm.redhat.com/version: v1.0.0
+        build.farm.redhat.com/runtime: tekton
+      labels:
+        app.kubernetes.io/managed-by: kube-burner
+        app.kubernetes.io/version: "1.0"
+        app.kubernetes.io/component: build-farm
+        app.kubernetes.io/part-of: build-farm-workload
+        app.kubernetes.io/instance: build-farm-{{.Iteration}}
+        app.kubernetes.io/name: build-farm
+        build-farm-watcher: "watcher{{mod .Replica .numWatchers | add1}}"
+    spec:
+      containers:
+      - name: step-use-trusted-artifact
+        image: {{.buildImage}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting step-use-trusted-artifact simulation"
+          echo "Build Image: quay.io/konflux-ci/buildah-task"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          echo "Job Name: {{.JobName}}"
+          echo "Iteration: {{.Iteration}}"
+
+          # Simulate artifact preparation work
+          for i in $(seq 1 120); do
+            echo "Processing trusted artifacts... $i/120"
+            sleep 1
+          done
+
+          echo "Trusted artifact step completed"
+        env:
+        - name: ACTIVATION_KEY
+          value: activation-key
+        - name: ADDITIONAL_SECRET
+          value: does-not-exist
+        - name: ADD_CAPABILITIES
+        - name: CONTEXT
+          value: .
+        - name: ENTITLEMENT_SECRET
+          value: etc-pki-entitlement
+        - name: HERMETIC
+          value: "false"
+        - name: IMAGE
+          value: {{.targetImage}}
+        - name: PRIVILEGED_NESTED
+          value: "false"
+        - name: SBOM_TYPE
+          value: spdx
+        - name: SKIP_SBOM_GENERATION
+          value: "false"
+        - name: SOURCE_CODE_DIR
+          value: source
+        - name: STORAGE_DRIVER
+          value: overlay
+        - name: TLSVERIFY
+          value: "true"
+        - name: BUILDER_IMAGE
+          value: {{.buildImage}}
+        - name: PLATFORM
+          value: {{.buildPlatform}}
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 200m
+          requests:
+            cpu: 15m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - MKNOD
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /secrets/build-secret-0-{{ add (mod (add (mul .Replica 2) 0) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-0-{{ add (mod (add (mul .Replica 2) 0) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-1-{{ add (mod (add (mul .Replica 2) 1) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-1-{{ add (mod (add (mul .Replica 2) 1) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-2-{{ add (mod (add (mul .Replica 2) 2) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-2-{{ add (mod (add (mul .Replica 2) 2) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-3-{{ add (mod (add (mul .Replica 2) 3) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-3-{{ add (mod (add (mul .Replica 2) 3) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-4-{{ add (mod (add (mul .Replica 2) 4) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-4-{{ add (mod (add (mul .Replica 2) 4) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-5-{{ add (mod (add (mul .Replica 2) 5) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-5-{{ add (mod (add (mul .Replica 2) 5) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-6-{{ add (mod (add (mul .Replica 2) 6) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-6-{{ add (mod (add (mul .Replica 2) 6) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-7-{{ add (mod (add (mul .Replica 2) 7) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-7-{{ add (mod (add (mul .Replica 2) 7) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-8-{{ add (mod (add (mul .Replica 2) 8) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-8-{{ add (mod (add (mul .Replica 2) 8) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-9-{{ add (mod (add (mul .Replica 2) 9) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-9-{{ add (mod (add (mul .Replica 2) 9) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-10-{{ add (mod (add (mul .Replica 2) 10) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-10-{{ add (mod (add (mul .Replica 2) 10) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-11-{{ add (mod (add (mul .Replica 2) 11) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-11-{{ add (mod (add (mul .Replica 2) 11) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-12-{{ add (mod (add (mul .Replica 2) 12) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-12-{{ add (mod (add (mul .Replica 2) 12) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-13-{{ add (mod (add (mul .Replica 2) 13) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-13-{{ add (mod (add (mul .Replica 2) 13) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-14-{{ add (mod (add (mul .Replica 2) 14) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-14-{{ add (mod (add (mul .Replica 2) 14) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-15-{{ add (mod (add (mul .Replica 2) 15) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-15-{{ add (mod (add (mul .Replica 2) 15) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-16-{{ add (mod (add (mul .Replica 2) 16) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-16-{{ add (mod (add (mul .Replica 2) 16) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-17-{{ add (mod (add (mul .Replica 2) 17) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-17-{{ add (mod (add (mul .Replica 2) 17) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-18-{{ add (mod (add (mul .Replica 2) 18) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-18-{{ add (mod (add (mul .Replica 2) 18) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-19-{{ add (mod (add (mul .Replica 2) 19) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-19-{{ add (mod (add (mul .Replica 2) 19) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-20-{{ add (mod (add (mul .Replica 2) 20) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-20-{{ add (mod (add (mul .Replica 2) 20) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-21-{{ add (mod (add (mul .Replica 2) 21) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-21-{{ add (mod (add (mul .Replica 2) 21) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-22-{{ add (mod (add (mul .Replica 2) 22) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-22-{{ add (mod (add (mul .Replica 2) 22) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-23-{{ add (mod (add (mul .Replica 2) 23) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-23-{{ add (mod (add (mul .Replica 2) 23) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-24-{{ add (mod (add (mul .Replica 2) 24) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-24-{{ add (mod (add (mul .Replica 2) 24) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-25-{{ add (mod (add (mul .Replica 2) 25) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-25-{{ add (mod (add (mul .Replica 2) 25) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-26-{{ add (mod (add (mul .Replica 2) 26) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-26-{{ add (mod (add (mul .Replica 2) 26) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-27-{{ add (mod (add (mul .Replica 2) 27) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-27-{{ add (mod (add (mul .Replica 2) 27) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-28-{{ add (mod (add (mul .Replica 2) 28) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-28-{{ add (mod (add (mul .Replica 2) 28) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-29-{{ add (mod (add (mul .Replica 2) 29) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-29-{{ add (mod (add (mul .Replica 2) 29) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+      - name: step-update-metadata
+        image: quay.io/kube-burner/build-farm-controller:metadata-adder
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: JOB_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['job-name']
+        - name: CUSTOM_LABELS
+          value: |
+            {
+              "build.farm.redhat.com/build<RANDSTRING>": "done"
+            }
+        - name: CUSTOM_ANNOTATIONS
+          value: |
+            {
+              "build.farm.redhat.com/build<RANDSTRING>-tested-at": "<TIMESTAMP>"
+            }
+        - name: ITERATIONS
+          value: "{{.metadataIterations}}"
+        - name: DELAY
+          value: "{{.metadataIterationsDelay}}"
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 200m
+          requests:
+            cpu: 15m
+            memory: 64Mi
+      restartPolicy: Never
+      serviceAccountName: metadata-editor-sa
+      volumes:
+      - name: build-secret-volume-0-{{ add (mod (add (mul .Replica 2) 0) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 0) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-1-{{ add (mod (add (mul .Replica 2) 1) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 1) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-2-{{ add (mod (add (mul .Replica 2) 2) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 2) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-3-{{ add (mod (add (mul .Replica 2) 3) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 3) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-4-{{ add (mod (add (mul .Replica 2) 4) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 4) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-5-{{ add (mod (add (mul .Replica 2) 5) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 5) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-6-{{ add (mod (add (mul .Replica 2) 6) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 6) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-7-{{ add (mod (add (mul .Replica 2) 7) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 7) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-8-{{ add (mod (add (mul .Replica 2) 8) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 8) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-9-{{ add (mod (add (mul .Replica 2) 9) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 9) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-10-{{ add (mod (add (mul .Replica 2) 10) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 10) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-11-{{ add (mod (add (mul .Replica 2) 11) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 11) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-12-{{ add (mod (add (mul .Replica 2) 12) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 12) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-13-{{ add (mod (add (mul .Replica 2) 13) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 13) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-14-{{ add (mod (add (mul .Replica 2) 14) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 14) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-15-{{ add (mod (add (mul .Replica 2) 15) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 15) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-16-{{ add (mod (add (mul .Replica 2) 16) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 16) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-17-{{ add (mod (add (mul .Replica 2) 17) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 17) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-18-{{ add (mod (add (mul .Replica 2) 18) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 18) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-19-{{ add (mod (add (mul .Replica 2) 19) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 19) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-20-{{ add (mod (add (mul .Replica 2) 20) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 20) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-21-{{ add (mod (add (mul .Replica 2) 21) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 21) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-22-{{ add (mod (add (mul .Replica 2) 22) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 22) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-23-{{ add (mod (add (mul .Replica 2) 23) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 23) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-24-{{ add (mod (add (mul .Replica 2) 24) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 24) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-25-{{ add (mod (add (mul .Replica 2) 25) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 25) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-26-{{ add (mod (add (mul .Replica 2) 26) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 26) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-27-{{ add (mod (add (mul .Replica 2) 27) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 27) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-28-{{ add (mod (add (mul .Replica 2) 28) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 28) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-29-{{ add (mod (add (mul .Replica 2) 29) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 29) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
