@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ocp
+package common
 
 import (
 	"context"
@@ -98,7 +98,7 @@ func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versio
 	return isHealthy
 }
 
-func isClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
+func IsClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
 	deployment, err := clientset.AppsV1().Deployments("openshift-image-registry").Get(context.TODO(), "image-registry", metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Error getting deployment: %v", err)
@@ -110,7 +110,7 @@ func isClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
 	return fmt.Errorf("Deployment image-registry in namespace openshift-image-registry doesn't have available replicas")
 }
 
-func isOLMv1Enabled(clientset kubernetes.Interface) error {
+func IsOLMv1Enabled(clientset kubernetes.Interface) error {
 	deployment, err := clientset.AppsV1().Deployments("openshift-catalogd").Get(context.TODO(), "catalogd-controller-manager", metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Error getting deployment: %v", err)

@@ -21,7 +21,8 @@ import (
 	"time"
 
 	uid "github.com/google/uuid"
-	ocp "github.com/kube-burner/kube-burner-ocp"
+	"github.com/kube-burner/kube-burner-ocp/pkg/common"
+	ocp "github.com/kube-burner/kube-burner-ocp/pkg/workloads"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -83,7 +84,7 @@ func openShiftCmd() *cobra.Command {
 			util.SetupFileLogging("ocp-" + workloadConfig.UUID)
 		}
 		if cmd.Name() != "cluster-health" && cmd.Name() != "index" {
-			ocp.ClusterHealthCheck(ignoreHealthCheck)
+			common.ClusterHealthCheck()
 		}
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		workloadDir := filepath.Join(rootDir, cmd.Name())
@@ -134,7 +135,7 @@ func openShiftCmd() *cobra.Command {
 		ocp.NewWhereabouts(&wh),
 		ocp.NewVirtDensity(&wh),
 		ocp.NewVirtUDNDensity(&wh),
-		ocp.ClusterHealth(),
+		common.ClusterHealth(),
 		ocp.CustomWorkload(&wh),
 		ocp.NewVirtCapacityBenchmark(&wh),
 		ocp.NewVirtClone(&wh),

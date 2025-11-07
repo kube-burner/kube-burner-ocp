@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ocp
+package workloads
 
 import (
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner-ocp/pkg/common"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
@@ -40,7 +41,7 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			kubeClientProvider := config.NewKubeClientProvider("", "")
 			clientSet, _ := kubeClientProvider.ClientSet(0, 0)
-			if err := isOLMv1Enabled(clientSet); err != nil {
+			if err := common.IsOLMv1Enabled(clientSet); err != nil {
 				log.Fatal(err.Error())
 			}
 			setMetrics(cmd, metricsProfiles)
