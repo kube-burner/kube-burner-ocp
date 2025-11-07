@@ -1,0 +1,1339 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    build.farm.redhat.com/build_type: docker
+    build.farm.redhat.com/component: build-farm-{{.Iteration}}
+    build.farm.redhat.com/application: build-farm-app
+    build.farm.redhat.com/version: v1.0.0
+    build.farm.redhat.com/runtime: tekton
+    build.farm.redhat.com/framework: konflux
+    build.farm.redhat.com/language: dockerfile
+    build.farm.redhat.com/tools: buildah,syft,mobster
+    build.farm.redhat.com/registry: quay.io
+    build.farm.redhat.com/namespace: konflux-ci
+    build.farm.redhat.com/image-name: build-farm-test
+    build.farm.redhat.com/image-tag: "{{.Iteration}}"
+    build.farm.redhat.com/build-method: containerized
+    build.farm.redhat.com/security-scan: enabled
+    build.farm.redhat.com/sbom-generation: enabled
+    build.farm.redhat.com/vulnerability-scan: enabled
+    build.farm.redhat.com/compliance-check: enabled
+    build.farm.redhat.com/artifact-upload: enabled
+  labels:
+    app.kubernetes.io/managed-by: kube-burner
+    app.kubernetes.io/version: "1.0"
+    app.kubernetes.io/component: build-farm
+    app.kubernetes.io/part-of: build-farm-workload
+    app.kubernetes.io/instance: build-farm-{{.Iteration}}
+    app.kubernetes.io/name: build-farm
+    app.kubernetes.io/created-by: kube-burner-ocp
+    build-farm.openshift.io/application: build-farm-app
+    build-farm.openshift.io/component: build-farm-{{.Iteration}}
+    build.farm.redhat.com/build_type: docker
+    build.farm.redhat.com/build_arch: x86_64
+    pipelines.build-farm.openshift.io/type: build
+    tekton.dev/pipeline: build-farm-{{.JobName}}-{{.Iteration}}
+    tekton.dev/pipelineRun: build-farm-{{.JobName}}-{{.Iteration}}
+    tekton.dev/pipelineRunUID: build-farm-{{.Iteration}}
+    tekton.dev/pipelineTask: build-images
+    tekton.dev/taskRun: build-farm-{{.JobName}}-{{.Iteration}}-build-images-0
+    tekton.dev/taskRunUID: build-farm-{{.Iteration}}-build
+    build-farm-watcher: "watcher{{mod .Replica .numWatchers | add1}}"
+  name: build-large-{{.Replica}}
+spec:
+  activeDeadlineSeconds: 7200
+  backoffLimit: 3
+  completions: 1
+  parallelism: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      annotations:
+        build.farm.redhat.com/build_type: docker
+        build.farm.redhat.com/component: build-farm-{{.Iteration}}
+        build.farm.redhat.com/application: build-farm-app
+        build.farm.redhat.com/version: v1.0.0
+        build.farm.redhat.com/runtime: tekton
+        build.farm.redhat.com/framework: konflux
+        build.farm.redhat.com/language: dockerfile
+        build.farm.redhat.com/tools: buildah,syft,mobster
+        build.farm.redhat.com/registry: quay.io
+        build.farm.redhat.com/namespace: konflux-ci
+        build.farm.redhat.com/image-name: build-farm-test
+        build.farm.redhat.com/image-tag: "{{.Iteration}}"
+        build.farm.redhat.com/build-method: containerized
+        build.farm.redhat.com/security-scan: enabled
+        build.farm.redhat.com/sbom-generation: enabled
+        build.farm.redhat.com/vulnerability-scan: enabled
+        build.farm.redhat.com/compliance-check: enabled
+        build.farm.redhat.com/artifact-upload: enabled
+      labels:
+        app.kubernetes.io/managed-by: kube-burner
+        app.kubernetes.io/version: "1.0"
+        app.kubernetes.io/component: build-farm
+        app.kubernetes.io/part-of: build-farm-workload
+        app.kubernetes.io/instance: build-farm-{{.Iteration}}
+        app.kubernetes.io/name: build-farm
+        app.kubernetes.io/created-by: kube-burner-ocp
+        build-farm.openshift.io/application: build-farm-app
+        build-farm.openshift.io/component: build-farm-{{.Iteration}}
+        build.farm.redhat.com/build_type: docker
+        pipelines.build-farm.openshift.io/type: build
+        tekton.dev/pipeline: build-farm-{{.JobName}}-{{.Iteration}}
+        tekton.dev/pipelineRun: build-farm-{{.JobName}}-{{.Iteration}}
+        tekton.dev/pipelineRunUID: build-farm-{{.Iteration}}
+        tekton.dev/pipelineTask: build-images
+        tekton.dev/task: buildah-remote-oci-ta
+        tekton.dev/taskRun: build-farm-{{.JobName}}-{{.Iteration}}-build-images-0
+        tekton.dev/taskRunUID: build-farm-{{.Iteration}}-build
+        build-farm-watcher: "watcher{{mod .Replica .numWatchers | add1}}"
+    spec:
+      containers:
+      - name: step-use-trusted-artifact
+        image: {{.buildImage}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting step-use-trusted-artifact simulation"
+          echo "Build Image: quay.io/konflux-ci/buildah-task"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          echo "Job Name: {{.JobName}}"
+          echo "Iteration: {{.Iteration}}"
+          
+          # Simulate artifact preparation work
+          for i in $(seq 1 120); do
+            echo "Processing trusted artifacts... $i/120"
+            sleep 1
+          done
+          
+          echo "Trusted artifact step completed"
+        env:
+        - name: ACTIVATION_KEY
+          value: activation-key
+        - name: ADDITIONAL_SECRET
+          value: does-not-exist
+        - name: ADD_CAPABILITIES
+        - name: CONTEXT
+          value: .
+        - name: ENTITLEMENT_SECRET
+          value: etc-pki-entitlement
+        - name: HERMETIC
+          value: "false"
+        - name: IMAGE
+          value: {{.targetImage}}
+        - name: PRIVILEGED_NESTED
+          value: "false"
+        - name: SBOM_TYPE
+          value: spdx
+        - name: SKIP_SBOM_GENERATION
+          value: "false"
+        - name: SOURCE_CODE_DIR
+          value: source
+        - name: STORAGE_DRIVER
+          value: overlay
+        - name: TLSVERIFY
+          value: "true"
+        - name: BUILDER_IMAGE
+          value: {{.buildImage}}
+        - name: PLATFORM
+          value: {{.buildPlatform}}
+        resources:
+          limits:
+            memory: 4Gi
+            cpu: 200m
+          requests:
+            cpu: 15m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - MKNOD
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
+        - mountPath: /var/workdir
+          name: workdir
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-build-farm
+          readOnly: true
+        workingDir: /var/workdir
+      - name: step-build
+        image: {{.buildImage}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting container build simulation"
+          echo "Build Image: quay.io/konflux-ci/buildah-task"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          echo "Job Name: {{.JobName}}"
+          echo "Iteration: {{.Iteration}}"
+          
+          # Simulate complex build process
+          echo "Phase 1: Environment validation and setup"
+          sleep 1
+
+          echo "Phase 2: Source code preparation and analysis"
+          sleep 2
+
+          echo "Phase 3: Dependency resolution and caching"
+          sleep 1
+
+          echo "Phase 4: Multi-stage container build process"
+          sleep 2
+
+          echo "Phase 5: Layer optimization and compression"
+          sleep 1
+
+          echo "Phase 6: Build verification and validation"
+          sleep 2
+          
+          echo "Container build completed for iteration {{.Iteration}}"
+        env:
+        - name: COMMIT_SHA
+          value: {{.targetImage}}
+        - name: DOCKERFILE
+          value: Dockerfile
+        - name: BUILDAH_HTTP_PROXY
+        - name: BUILDAH_NO_PROXY
+        - name: ICM_KEEP_COMPAT_LOCATION
+          value: "true"
+        - name: ACTIVATION_KEY
+          value: activation-key
+        - name: ADDITIONAL_SECRET
+          value: does-not-exist
+        - name: ADD_CAPABILITIES
+        - name: CONTEXT
+          value: .
+        - name: ENTITLEMENT_SECRET
+          value: etc-pki-entitlement
+        - name: HERMETIC
+          value: "false"
+        - name: IMAGE
+          value: {{.targetImage}}
+        - name: PRIVILEGED_NESTED
+          value: "false"
+        - name: SBOM_TYPE
+          value: spdx
+        - name: SKIP_SBOM_GENERATION
+          value: "false"
+        - name: SOURCE_CODE_DIR
+          value: source
+        - name: STORAGE_DRIVER
+          value: overlay
+        - name: TLSVERIFY
+          value: "true"
+        - name: BUILDER_IMAGE
+          value: quay.io/konflux-ci/buildah-task
+        - name: PLATFORM
+          value: {{.buildPlatform}}
+        - name: BUILDAH_LOGFILE
+          value: /logs/build-logs/buildah.log
+        - name: REGISTRY_AUTH_FILE
+          value: /tekton/creds/.dockerconfigjson
+        - name: DOCKER_CONFIG
+          value: /tekton/creds
+        - name: HOME
+          value: /tekton/home
+        - name: USER
+          value: build-user
+        - name: BUILD_USER_ID
+          value: "1000"
+        - name: BUILD_GROUP_ID
+          value: "1000"
+        - name: TMPDIR
+          value: /tmp/build-tmp
+        - name: TMP
+          value: /tmp/build-tmp
+        - name: TEMP
+          value: /tmp/build-tmp
+        resources:
+          limits:
+            memory: 8Gi
+            cpu: 200m
+          requests:
+            cpu: 15m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - MKNOD
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/containers
+          name: varlibcontainers
+        - mountPath: /secrets/build-secret-0-{{ add (mod (add (mul .Replica 2) 0) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-0-{{ add (mod (add (mul .Replica 2) 0) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-1-{{ add (mod (add (mul .Replica 2) 1) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-1-{{ add (mod (add (mul .Replica 2) 1) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-2-{{ add (mod (add (mul .Replica 2) 2) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-2-{{ add (mod (add (mul .Replica 2) 2) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-3-{{ add (mod (add (mul .Replica 2) 3) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-3-{{ add (mod (add (mul .Replica 2) 3) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-4-{{ add (mod (add (mul .Replica 2) 4) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-4-{{ add (mod (add (mul .Replica 2) 4) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-5-{{ add (mod (add (mul .Replica 2) 5) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-5-{{ add (mod (add (mul .Replica 2) 5) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-6-{{ add (mod (add (mul .Replica 2) 6) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-6-{{ add (mod (add (mul .Replica 2) 6) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-7-{{ add (mod (add (mul .Replica 2) 7) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-7-{{ add (mod (add (mul .Replica 2) 7) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-8-{{ add (mod (add (mul .Replica 2) 8) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-8-{{ add (mod (add (mul .Replica 2) 8) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /secrets/build-secret-9-{{ add (mod (add (mul .Replica 2) 9) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          name: build-secret-volume-9-{{ add (mod (add (mul .Replica 2) 9) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          readOnly: true
+        - mountPath: /mnt/proxy-ca-bundle
+          name: proxy-ca-bundle
+          readOnly: true
+        - mountPath: /shared
+          name: shared
+        - mountPath: /var/workdir
+          name: workdir
+        - mountPath: /workspace
+          name: tekton-internal-workspace
+        - mountPath: /tekton/home
+          name: tekton-internal-home
+        - mountPath: /tekton/results
+          name: tekton-internal-results
+        - mountPath: /tekton/steps
+          name: tekton-internal-steps
+          readOnly: true
+        - mountPath: /tekton/artifacts
+          name: tekton-internal-artifacts
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-build-farm
+          readOnly: true
+        - mountPath: /cache/build-cache
+          name: build-cache-volume
+        - mountPath: /cache/dependency-cache
+          name: dependency-cache-volume
+        - mountPath: /cache/layer-cache
+          name: layer-cache-volume
+        - mountPath: /logs/build-logs
+          name: build-logs-volume
+        - mountPath: /metrics/build-metrics
+          name: build-metrics-volume
+        - mountPath: /tmp/build-tmp
+          name: build-tmp-volume
+        workingDir: /var/workdir
+      - name: step-push
+        image: {{.buildImage}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "[$(date --utc -Ins)] Starting image push for iteration {{.Iteration}}"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          
+          # Simulate image push with retries
+          echo "Phase 1: Image preparation and manifest generation"
+          sleep 1
+
+          echo "Phase 2: Layer upload and verification"
+          sleep 1
+
+          echo "Phase 3: Manifest upload and registry sync"
+          sleep 1
+
+          echo "Phase 4: Tag assignment and metadata update"
+          sleep 5
+          
+          echo "[$(date --utc -Ins)] Image push completed for iteration {{.Iteration}}"
+        env:
+        - name: BUILDAH_FORMAT
+          value: docker
+        - name: TASKRUN_NAME
+          value: build-farm-{{.JobName}}-{{.Iteration}}-build-images-0
+        - name: ACTIVATION_KEY
+          value: activation-key
+        - name: ADDITIONAL_SECRET
+          value: does-not-exist
+        - name: ADD_CAPABILITIES
+        - name: CONTEXT
+          value: .
+        - name: ENTITLEMENT_SECRET
+          value: etc-pki-entitlement
+        - name: HERMETIC
+          value: "false"
+        - name: IMAGE
+          value: {{.targetImage}}
+        - name: PRIVILEGED_NESTED
+          value: "false"
+        - name: SBOM_TYPE
+          value: spdx
+        - name: SKIP_SBOM_GENERATION
+          value: "false"
+        - name: SOURCE_CODE_DIR
+          value: source
+        - name: STORAGE_DRIVER
+          value: overlay
+        - name: TLSVERIFY
+          value: "true"
+        - name: BUILDER_IMAGE
+          value: quay.io/konflux-ci/buildah-task
+        - name: PLATFORM
+          value: {{.buildPlatform}}
+        - name: REGISTRY_PUSH_TIMEOUT
+          value: "600"
+        - name: REGISTRY_RETRY_COUNT
+          value: "3"
+        - name: REGISTRY_RETRY_DELAY
+          value: "10"
+        - name: PUSH_EXTRA_ARGS
+          value: "--retry=3 --retry-delay=10s"
+        - name: COMPRESSION_TYPE
+          value: gzip
+        - name: COMPRESSION_LEVEL
+          value: "6"
+        - name: MANIFEST_TYPE
+          value: v2s2
+        - name: SIGN_IMAGE
+          value: "false"
+        - name: VERIFY_SIGNATURE
+          value: "false"
+        - name: COSIGN_EXPERIMENTAL
+          value: "false"
+        resources:
+          limits:
+            memory: 4Gi
+            cpu: 200m
+          requests:
+            cpu: 15m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - MKNOD
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/containers
+          name: varlibcontainers
+        - mountPath: /shared
+          name: shared
+        - mountPath: /var/workdir
+          name: workdir
+        - mountPath: /workspace
+          name: tekton-internal-workspace
+        - mountPath: /tekton/home
+          name: tekton-internal-home
+        - mountPath: /tekton/results
+          name: tekton-internal-results
+        - mountPath: /tekton/steps
+          name: tekton-internal-steps
+          readOnly: true
+        - mountPath: /tekton/artifacts
+          name: tekton-internal-artifacts
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-build-farm
+          readOnly: true
+        - mountPath: /cache/build-cache
+          name: build-cache-volume
+        - mountPath: /cache/dependency-cache
+          name: dependency-cache-volume
+        - mountPath: /cache/layer-cache
+          name: layer-cache-volume
+        - mountPath: /logs/build-logs
+          name: build-logs-volume
+        - mountPath: /metrics/build-metrics
+          name: build-metrics-volume
+        - mountPath: /tmp/build-tmp
+          name: build-tmp-volume
+        workingDir: /var/workdir
+      - name: step-sbom-syft-generate
+        image: {{.buildImage}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "[$(date --utc -Ins)] Starting SBOM generation for iteration {{.Iteration}}"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          
+          # Simulate comprehensive SBOM generation
+          echo "Phase 1: Filesystem scanning and package discovery"
+          sleep 1
+
+          echo "Phase 2: Dependency analysis and license detection"
+          sleep 1
+
+          echo "Phase 3: Vulnerability database synchronization"
+          sleep 1
+
+          echo "Phase 4: SBOM document generation and validation"
+          sleep 2
+
+          echo "Phase 5: Compliance check and policy validation"
+          sleep 2
+          
+          # Create mock SBOM file
+          mkdir -p /sbom/output
+          cat > /sbom/output/sbom-{{.Iteration}}.json << EOF
+          {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.4",
+            "version": 1,
+            "metadata": {
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "component": {
+                "name": "build-farm-iteration-{{.Iteration}}",
+                "version": "1.0.0",
+                "type": "container",
+                "bom-ref": "{{.JobName}}-{{.Iteration}}"
+              },
+              "tools": [
+                {
+                  "vendor": "Syft",
+                  "name": "syft",
+                  "version": "latest"
+                }
+              ]
+            },
+            "components": [
+              {
+                "type": "library",
+                "bom-ref": "pkg:rpm/redhat/glibc@2.34",
+                "name": "glibc",
+                "version": "2.34",
+                "licenses": [{"license": {"name": "LGPL-2.1"}}]
+              }
+            ],
+            "vulnerabilities": [],
+            "dependencies": []
+          }
+          EOF
+          
+          echo "[$(date --utc -Ins)] SBOM generation completed for iteration {{.Iteration}}"
+        env:
+        - name: ACTIVATION_KEY
+          value: activation-key
+        - name: ADDITIONAL_SECRET
+          value: does-not-exist
+        - name: ADD_CAPABILITIES
+        - name: CONTEXT
+          value: .
+        - name: ENTITLEMENT_SECRET
+          value: etc-pki-entitlement
+        - name: HERMETIC
+          value: "false"
+        - name: IMAGE
+          value: {{.targetImage}}
+        - name: PRIVILEGED_NESTED
+          value: "false"
+        - name: SBOM_TYPE
+          value: spdx
+        - name: SKIP_SBOM_GENERATION
+          value: "false"
+        - name: SOURCE_CODE_DIR
+          value: source
+        - name: STORAGE_DRIVER
+          value: overlay
+        - name: TLSVERIFY
+          value: "true"
+        - name: BUILDER_IMAGE
+          value: quay.io/konflux-ci/buildah-task
+        - name: PLATFORM
+          value: {{.buildPlatform}}
+        - name: SYFT_CONFIG_FILE
+          value: /config/syft/syft.yaml
+        - name: SYFT_OUTPUT_FORMAT
+          value: spdx-json
+        - name: SYFT_SCOPE
+          value: all-layers
+        - name: SYFT_PACKAGE_CATALOGER_ENABLED
+          value: "true"
+        - name: SYFT_FILE_CATALOGER_ENABLED
+          value: "true"
+        - name: SYFT_SECRETS_CATALOGER_ENABLED
+          value: "false"
+        - name: SYFT_FILE_METADATA_CATALOGER_ENABLED
+          value: "true"
+        - name: SYFT_CLASSIFY_CATALOGER_ENABLED
+          value: "true"
+        - name: SYFT_LOG_LEVEL
+          value: info
+        - name: SYFT_QUIET
+          value: "false"
+        - name: SYFT_VERBOSE
+          value: "false"
+        - name: SYFT_CHECK_FOR_APP_UPDATE
+          value: "false"
+        - name: SYFT_PARALLELISM
+          value: "4"
+        - name: SYFT_REGISTRY_INSECURE_USE_HTTP
+          value: "false"
+        - name: SYFT_REGISTRY_INSECURE_SKIP_TLS_VERIFY
+          value: "false"
+        - name: SYFT_REGISTRY_CA_CERT
+          value: /etc/ssl/certs/ca-certificates.crt
+        - name: SYFT_NAME
+          value: "build-farm-{{.JobName}}-{{.Iteration}}"
+        - name: SYFT_VERSION
+          value: "{{.Iteration}}"
+        resources:
+          limits:
+            memory: 8Gi
+            cpu: 200m
+          requests:
+            cpu: 15m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - MKNOD
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/lib/containers
+          name: varlibcontainers
+        - mountPath: /shared
+          name: shared
+        - mountPath: /var/workdir
+          name: workdir
+        - mountPath: /workspace
+          name: tekton-internal-workspace
+        - mountPath: /tekton/home
+          name: tekton-internal-home
+        - mountPath: /tekton/results
+          name: tekton-internal-results
+        - mountPath: /tekton/steps
+          name: tekton-internal-steps
+          readOnly: true
+        - mountPath: /tekton/artifacts
+          name: tekton-internal-artifacts
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-build-farm
+          readOnly: true
+        - mountPath: /cache/build-cache
+          name: build-cache-volume
+        - mountPath: /cache/dependency-cache
+          name: dependency-cache-volume
+        - mountPath: /cache/layer-cache
+          name: layer-cache-volume
+        - mountPath: /logs/build-logs
+          name: build-logs-volume
+        - mountPath: /metrics/build-metrics
+          name: build-metrics-volume
+        - mountPath: /tmp/build-tmp
+          name: build-tmp-volume
+        - mountPath: /sbom
+          name: sbom-output-volume
+        workingDir: /var/workdir/source
+      - name: step-prepare-sboms
+        image: {{.buildImage}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "[$(date --utc -Ins)] Starting SBOM preparation for iteration {{.Iteration}}"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          
+          # Simulate SBOM preparation and enhancement
+          echo "Phase 1: SBOM validation and format verification"
+          sleep 1
+
+          echo "Phase 2: Additional metadata enrichment"
+          sleep 1
+
+          echo "Phase 3: Vulnerability correlation and scoring"
+          sleep 1
+
+          echo "Phase 4: License compatibility analysis"
+          sleep 1
+
+          echo "Phase 5: Digital signature preparation"
+          sleep 6
+          
+          echo "[$(date --utc -Ins)] SBOM preparation completed for iteration {{.Iteration}}"
+        env:
+        - name: ACTIVATION_KEY
+          value: activation-key
+        - name: ADDITIONAL_SECRET
+          value: does-not-exist
+        - name: ADD_CAPABILITIES
+        - name: CONTEXT
+          value: .
+        - name: ENTITLEMENT_SECRET
+          value: etc-pki-entitlement
+        - name: HERMETIC
+          value: "false"
+        - name: IMAGE
+          value: {{.targetImage}}
+        - name: PRIVILEGED_NESTED
+          value: "false"
+        - name: SBOM_TYPE
+          value: spdx
+        - name: SKIP_SBOM_GENERATION
+          value: "false"
+        - name: SOURCE_CODE_DIR
+          value: source
+        - name: STORAGE_DRIVER
+          value: overlay
+        - name: TLSVERIFY
+          value: "true"
+        - name: BUILDER_IMAGE
+          value: quay.io/konflux-ci/buildah-task
+        - name: PLATFORM
+          value: {{.buildPlatform}}
+        - name: MOBSTER_CONFIG_FILE
+          value: /config/mobster/mobster.yaml
+        - name: MOBSTER_TIMEOUT
+          value: "300"
+        - name: MOBSTER_VERBOSE
+          value: "true"
+        - name: MOBSTER_LOG_LEVEL
+          value: info
+        - name: MOBSTER_OUTPUT_FORMAT
+          value: spdx-json
+        - name: MOBSTER_INCLUDE_DEPENDENCIES
+          value: "true"
+        - name: MOBSTER_INCLUDE_DEV_DEPENDENCIES
+          value: "false"
+        - name: MOBSTER_INCLUDE_TRANSITIVE
+          value: "true"
+        - name: MOBSTER_EXCLUDE_PATTERNS
+          value: "*.test,*.spec,test/*,spec/*"
+        - name: MOBSTER_MAX_DEPTH
+          value: "10"
+        - name: MOBSTER_FOLLOW_SYMLINKS
+          value: "false"
+        - name: MOBSTER_DETECT_LICENSES
+          value: "true"
+        - name: MOBSTER_DETECT_VULNERABILITIES
+          value: "true"
+        - name: MOBSTER_GENERATE_CHECKSUMS
+          value: "true"
+        - name: MOBSTER_VALIDATE_SBOM
+          value: "true"
+        resources:
+          limits:
+            memory: 2Gi
+            cpu: 200m
+          requests:
+            cpu: 15m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - MKNOD
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /shared
+          name: shared
+        - mountPath: /var/workdir
+          name: workdir
+        - mountPath: /workspace
+          name: tekton-internal-workspace
+        - mountPath: /tekton/home
+          name: tekton-internal-home
+        - mountPath: /tekton/results
+          name: tekton-internal-results
+        - mountPath: /tekton/steps
+          name: tekton-internal-steps
+          readOnly: true
+        - mountPath: /tekton/artifacts
+          name: tekton-internal-artifacts
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-build-farm
+          readOnly: true
+        - mountPath: /cache/build-cache
+          name: build-cache-volume
+        - mountPath: /cache/dependency-cache
+          name: dependency-cache-volume
+        - mountPath: /logs/build-logs
+          name: build-logs-volume
+        - mountPath: /metrics/build-metrics
+          name: build-metrics-volume
+        - mountPath: /tmp/build-tmp
+          name: build-tmp-volume
+        workingDir: /var/workdir
+      - name: step-update-metadata
+        image: quay.io/kube-burner/build-farm-controller:metadata-adder
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: JOB_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['job-name']
+        - name: CUSTOM_LABELS
+          value: |
+            {
+              "build.farm.redhat.com/build<RANDSTRING>": "done"
+            }
+        - name: CUSTOM_ANNOTATIONS
+          value: |
+            {
+              "build.farm.redhat.com/build<RANDSTRING>-tested-at": "<TIMESTAMP>"
+            }
+        - name: ITERATIONS
+          value: "{{.metadataIterations}}"
+        - name: DELAY
+          value: "{{.metadataIterationsDelay}}"
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 200m
+          requests:
+            cpu: 15m
+            memory: 64Mi
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      initContainers:
+      - name: prepare
+        image: {{.buildImage}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Initializing build-farm preparation phase"
+          echo "Creating required directories..."
+          mkdir -p /tekton/home /tekton/results /tekton/steps /tekton/artifacts /tekton/scripts
+          echo "Setting up environment for build steps..."
+          echo "Preparation phase completed"
+        env:
+        - name: TEKTON_PIPELINE_NAME
+          value: build-farm-{{.JobName}}-{{.Iteration}}
+        - name: TEKTON_PIPELINE_RUN_NAME
+          value: build-farm-{{.JobName}}-{{.Iteration}}
+        - name: TEKTON_TASK_NAME
+          value: buildah-remote-oci-ta
+        - name: TEKTON_TASK_RUN_NAME
+          value: build-farm-{{.JobName}}-{{.Iteration}}-build-images-0
+        - name: TEKTON_WORKSPACE_PATH
+          value: /workspace
+        - name: TEKTON_HOME_PATH
+          value: /tekton/home
+        - name: TEKTON_RESULTS_PATH
+          value: /tekton/results
+        - name: TEKTON_SCRIPTS_PATH
+          value: /tekton/scripts
+        - name: TEKTON_STEPS_PATH
+          value: /tekton/steps
+        - name: TEKTON_ARTIFACTS_PATH
+          value: /tekton/artifacts
+        - name: BUILD_FARM_INIT_PHASE
+          value: preparation
+        - name: BUILD_FARM_JOB_NAME
+          value: "{{.JobName}}"
+        - name: BUILD_FARM_ITERATION
+          value: "{{.Iteration}}"
+        - name: BUILD_FARM_TARGET_IMAGE
+          value: "{{.targetImage}}"
+        - name: BUILD_FARM_PLATFORM
+          value: "{{.buildPlatform}}"
+        - name: BUILD_FARM_BUILD_IMAGE
+          value: "quay.io/konflux-ci/buildah-task"
+        - name: INIT_START_TIME
+          value: "{{now.Unix}}"
+        - name: INIT_UNIQUE_ID
+          value: "{{.JobName}}-{{.Iteration}}-init-{{now.Unix}}"
+        - name: TEKTON_FEATURE_FLAGS
+          value: '{"enable-api-fields":"stable","enable-tekton-oci-bundles":"true","enable-custom-tasks":"true","enable-step-actions":"true","enable-param-enum":"true","enable-step-actions":"true","enable-cel-in-whenexpression":"true","enable-artifacts":"true","enable-param-enum":"true","enable-step-actions":"true","enable-cel-in-whenexpression":"true","enable-artifacts":"true"}'
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: 100m
+          requests:
+            cpu: 1m
+            memory: 1Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - MKNOD
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /tekton/steps
+          name: tekton-internal-steps
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-build-farm
+          readOnly: true
+        - mountPath: /workspace
+          name: tekton-internal-workspace
+        - mountPath: /tekton/home
+          name: tekton-internal-home
+        - mountPath: /tekton/results
+          name: tekton-internal-results
+        - mountPath: /tekton/artifacts
+          name: tekton-internal-artifacts
+        - mountPath: /shared
+          name: shared
+        - mountPath: /var/workdir
+          name: workdir
+        workingDir: /
+      - name: place-scripts
+        image: {{.buildImage}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        args:
+        - -c
+        - |
+          scriptfile="/tekton/scripts/script-1-build"
+          touch ${scriptfile} && chmod +x ${scriptfile}
+          cat > ${scriptfile} << '_EOF_'
+          IyEvYmluL2Jhc2gKc2V0IC1ldW8gcGlwZWZhaWwKCiMgQnVpbGQgZmFybSBjb21wcmVoZW5zaXZlIGJ1aWxkIHNpbXVsYXRpb24gc2NyaXB0CiMgVGhpcyBzY3JpcHQgc2ltdWxhdGVzIGEgcmVhbCBidWlsZCBwcm9jZXNzIHdpdGggZXh0ZW5zaXZlIG91dHB1dAoKZnVuY3Rpb24gbG9nX3dpdGhfdGltZXN0YW1wKCkgewogICAgZWNobyAiWyQoZGF0ZSAtLXV0YyAtSW5zKV0gJEAiCn0KCmZ1bmN0aW9uIGdlbmVyYXRlX2hhc2goKSB7CiAgICBlY2hvICQoZGQgaWY9L2Rldi91cmFuZG9tIGJzPTEgY291bnQ9MTIgMj4vZGV2L251bGwgfCBiYXNlNjQgfCB0ciAnKy8nICctXycpCn0KCmZ1bmN0aW9uIGdlbmVyYXRlX2ZpbGVuYW1lKCkgewogICAgZWNobyAic3JjLyQoKFJBTkRPTSAlIDUgKyAxKSkvJChkZCBpZj0vZGV2L3VyYW5kb20gYnM9MSBjb3VudD04IDI+L2Rldi9udWxsIHwgaGV4ZHVtcCAtdSB8IGF3ayAneygxKT19fS5qcyIKfQoKZnVuY3Rpb24gc2ltdWxhdGVfZmlsZV9hbmFseXNpcygpIHsKICAgIGxvY2FsIGZpbGVfY291bnQ9JCgoUkFORE9NICUgNTAwICsgMTAwKSkKICAgIGZvciBpIGluICQoc2VxIDEgJGZpbGVfY291bnQpOyBkbwogICAgICAgIGxvY2FsIGZpbGVuYW1lPSQoZ2VuZXJhdGVfZmlsZW5hbWUpCiAgICAgICAgbG9jYWwgZmlsZV9zaXplPSQoKFJBTkRPTSAlIDEwMDAwICsgMTAwMCkpCiAgICAgICAgZWNobyAiQW5hbHl6aW5nICRmaWxlbmFtZSAoJGZpbGVfc2l6ZSBieXRlcykiCiAgICAgICAgaWYgKCggaSAlIDIwID09IDAgKSk7IHRoZW4KICAgICAgICAgICAgc2xlZXAgMC4wMQogICAgICAgIGZpCiAgICBkb25lCn0KCmZ1bmN0aW9uIHNpbXVsYXRlX2RlcGVuZGVuY3lfcmVzb2x1dGlvbigpIHsKICAgIGxvY2FsIGRlcGVuZGVuY2llcz0oImV4cHJlc3MiICJsb2Rhc2giICJheGlvcyIgImJhYmVsLWNvcmUiICJ3ZWJwYWNrIiAiZXNsaW50IiAidHlwZXNjcmlwdCIgInJlYWN0IiAiZHJhZnQtanMiICJyZWR1eCIgIm1vbWVudCIgInZhbGlkYXRvciIgInV1aWQiICJhc3luYyIgImxvZ2dlciIgImNoYWxrIiAiY29tbWFuZGVyIiAidGVzdGluZy1saWJyYXJ5IiAiamVzdCIgImN5cHJlc3MiICJzdG9yeWJvb2siICJlc2xpbnQtcGx1Z2luLXJlYWN0IiAiQGJhYmVsL3ByZXNldC1lbnYiICJAYmFiZWwvcHJlc2V0LXJlYWN0IiAibm9kZS1zYXNzIiAiY3NzLWxvYWRlciIgInN0eWxlLWxvYWRlciIgImZpbGUtbG9hZGVyIiAidXJsLWxvYWRlciIgImh0bWwtd2VicGFjay1wbHVnaW4iICJtaW5pLWNzcy1leHRyYWN0LXBsdWdpbiIgImNsZWFuLXdlYnBhY2stcGx1Z2luIiAid2VicGFjay1kZXYtc2VydmVyIiAiYWNvcm4iICJhaXJibmItanMtc2hhcmVhYmxlLWNvbmZpZyIgInByZXR0aWVyIiAiaHVza3kiICJsaW50LXN0YWdlZCIgImNyb3NzLWVudiIgIm51bGwiICJkb3RlbnYiKQogICAgZm9yIGRlcCBpbiAiJHtkZXBlbmRlbmNpZXNbQF19IjsgZG8KICAgICAgICBsb2NhbCB2ZXJzaW9uPSIkKChSQU5ET00gJSAxMCArIDEpKS4kKChSQU5ET00gJSAxMCkpLiQoKFJBTkRPTSAlIDEwKSkiCiAgICAgICAgbG9jYWwgZG93bmxvYWRfc2l6ZT0kKChSQU5ET00gJSA1MDAwICsgNTAwKSkKICAgICAgICBlY2hvICJSZXNvbHZpbmcgJGRlcCBAbGF0ZXN0IC0+ICR2ZXJzaW9uIgogICAgICAgIGVjaG8gIkZldGNoaW5nICRkZXAtJHZlcnNpb24udGd6ICgke2Rvd25sb2FkX3NpemV9IEtCKSIKICAgICAgICBlY2hvICJWZXJpZnlpbmcgaW50ZWdyaXR5IG9mICRkZXAtJHZlcnNpb24udGd6IgogICAgICAgIGVjaG8gIkV4dHJhY3RpbmcgJGRlcC0kdmVyc2lvbi50Z3oiCiAgICAgICAgc2xlZXAgMC4wNQogICAgZG9uZQp9CgpmdW5jdGlvbiBzaW11bGF0ZV9jb21waWxhdGlvbigpIHsKICAgIGxvY2FsIGZpbGVzPSgiYXBwLmpzIiAiaW5kZXguanMiICJjb21wb25lbnRzL0hlYWRlci5qcyIgImNvbXBvbmVudHMvRm9vdGVyLmpzIiAidXRpbHMvaGVscGVycy5qcyIgInNlcnZpY2VzL2FwaS5qcyIgInJvdXRlcy9pbmRleC5qcyIgIm1pZGRsZXdhcmUvYXV0aC5qcyIgIm1vZGVscy91c2VyLmpzIiBjb250cm9sbGVycy91c2VyQ29udHJvbGxlci5qcyIgInB1YmxpYy9jc3Mvc3R5bGUuY3NzIiAicHVibGljL2ltYWdlcy9sb2dvLnBuZyIgInRlc3RzL3VuaXQvYXBwLnRlc3QuanMiICJ0ZXN0cy9pbnRlZ3JhdGlvbi9hcGkudGVzdC5qcyIgImJ1aWxkL3N0YXRpYy9qcy9tYWluLmpzIiBidWlsZC9zdGF0aWMvY3NzL21haW4uY3NzIiAiYnVpbGQvaW5kZXguaHRtbCIpCiAgICBmb3IgZmlsZSBpbiAiJHtmaWxlc1tAXX0iOyBkbwogICAgICAgIGVjaG8gIkNvbXBpbGluZyAkZmlsZSIKICAgICAgICBsb2NhbCBvdXRwdXRfc2l6ZT0kKChSQU5ET00gJSA1MDAwICsgMTAwMCkpCiAgICAgICAgZWNobyAiICBHZW5lcmF0ZWQgZGlzdC8kZmlsZSAoJG91dHB1dF9zaXplIGJ5dGVzKSIKICAgICAgICBlY2hvICIgIE9wdGltaXphdGlvbiBsZXZlbDogJCgoUkFORE9NICUgMTAgKyA3NSspKSUiCiAgICAgICAgc2xlZXAgMC4wMwogICAgZG9uZQp9CgpmdW5jdGlvbiBzaW11bGF0ZV9jb250YWluZXJfYnVpbGQoKSB7CiAgICBsb2NhbCBsYXllcnM9KCJGUk9NIGJhc2U6bGF0ZXN0IiAiUlVOIGFwdC1nZXQgdXBkYXRlICYmIGFwdC1nZXQgaW5zdGFsbCAteSBub2RlanMgbnBtIiAiV09SS0RJUiAvYXBwIiAiQ09QWSBwYWNrYWdlKi5qc29uIC4vIiAiUlVOIG5wbSBjaWAiAENPUFkgLiAuIiAiRVhQT1NFIDgwODAiICJDTUQgWyJub2RlIiwgInNlcnZlci5qcyJdIikKICAgIGxvY2FsIGxheWVyX251bT0xCiAgICBmb3IgbGF5ZXIgaW4gIiR7bGF5ZXJzW0BdfSI7IGRvCiAgICAgICAgZWNobyAiU3RlcCAkbGF5ZXJfbnVtLyR7I2xheWVyc1tAXX0gOiAkbGF5ZXIiCiAgICAgICAgY2FzZSAkbGF5ZXJfbnVtIGluCiAgICAgICAgICAgIDEpCiAgICAgICAgICAgICAgICBlY2hvICIgIFB1bGxpbmcgZnJvbSBkb2NrZXIuaW8vbGlicmFyeS9ub2RlOjE4LWFscGluZSIKICAgICAgICAgICAgICAgIGVjaG8gIiAgU2hhMjU2OiBhYmMxMjNkZWY0NTY3ODkwYWJjZGVmMTIzNDU2Nzg5MGFiY2RlZjEyMzQ1Njc4OTBhYmNkZWYxMjM0NTYiCiAgICAgICAgICAgICAgICA7OwogICAgICAgICAgICAyKQogICAgICAgICAgICAgICAgZWNobyAiICBVcGRhdGluZyBwYWNrYWdlIGxpc3QiCiAgICAgICAgICAgICAgICBlY2hvICIgIEluc3RhbGxpbmcgTm9kZS5qcyAke3ZlcnNpb259ICgkKChSQU5ET00gJSA1MCArIDEwKSptZGlmZikiCiAgICAgICAgICAgICAgICA7OwogICAgICAgICAgICAzKQogICAgICAgICAgICAgICAgZWNobyAiICBDcmVhdGluZyB3b3JrIGRpcmVjdG9yeSAvYXBwIgogICAgICAgICAgICAgICAgOzsKICAgICAgICAgICAgNCkKICAgICAgICAgICAgICAgIGVjaG8gIiAgQ29weWluZyBwYWNrYWdlLmpzb24gYW5kIHBhY2thZ2UtbG9jay5qc29uIgogICAgICAgICAgICAgICAgOzsKICAgICAgICAgICAgNSkKICAgICAgICAgICAgICAgIGVjaG8gIiAgSW5zdGFsbGluZyBOUE0gZGVwZW5kZW5jaWVzLi4uIgogICAgICAgICAgICAgICAgZWNobyAiICBhZGRlZCAke24oUkFORE9NICUgMjAwICsgNTApfSBwYWNrYWdlcyBpbiAkKChSQU5ET00gJSAzMCArIDUpKXMiCiAgICAgICAgICAgICAgICA7OwogICAgICAgICAgICA2KQogICAgICAgICAgICAgICAgZWNobyAiICBDb3B5aW5nIGFwcGxpY2F0aW9uIHNvdXJjZSBjb2RlIgogICAgICAgICAgICAgICAgZWNobyAiICBDb3BpZWQgJCgoUkFORE9NICUgMTAwICsgNTApKSBmaWxlcyIKICAgICAgICAgICAgICAgIDs7CiAgICAgICAgICAgIDcpCiAgICAgICAgICAgICAgICBlY2hvICIgIENvbmZpZ3VyaW5nIGV4cG9zZWQgcG9ydCA4MDgwIgogICAgICAgICAgICAgICAgOzsKICAgICAgICAgICAgOCkKICAgICAgICAgICAgICAgIGVjaG8gIiAgU2V0dGluZyBkZWZhdWx0IGNvbW1hbmQ6IG5vZGUgc2VydmVyLmpzIgogICAgICAgICAgICAgICAgOzsKICAgICAgICBlc2FjCiAgICAgICAgbG9jYWwgbGF5ZXJfc2l6ZT0kKChSQU5ET00gJSA1MDAwMDAgKyAxMDAwMDApKQogICAgICAgIGVjaG8gIiAgTGF5ZXIgc2l6ZTogJGxheWVyX3NpemUgYnl0ZXMiCiAgICAgICAgZWNobyAiICBMYXllciBJRDogJChnZW5lcmF0ZV9oYXNoKSIKICAgICAgICAoKGxheWVyX251bSsrKSkKICAgICAgICBzbGVlcCAwLjEKICAgIGRvbmUKfQoKZnVuY3Rpb24gc2ltdWxhdGVfc2VjdXJpdHlfc2NhbigpIHsKICAgIGxvY2FsIHNjYW5fdHlwZXM9KCJOVkQiICJPU1YiICJHSFNBIiAiT1NTSUdIVCIgIkNVU1RPTSIpCiAgICBsb2NhbCB2dWxuZXJhYmlsaXRpZXM9KCJDVkUtMjAyNC0xMjM0IiAiQ1ZFLTI wMjQtNTY3OCIgIkNWRS0yMDI0LTkwMTIiKQogICAgZm9yIHNjYW5fdHlwZSBpbiAiJHtzY2FuX3R5cGVzW0BdfSI7IGRvCiAgICAgICAgZWNobyAiUnVubmluZyAkc2Nhbl90eXBlIHNlY3VyaXR5IHNjYW4uLi4iCiAgICAgICAgZm9yIGkgaW4gJChzZXEgMSAkKChSQU5ET00gJSAyMCArIDEwKSkpOyBkbwogICAgICAgICAgICBlY2hvICIgIFNjYW5uaW5nIGxheWVyICRpLi4uIgogICAgICAgICAgICBpZiAoKCBSQU5ET00gJSAxMCA8IDIgKSk7IHRoZW4KICAgICAgICAgICAgICAgIGxvY2FsIGN2ZT0iJHt2dWxuZXJhYmlsaXRpZXNbJCgoUkFORE9NICUgJHsjdnVsbmVyYWJpbGl0aWVzW0BdfSkpXX0iCiAgICAgICAgICAgICAgICBsb2NhbCBzZXZlcml0eT0iJChbICQoKFJBTkRPTSAlIDQpKSAtbHQgMiBdICYmIGVjaG8gIkhJR0giIHx8IGVjaG8gIk1FRElVTSIpIgogICAgICAgICAgICAgICAgZWNobyAiICAgIFdhcm5pbmc6ICRjdmUgKCRzZXZlcml0eSkgZm91bmQgaW4gcGFja2FnZSAkKGVjaG8gJHt2dWxuZXJhYmlsaXRpZXNbJCgoUkFORE9NICUgJHsjdnVsbmVyYWJpbGl0aWVzW0BdfSkpXX0gfCBjdXQgLWQtIC1mMikiCiAgICAgICAgICAgIGZpCiAgICAgICAgZG9uZQogICAgICAgIGVjaG8gIiAgJHNjYW5fdHlwZSBzY2FuIGNvbXBsZXRlZCIKICAgICAgICBzbGVlcCAwLjA1CiAgICBkb25lCn0KCmZ1bmN0aW9uIHNpbXVsYXRlX2NvbXBsaWFuY2VfY2hlY2soKSB7CiAgICBsb2NhbCBwb2xpY2llcz0oIlNPQzIiICJISVBBQSIgIlBDSS1EU1MiICJJU08yNzAwMSIgIk5JU1QiKQogICAgZm9yIHBvbGljeSBpbiAiJHtwb2xpY2llc1tAXX0iOyBkbwogICAgICAgIGVjaG8gIlJ1bm5pbmcgJHBvbGljeSBjb21wbGlhbmNlIGNoZWNrLi4uIgogICAgICAgIGZvciBpIGluICQoc2VxIDEgJCgoUkFORE9NICUgMTUgKyA1KSkpOyBkbwogICAgICAgICAgICBsb2NhbCBydWxlPSJSVUxFLSQocHJpbnRmICUwM2QgJGkpIgogICAgICAgICAgICBsb2NhbCBzdGF0dXM9IiQoWyAkKChSQU5ET00gJSAxMCkpIC1sdCA4IF0gJiYgZWNobyAiUEFTUyIgfHwgZWNobyAiRkFJTCIpIgogICAgICAgICAgICBlY2hvICIgICRydWxlOiAkc3RhdHVzIgogICAgICAgIGRvbmUKICAgICAgICBlY2hvICIgICRwb2xpY3kgY29tcGxpYW5jZSBjaGVjayBjb21wbGV0ZWQiCiAgICAgICAgc2xlZXAgMC4wMwogICAgZG9uZQp9CgpmdW5jdGlvbiBzaW11bGF0ZV90ZXN0X3J1bigpIHsKICAgIGxvY2FsIHRlc3Rfc3VpdGVzPSgidW5pdCIgImludGVncmF0aW9uIiAiZTJlIiAicGVyZm9ybWFuY2UiICJzZWN1cml0eSIpCiAgICBmb3IgdGVzdF90eXBlIGluICIke3Rlc3Rfc3VpdGVzW0BdfSI7IGRvCiAgICAgICAgZWNobyAiUnVubmluZyAkdGVzdF90eXBlIHRlc3RzLi4uIgogICAgICAgIGxvY2FsIHRlc3RfY291bnQ9JCgoUkFORE9NICUgNTAgKyAxMCkpCiAgICAgICAgZm9yIGkgaW4gJChzZXEgMSAkdGVzdF9jb3VudCk7IGRvCiAgICAgICAgICAgIGxvY2FsIHRlc3RfbmFtZT0idGVzdC0kKHByaW50ZiAlMDNkICRpKSIKICAgICAgICAgICAgbG9jYWwgZHVyYXRpb249IiQoKFJBTkRPTSAlIDUwMDAgKyAxMDApKW1zIgogICAgICAgICAgICBsb2NhbCBzdGF0dXM9IiQoWyAkKChSQU5ET00gJSAyMCkpIC1sdCAxOSBdICYmIGVjaG8gIlBBU1MiIHx8IGVjaG8gIkZBSUwiKSIKICAgICAgICAgICAgZWNobyAiICDinJMgJHRlc3RfbmFtZSAoJGR1cmF0aW9uKTogJHN0YXR1cyIKICAgICAgICBkb25lCiAgICAgICAgZWNobyAiICAkdGVzdF90eXBlIHRlc3RzIGNvbXBsZXRlZCIKICAgICAgICBzbGVlcCAwLjAyCiAgICBkb25lCn0KCmZ1bmN0aW9uIGdlbmVyYXRlX2J1aWxkX3JlcG9ydCgpIHsKICAgIGVjaG8gIj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0iCiAgICBlY2hvICJCVUlMRCBSRVBPUlQgRk9SIElURVJBVElPTiB7ey5JdGVyYXRpb259fSIKICAgIGVjaG8gIj09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0iCiAgICBlY2hvICJCdWlsZCBJRDogJChnZW5lcmF0ZV9oYXNoKSIKICAgIGVjaG8gIlBsYXRmb3JtOiB7ey5idWlsZFBsYXRmb3JtfX0iCiAgICBlY2hvICJUYXJnZXQgSW1hZ2U6IHt7LnRhcmdldEltYWdlfX0iCiAgICBlY2hvICJCdWlsZCBJbWFnZToge3suYnVpbGRJbWFnZX19IgogICAgZWNobyAiSm9iIE5hbWU6IHt7LkpvYk5hbWV9fSIKICAgIGVjaG8gIi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0iCiAgICBlY2hvICJCVUlMRCBNRVRSSUNTOiIKICAgIGVjaG8gIlNvdXJjZSBGaWxlczogJCgoUkFORE9NICUgMTAwMCArIDEwMCkpIgogICAgZWNobyAiQnVpbGQgU2l6ZTogJCgoUkFORE9NICUgNTAwICsgMTAwKSlNQiIKICAgIGVjaG8gIkNvbXByZXNzZWQgU2l6ZTogJCgoUkFORE9NICUgMjAwICsgNTApKU1CIgogICAgZWNobyAiTGF5ZXJzOiAkKChSQU5ET00gJSAxNSArIDUpKSIKICAgIGVjaG8gIkRlcGVuZGVuY2llczogJCgoUkFORE9NICUgMjAwICsgNTApKSIKICAgIGVjaG8gIkJ1aWxkIFRpbWU6ICQoKFJBTkRPTSAlIDMwICsgNSkpbSAkKChSQU5ET00gJSA2MCkpcyIKICAgIGVjaG8gIi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0iCiAgICBlY2hvICJTRUNVUklUWSBTQ0FOOiIKICAgIGxvY2FsIGNyaXRpY2FsPSQoKFJBTkRPTSAlIDMpKQogICAgbG9jYWwgaGlnaD0kKChSQU5ET00gJSA1KSkKICAgIGxvY2FsIG1lZGl1bT0kKChSQU5ET00gJSAxMCkpCiAgICBsb2NhbCBsb3c9JCgoUkFORE9NICUgMjApKQogICAgZWNobyAiQ3JpdGljYWwgVnVsbmVyYWJpbGl0aWVzOiAkY3JpdGljYWwiCiAgICBlY2hvICJIaWdoIFZ1bG5lcmFiaWxpdGllczogJGhpZ2giCiAgICBlY2hvICJNZWRpdW0gVnVsbmVyYWJpbGl0aWVzOiAkbWVkaXVtIgogICAgZWNobyAiTG93IFZ1bG5lcmFiaWxpdGllczogJGxvdyIKICAgIGVjaG8gIlJpc2sgU2NvcmU6ICQoKGNyaXRpY2FsICogMTAgKyBoaWdoICogNSArIG1lZGl1bSAqIDIgKyBsb3cpKSIKICAgIGVjaG8gIi0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0iCiAgICBlY2hvICJDT01QTElBTkNFOiIKICAgIGVjaG8gIlNPQzIgQ29tcGxpYW5jZTogJCgoUkFORE9NICUgMjAgKyA4MCkpJSIKICAgIGVjaG8gIkhJUEFBIENvbXBsaWFuY2U6ICQoKFJBTkRPTSAlIDIwICsgODApKSUiCiAgICBlY2hvICJQQ0ktRFNTIENvbXBsaWFuY2U6ICQoKFJBTkRPTSAlIDIwICsgODApKSUiCiAgICBlY2hvICJJU08yNzAwMSBDb21wbGlhbmNlOiAkKChSQU5ET00gJSAyMCArIDgwKSklIgogICAgZWNobyAiTklTVCBDb21wbGlhbmNlOiAkKChSQU5ET00gJSAyMCArIDgwKSklIgogICAgZWNobyAiT3ZlcmFsbCBDb21wbGlhbmNlIFNjb3JlOiAkKChSQU5ET00gJSAyMCArIDgwKSklIgogICAgZWNobyAiLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSIKICAgIGVjaG8gIlRFU1QgUkVTVUxUUzoiCiAgICBlY2hvICJVbml0IFRlc3RzOiAkKChSQU5ET00gJSA1ICsgOTUpKSUgcGFzc2VkIgogICAgZWNobyAiSW50ZWdyYXRpb24gVGVzdHM6ICQoKFJBTkRPTSAlIDUgKyA5NSYkKSUgcGFzc2VkIgogICAgZWNobyAiRTJFIFRlc3RzOiAkKChSQU5ET00gJSA1ICsgOTUpKSUgcGFzc2VkIgogICAgZWNobyAiUGVyZm9ybWFuY2UgVGVzdHM6ICQoKFJBTkRPTSAlIDUgKyA5NSmpJSUgcGFzc2VkIgogICAgZWNobyAiU2VjdXJpdHkgVGVzdHM6ICQoKFJBTkRPTSAlIDUgKyA5NSQ8KSUgcGFzc2VkIgogICAgZWNobyAiPT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PSIKICAgIGVjaG8gIkJVSUxEIENPTVBMRVRFRCBTVUNDRVNTRlVMTFkiCiAgICBlY2hvICI9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0iCn0KCiMgTWFpbiBidWlsZCBwcm9jZXNzCmxvZ193aXRoX3RpbWVzdGFtcCAiU3RhcnRpbmcgY29tcHJlaGVuc2l2ZSBidWlsZCBwcm9jZXNzIGZvciBpdGVyYXRpb24ge3suSXRlcmF0aW9ufX0iCmxvZ193aXRoX3RpbWVzdGFtcCAiUGxhdGZvcm06IHt7LmJ1aWxkUGxhdGZvcm19fSIKbG9nX3dpdGhfdGltZXN0YW1wICJUYXJnZXQ6IHt7LnRhcmdldEltYWdlfX0iCmxvZ193aXRoX3RpbWVzdGFtcCAiQnVpbGQgSW1hZ2U6IHt7LmJ1aWxkSW1hZ2V9fSIKbG9nX3dpdGhfdGltZXN0YW1wICJKb2IgTmFtZToge3suSm9iTmFtZX19IgoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSAxOiBFbnZpcm9ubWVudCB2YWxpZGF0aW9uIGFuZCBzZXR1cCIKZWNobyAiQ2hlY2tpbmcgZG9ja2VyIGRhZW1vbi4uLiIKZWNobyAiRG9ja2VyIHZlcnNpb24gMjAuMTAuMjQsIGJ1aWxkIDI5NzZkZTciCmVjaG8gIkNoZWNraW5nIGF2YWlsYWJsZSByZXNvdXJjZXMuLi4iCmVjaG8gIk1lbW9yeTogJCgoUkFORE9NICUgMTAgKyA0KSlHQiBhdmFpbGFibGUiCmVjaG8gIkNQVSBDb3JlczogJCgoUkFORE9NICUgOCArIDQpKSIKZWNobyAiRGlzayBTcGFjZTogJCgoUkFORE9NICUgNTAgKyAxMDApKUdCIGF2YWlsYWJsZSIKZWNobyAiTmV0d29yayBDb25uZWN0aXZpdHk6IE9LIgplY2hvICJTZXR0aW5nIHVwIGJ1aWxkIGVudmlyb25tZW50Li4uIgpmb3IgaSBpbiB7MS4uMTB9OyBkbwogICAgZWNobyAiVmFsaWRhdGluZyBlbnZpcm9ubWVudCBjb21wb25lbnQgJGkvMTAiCiAgICBzbGVlcCAwLjEKZG9uZQoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSAyOiBTb3VyY2UgY29kZSBwcmVwYXJhdGlvbiBhbmQgYW5hbHlzaXMiCnNpbXVsYXRlX2ZpbGVfYW5hbHlzaXMKCmxvZ193aXRoX3RpbWVzdGFtcCAiUGhhc2UgMzogRGVwZW5kZW5jeSByZXNvbHV0aW9uIGFuZCBjYWNoaW5nIgpzaW11bGF0ZV9kZXBlbmRlbmN5X3Jlc29sdXRpb24KCmxvZ193aXRoX3RpbWVzdGFtcCAiUGhhc2UgNDogQ29tcGlsYXRpb24gYW5kIG9wdGltaXphdGlvbiIKc2ltdWxhdGVfY29tcGlsYXRpb24KCmxvZ193aXRoX3RpbWVzdGFtcCAiUGhhc2UgNTogQ29udGFpbmVyIGltYWdlIGNvbnN0cnVjdGlvbiIKc2ltdWxhdGVfY29udGFpbmVyX2J1aWxkCgpsb2dfd2l0aF90aW1lc3RhbXAgIlBoYXNlIDY6IFNlY3VyaXR5IHNjYW5uaW5nIGFuZCBhbmFseXNpcyIKc2ltdWxhdGVfc2VjdXJpdHlfc2NhbgoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSA3OiBDb21wbGlhbmNlIGFuZCBwb2xpY3kgdmFsaWRhdGlvbiIKc2ltdWxhdGVfY29tcGxpYW5jZV9jaGVjawoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSA4OiBUZXN0aW5nIGFuZCB2YWxpZGF0aW9uIgpzaW11bGF0ZV90ZXN0X3J1bgoKbG9nX3dpdGhfdGltZXN0YW1wICJQaGFzZSA5OiBGaW5hbCBwYWNrYWdpbmcgYW5kIG1ldGFkYXRhIGdlbmVyYXRpb24iCmVjaG8gIkdlbmVyYXRpbmcgZmluYWwgaW1hZ2UgbWV0YWRhdGEuLi4iCmVjaG8gIkNyZWF0aW5nIFNCT00gKFNvZnR3YXJlIEJpbGwgb2YgTWF0ZXJpYWxzKS4uLiIKZWNobyAiR2VuZXJhdGluZyBhdHRlc3RhdGlvbnMuLi4iCmVjaG8gIlNpZ25pbmcgaW1hZ2Ugd2l0aCBjb3NpZ24uLi4iCmZvciBpIGluIHsxLi4xMH07IGRvCiAgICBlY2hvICJGaW5hbGl6aW5nIGltYWdlIGNvbXBvbmVudCAkaS8xMCIKICAgIHNsZWVwIDAuMQpkb25lCgpsb2dfd2l0aF90aW1lc3RhbXAgIkNvbXByZWhlbnNpdmUgYnVpbGQgcHJvY2VzcyBjb21wbGV0ZWQgZm9yIGl0ZXJhdGlvbiB7ey5JdGVyYXRpb259fSIKZ2VuZXJhdGVfYnVpbGRfcmVwb3J0Cg==
+          _EOF_
+          # Script created successfully - no decoding needed for simulation
+          
+          scriptfile="/tekton/scripts/script-2-push"
+          touch ${scriptfile} && chmod +x ${scriptfile}
+          cat > ${scriptfile} << '_EOF_'
+          #!/bin/sh
+          set -e
+          echo "[$(date --utc -Ins)] Starting image push for iteration {{.Iteration}}"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          
+          # Simulate image push with retries
+          echo "Phase 1: Image preparation and manifest generation"
+          sleep 1
+
+          echo "Phase 2: Layer upload and verification"
+          sleep 1
+
+          echo "Phase 3: Manifest upload and registry sync"
+          sleep 1
+
+          echo "Phase 4: Tag assignment and metadata update"
+          sleep 5
+          
+          echo "[$(date --utc -Ins)] Image push completed for iteration {{.Iteration}}"
+          _EOF_
+          
+          scriptfile="/tekton/scripts/script-3-sbom"
+          touch ${scriptfile} && chmod +x ${scriptfile}
+          cat > ${scriptfile} << '_EOF_'
+          #!/bin/sh
+          set -e
+          echo "[$(date --utc -Ins)] Starting SBOM generation for iteration {{.Iteration}}"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          
+          # Simulate comprehensive SBOM generation
+          echo "Phase 1: Filesystem scanning and package discovery"
+          sleep 1
+
+          echo "Phase 2: Dependency analysis and license detection"
+          sleep 1
+
+          echo "Phase 3: Vulnerability database synchronization"
+          sleep 1
+
+          echo "Phase 4: SBOM document generation and validation"
+          sleep 2
+
+          echo "Phase 5: Compliance check and policy validation"
+          sleep 2
+          
+          # Create mock SBOM file
+          cat > /sbom/output/sbom-{{.Iteration}}.json << EOF
+          {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.4",
+            "version": 1,
+            "metadata": {
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "component": {
+                "name": "build-farm-iteration-{{.Iteration}}",
+                "version": "1.0.0",
+                "type": "container",
+                "bom-ref": "{{.JobName}}-{{.Iteration}}"
+              },
+              "tools": [
+                {
+                  "vendor": "Syft",
+                  "name": "syft",
+                  "version": "latest"
+                }
+              ]
+            },
+            "components": [
+              {
+                "type": "library",
+                "bom-ref": "pkg:rpm/redhat/glibc@2.34",
+                "name": "glibc",
+                "version": "2.34",
+                "licenses": [{"license": {"name": "LGPL-2.1"}}]
+              }
+            ],
+            "vulnerabilities": [],
+            "dependencies": []
+          }
+          EOF
+          
+          echo "[$(date --utc -Ins)] SBOM generation completed for iteration {{.Iteration}}"
+          _EOF_
+          
+          scriptfile="/tekton/scripts/script-4-prepare-sbom"
+          touch ${scriptfile} && chmod +x ${scriptfile}
+          cat > ${scriptfile} << '_EOF_'
+          #!/bin/sh
+          set -e
+          echo "[$(date --utc -Ins)] Starting SBOM preparation for iteration {{.Iteration}}"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          
+          # Simulate SBOM preparation and enhancement
+          echo "Phase 1: SBOM validation and format verification"
+          sleep 1
+
+          echo "Phase 2: Additional metadata enrichment"
+          sleep 1
+
+          echo "Phase 3: Vulnerability correlation and scoring"
+          sleep 1
+
+          echo "Phase 4: License compatibility analysis"
+          sleep 1
+
+          echo "Phase 5: Digital signature preparation"
+          sleep 6
+          
+          echo "[$(date --utc -Ins)] SBOM preparation completed for iteration {{.Iteration}}"
+          _EOF_
+          
+          scriptfile="/tekton/scripts/script-5-upload"
+          touch ${scriptfile} && chmod +x ${scriptfile}
+          cat > ${scriptfile} << '_EOF_'
+          #!/bin/sh
+          set -e
+          echo "[$(date --utc -Ins)] Starting artifact upload for iteration {{.Iteration}}"
+          echo "Platform: {{.buildPlatform}}"
+          echo "Target: {{.targetImage}}"
+          
+          # Simulate comprehensive artifact upload
+          echo "Phase 1: Artifact integrity verification"
+          sleep 5
+          
+          echo "Phase 2: Digital signature generation"
+          sleep 1
+          
+          echo "Phase 3: Transparency log upload"
+          sleep 1
+          
+          echo "Phase 4: Registry attestation storage"
+          sleep 1
+          
+          echo "Phase 5: Metadata synchronization"
+          sleep 1
+          
+          if [ -f "/sbom/output/sbom-{{.Iteration}}.json" ]; then
+            echo "Phase 6: SBOM upload and verification"
+            sleep 7
+            echo "SBOM uploaded successfully to registry"
+          fi
+          
+          echo "Phase 7: Notification and reporting"
+          sleep 5
+          
+          echo "[$(date --utc -Ins)] Artifact upload completed for iteration {{.Iteration}}"
+          _EOF_
+        env:
+        - name: SCRIPT_GENERATION_PHASE
+          value: script-preparation
+        - name: BUILD_FARM_JOB_NAME
+          value: "{{.JobName}}"
+        - name: BUILD_FARM_ITERATION
+          value: "{{.Iteration}}"
+        - name: BUILD_FARM_TARGET_IMAGE
+          value: "{{.targetImage}}"
+        - name: BUILD_FARM_PLATFORM
+          value: "{{.buildPlatform}}"
+        - name: BUILD_FARM_BUILD_IMAGE
+          value: "quay.io/konflux-ci/buildah-task"
+        - name: SCRIPT_START_TIME
+          value: "{{now.Unix}}"
+        - name: SCRIPT_UNIQUE_ID
+          value: "{{.JobName}}-{{.Iteration}}-scripts-{{now.Unix}}"
+        - name: TEKTON_SCRIPTS_PATH
+          value: /tekton/scripts
+        - name: SCRIPT_TEMPLATE_VERSION
+          value: v1.2.0
+        - name: SCRIPT_GENERATION_TOOL
+          value: build-farm-script-generator
+        - name: SCRIPT_VALIDATION_ENABLED
+          value: "true"
+        - name: SCRIPT_DEBUG_MODE
+          value: "false"
+        - name: SCRIPT_LOGGING_LEVEL
+          value: info
+        - name: SCRIPT_TIMEOUT_SECONDS
+          value: "1800"
+        - name: SCRIPT_RETRY_COUNT
+          value: "3"
+        - name: SCRIPT_PARALLELISM
+          value: "1"
+        - name: SCRIPT_WORKSPACE_CLEANUP
+          value: "true"
+        - name: SCRIPT_ARTIFACT_RETENTION
+          value: "7d"
+        - name: SCRIPT_SECURITY_SCAN
+          value: "true"
+        - name: SCRIPT_COMPLIANCE_CHECK
+          value: "true"
+        - name: SCRIPT_PERFORMANCE_MONITORING
+          value: "true"
+        - name: SCRIPT_RESOURCE_LIMITS
+          value: "true"
+        - name: SCRIPT_NETWORK_POLICY
+          value: "restricted"
+        - name: SCRIPT_STORAGE_CLASS
+          value: "fast-ssd"
+        - name: SCRIPT_BACKUP_ENABLED
+          value: "true"
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: 100m
+          requests:
+            cpu: 1m
+            memory: 1Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - MKNOD
+            - ALL
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          name: kube-api-access-build-farm
+          readOnly: true
+        - mountPath: /workspace
+          name: tekton-internal-workspace
+        - mountPath: /tekton/home
+          name: tekton-internal-home
+        - mountPath: /tekton/results
+          name: tekton-internal-results
+        - mountPath: /tekton/artifacts
+          name: tekton-internal-artifacts
+        - mountPath: /tekton/scripts
+          name: tekton-internal-scripts
+        - mountPath: /shared
+          name: shared
+        - mountPath: /var/workdir
+          name: workdir
+        - mountPath: /cache/build-cache
+          name: build-cache-volume
+        - mountPath: /cache/dependency-cache
+          name: dependency-cache-volume
+        - mountPath: /logs/build-logs
+          name: build-logs-volume
+        - mountPath: /metrics/build-metrics
+          name: build-metrics-volume
+        - mountPath: /tmp/build-tmp
+          name: build-tmp-volume
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: metadata-editor-sa
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: tekton-internal-workspace
+        emptyDir:
+          sizeLimit: 20Gi
+      - name: tekton-internal-home
+        emptyDir:
+          sizeLimit: 5Gi
+      - name: tekton-internal-results
+        emptyDir:
+          sizeLimit: 2Gi
+      - name: tekton-internal-steps
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: tekton-internal-scripts
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: tekton-internal-artifacts
+        emptyDir:
+          sizeLimit: 10Gi
+      - name: proxy-ca-bundle
+        configMap:
+          defaultMode: 420
+          items:
+          - key: ca-bundle.crt
+            path: ca-bundle.crt
+          name: proxy-ca-bundle
+          optional: true
+      - name: shared
+        emptyDir:
+          sizeLimit: 5Gi
+      - name: varlibcontainers
+        emptyDir:
+          sizeLimit: 50Gi
+      - name: workdir
+        emptyDir:
+          sizeLimit: 30Gi
+      - name: kube-api-access-build-farm
+        projected:
+          defaultMode: 420
+          sources:
+          - serviceAccountToken:
+              expirationSeconds: 3607
+              path: token
+          - configMap:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: kube-root-ca.crt
+          - downwardAPI:
+              items:
+              - fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+                path: namespace
+          - configMap:
+              items:
+              - key: service-ca.crt
+                path: service-ca.crt
+              name: openshift-service-ca.crt
+      - name: build-cache-volume
+        emptyDir:
+          sizeLimit: 20Gi
+      - name: dependency-cache-volume
+        emptyDir:
+          sizeLimit: 10Gi
+      - name: layer-cache-volume
+        emptyDir:
+          sizeLimit: 15Gi
+      - name: build-secret-volume-0-{{ add (mod (add (mul .Replica 2) 0) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 0) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-1-{{ add (mod (add (mul .Replica 2) 1) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 1) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-2-{{ add (mod (add (mul .Replica 2) 2) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 2) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-3-{{ add (mod (add (mul .Replica 2) 3) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 3) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-4-{{ add (mod (add (mul .Replica 2) 4) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 4) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-5-{{ add (mod (add (mul .Replica 2) 5) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 5) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-6-{{ add (mod (add (mul .Replica 2) 6) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 6) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-7-{{ add (mod (add (mul .Replica 2) 7) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 7) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-8-{{ add (mod (add (mul .Replica 2) 8) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 8) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-secret-volume-9-{{ add (mod (add (mul .Replica 2) 9) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+        secret:
+          secretName: {{.JobName}}-{{ add (mod (add (mul .Replica 2) 9) (div (mul .iterationsPerNamespace 3) 2)) 1 }}
+          defaultMode: 0600
+      - name: build-logs-volume
+        emptyDir:
+          sizeLimit: 5Gi
+      - name: build-metrics-volume
+        emptyDir:
+          sizeLimit: 2Gi
+      - name: build-tmp-volume
+        emptyDir:
+          sizeLimit: 10Gi
+      - name: sbom-output-volume
+        emptyDir:
+          sizeLimit: 1Gi

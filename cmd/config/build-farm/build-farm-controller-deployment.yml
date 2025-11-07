@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: build-farm-controller-{{ .Replica }}
+spec:
+  replicas: {{ .numControllers }}
+  selector:
+    matchLabels:
+      app: build-farm-controller
+  template:
+    metadata:
+      labels:
+        app: build-farm-controller
+        component: build-farm-controller
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/infra
+                operator: Exists
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+      tolerations:
+      - key: "node-role.kubernetes.io/infra"
+        operator: "Exists"
+        effect: "NoSchedule"
+      serviceAccountName: build-farm-controller
+      containers:
+      - name: manager
+        image: quay.io/kube-burner/build-farm-controller:manager
+        imagePullPolicy: Always
+        env:
+        - name: RESTART_INTERVAL
+          value: "{{ .watcherRestartInterval }}"
+        - name: SLEEP_BEFORE_RESTART
+          value: "{{ .sleepBeforeRestart }}"
+        - name: NUM_WATCHERS
+          value: "{{ .numThreads }}"
+        - name: LOG_LEVEL
+          value: "Info"
+        - name: ENABLE_POD_WATCHER
+          value: "{{ .enablePodWatcher }}"
+        - name: ENABLE_JOB_WATCHER
+          value: "{{ .enableJobWatcher }}"
+        - name: ENABLE_SECRETS_LISTING
+          value: "{{ .enableSecretsListing }}"
+        - name: SECRETS_LIST_INTERVAL
+          value: "{{ .secretsListInterval }}"
+        - name: ENABLE_JOBS_LISTING
+          value: "{{ .enableJobsListing }}"
+        - name: JOBS_LIST_INTERVAL
+          value: "{{ .jobsListInterval }}"
+        - name: NAMESPACE_FILTER_REGEX
+          value: "{{ .namespaceFilterRegEx }}"
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "500m"
+          limits:
+            memory: "80Gi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+          capabilities:
+            drop:
+            - ALL
