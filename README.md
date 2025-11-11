@@ -1032,6 +1032,10 @@ When using the regular profiles ([metrics-aggregated](https://github.com/kube-bu
 
 The reporting profile is very useful to reduce the number of documents sent to the configured indexer. Thanks to the combination of aggregations and instant queries for prometheus metrics, and 4 summaries for latency measurements, only a few documents will be indexed per benchmark. This flag makes possible to specify one or both of these profiles indistinctly.
 
+## Grafana Dashboards
+
+Grafana dashboards are available to visualize kube-burner metrics and performance data. See the [dashboards documentation](dashboards/README.md) for details on how to import and use the dashboards with their corresponding metrics profiles.
+
 ## Customizing workloads
 
 It is possible to customize any of the above workload configurations by extracting, updating, and finally running it:
