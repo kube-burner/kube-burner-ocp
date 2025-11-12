@@ -34,7 +34,7 @@ spec:
       containers:
       - name: manager
         image: quay.io/kube-burner/build-farm-controller:manager
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: RESTART_INTERVAL
           value: "{{ .watcherRestartInterval }}"
