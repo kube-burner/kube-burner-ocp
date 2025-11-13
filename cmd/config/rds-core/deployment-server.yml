@@ -15,7 +15,7 @@ spec:
         app: nginx
       annotations:
         k8s.v1.cni.cncf.io/networks: '[
-          { "name": "sriov-net-{{ .Iteration }}-1" }
+          { "name": "sriov-server-net-{{ .Iteration }}-1" }
         ]'
     spec:
       topologySpreadConstraints:
