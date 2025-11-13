@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{.JobName}}-{{.Replica}}
+  labels:
+    app.kubernetes.io/managed-by: kube-burner
+    app.kubernetes.io/component: build-farm
+data:
+  config.json: "{{randAlphaNum 51200}}"
+  build-metadata: "{{randAlphaNum 30720}}"
+  pipeline-config: "{{randAlphaNum 20480}}"
