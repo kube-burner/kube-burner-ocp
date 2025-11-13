@@ -125,8 +125,8 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 5, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
-	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 10*time.Minute, "Time to wait between each churn")
-	cmd.Flags().IntVar(&churnPercent, "churn-percent", 60, "Percentage of job iterations that kube-burner will churn each round")
+	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 3*time.Minute, "Time to wait between each churn")
+	cmd.Flags().IntVar(&churnPercent, "churn-percent", 50, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 
 	// Controller configuration flags
