@@ -421,6 +421,79 @@ Pre-requisites:
          effect: "NoExecute"
      ```
  - **SRIOV operator** with its corresponding *SriovNetworkNodePolicy*
+
+    Note : Please find the recommended *SriovNetworkNodePolicy* for pod churn at high %
+
+    ```yaml
+    ---
+    apiVersion: sriovnetwork.openshift.io/v1
+    kind: SriovNetworkNodePolicy
+    metadata:
+      name: dpdk-vfs-policy
+      namespace: openshift-sriov-network-operator
+    spec:
+      deviceType: vfio-pci
+      isRdma: false
+      nicSelector:
+        pfNames:
+        - ens1f1#0-19
+      nodeSelector:
+        node-role.kubernetes.io/worker-dpdk: ""
+      numVfs: 60
+      priority: 99
+      resourceName: dpdkvfs
+    ---
+    apiVersion: sriovnetwork.openshift.io/v1
+    kind: SriovNetworkNodePolicy
+    metadata:
+      name: sriov-vfs-policy-worker-dpdk
+      namespace: openshift-sriov-network-operator
+    spec:
+      deviceType: netdevice
+      isRdma: false
+      nicSelector:
+        pfNames:
+        - ens1f1#20-59
+      nodeSelector:
+        node-role.kubernetes.io/worker-dpdk: ""
+      numVfs: 60
+      priority: 99
+      resourceName: servervfs
+    ---
+    apiVersion: sriovnetwork.openshift.io/v1
+    kind: SriovNetworkNodePolicy
+    metadata:
+      name: server-vfs-policy
+      namespace: openshift-sriov-network-operator
+    spec:
+      deviceType: netdevice
+      isRdma: false
+      nicSelector:
+        pfNames:
+        - ens1f1
+      nodeSelector:
+        node-role.kubernetes.io/customcnf: "enabled"
+      numVfs: 60
+      priority: 50
+      resourceName: servervfs
+    ---
+    apiVersion: sriovnetwork.openshift.io/v1
+    kind: SriovNetworkNodePolicy
+    metadata:
+      name: server-vfs-policy-metallb-workers
+      namespace: openshift-sriov-network-operator
+    spec:
+      deviceType: netdevice
+      isRdma: false
+      nicSelector:
+        pfNames:
+        - ens1f1
+      nodeSelector:
+        node-role.kubernetes.io/worker-metallb: ""
+      numVfs: 60
+      priority: 50
+      resourceName: servervfs
+    ```
  - Some nodes (i.e.: 25% of them) with the ***worker-dpdk*** label to host the DPDK pods, i.e.:
      ```
      $ kubectl label node worker1 node-role.kubernetes.io/worker-dpdk=

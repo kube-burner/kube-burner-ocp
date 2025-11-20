@@ -20,8 +20,8 @@ spec:
         cpu-load-balancing.crio.io: "disable"
         cpu-quota.crio.io: "disable"
         k8s.v1.cni.cncf.io/networks: '[
-          { "name": "sriov-net-{{ .Iteration }}-1" },
-          { "name": "sriov-net-{{ .Iteration }}-2" }
+          { "name": "sriov-dpdk-net-{{ .Iteration }}-1" },
+          { "name": "sriov-dpdk-net-{{ .Iteration }}-2" }
         ]'
     spec:
       runtimeClassName: performance-{{.perf_profile}}
