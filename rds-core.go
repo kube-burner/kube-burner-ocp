@@ -29,7 +29,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, churnPercent, churnCycles, dpdkCores int
 	var churn, svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var deletionStrategy, perfProfile, dpdkHugepages string
+	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -50,6 +50,8 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["DPDK_CORES"] = dpdkCores
 			AdditionalVars["DPDK_HUGEPAGES"] = dpdkHugepages
+			AdditionalVars["SRIOV_DPDK_DEVICEPOOL"] = sriovDpdkDevicepool
+			AdditionalVars["SRIOV_NET_DEVICEPOOL"] = sriovNetDevicepool
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PERF_PROFILE"] = perfProfile
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
@@ -69,6 +71,8 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().IntVar(&dpdkCores, "dpdk-cores", 2, "Number of cores per DPDK pod")
 	cmd.Flags().StringVar(&dpdkHugepages, "dpdk-hugepages", "16Gi", "Number of hugepages per DPDK pod. Must be a multiple of 1Gi")
+	cmd.Flags().StringVar(&sriovDpdkDevicepool, "dpdk-devicepool", "intelnics2", "SRIOV Device pool name for DPDK VFs in the cluster")
+	cmd.Flags().StringVar(&sriovNetDevicepool, "net-devicepool", "intelnics2", "SRIOV Device pool name for Kernel VFs in the cluster")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&perfProfile, "perf-profile", "default", "Performance profile implemented in the cluster")

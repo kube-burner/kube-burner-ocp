@@ -1,7 +1,8 @@
+---
 apiVersion: sriovnetwork.openshift.io/v1
 kind: SriovNetwork
 metadata:
-  name: sriov-server-net-{{ .Iteration }}-{{ .Replica }}
+  name: sriov-dpdk-net-{{ .Iteration }}-{{ .Replica }}
   namespace: openshift-sriov-network-operator
 spec:
   ipam: |
@@ -16,6 +17,5 @@ spec:
   logLevel: info #debug
   spoofChk: "off"
   trust: "on"
-  resourceName: {{ .sriovNetDevicepool }}
+  resourceName: {{ .sriovDpdkDevicepool }}
   networkNamespace: rds-{{ .Iteration }}
-  #capabilities: '{ "dpdk": true }'
