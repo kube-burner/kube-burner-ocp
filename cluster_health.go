@@ -36,13 +36,13 @@ func ClusterHealth() *cobra.Command {
 		Use:   "cluster-health",
 		Short: "Checks for ocp cluster health",
 		Run: func(cmd *cobra.Command, args []string) {
-			ClusterHealthCheck()
+			ClusterHealthCheck(false)
 		},
 	}
 	return cmd
 }
 
-func ClusterHealthCheck() {
+func ClusterHealthCheck(ignoreHealthCheck bool) {
 	log.Infof("❤️ Checking for Cluster Health")
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
@@ -53,7 +53,11 @@ func ClusterHealthCheck() {
 	if util.ClusterHealthyVanillaK8s(clientSet) && isClusterHealthy(clientSet, openshiftClientset) {
 		log.Infof("Cluster is Healthy")
 	} else {
-		log.Fatalf("Cluster is Unhealthy")
+		if ignoreHealthCheck {
+			log.Warn("Cluster is Unhealthy, continuing execution")
+		} else {
+			log.Fatal("Cluster is Unhealthy")
+		}
 	}
 }
 
