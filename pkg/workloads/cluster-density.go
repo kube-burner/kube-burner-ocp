@@ -19,8 +19,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner-ocp/pkg/common"
+	"github.com/kube-burner/kube-burner-ocp/pkg/clusterhealth"
 	"github.com/kube-burner/kube-burner/pkg/config"
+
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -42,7 +43,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			if cmd.Name() == "cluster-density-v2" {
 				kubeClientProvider := config.NewKubeClientProvider("", "")
 				clientSet, _ := kubeClientProvider.ClientSet(0, 0)
-				if err := common.IsClusterImageRegistryAvailable(clientSet); err != nil {
+				if err := clusterhealth.IsClusterImageRegistryAvailable(clientSet); err != nil {
 					log.Fatal(err.Error())
 				}
 			}
