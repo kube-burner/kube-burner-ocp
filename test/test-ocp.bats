@@ -151,6 +151,9 @@ teardown_file() {
     check_metric_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency vmReadyLatency
     check_quantile_recorded ./virt-capacity-benchmark/iteration-1 ${job} vmiLatency VMReady
   done
+  # check pvcLatency and dvLatency
+  check_metric_recorded ./virt-capacity-benchmark/iteration-1 create-vms pvcLatency bindingLatency
+  check_metric_recorded ./virt-capacity-benchmark/iteration-1 create-vms dvLatency dvReadyLatency
   check_destroyed_ns virt-capacity-benchmark
 }
 
