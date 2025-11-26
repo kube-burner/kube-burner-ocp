@@ -45,7 +45,7 @@ func openShiftCmd() *cobra.Command {
 	var metricsProfileType string
 	var esServer, esIndex string
 	var QPS, burst int
-	var gc, gcMetrics, alerting, checkHealth, localIndexing, extract, enableFileLogging bool
+	var gc, gcMetrics, alerting, ignoreHealthCheck, localIndexing, extract, enableFileLogging bool
 	ocpCmd := &cobra.Command{
 		Use:  "kube-burner-ocp",
 		Long: `kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads`,
@@ -55,7 +55,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().BoolVar(&localIndexing, "local-indexing", false, "Enable local indexing")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints, overrides the es-server and es-index flags")
 	ocpCmd.PersistentFlags().BoolVar(&alerting, "alerting", true, "Enable alerting")
-	ocpCmd.PersistentFlags().BoolVar(&checkHealth, "check-health", true, "Check cluster health before job")
+	ocpCmd.PersistentFlags().BoolVar(&ignoreHealthCheck, "ignore-health-check", false, "Run cluster health check, but ignore failures")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UUID, "uuid", uid.NewString(), "Benchmark UUID")
 	ocpCmd.PersistentFlags().DurationVar(&workloadConfig.Timeout, "timeout", 4*time.Hour, "Benchmark timeout")
 	ocpCmd.PersistentFlags().IntVar(&QPS, "qps", 20, "QPS")
@@ -82,8 +82,8 @@ func openShiftCmd() *cobra.Command {
 		if enableFileLogging {
 			util.SetupFileLogging("ocp-" + workloadConfig.UUID)
 		}
-		if checkHealth && (cmd.Name() != "cluster-health" || cmd.Name() == "index") {
-			ocp.ClusterHealthCheck()
+		if cmd.Name() != "cluster-health" && cmd.Name() != "index" {
+			ocp.ClusterHealthCheck(ignoreHealthCheck)
 		}
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		workloadDir := filepath.Join(rootDir, cmd.Name())
