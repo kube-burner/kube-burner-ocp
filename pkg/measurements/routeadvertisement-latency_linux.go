@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -60,15 +61,19 @@ const (
 	exportPingerTimeoutMsec       = 100
 )
 
-// default values for the job's input variables. This will be overridden with user passed values in the job template
-// number of routes to be imported will be a multiple of numDummyIfaces and numAddressOnDummyIface
-var numDummyIfaces = 20
-var numAddressOnDummyIface = 10
-var importRoutesCount = numDummyIfaces * numAddressOnDummyIface
+var (
+	// default values for the job's input variables. This will be overridden with user passed values in the job template
+	// number of routes to be imported will be a multiple of numDummyIfaces and numAddressOnDummyIface
+	numDummyIfaces         = 20
+	numAddressOnDummyIface = 10
+	importRoutesCount      = numDummyIfaces * numAddressOnDummyIface
 
-// Max timeout to wait for finishing the import and export scenarios
-var exportScenarioMaxTimeout time.Duration = 1 * time.Minute
-var importScenarioMaxTimeout time.Duration = 1 * time.Minute
+	// Max timeout to wait for finishing the import and export scenarios
+	exportScenarioMaxTimeout time.Duration = 1 * time.Minute
+	importScenarioMaxTimeout time.Duration = 1 * time.Minute
+
+	supportedRaLatencyJobTypes = []config.JobType{config.CreationJob, config.PatchJob}
+)
 
 // Internal struct used to marshal PodAnnotation to the pod annotation
 // pod IP address is derived from podAnnotation when the pod is created on cudn network
@@ -825,4 +830,8 @@ func (r *raLatency) getLatency(normLatency any) map[string]float64 {
 		"MaxNetlinkRouteLatency": float64(raMetric.MaxNetlinkRouteLatency),
 		"P99NetlinkRouteLatency": float64(raMetric.P99NetlinkRouteLatency),
 	}
+}
+
+func (r *raLatency) IsCompatible() bool {
+	return slices.Contains(supportedRaLatencyJobTypes, r.JobConfig.JobType)
 }
