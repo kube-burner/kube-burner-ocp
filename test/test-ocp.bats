@@ -139,6 +139,21 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} cluster-health
 }
 
+@test "kueue-operator: jobs" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --job-replicas=10 --parallelism=10 --workload-runtime=2s ${INDEXING_FLAGS}
+  check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
+}
+
+@test "kueue-operator: pods" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-pods --pod-replicas=50 --workload-runtime=2s ${INDEXING_FLAGS}
+  check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
+}
+
+@test "kueue-operator: jobs-shared" {
+  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --iterations=2 --parallelism=5 --workload-runtime=2s ${INDEXING_FLAGS}
+  check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
+}
+
 @test "virt-capacity-benchmark" {
     local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
@@ -218,17 +233,3 @@ teardown_file() {
   git clean -fd
 }
 
-@test "kueue-operator: jobs" {
-  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --job-replicas=10 --parallelism=10 --workload-runtime=2s ${INDEXING_FLAGS}
-  check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
-}
-
-@test "kueue-operator: pods" {
-  run_cmd ${KUBE_BURNER_OCP} kueue-operator-pods --pod-replicas=50 --workload-runtime=2s ${INDEXING_FLAGS}
-  check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
-}
-
-@test "kueue-operator: jobs-shared" {
-  run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --iterations=2 --parallelism=5 --workload-runtime=2s ${INDEXING_FLAGS}
-  check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
-}
