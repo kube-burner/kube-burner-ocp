@@ -22,7 +22,7 @@ import (
 
 	uid "github.com/google/uuid"
 	"github.com/kube-burner/kube-burner-ocp/pkg/clusterhealth"
-	ocp "github.com/kube-burner/kube-burner-ocp/pkg/workloads"
+	ocpWorkloads "github.com/kube-burner/kube-burner-ocp/pkg/workloads"
 	"github.com/kube-burner/kube-burner/pkg/config"
 	"github.com/kube-burner/kube-burner/pkg/util"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -91,7 +91,7 @@ func openShiftCmd() *cobra.Command {
 		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, workloadDir, metricsProfilesDir, alertsDir, scriptsDir, kubeClientProvider)
 
 		// Set common variables that all workloads can use
-		ocp.AdditionalVars = map[string]any{
+		ocpWorkloads.AdditionalVars = map[string]any{
 			"UUID":           workloadConfig.UUID,
 			"QPS":            QPS,
 			"BURST":          burst,
@@ -100,52 +100,52 @@ func openShiftCmd() *cobra.Command {
 			"LOCAL_INDEXING": localIndexing,
 		}
 		if alerting {
-			ocp.AdditionalVars["ALERTS"] = "alerts.yml"
+			ocpWorkloads.AdditionalVars["ALERTS"] = "alerts.yml"
 		} else {
-			ocp.AdditionalVars["ALERTS"] = ""
+			ocpWorkloads.AdditionalVars["ALERTS"] = ""
 		}
 		if workloadConfig.MetricsEndpoint == "" {
-			ocp.AdditionalVars["ES_SERVER"] = esServer
-			ocp.AdditionalVars["ES_INDEX"] = esIndex
+			ocpWorkloads.AdditionalVars["ES_SERVER"] = esServer
+			ocpWorkloads.AdditionalVars["ES_INDEX"] = esIndex
 		}
 
-		if err := ocp.GatherMetadata(&wh, alerting); err != nil {
+		if err := ocpWorkloads.GatherMetadata(&wh, alerting); err != nil {
 			log.Fatal(err.Error())
 		}
 	}
 	ocpCmd.AddCommand(
-		ocp.NewClusterDensity(&wh, "cluster-density-v2"),
-		ocp.NewClusterDensity(&wh, "cluster-density-ms"),
-		ocp.NewCrdScale(&wh),
-		ocp.NewUdnBgp(&wh, "udn-bgp"),
-		ocp.NewNetworkPolicy(&wh, "network-policy"),
-		ocp.NewOLMv1(&wh, "olm"),
-		ocp.NewNodeDensity(&wh, "node-density"),
-		ocp.NewNodeDensity(&wh, "node-density-heavy"),
-		ocp.NewNodeDensity(&wh, "node-density-cni"),
-		ocp.NewNodeScale(&wh, "node-scale"),
-		ocp.NewUDNDensityPods(&wh),
-		ocp.NewIndex(&wh, ocpConfig),
-		ocp.NewPVCDensity(&wh),
-		ocp.NewRDSCore(&wh),
-		ocp.NewWebBurner(&wh, "web-burner-init"),
-		ocp.NewWebBurner(&wh, "web-burner-node-density"),
-		ocp.NewWebBurner(&wh, "web-burner-cluster-density"),
-		ocp.NewEgressIP(&wh, "egressip"),
-		ocp.NewWhereabouts(&wh),
-		ocp.NewVirtDensity(&wh),
-		ocp.NewVirtUDNDensity(&wh),
+		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-v2"),
+		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-ms"),
+		ocpWorkloads.NewCrdScale(&wh),
+		ocpWorkloads.NewUdnBgp(&wh, "udn-bgp"),
+		ocpWorkloads.NewNetworkPolicy(&wh, "network-policy"),
+		ocpWorkloads.NewOLMv1(&wh, "olm"),
+		ocpWorkloads.NewNodeDensity(&wh, "node-density"),
+		ocpWorkloads.NewNodeDensity(&wh, "node-density-heavy"),
+		ocpWorkloads.NewNodeDensity(&wh, "node-density-cni"),
+		ocpWorkloads.NewNodeScale(&wh, "node-scale"),
+		ocpWorkloads.NewUDNDensityPods(&wh),
+		ocpWorkloads.NewIndex(&wh, ocpConfig),
+		ocpWorkloads.NewPVCDensity(&wh),
+		ocpWorkloads.NewRDSCore(&wh),
+		ocpWorkloads.NewWebBurner(&wh, "web-burner-init"),
+		ocpWorkloads.NewWebBurner(&wh, "web-burner-node-density"),
+		ocpWorkloads.NewWebBurner(&wh, "web-burner-cluster-density"),
+		ocpWorkloads.NewEgressIP(&wh, "egressip"),
+		ocpWorkloads.NewWhereabouts(&wh),
+		ocpWorkloads.NewVirtDensity(&wh),
+		ocpWorkloads.NewVirtUDNDensity(&wh),
 		clusterhealth.ClusterHealth(),
-		ocp.CustomWorkload(&wh),
-		ocp.NewVirtCapacityBenchmark(&wh),
-		ocp.NewVirtClone(&wh),
-		ocp.NewVirtEphemeralRestart(&wh),
-		ocp.NewDVClone(&wh),
-		ocp.NewVirtMigration(&wh),
-		ocp.NewKueueOperator(&wh, "kueue-operator-pods"),
-		ocp.NewKueueOperator(&wh, "kueue-operator-jobs"),
-		ocp.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
-		ocp.NewANPDensityPods(&wh, "anp-density-pods"),
+		ocpWorkloads.CustomWorkload(&wh),
+		ocpWorkloads.NewVirtCapacityBenchmark(&wh),
+		ocpWorkloads.NewVirtClone(&wh),
+		ocpWorkloads.NewVirtEphemeralRestart(&wh),
+		ocpWorkloads.NewDVClone(&wh),
+		ocpWorkloads.NewVirtMigration(&wh),
+		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-pods"),
+		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-jobs"),
+		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
+		ocpWorkloads.NewANPDensityPods(&wh, "anp-density-pods"),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
