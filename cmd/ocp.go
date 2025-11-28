@@ -112,7 +112,8 @@ func openShiftCmd() *cobra.Command {
 		if err := ocpWorkloads.GatherMetadata(&wh, alerting); err != nil {
 			log.Fatal(err.Error())
 		}
-	}	ocpCmd.AddCommand(
+	}	
+	ocpCmd.AddCommand(
 		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-v2"),
 		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-ms"),
 		ocpWorkloads.NewCrdScale(&wh),
