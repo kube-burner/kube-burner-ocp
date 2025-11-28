@@ -1,0 +1,4493 @@
+{
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "barchart",
+      "name": "Bar chart",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "bargauge",
+      "name": "Bar gauge",
+      "version": ""
+    },
+    {
+      "type": "datasource",
+      "id": "elasticsearch",
+      "name": "Elasticsearch",
+      "version": "1.0.0"
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.4.0"
+    },
+    {
+      "type": "panel",
+      "id": "table",
+      "name": "Table",
+      "version": ""
+    }
+  ],
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "$Datasource"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [
+            {
+              "options": {
+                "passed": {
+                  "color": "green",
+                  "index": 0
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "passed"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "mode": "basic",
+                  "type": "color-background"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 492,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "hide": false,
+          "metrics": [
+            {
+              "id": "1",
+              "settings": {
+                "size": "500"
+              },
+              "type": "raw_data"
+            }
+          ],
+          "query": "uuid.keyword: $uuid AND metricName.keyword: jobSummary",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "benchmark": true,
+              "clustertype": true,
+              "endDate": true,
+              "end_date": true,
+              "highlight": true,
+              "jobConfig.burst": true,
+              "jobConfig.cleanup": true,
+              "jobConfig.errorOnVerify": true,
+              "jobConfig.iterationsPerNamespace": true,
+              "jobConfig.jobIterationDelay": true,
+              "jobConfig.jobIterations": true,
+              "jobConfig.jobPause": true,
+              "jobConfig.jobType": true,
+              "jobConfig.maxWaitTimeout": true,
+              "jobConfig.namespace": true,
+              "jobConfig.namespaced": true,
+              "jobConfig.namespacedIterations": true,
+              "jobConfig.objects": true,
+              "jobConfig.preLoadImages": true,
+              "jobConfig.preLoadPeriod": true,
+              "jobConfig.qps": true,
+              "jobConfig.verifyObjects": true,
+              "jobConfig.waitFor": true,
+              "jobConfig.waitForDeletion": true,
+              "jobConfig.waitWhenFinished": true,
+              "k8sVersion": true,
+              "metricName": true,
+              "ocp_version": true,
+              "platform": false,
+              "sdn_type": false,
+              "sort": true,
+              "timestamp": true,
+              "total_nodes": false,
+              "uuid": false,
+              "workload": true,
+              "workload_nodes_count": true,
+              "workload_nodes_type": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "_id": 1,
+              "_index": 2,
+              "_type": 3,
+              "benchmark": 5,
+              "clusterName": 8,
+              "endDate": 9,
+              "highlight": 6,
+              "infraNodesCount": 20,
+              "infraNodesType": 21,
+              "k8sVersion": 10,
+              "masterNodesType": 16,
+              "metricName": 13,
+              "ocpVersion": 11,
+              "passed": 15,
+              "platform": 12,
+              "sdnType": 14,
+              "sort": 7,
+              "timestamp": 0,
+              "totalNodes": 17,
+              "uuid": 4,
+              "workerNodesCount": 18,
+              "workerNodesType": 19
+            },
+            "renameByName": {
+              "_type": "",
+              "clusterName": "Cluster",
+              "elapsedTime": "Elapsed time",
+              "endDate": "",
+              "infraNodesCount": "infra count",
+              "infraNodesType": "infra type",
+              "infra_nodes_count": "Infra nodes",
+              "infra_nodes_type": "Infra flavor",
+              "jobConfig.burst": "Burst",
+              "jobConfig.cleanup": "",
+              "jobConfig.errorOnVerify": "errorOnVerify",
+              "jobConfig.jobIterationDelay": "jobIterationDelay",
+              "jobConfig.jobIterations": "Iterations",
+              "jobConfig.jobPause": "jobPause",
+              "jobConfig.jobType": "Job Type",
+              "jobConfig.maxWaitTimeout": "maxWaitTImeout",
+              "jobConfig.name": "Name",
+              "jobConfig.namespace": "namespacePrefix",
+              "jobConfig.namespaced": "",
+              "jobConfig.namespacedIterations": "Namespaced iterations",
+              "jobConfig.objects": "",
+              "jobConfig.podWait": "podWait",
+              "jobConfig.preLoadImages": "Preload Images",
+              "jobConfig.preLoadPeriod": "",
+              "jobConfig.qps": "QPS",
+              "jobConfig.verifyObjects": "",
+              "k8sVersion": "k8s version",
+              "k8s_version": "k8s version",
+              "masterNodesType": "master type",
+              "master_nodes_count": "Master nodes",
+              "master_nodes_type": "Masters flavor",
+              "metricName": "",
+              "ocpVersion": "OCP version",
+              "passed": "Passed",
+              "platform": "Platform",
+              "result": "Result",
+              "sdnType": "SDN",
+              "sdn_type": "SDN",
+              "timestamp": "",
+              "totalNodes": "total nodes",
+              "total_nodes": "Total nodes",
+              "uuid": "UUID",
+              "workerNodesCount": "worker count",
+              "workerNodesType": "worker type",
+              "worker_nodes_count": "Worker nodes",
+              "worker_nodes_type": "Workers flavor",
+              "workload": "",
+              "workload_nodes_count": "Workload nodes",
+              "workload_nodes_type": "Workload flavor"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "$Datasource"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Elapsed time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Elapsed Time"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ns"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "id": 327,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "metadata.ocpMajorVersion"
+          }
+        ]
+      },
+      "pluginVersion": "10.4.0",
+      "targets": [
+        {
+          "alias": "",
+          "bucketAggs": [],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "hide": false,
+          "metrics": [
+            {
+              "id": "1",
+              "settings": {
+                "size": "500"
+              },
+              "type": "raw_data"
+            }
+          ],
+          "query": "uuid.keyword: $uuid AND metricName.keyword: jobSummary",
+          "refId": "B",
+          "timeField": "timestamp"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "_id": true,
+              "_index": true,
+              "_type": true,
+              "highlight": true,
+              "jobConfig.churnDelay": true,
+              "jobConfig.churnDuration": true,
+              "jobConfig.churnPercent": true,
+              "jobConfig.cleanup": true,
+              "jobConfig.errorOnVerify": true,
+              "jobConfig.iterationsPerNamespace": true,
+              "jobConfig.jobIterationDelay": true,
+              "jobConfig.jobIterations": false,
+              "jobConfig.jobPause": true,
+              "jobConfig.jobType": true,
+              "jobConfig.maxWaitTimeout": true,
+              "jobConfig.name": false,
+              "jobConfig.namespace": true,
+              "jobConfig.namespaceLabels.pod-security.kubernetes.io/audit": true,
+              "jobConfig.namespaceLabels.pod-security.kubernetes.io/enforce": true,
+              "jobConfig.namespaceLabels.pod-security.kubernetes.io/warn": true,
+              "jobConfig.namespaceLabels.security.openshift.io/scc.podSecurityLabelSync": true,
+              "jobConfig.namespaced": true,
+              "jobConfig.namespacedIterations": true,
+              "jobConfig.objects": true,
+              "jobConfig.podWait": true,
+              "jobConfig.preLoadImages": true,
+              "jobConfig.preLoadPeriod": true,
+              "jobConfig.verifyObjects": true,
+              "jobConfig.waitFor": true,
+              "jobConfig.waitForDeletion": true,
+              "jobConfig.waitWhenFinished": true,
+              "metadata.cloud-bulldozer": true,
+              "metadata.k8sVersion": true,
+              "metadata.ocpMajorVersion": true,
+              "metadata.ocpVersion": true,
+              "metadata.platform": true,
+              "metadata.sdnType": true,
+              "metadata.totalNodes": true,
+              "metricName": true,
+              "sort": true,
+              "timestamp": false,
+              "uuid": false
+            },
+            "indexByName": {
+              "_id": 2,
+              "_index": 3,
+              "_type": 4,
+              "elapsedTime": 8,
+              "highlight": 19,
+              "jobConfig.burst": 7,
+              "jobConfig.churnDelay": 20,
+              "jobConfig.churnDuration": 21,
+              "jobConfig.churnPercent": 22,
+              "jobConfig.cleanup": 11,
+              "jobConfig.errorOnVerify": 12,
+              "jobConfig.iterationsPerNamespace": 23,
+              "jobConfig.jobIterations": 9,
+              "jobConfig.jobType": 10,
+              "jobConfig.maxWaitTimeout": 13,
+              "jobConfig.name": 5,
+              "jobConfig.namespace": 14,
+              "jobConfig.preLoadImages": 24,
+              "jobConfig.preLoadPeriod": 25,
+              "jobConfig.qps": 6,
+              "jobConfig.verifyObjects": 15,
+              "jobConfig.waitForDeletion": 16,
+              "jobConfig.waitWhenFinished": 17,
+              "metadata.k8sVersion": 26,
+              "metadata.ocpMajorVersion": 27,
+              "metadata.ocpVersion": 28,
+              "metadata.platform": 29,
+              "metadata.sdnType": 30,
+              "metadata.totalNodes": 31,
+              "metricName": 18,
+              "sort": 32,
+              "timestamp": 1,
+              "uuid": 0,
+              "version": 33
+            },
+            "renameByName": {
+              "_type": "",
+              "elapsedTime": "Elapsed time",
+              "elapsedTimeNs": "Elapsed Time",
+              "endTimestamp": "",
+              "highlight": "",
+              "jobConfig.burst": "Burst",
+              "jobConfig.churn": "Churn",
+              "jobConfig.churnDelay": "",
+              "jobConfig.churnDeletionStrategy": "Churn Deletion strategy",
+              "jobConfig.cleanup": "",
+              "jobConfig.errorOnVerify": "errorOnVerify",
+              "jobConfig.iterationsPerNamespace": "iterationsPerNs",
+              "jobConfig.jobIterationDelay": "jobIterationDelay",
+              "jobConfig.jobIterations": "Iterations",
+              "jobConfig.jobPause": "jobPause",
+              "jobConfig.jobType": "Job Type",
+              "jobConfig.maxWaitTimeout": "maxWaitTImeout",
+              "jobConfig.name": "Name",
+              "jobConfig.namespace": "namespacePrefix",
+              "jobConfig.namespaceLabels.pod-security.kubernetes.io/audit": "",
+              "jobConfig.namespaced": "",
+              "jobConfig.namespacedIterations": "Namespaced iterations",
+              "jobConfig.objects": "",
+              "jobConfig.podWait": "podWait",
+              "jobConfig.preLoadImages": "Preload Images",
+              "jobConfig.preLoadPeriod": "",
+              "jobConfig.qps": "QPS",
+              "jobConfig.verifyObjects": "",
+              "metadata.ocpMajorVersion": "Major version",
+              "metadata.platform": "Platform",
+              "metricName": "",
+              "timestamp": "Date",
+              "uuid": "UUID",
+              "version": "Kube-burner version"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 658,
+      "panels": [
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Average CPU usage across nodes",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "purple",
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "cores"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 8,
+            "x": 0,
+            "y": 12
+          },
+          "id": 537,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "repeat": "node_roles",
+          "repeatDirection": "h",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "3",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "0",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: cpu-$node_roles",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "$workerNodesCount nodes - CPU usage $node_roles",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Maximum CPU usage across nodes",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "purple",
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "cores"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 8,
+            "x": 0,
+            "y": 16
+          },
+          "id": 714,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "repeat": "node_roles",
+          "repeatDirection": "h",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "3",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "0",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-cpu-$node_roles",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum CPU usage $node_roles",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Average memory usage across nodes",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "dark-red",
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 5,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 8,
+            "x": 0,
+            "y": 20
+          },
+          "id": 577,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "repeat": "node_roles",
+          "repeatDirection": "h",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "3",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "1",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: memory-$node_roles",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "$workerNodesCount nodes - Memory usage $node_roles",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Maximum aggregated memory usage across nodes",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "dark-red",
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 5,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 8,
+            "x": 0,
+            "y": 24
+          },
+          "id": 646,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "repeat": "node_roles",
+          "repeatDirection": "h",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "3",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "1",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-memory-sum-$node_roles",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "$workerNodesCount nodes - Maximum aggregated memory usage $node_roles",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Maximum usage ratio, based on\ncluster:node_cpu:ratio\nRatio is calculated from capacity/usage",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "percentage",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "orange",
+                    "value": 70
+                  },
+                  {
+                    "color": "red",
+                    "value": 85
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 28
+          },
+          "id": 566,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "always",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 100
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-cpu-cluster-usage-ratio",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Max Cluster CPU usage ratio",
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Maximum usage ratio, based on\ncluster:memory_usage:ratio\nRatio is calculated from capacity/usage",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 28
+          },
+          "id": 539,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-memory-cluster-usage-ratio",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Max Cluster memory usage ratio",
+          "type": "barchart"
+        }
+      ],
+      "title": "Node Usage",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 670,
+      "panels": [
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 5000
+                  }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 13
+          },
+          "id": 318,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "6",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "7",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "0",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "P99",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: podLatencyQuantilesMeasurement AND quantileName.keyword: Ready",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "$workerNodesCount nodes - P99 Pod ready latency",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "orange",
+                "mode": "fixed"
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 5000
+                  }
+                ]
+              },
+              "unit": "ns"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 13
+          },
+          "id": 702,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "6",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "7",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "0",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "P99",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: svcLatencyQuantilesMeasurement AND quantileName.keyword: Ready",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "$workerNodesCount nodes - P99 Service ready latency",
+          "type": "bargauge"
+        }
+      ],
+      "title": "Pod & Service ready latency",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 626,
+      "panels": [
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 14
+          },
+          "id": 636,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: avg-ro-apicalls-latency  AND labels.scope.keyword: resource",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Read Only API request P99 latency - resource scoped",
+          "transformations": [
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
+                  {
+                    "destinationType": "enum",
+                    "targetField": "metadata.ocpMajorVersion.keyword"
+                  }
+                ],
+                "fields": {}
+              }
+            }
+          ],
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 14
+          },
+          "id": 717,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-ro-apicalls-latency AND labels.scope.keyword: resource",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum Read Only API request P99 latency - resource scoped",
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 20
+          },
+          "id": 615,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: avg-ro-apicalls-latency AND labels.scope.keyword: namespace",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Read Only API request P99 latency - namespace scoped",
+          "transformations": [
+            {
+              "id": "convertFieldType",
+              "options": {}
+            }
+          ],
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 20
+          },
+          "id": 718,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-ro-apicalls-latency AND labels.scope.keyword: namespace",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum Read Only API request P99 latency - namespace scoped",
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 26
+          },
+          "id": 614,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xField": "metadata.ocpMajorVersion.keyword",
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: avg-ro-apicalls-latency ",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Read Only API request P99 latency - cluster scoped",
+          "transformations": [
+            {
+              "id": "convertFieldType",
+              "options": {}
+            }
+          ],
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 26
+          },
+          "id": 719,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-ro-apicalls-latency AND labels.scope.keyword: cluster",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum Read Only API request P99 latency - cluster scoped",
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 32
+          },
+          "id": 616,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xField": "metadata.ocpMajorVersion.keyword",
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: avg-mutating-apicalls-latency",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Mutating API request P99 latency",
+          "transformations": [
+            {
+              "id": "convertFieldType",
+              "options": {}
+            }
+          ],
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 32
+          },
+          "id": 720,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "auto",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 0
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "Memory",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-mutating-apicalls-latency",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum Mutating API request P99 latency",
+          "type": "barchart"
+        }
+      ],
+      "title": "API latency",
+      "type": "row"
+    },
+    {
+      "collapsed": true,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 14
+      },
+      "id": 590,
+      "panels": [
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisGridShow": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 10,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 12,
+            "x": 0,
+            "y": 15
+          },
+          "id": 540,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "right",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "always",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 300
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "{{labels.pod.keyword}}",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "5",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "$$hashKey": "object:31",
+                  "field": "value",
+                  "id": "1",
+                  "meta": {},
+                  "settings": {},
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: 99thEtcdDiskWalFsync",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "99th WAL fsync ",
+          "transformations": [
+            {
+              "id": "convertFieldType",
+              "options": {
+                "conversions": [
+                  {
+                    "destinationType": "enum",
+                    "targetField": "metadata.ocpMajorVersion.keyword"
+                  }
+                ],
+                "fields": {}
+              }
+            }
+          ],
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisGridShow": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 10,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 12,
+            "x": 12,
+            "y": 15
+          },
+          "id": 721,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "right",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "always",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 300
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "{{labels.pod.keyword}}",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "5",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "$$hashKey": "object:31",
+                  "field": "value",
+                  "id": "1",
+                  "meta": {},
+                  "settings": {},
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-99thEtcdDiskWalFsync",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum 99th WAL fsync ",
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "green",
+                "mode": "fixed"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "series",
+                "axisGridShow": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 12,
+            "x": 0,
+            "y": 20
+          },
+          "id": 543,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "right",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "always",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 300
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "{{labels.pod.keyword}}",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "5",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "$$hashKey": "object:31",
+                  "field": "value",
+                  "id": "1",
+                  "meta": {},
+                  "settings": {},
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: 99thEtcdRoundTripTime",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "99th Roundtrip",
+          "transformations": [
+            {
+              "id": "convertFieldType",
+              "options": {}
+            }
+          ],
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "continuous-RdYlGr"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "series",
+                "axisGridShow": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "hue",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 10,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 12,
+            "x": 12,
+            "y": 20
+          },
+          "id": 722,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "right",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "always",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 300
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "{{labels.pod.keyword}}",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "5",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "$$hashKey": "object:31",
+                  "field": "value",
+                  "id": "1",
+                  "meta": {},
+                  "settings": {},
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-99thEtcdRoundTripTime",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum 99th Roundtrip",
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisGridShow": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 2,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 12,
+            "x": 0,
+            "y": 25
+          },
+          "id": 542,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "right",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "always",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 300
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "{{labels.pod.keyword}}",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "5",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "$$hashKey": "object:31",
+                  "field": "value",
+                  "id": "1",
+                  "meta": {},
+                  "settings": {},
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: 99thEtcdDiskBackendCommit",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "99th Backend I/O",
+          "transformations": [
+            {
+              "id": "convertFieldType",
+              "options": {}
+            }
+          ],
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "$Datasource"
+          },
+          "description": "",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisGridShow": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "fillOpacity": 80,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineWidth": 1,
+                "scaleDistribution": {
+                  "log": 10,
+                  "type": "log"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "s"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 5,
+            "w": 12,
+            "x": 12,
+            "y": 25
+          },
+          "id": 723,
+          "options": {
+            "barRadius": 0,
+            "barWidth": 0.97,
+            "fullHighlight": false,
+            "groupWidth": 0.7,
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "right",
+              "showLegend": false
+            },
+            "orientation": "horizontal",
+            "showValue": "always",
+            "stacking": "none",
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            },
+            "xTickLabelRotation": 0,
+            "xTickLabelSpacing": 300
+          },
+          "pluginVersion": "10.0.1",
+          "targets": [
+            {
+              "alias": "{{labels.pod.keyword}}",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "5",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "hide": false,
+              "metrics": [
+                {
+                  "$$hashKey": "object:31",
+                  "field": "value",
+                  "id": "1",
+                  "meta": {},
+                  "settings": {},
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-99thEtcdDiskBackendCommit",
+              "refId": "B",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum 99th Backend I/O",
+          "type": "barchart"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Average CPU usage across the aggregated replicas",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "cores"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 30
+          },
+          "id": 534,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": false,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "3",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "0",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: cpu-etcd",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Etcd CPU usage",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Maximum CPU usage across replicas",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "cores"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 30
+          },
+          "id": 724,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": false,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "3",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "0",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-cpu-etcd",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Maximum Etcd CPU usage",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Average RSS usage across the aggregated replicas",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 36
+          },
+          "id": 545,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": false,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "3",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "0",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: memory-etcd",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Etcd RSS usage",
+          "type": "bargauge"
+        },
+        {
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "description": "Max RSS usage across all replicas",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green"
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 36
+          },
+          "id": 599,
+          "options": {
+            "displayMode": "gradient",
+            "maxVizHeight": 300,
+            "minVizHeight": 10,
+            "minVizWidth": 0,
+            "namePlacement": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": false,
+            "sizing": "auto",
+            "valueMode": "color"
+          },
+          "pluginVersion": "10.4.0",
+          "targets": [
+            {
+              "alias": "",
+              "bucketAggs": [
+                {
+                  "field": "$compare_by.keyword",
+                  "id": "2",
+                  "settings": {
+                    "min_doc_count": "1",
+                    "order": "desc",
+                    "orderBy": "_term",
+                    "size": "10"
+                  },
+                  "type": "terms"
+                },
+                {
+                  "field": "timestamp",
+                  "id": "3",
+                  "settings": {
+                    "interval": "auto",
+                    "min_doc_count": "0",
+                    "timeZone": "utc",
+                    "trimEdges": "0"
+                  },
+                  "type": "date_histogram"
+                }
+              ],
+              "datasource": {
+                "type": "elasticsearch",
+                "uid": "${Datasource}"
+              },
+              "metrics": [
+                {
+                  "field": "value",
+                  "id": "1",
+                  "type": "avg"
+                }
+              ],
+              "query": "uuid.keyword: $uuid AND metricName.keyword: max-memory-etcd",
+              "refId": "A",
+              "timeField": "timestamp"
+            }
+          ],
+          "title": "Etcd max RSS usage",
+          "type": "bargauge"
+        }
+      ],
+      "title": "Etcd",
+      "type": "row"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 546,
+      "panels": [],
+      "repeat": "component",
+      "repeatDirection": "h",
+      "title": "$component",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "${Datasource}"
+      },
+      "description": "Average RSS across all replicas",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 9,
+        "x": 0,
+        "y": 16
+      },
+      "id": 547,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "asc"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.0.1",
+      "targets": [
+        {
+          "alias": "RSS",
+          "bucketAggs": [
+            {
+              "field": "$compare_by.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "hide": false,
+          "metrics": [
+            {
+              "field": "value",
+              "id": "1",
+              "type": "avg"
+            }
+          ],
+          "query": "uuid.keyword: $uuid AND metricName.keyword: memory-${component:raw}",
+          "refId": "C",
+          "timeField": "timestamp"
+        }
+      ],
+      "title": "Average RSS Usage $component",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "${Datasource}"
+      },
+      "description": "Maximum CPU across all replicas",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisGridShow": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "log": 10,
+              "type": "log"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "cores"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 9,
+        "y": 16
+      },
+      "id": 725,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.0.1",
+      "targets": [
+        {
+          "alias": "RSS",
+          "bucketAggs": [
+            {
+              "field": "$compare_by.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "hide": false,
+          "metrics": [
+            {
+              "field": "value",
+              "id": "1",
+              "settings": {},
+              "type": "avg"
+            }
+          ],
+          "query": "uuid.keyword: $uuid AND metricName.keyword: max-cpu-${component:raw}",
+          "refId": "C",
+          "timeField": "timestamp"
+        }
+      ],
+      "title": "Maximum CPU Usage $component",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "${Datasource}"
+      },
+      "description": "Max RSS across all replicas",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "log": 10,
+              "type": "log"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 7,
+        "x": 17,
+        "y": 16
+      },
+      "id": 548,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "text": {},
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.0.1",
+      "targets": [
+        {
+          "alias": "RSS",
+          "bucketAggs": [
+            {
+              "field": "$compare_by.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "hide": false,
+          "metrics": [
+            {
+              "field": "value",
+              "id": "1",
+              "type": "avg"
+            }
+          ],
+          "query": "uuid.keyword: $uuid AND metricName.keyword: max-memory-${component:raw}",
+          "refId": "C",
+          "timeField": "timestamp"
+        }
+      ],
+      "title": "Max RSS Usage $component",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "${Datasource}"
+      },
+      "description": "Average CPU across all replicas",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "yellow",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisGridShow": false,
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "log": 10,
+              "type": "log"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "cores"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "id": 536,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.0.1",
+      "targets": [
+        {
+          "alias": "RSS",
+          "bucketAggs": [
+            {
+              "field": "$compare_by.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "hide": false,
+          "metrics": [
+            {
+              "field": "value",
+              "id": "1",
+              "settings": {},
+              "type": "avg"
+            }
+          ],
+          "query": "uuid.keyword: $uuid AND metricName.keyword: cpu-${component:raw}",
+          "refId": "C",
+          "timeField": "timestamp"
+        }
+      ],
+      "title": "Average CPU Usage $component",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "${Datasource}"
+      },
+      "description": "Max aggregated memory usage seen in all replicas",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "log": 2,
+              "type": "log"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 21
+      },
+      "id": 608,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.97,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "pluginVersion": "10.0.1",
+      "targets": [
+        {
+          "alias": "RSS",
+          "bucketAggs": [
+            {
+              "field": "$compare_by.keyword",
+              "id": "2",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "10"
+              },
+              "type": "terms"
+            }
+          ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${Datasource}"
+          },
+          "hide": false,
+          "metrics": [
+            {
+              "field": "value",
+              "id": "1",
+              "type": "avg"
+            }
+          ],
+          "query": "uuid.keyword: $uuid AND metricName.keyword: max-memory-sum-${component:raw}",
+          "refId": "C",
+          "timeField": "timestamp"
+        }
+      ],
+      "title": "Max Aggregated RSS Usage $component",
+      "type": "barchart"
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": [
+    "kube-burner"
+  ],
+  "templating": {
+    "list": [
+      {
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "Datasource",
+        "options": [],
+        "query": "elasticsearch",
+        "queryValue": "",
+        "refresh": 1,
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "uid": "$Datasource"
+        },
+        "definition": "{\"find\": \"terms\", \"field\": \"platform.keyword\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Platform",
+        "multi": true,
+        "name": "platform",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"platform.keyword\"}",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "${Datasource}"
+        },
+        "definition": "{\"find\": \"terms\", \"field\": \"sdnType.keyword\", \"query\": \"platform.keyword: $platform\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "SDN type",
+        "multi": true,
+        "name": "sdn",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"sdnType.keyword\", \"query\": \"platform.keyword: $platform\"}",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "${Datasource}"
+        },
+        "definition": "{\"find\": \"terms\", \"field\": \"clusterType.keyword\", \"query\": \"platform.keyword: $platform\"}",
+        "hide": 0,
+        "includeAll": true,
+        "label": "clusterType",
+        "multi": true,
+        "name": "clusterType",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"clusterType.keyword\", \"query\": \"platform.keyword: $platform\"}",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "${Datasource}"
+        },
+        "definition": "{\"find\": \"terms\", \"field\": \"jobConfig.name.keyword\", \"query\": \"platform.keyword: $platform AND sdnType.keyword: $sdn AND clusterType.keyword: $clusterType AND NOT jobConfig.name: garbage-collection\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Job",
+        "multi": false,
+        "name": "job",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"jobConfig.name.keyword\", \"query\": \"platform.keyword: $platform AND sdnType.keyword: $sdn AND clusterType.keyword: $clusterType AND NOT jobConfig.name: garbage-collection\"}",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "${Datasource}"
+        },
+        "definition": "{\"find\": \"terms\", \"field\": \"workerNodesCount\", \"query\": \"platform.keyword: $platform AND sdnType.keyword: $sdn AND jobConfig.name.keyword: $job AND clusterType.keyword: $clusterType\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Workers",
+        "multi": false,
+        "name": "workerNodesCount",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"workerNodesCount\", \"query\": \"platform.keyword: $platform AND sdnType.keyword: $sdn AND jobConfig.name.keyword: $job AND clusterType.keyword: $clusterType\"}",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "${Datasource}"
+        },
+        "definition": "{\"find\": \"terms\", \"field\": \"ocpMajorVersion.keyword\", \"query\": \"platform.keyword: $platform AND sdnType.keyword: $sdn AND jobConfig.name.keyword: $job AND workerNodesCount: $workerNodesCount AND clusterType.keyword: $clusterType\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "OCP Major",
+        "multi": true,
+        "name": "ocpMajorVersion",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"ocpMajorVersion.keyword\", \"query\": \"platform.keyword: $platform AND sdnType.keyword: $sdn AND jobConfig.name.keyword: $job AND workerNodesCount: $workerNodesCount AND clusterType.keyword: $clusterType\"}",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "datasource": {
+          "uid": "$Datasource"
+        },
+        "definition": "{\"find\": \"terms\", \"field\": \"uuid.keyword\", \"query\": \"platform.keyword: $platform AND sdnType.keyword: $sdn AND jobConfig.name.keyword: $job AND workerNodesCount: $workerNodesCount  AND ocpMajorVersion.keyword: $ocpMajorVersion AND clusterType.keyword: $clusterType\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "UUID",
+        "multi": true,
+        "name": "uuid",
+        "options": [],
+        "query": "{\"find\": \"terms\", \"field\": \"uuid.keyword\", \"query\": \"platform.keyword: $platform AND sdnType.keyword: $sdn AND jobConfig.name.keyword: $job AND workerNodesCount: $workerNodesCount  AND ocpMajorVersion.keyword: $ocpMajorVersion AND clusterType.keyword: $clusterType\"}",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "metadata.ocpMajorVersion",
+          "value": "metadata.ocpMajorVersion"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Compare by",
+        "multi": false,
+        "name": "compare_by",
+        "options": [
+          {
+            "selected": false,
+            "text": "uuid",
+            "value": "uuid"
+          },
+          {
+            "selected": false,
+            "text": "metadata.ocpVersion",
+            "value": "metadata.ocpVersion"
+          },
+          {
+            "selected": true,
+            "text": "metadata.ocpMajorVersion",
+            "value": "metadata.ocpMajorVersion"
+          }
+        ],
+        "query": "uuid,metadata.ocpVersion,metadata.ocpMajorVersion",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "kube-apiserver",
+            "kube-controller-manager"
+          ],
+          "value": [
+            "kube-apiserver",
+            "kube-controller-manager"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "label": "Component",
+        "multi": true,
+        "name": "component",
+        "options": [
+          {
+            "selected": false,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "crio",
+            "value": "crio"
+          },
+          {
+            "selected": true,
+            "text": "kube-apiserver",
+            "value": "kube-apiserver"
+          },
+          {
+            "selected": true,
+            "text": "kube-controller-manager",
+            "value": "kube-controller-manager"
+          },
+          {
+            "selected": false,
+            "text": "kubelet",
+            "value": "kubelet"
+          },
+          {
+            "selected": false,
+            "text": "multus",
+            "value": "multus"
+          },
+          {
+            "selected": false,
+            "text": "openshift-apiserver",
+            "value": "openshift-apiserver"
+          },
+          {
+            "selected": false,
+            "text": "openshift-controller-manager",
+            "value": "openshift-controller-manager"
+          },
+          {
+            "selected": false,
+            "text": "ovn-control-plane",
+            "value": "ovn-control-plane"
+          },
+          {
+            "selected": false,
+            "text": "ovnkube-node",
+            "value": "ovnkube-node"
+          },
+          {
+            "selected": false,
+            "text": "prometheus",
+            "value": "prometheus"
+          },
+          {
+            "selected": false,
+            "text": "router",
+            "value": "router"
+          }
+        ],
+        "query": "crio,kube-apiserver,kube-controller-manager,kubelet,multus,openshift-apiserver,openshift-controller-manager,ovn-control-plane,ovnkube-node,prometheus,router",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "masters",
+            "workers",
+            "infra"
+          ],
+          "value": [
+            "masters",
+            "workers",
+            "infra"
+          ]
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Node roles",
+        "multi": true,
+        "name": "node_roles",
+        "options": [
+          {
+            "selected": true,
+            "text": "masters",
+            "value": "masters"
+          },
+          {
+            "selected": true,
+            "text": "workers",
+            "value": "workers"
+          },
+          {
+            "selected": true,
+            "text": "infra",
+            "value": "infra"
+          }
+        ],
+        "query": "masters,workers,infra",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "datasource": {
+          "type": "elasticsearch",
+          "uid": "${Datasource}"
+        },
+        "description": "This filter will be applied to the selected UUIDs",
+        "filters": [],
+        "hide": 0,
+        "name": "Filter",
+        "skipUrlSync": false,
+        "type": "adhoc"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "utc",
+  "title": "Kube-burner report mode",
+  "uid": "D5E8c5XVz",
+  "version": 106,
+  "weekStart": ""
+}
