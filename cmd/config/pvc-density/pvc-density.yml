@@ -36,11 +36,6 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
     objects:
 
-      - objectTemplate: storageclass.yml
-        inputVars:
-          storageProvisioner: {{.STORAGE_PROVISIONER}}
-        replicas: 1
-
   - name: pvc-density
     namespace: pvc-density
     jobIterations: {{.JOB_ITERATIONS}}

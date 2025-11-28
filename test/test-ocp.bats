@@ -189,8 +189,7 @@ teardown_file() {
 }
 
 @test "pvc-density" {
-  PVC_DENSITY_PROVISIONER=${PVC_DENSITY_PROVISIONER:-oci}
-  run_cmd ${KUBE_BURNER_OCP} pvc-density --iterations=2 --provisioner $PVC_DENSITY_PROVISIONER
+  run_cmd ${KUBE_BURNER_OCP} pvc-density --iterations=2
 }
 
 @test "virt-ephemeral-restart" {
