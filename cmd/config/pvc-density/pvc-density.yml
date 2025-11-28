@@ -56,6 +56,7 @@ jobs:
         replicas: 1
         inputVars:
           claimSize: {{.CLAIM_SIZE}}
+          storageClassName: {{.STORAGE_CLASS_NAME}}
 
       - objectTemplate: pod.yml
         replicas: 1
