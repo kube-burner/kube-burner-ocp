@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ocp
+package workloads
 
 import (
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner-ocp/pkg/clusterhealth"
 	"github.com/kube-burner/kube-burner/pkg/config"
+
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -41,7 +43,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			if cmd.Name() == "cluster-density-v2" {
 				kubeClientProvider := config.NewKubeClientProvider("", "")
 				clientSet, _ := kubeClientProvider.ClientSet(0, 0)
-				if err := isClusterImageRegistryAvailable(clientSet); err != nil {
+				if err := clusterhealth.IsClusterImageRegistryAvailable(clientSet); err != nil {
 					log.Fatal(err.Error())
 				}
 			}
