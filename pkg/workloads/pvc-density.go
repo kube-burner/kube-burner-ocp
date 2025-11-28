@@ -48,7 +48,7 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().StringVarP(&storageClassName, "sc", "storage-class-name", "", "Storage class name, ommited by default")
+	cmd.Flags().StringVar(&storageClassName, "storage-class-name", "", "Storage class name, leave this empty to use the default one")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", iterations))
 	cmd.Flags().StringVar(&claimSize, "claim-size", "256Mi", "claim-size=256Mi")
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
