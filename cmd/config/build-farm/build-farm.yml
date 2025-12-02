@@ -28,6 +28,7 @@ jobs:
   - name: build-farm-controller
     namespace: build-farm-controllers
     jobIterations: 1
+    skipIndexing: true
     namespacedIterations: false
     preLoadImages: false
     objects:
