@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/cloud-bulldozer/go-commons/v2 v2.1.1
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner v1.17.7
+	github.com/kube-burner/kube-burner v1.18.1
 	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
 	github.com/openshift/client-go v0.0.0-20240821135114-75c118605d5f
 	github.com/praserx/ipconv v1.2.1
@@ -100,3 +100,5 @@ require (
 )
 
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // Replacements are not inherited from dependencies, this replacement is required by kubevirt.io/client-go prevents updating this module accidentally
+
+exclude github.com/kube-burner/kube-burner v1.20.6 // Published accidentally

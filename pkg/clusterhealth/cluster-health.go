@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ocp
+package clusterhealth
 
 import (
 	"context"
@@ -36,13 +36,13 @@ func ClusterHealth() *cobra.Command {
 		Use:   "cluster-health",
 		Short: "Checks for ocp cluster health",
 		Run: func(cmd *cobra.Command, args []string) {
-			ClusterHealthCheck()
+			ClusterHealthCheck(false)
 		},
 	}
 	return cmd
 }
 
-func ClusterHealthCheck() {
+func ClusterHealthCheck(ignoreHealthCheck bool) {
 	log.Infof("❤️ Checking for Cluster Health")
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
@@ -53,7 +53,11 @@ func ClusterHealthCheck() {
 	if util.ClusterHealthyVanillaK8s(clientSet) && isClusterHealthy(clientSet, openshiftClientset) {
 		log.Infof("Cluster is Healthy")
 	} else {
-		log.Fatalf("Cluster is Unhealthy")
+		if ignoreHealthCheck {
+			log.Warn("Cluster is Unhealthy, continuing execution")
+		} else {
+			log.Fatal("Cluster is Unhealthy")
+		}
 	}
 }
 
@@ -94,7 +98,7 @@ func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versio
 	return isHealthy
 }
 
-func isClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
+func IsClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
 	deployment, err := clientset.AppsV1().Deployments("openshift-image-registry").Get(context.TODO(), "image-registry", metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Error getting deployment: %v", err)
@@ -106,7 +110,7 @@ func isClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
 	return fmt.Errorf("Deployment image-registry in namespace openshift-image-registry doesn't have available replicas")
 }
 
-func isOLMv1Enabled(clientset kubernetes.Interface) error {
+func IsOLMv1Enabled(clientset kubernetes.Interface) error {
 	deployment, err := clientset.AppsV1().Deployments("openshift-catalogd").Get(context.TODO(), "catalogd-controller-manager", metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Error getting deployment: %v", err)

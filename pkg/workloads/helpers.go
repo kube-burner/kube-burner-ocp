@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ocp
+package workloads
 
 import (
 	"context"
@@ -189,7 +189,7 @@ func deletePVsForNamespaces(ctx context.Context, connector k8sconnector.K8SConne
 	deletingPVs := make(map[string]struct{})
 	for _, pv := range pvs.Items {
 		// PV not claimed
-		if pv.Spec.ClaimRef != nil {
+		if pv.Spec.ClaimRef == nil {
 			continue
 		}
 		// PV not claimed by test namespace
