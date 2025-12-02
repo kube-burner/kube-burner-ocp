@@ -5,6 +5,9 @@ metadata:
     app: pvc-density-{{.Iteration}}
   name: pvc-{{.Iteration}}
 spec:
+{{ if .storageClassName }}
+  storageClassName: {{ .storageClassName }}
+{{ end }}
   accessModes:
   -  ReadWriteOnce
   resources:

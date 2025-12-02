@@ -4,7 +4,6 @@ metadata:
   name: {{.JobName}}-{{.Replica}}
   labels:
     group: test-job
-  annotations:
     kueue.x-k8s.io/queue-name: kueue-scale
 spec:
   parallelism: {{.parallelism}}
