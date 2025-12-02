@@ -112,7 +112,7 @@ func openShiftCmd() *cobra.Command {
 		if err := ocpWorkloads.GatherMetadata(&wh, alerting); err != nil {
 			log.Fatal(err.Error())
 		}
-	}	
+	}
 	ocpCmd.AddCommand(
 		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-v2"),
 		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-ms"),
@@ -146,7 +146,7 @@ func openShiftCmd() *cobra.Command {
 		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-jobs"),
 		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
 		ocpWorkloads.NewANPDensityPods(&wh, "anp-density-pods"),
-        ocpWorkloads.NewBuildFarm(&wh),
+		ocpWorkloads.NewBuildFarm(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
