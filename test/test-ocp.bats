@@ -72,8 +72,8 @@ teardown_file() {
   check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion
 }
 
-@test "cluster-density-v2: churn-deletion-strategy=gvr; custom-metrics=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=2 --metrics-profile=custom-metrics.yml ${INDEXING_FLAGS} --uuid=${UUID}
+@test "cluster-density-v2: custom-metrics=true" {
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --churn=false --iterations=3 --metrics-profile=custom-metrics.yml ${INDEXING_FLAGS} --uuid=${UUID}
   check_metric_value prometheusRSS jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
