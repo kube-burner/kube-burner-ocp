@@ -199,9 +199,9 @@
   metricName: nodeMajorFaults
 
 # cgroup CPU instantaneous per-second rate of increase over the last 2 minutes
-- query: sum (  irate( container_cpu_usage_seconds_total { id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }[2m])  )  by   (   id , instance )
+- query: sum (  irate( container_cpu_usage_seconds_total { id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }[2m])  )  by   (   id , node )
   metricName: cgroupCPU
 
 # RSS Memory
-- query: sum( container_memory_rss { id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice"}) by (id, instance)
+- query: sum( container_memory_rss { id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice"}) by (id, node)
   metricName: cgroupMemoryRSS
