@@ -32,7 +32,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	var iterations, churnPercent, churnCycles int
 	var churn, svcLatency, pprof bool
 	var churnDelay, churnDuration time.Duration
-	var deletionStrategy string
+	var deletionStrategy, churnMode string
 	var podReadyThreshold time.Duration
 	var metricsProfiles []string
 	var rc int
@@ -63,6 +63,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
+			AdditionalVars["CHURN_MODE"] = churnMode
 
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -77,6 +78,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")

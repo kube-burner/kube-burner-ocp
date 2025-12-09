@@ -43,6 +43,7 @@ jobs:
       duration: {{.CHURN_DURATION}}
       percent: {{.CHURN_PERCENT}}
       delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
