@@ -4,7 +4,7 @@ metadata:
   name: cluster-queue-{{ sub .Replica 1 }}
 spec:
   namespaceSelector: {} # match all.
-  cohort: "shared-cq"
+  cohortName: "shared-cq"
   resourceGroups:
   - coveredResources: [pods]
     flavors:
