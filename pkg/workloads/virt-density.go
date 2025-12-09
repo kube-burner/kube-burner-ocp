@@ -18,7 +18,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -26,7 +27,7 @@ import (
 
 // Returns virt-density workload
 func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
-	var vmImage, deletionStrategy string
+	var vmImage, deletionStrategy, churnMode string
 	var vmsPerNode, iterationsPerNamespace, churnPercent, churnCycles int
 	var vmiRunningThreshold time.Duration
 	var namespacedIterations, churn bool
@@ -55,6 +56,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
+			AdditionalVars["CHURN_MODE"] = churnMode
 			setMetrics(cmd, metricsProfiles)
 			AddVirtMetadata(wh, vmImage, "", "")
 
@@ -69,12 +71,13 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", false, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 10, "Iterations per namespace")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
-	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", "gvr", "Deletion strategy to use, values: 'gvr' (object delete) or 'default' (namespace delete)")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.GVRDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	return cmd
 }

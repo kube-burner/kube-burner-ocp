@@ -19,8 +19,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +33,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles int
 	var churn, l3 bool
 	var churnDelay, churnDuration time.Duration
-	var deletionStrategy, jobPause, vmImage, bindingMethod string
+	var deletionStrategy, jobPause, vmImage, bindingMethod, churnMode string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "virt-udn-density",
@@ -67,7 +67,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["UDN_BINDING_METHOD"] = bindingMethod
 			AdditionalVars["ENABLE_LAYER_3"] = l3
-
+			AdditionalVars["CHURN_MODE"] = churnMode
 			if l3 {
 				log.Info("Layer 3 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer3", bindingMethod)
@@ -90,7 +90,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", config.DefaultDeletionStrategy, "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "Job iterations")
 	cmd.Flags().IntVar(&iterations, "iteration", 1, "iterations")
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 50, "VMs per node")

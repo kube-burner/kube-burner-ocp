@@ -19,7 +19,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 
 	"github.com/spf13/cobra"
 )
@@ -30,7 +31,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var metricsProfiles []string
 	var iterations, churnCycles, churnPercent, cpu, memory, maxPods int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
-	var deletionStrategy, tag string
+	var deletionStrategy, tag, churnMode string
 	var churn bool
 	cmd := &cobra.Command{
 		Use:          variant,
@@ -42,6 +43,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
@@ -61,7 +63,8 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "gvr", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.GVRDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().StringVar(&tag, "version", "v1.33.0", "Image tag version of the kubemark container")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")

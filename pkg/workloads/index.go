@@ -25,11 +25,11 @@ import (
 
 	"github.com/cloud-bulldozer/go-commons/v2/indexers"
 	"github.com/cloud-bulldozer/go-commons/v2/version"
-	"github.com/kube-burner/kube-burner/pkg/burner"
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/prometheus"
-	"github.com/kube-burner/kube-burner/pkg/util/metrics"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/burner"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/prometheus"
+	"github.com/kube-burner/kube-burner/v2/pkg/util/metrics"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

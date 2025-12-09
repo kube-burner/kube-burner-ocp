@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/kube-burner/kube-burner-ocp/pkg/clusterhealth"
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +29,7 @@ import (
 // NewOLMv1 holds OLMv1 workload
 func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations int
-	var catalogImage, deletionStrategy, namespace, prefixPkgName, prefixImgName string
+	var catalogImage, deletionStrategy, namespace, prefixPkgName, prefixImgName, churnMode string
 	var metricsProfiles []string
 	var rc, iterationsPerNamespace, churnCycles, churnPercent int
 	var pprof, namespacedIterations, churn bool
@@ -55,6 +55,7 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["NAMESPACE"] = namespace
 			AdditionalVars["PREFIX_PKG_NAME_V1"] = prefixPkgName
@@ -72,7 +73,8 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 5, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "gvr", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.GVRDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 20, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 10, "Iterations per namespace")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")

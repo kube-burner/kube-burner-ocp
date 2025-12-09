@@ -18,8 +18,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +30,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churn, l3, simple, pprof bool
 	var jobPause time.Duration
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var deletionStrategy string
+	var deletionStrategy, churnMode string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -61,7 +61,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
-
+			AdditionalVars["CHURN_MODE"] = churnMode
 			rc = wh.RunWithAdditionalVars("udn-density-pods.yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -77,7 +77,8 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", config.DefaultDeletionStrategy, "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
