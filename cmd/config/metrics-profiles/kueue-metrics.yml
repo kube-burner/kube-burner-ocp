@@ -38,3 +38,4 @@
 
 - query: kueue_build_info
   metricName: KueueBuildInfo
+  instant: true
