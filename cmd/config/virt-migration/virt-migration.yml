@@ -47,7 +47,7 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml
@@ -93,7 +93,7 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
   objects:
 
   - objectTemplate: templates/vm.yml
@@ -122,7 +122,7 @@ jobs:
     - apiVersion: kubevirt.io/v1
       kind: VirtualMachine
       labelSelector:
-        kube-burner-job: {{ $createMigratingVMsJobName }}
+        kube-burner.io/job: {{ $createMigratingVMsJobName }}
       patchType: "application/merge-patch+json"
       objectTemplate: templates/remove_affinity_patch.yml
 
@@ -133,8 +133,8 @@ jobs:
   jobIterations: 1
   maxWaitTimeout: 1h
   waitWhenFinished: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
   objects:
   - kubeVirtOp: migrate
     labelSelector:
-      kube-burner-job: {{ $createMigratingVMsJobName }}
+      kube-burner.io/job: {{ $createMigratingVMsJobName }}

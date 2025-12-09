@@ -26,7 +26,7 @@ setup() {
 }
 
 teardown() {
-  oc delete ns -l kube-burner-uuid="${UUID}" --ignore-not-found
+  oc delete ns -l kube-burner.io/uuid="${UUID}" --ignore-not-found
 }
 
 teardown_file() {
@@ -82,7 +82,7 @@ teardown_file() {
   PODS_PER_NODE=$(calculate_pods_per_node)
   echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
   run_cmd ${KUBE_BURNER_OCP} node-density-cni --pods-per-node=${PODS_PER_NODE} --gc=false --uuid=${UUID} --alerting=false
-  oc delete ns -l kube-burner-uuid=${UUID} --wait=false
+  oc delete ns -l kube-burner.io/uuid=${UUID} --wait=false
   trap - ERR
 }
 
@@ -218,8 +218,8 @@ teardown_file() {
   # Disable garbage-collection through using the config file
   sed -i 's/gc: {{.GC}}/gc: false/g' crd-scale.yml
   run_cmd ${KUBE_BURNER_OCP} crd-scale --iterations=5
-  verify_object_count crd 5 "" "kube-burner-job=crd-scale"
-  oc delete crd -l kube-burner-job=crd-scale
+  verify_object_count crd 5 "" "kube-burner.io/job=crd-scale"
+  oc delete crd -l kube-burner.io/job=crd-scale
   git clean -fd
 }
 
