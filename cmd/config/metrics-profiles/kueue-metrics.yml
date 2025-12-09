@@ -35,3 +35,6 @@
 
 - query: histogram_quantile(0.99, rate(kueue_admission_wait_time_seconds_bucket[2m]))
   metricName: P99KueueAdmissionWaitTime
+
+- query: kueue_build_info
+  metricName: KueueBuildInfo
