@@ -18,15 +18,16 @@ import (
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
-	var churn, namespacedIterations, svcLatency bool
+	var namespacedIterations, svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var configFile, deletionStrategy string
+	var configFile, deletionStrategy, churnMode string
 	var iterations, churnPercent, churnCycles, iterationsPerNamespace, podsPerNode int
 	var rc int
 	cmd := &cobra.Command{
@@ -55,11 +56,11 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				jobIterations = (totalPods - podCount) / 2
 			}
 
-			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
@@ -75,12 +76,12 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&configFile, "config", "c", "", "Config file path or url")
-	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 5*time.Minute, "Churn duration")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations. Mutually exclusive with '--pods-per-node'")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1, "Iterations per namespace")
 	// Adding a super set of flags from other commands so users can decide if they want to use them

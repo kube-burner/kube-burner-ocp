@@ -32,7 +32,7 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var catalogImage, deletionStrategy, namespace, prefixPkgName, prefixImgName, churnMode string
 	var metricsProfiles []string
 	var rc, iterationsPerNamespace, churnCycles, churnPercent int
-	var pprof, namespacedIterations, churn bool
+	var pprof, namespacedIterations bool
 	var churnDuration, churnDelay time.Duration
 
 	cmd := &cobra.Command{
@@ -50,7 +50,6 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
-			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -69,9 +68,8 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", false, "Namespaced iterations")
-	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 5, "Churn cycles to execute")
-	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
+	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.GVRDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
