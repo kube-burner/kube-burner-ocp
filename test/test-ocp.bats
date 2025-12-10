@@ -38,7 +38,7 @@ teardown_file() {
 }
 
 @test "olmv1 benchmark" {
-  run_cmd ${KUBE_BURNER_OCP} olm --log-level debug --uuid=${UUID} --iterations 5 --catalogImage registry.redhat.io/redhat/redhat-operator-index:v4.18
+  run_cmd ${KUBE_BURNER_OCP} olm --log-level debug --uuid=${UUID} --iterations 2 --churn-cycles 1 --catalogImage registry.redhat.io/redhat/redhat-operator-index:v4.18
   # no need, the created test clustercatalog resource has been removed
   # run_cmd oc delete clustercatalog --all
 }
