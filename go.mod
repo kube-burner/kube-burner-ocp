@@ -7,7 +7,7 @@ toolchain go1.23.4
 require (
 	github.com/cloud-bulldozer/go-commons/v2 v2.2.0
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner/v2 v2.0.0
+	github.com/kube-burner/kube-burner/v2 v2.0.1
 	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
 	github.com/openshift/client-go v0.0.0-20240821135114-75c118605d5f
 	github.com/praserx/ipconv v1.2.1
@@ -26,7 +26,6 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
-	github.com/cloud-bulldozer/go-commons v1.0.19 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.13.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
