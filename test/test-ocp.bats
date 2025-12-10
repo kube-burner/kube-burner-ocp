@@ -64,7 +64,7 @@ teardown_file() {
 }
 
 @test "cluster-density-ms: metrics-endpoint=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-ms --iterations=1 --churn-duration=0 --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-ms --iterations=1 --uuid=${UUID}
 }
 
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
@@ -73,7 +73,7 @@ teardown_file() {
 }
 
 @test "cluster-density-v2: custom-metrics=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --churn-duration=0 --iterations=3 --metrics-profile=custom-metrics.yml ${INDEXING_FLAGS} --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=3 --metrics-profile=custom-metrics.yml ${INDEXING_FLAGS} --uuid=${UUID}
   check_metric_value prometheusRSS jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
@@ -128,7 +128,7 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} udn-density-pods --extract
   # Disable garbage-collection through using the config file
   sed -i 's/jobPause: 5m/jobPause: 5s/g' udn-density-pods.yml
-  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --churn-duration=0
+  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true
 }
 
 @test "cluster-health" {
