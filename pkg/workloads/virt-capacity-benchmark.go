@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"time"
 
 	k8sstorage "github.com/cloud-bulldozer/go-commons/v2/k8s-storage"
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
@@ -52,6 +53,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var cleanupOnly bool
 	var cleanup bool
+	var jobIterationDelay time.Duration
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtCapacityBenchmarkTestName,
@@ -128,6 +130,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["dataVolumeSize"] = dataVolumeSize
 			AdditionalVars["volumeSizeIncrement"] = volumeSizeIncrement
 			AdditionalVars["skipResizeJob"] = skipResizeJob
+			AdditionalVars["jobIterationDelay"] = jobIterationDelay
 
 			setMetrics(cmd, metricsProfiles)
 
@@ -172,5 +175,6 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanupOnly, "cleanup-only", false, "Only cleanup the resource created by the previous run. Do not run the test.")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup the resource created by the test.")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
 	return cmd
 }

@@ -77,7 +77,7 @@ jobs:
         replicas: 1
 
       - objectTemplate: pod-reader-pod.yml
-        replicas: 1       
+        replicas: 1
 
       - objectTemplate: pod-reader-service.yml
         replicas: 1
@@ -126,7 +126,7 @@ jobs:
         replicas: 1
         inputVars:
           podReplicas: 1
-          tenant: "anp-restricted"          
+          tenant: "anp-restricted"
 
   - name: anp-open-pods
     namespace: anp-open
@@ -148,7 +148,7 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
-      tenant: anp-open 
+      tenant: anp-open
     objects:
 
       - objectTemplate: postgres-deployment.yml
@@ -172,7 +172,7 @@ jobs:
         replicas: 1
         inputVars:
           podReplicas: 1
-          tenant: "anp-open" 
+          tenant: "anp-open"
 
   - name: anp-cidr-pods
     namespace: anp-cidr
@@ -194,7 +194,7 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
-      tenant: anp-cidr    
+      tenant: anp-cidr
     objects:
 
       - objectTemplate: postgres-deployment.yml
@@ -219,7 +219,7 @@ jobs:
         inputVars:
           podReplicas: 1
           tenant: "anp-cidr"
-          
+
   - name: anp-create-policy
     jobType: create
     namespace: default
@@ -228,7 +228,7 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: false
     podWait: false
-    churn: {{.CHURN}}    
+    churn: {{.CHURN}}
     waitWhenFinished: true
     preLoadImages: true
     preLoadPeriod: 30s
@@ -256,4 +256,3 @@ jobs:
 
       - objectTemplate: anp-allow-openshift-kubeapi.yml
         replicas: 1
-

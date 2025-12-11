@@ -17,6 +17,7 @@ package workloads
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 
@@ -34,6 +35,7 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	var defaultJobReplicas, podReplicas, jobReplicas, defaultIterations, parallelism int
 	var QPS, burst int
 	var podsQuota int
+	var jobIterationDelay time.Duration
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
@@ -52,6 +54,7 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			AdditionalVars["WORKLOAD_RUNTIME"] = workloadRuntime
 			AdditionalVars["QPS"] = QPS
 			AdditionalVars["BURST"] = burst
+			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -76,6 +79,7 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", defaultIterations, "Number of iterations/namespaces")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"kueue-metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
 	cmd.PersistentFlags().IntVar(&QPS, "qps", 10, "QPS")
 	cmd.PersistentFlags().IntVar(&burst, "burst", 10, "Burst")
 	return cmd

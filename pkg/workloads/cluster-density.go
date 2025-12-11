@@ -31,7 +31,7 @@ import (
 func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, churnPercent, churnCycles int
 	var churn, svcLatency, pprof bool
-	var churnDelay, churnDuration time.Duration
+	var churnDelay, churnDuration, jobIterationDelay time.Duration
 	var deletionStrategy string
 	var podReadyThreshold time.Duration
 	var metricsProfiles []string
@@ -63,6 +63,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
+			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
 
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -81,6 +82,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }

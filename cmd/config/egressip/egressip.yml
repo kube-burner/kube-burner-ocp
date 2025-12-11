@@ -1,5 +1,5 @@
 # This workload has special hardware requirements.
-# In order to meet those requirements we have added CI tests in e2e-benchmarking: 
+# In order to meet those requirements we have added CI tests in e2e-benchmarking:
 # https://github.com/openshift/release/tree/master/ci-operator/step-registry/cloud-bulldozer/e2e-benchmarking
 ---
 global:
@@ -49,7 +49,7 @@ jobs:
 
       - objectTemplate: prometheus_role_binding.yml
         replicas: 1
-      
+
       - objectTemplate: pod_monitor.yml
         replicas: 1
 
@@ -58,7 +58,7 @@ jobs:
         inputVars:
           eipAddresses: {{.EIP_ADDRESSES}}
           addrPerIteration: {{.ADDRESSES_PER_ITERATION}}
-          
+
       - objectTemplate: deployment-client.yml
         replicas: 1
         inputVars:

@@ -16,6 +16,7 @@ package workloads
 
 import (
 	"os"
+	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	log "github.com/sirupsen/logrus"
@@ -41,6 +42,7 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var clonesPerIteration int
 	var metricsProfiles []string
 	var volumeAccessMode string
+	var jobIterationDelay time.Duration
 	var rc int
 	cmd := &cobra.Command{
 		Use:          dvCloneTestName,
@@ -72,6 +74,7 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
 			AdditionalVars["iterations"] = iterations
 			AdditionalVars["clonesPerIteration"] = clonesPerIteration
+			AdditionalVars["jobIterationDelay"] = jobIterationDelay
 
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
@@ -89,5 +92,6 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&containerDiskUrl, "container-disk", dvCloneDefaultContainerDiskUrl, "URL of the container disk to load into the volume")
 	cmd.Flags().StringVar(&dataVolumeSize, "datavolume-size", dvCloneDefaultDataVolumeSize, "Size of the DataVolume to create")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
 	return cmd
 }

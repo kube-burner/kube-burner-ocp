@@ -12,7 +12,7 @@ metricsEndpoints:
       insecureSkipVerify: true
       esServers: [{{.ES_SERVER}}]
       defaultIndex: {{.ES_INDEX}}
-      type: opensearch      
+      type: opensearch
 {{ end }}
 {{ if .LOCAL_INDEXING }}
   - metrics: [{{.METRICS}}]
@@ -21,7 +21,7 @@ metricsEndpoints:
       type: local
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
-  
+
 jobs:
 
   - name: prereqs

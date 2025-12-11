@@ -27,7 +27,7 @@ metricsEndpoints:
 {{ end }}
 jobs:
   - name: whereabouts
-    namespace: kube-burner-whereabouts-{{.JOB_ITERATIONS}} 
+    namespace: kube-burner-whereabouts-{{.JOB_ITERATIONS}}
     jobIterations: {{.JOB_ITERATIONS}}
     podWait: true
     qps: {{.QPS}}
