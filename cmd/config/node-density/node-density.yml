@@ -49,6 +49,7 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: {{.NAMESPACED_ITERATIONS}}
     iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
+    jobIterationDelay: {{.JOB_ITERATION_DELAY}}
     churn: {{.CHURN}}
     churnCycles: {{.CHURN_CYCLES}}
     churnDuration: {{.CHURN_DURATION}}

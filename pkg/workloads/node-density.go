@@ -30,7 +30,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	var rc int
 	var metricsProfiles []string
 	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent int
-	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
+	var podReadyThreshold, churnDuration, churnDelay, jobIterationDelay, probesPeriod time.Duration
 	var containerImage, deletionStrategy string
 	var namespacedIterations, churn, pprof, svcLatency bool
 	cmd := &cobra.Command{
@@ -49,11 +49,14 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
-			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
+			if variant == "node-density-heavy" {
+				AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
+			}
 			AdditionalVars["CONTAINER_IMAGE"] = containerImage
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
+			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 
@@ -92,5 +95,6 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1000, "Iterations per namespace")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
 	return cmd
 }
