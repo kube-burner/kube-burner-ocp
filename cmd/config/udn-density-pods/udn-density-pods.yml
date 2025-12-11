@@ -42,7 +42,7 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
-  {{ if not .CHURN }}
+  {{ if and (eq .CHURN_DURATION 0) (eq .CHURN_CYCLES 0) }}
   {{ if .ENABLE_LAYER_3 }}
   - name: create-udn-l3
   {{ else }}
@@ -90,11 +90,12 @@ jobs:
     waitWhenFinished: true
     preLoadImages: true
     preLoadPeriod: 15s
-    churn: {{.CHURN}}
-    churnCycles: {{.CHURN_CYCLES}}
-    churnDuration: {{.CHURN_DURATION}}
-    churnPercent: {{.CHURN_PERCENT}}
-    churnDelay: {{.CHURN_DELAY}}
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
     jobPause: 5m
     metricsClosing: afterJobPause
     cleanup: false
@@ -105,7 +106,7 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
-      {{ if .CHURN }}
+      {{ if and (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
       {{ if .ENABLE_LAYER_3 }}
       - objectTemplate: udn_l3.yml
         replicas: 1

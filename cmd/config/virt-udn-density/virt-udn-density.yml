@@ -32,7 +32,7 @@ jobs:
   {{ else }}
   - name: create-udn-l2
   {{ end }}
-    namespace: virt-density
+    namespace: virt-density-udn
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
@@ -41,11 +41,12 @@ jobs:
     waitWhenFinished: true
     preLoadImages: true
     preLoadPeriod: 15s
-    churn: {{.CHURN}}
-    churnCycles: {{.CHURN_CYCLES}}
-    churnDuration: {{.CHURN_DURATION}}
-    churnPercent: {{.CHURN_PERCENT}}
-    churnDelay: {{.CHURN_DELAY}}
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
     jobPause: {{.JOB_PAUSE}}
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
@@ -63,7 +64,7 @@ jobs:
       {{ end }}
 
   - name: virt-density-udn
-    namespace: virt-density
+    namespace: virt-density-udn
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}

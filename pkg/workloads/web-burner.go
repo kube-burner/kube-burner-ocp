@@ -19,7 +19,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	"github.com/spf13/cobra"
 )
 

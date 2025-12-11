@@ -23,9 +23,9 @@ import (
 	uid "github.com/google/uuid"
 	"github.com/kube-burner/kube-burner-ocp/pkg/clusterhealth"
 	ocpWorkloads "github.com/kube-burner/kube-burner-ocp/pkg/workloads"
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/util"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/util"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )

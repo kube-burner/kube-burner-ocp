@@ -51,11 +51,12 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: {{.NAMESPACED_ITERATIONS}}
     iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
-    churn: {{.CHURN}}
-    churnCycles: {{.CHURN_CYCLES}}
-    churnDuration: {{.CHURN_DURATION}}
-    churnPercent: {{.CHURN_PERCENT}}
-    churnDelay: {{.CHURN_DELAY}}
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
     podWait: true
     waitWhenFinished: true
     preLoadImages: true
@@ -79,11 +80,11 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: {{.NAMESPACED_ITERATIONS}}
     iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
-    churn: {{.CHURN}}
-    churnCycles: {{.CHURN_CYCLES}}
-    churnDuration: {{.CHURN_DURATION}}
-    churnPercent: {{.CHURN_PERCENT}}
-    churnDelay: {{.CHURN_DELAY}}
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
     executionMode: parallel
     verifyObjects: true
     errorOnVerify: true

@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	"github.com/praserx/ipconv"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

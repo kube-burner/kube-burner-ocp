@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -282,7 +282,7 @@ spec:
 // NewUDNDensityPods holds udn-density-pods workload
 func NewANPDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
-	var churn, svcLatency, simple, pprof bool
+	var svcLatency, simple, pprof bool
 	var jobPause time.Duration
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var metricsProfiles []string
@@ -293,13 +293,12 @@ func NewANPDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
 
-			if churn {
+			if churnDuration > 0 || churnCycles > 0 {
 				log.Info("Churn is enabled, there will not be a pause after UDN creation")
 			}
 
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["SIMPLE"] = simple
-			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -341,9 +340,8 @@ func NewANPDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().DurationVar(&jobPause, "job-pause", 0, "Time to pause after finishing the job that creates the UDN")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
-	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
-	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
+	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Iterations")

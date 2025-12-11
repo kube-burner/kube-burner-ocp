@@ -177,7 +177,7 @@ This workload family is a control-plane density focused workload that that creat
 Each iteration of these create a new namespace, the three support similar configuration flags. Check them out from the subcommand help.
 
 !!! Info
-    Workload churning of 1h is enabled by default in the `cluster-density` workloads; you can disable it by passing `--churn=false` to the workload subcommand.
+    Workload churning of 1h is enabled by default in the `cluster-density` workloads; you can disable it by passing `--churn-duration=0` to the workload subcommand.
 
 ### cluster-density-v2
 
@@ -1020,19 +1020,19 @@ Usage:
   kube-burner-ocp init [flags]
 
 Flags:
-    --churn                            Enable churning (default true)
-    --churn-cycles int                 Churn cycles to execute
-    --churn-delay duration             Time to wait between each churn (default 2m0s)
-    --churn-deletion-strategy string   Churn deletion strategy to use (default "default")
-    --churn-duration duration          Churn duration (default 5m0s)
-    --churn-percent int                Percentage of job iterations that kube-burner will churn each round (default 10)
-    -c, --config string                    Config file path or url
-    -h, --help                             help for init
-    --iterations int                   Job iterations. Mutually exclusive with '--pods-per-node' (default 1)
-    --iterations-per-namespace int     Iterations per namespace (default 1)
-    --namespaced-iterations            Namespaced iterations (default true)
-    --pods-per-node int                Pods per node. Mutually exclusive with '--iterations' (default 50)
-    --service-latency                  Enable service latency measurement
+      --churn-cycles int               Churn cycles to execute
+      --churn-delay duration           Time to wait between each churn (default 2m0s)
+      --churn-duration duration        Churn duration (default 5m0s)
+      --churn-mode string              Either namespaces, to churn entire namespaces or objects, to churn individual objects (default "namespaces")
+      --churn-percent int              Percentage of job iterations that kube-burner will churn each round (default 10)
+  -c, --config string                  Config file path or url
+      --deletion-strategy string       GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace (default "default")
+  -h, --help                           help for init
+      --iterations int                 Job iterations. Mutually exclusive with '--pods-per-node'
+      --iterations-per-namespace int   Iterations per namespace (default 1)
+      --namespaced-iterations          Namespaced iterations (default true)
+      --pods-per-node int              Pods per node. Mutually exclusive with '--iterations'
+      --service-latency                Enable service latency measurement
 ```
 
 Creating a custom workload for kube-burner-ocp is a seamless process, and you have the flexibility to craft it according to your specific needs. Below is a template to guide you through the customization of your workload:
