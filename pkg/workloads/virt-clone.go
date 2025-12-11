@@ -46,7 +46,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var volumeAccessMode string
 	var verifyEachIteration bool
-	var jobIterationDelay time.Duration
+	var jobIterationDelay, namespaceDelay time.Duration
 	var verifyMaxWaitTime time.Duration
 	var dataVolumeCount int
 	var rc int
@@ -81,6 +81,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["clonesPerIteration"] = clonesPerIteration
 			AdditionalVars["verifyEachIteration"] = verifyEachIteration
 			AdditionalVars["jobIterationDelay"] = jobIterationDelay
+			AdditionalVars["namespaceDelay"] = namespaceDelay
 			AdditionalVars["verifyMaxWaitTime"] = verifyMaxWaitTime
 			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
 
@@ -100,6 +101,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().BoolVar(&verifyEachIteration, "verify-each-iteration", true, "Wait for each iteration to complete and verify before starting the next one")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	cmd.Flags().DurationVar(&verifyMaxWaitTime, "verify-max-wait-time", 1*time.Hour, "Max wait time for clone creation waiting")
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", virtCloneDefaultDataVolumeCount, "Number of data volumes per VM")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")

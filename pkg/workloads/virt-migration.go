@@ -17,6 +17,7 @@ package workloads
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
 	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
@@ -52,6 +53,7 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	var loadVMsIterations int
 	var loadVMsPerIteration int
 	var migrationQPS int
+	var jobIterationDelay, namespaceDelay time.Duration
 
 	var rc int
 	cmd := &cobra.Command{
@@ -85,6 +87,8 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["loadVMsIterations"] = loadVMsIterations
 			AdditionalVars["loadVMsPerIteration"] = loadVMsPerIteration
 			AdditionalVars["migrationQPS"] = migrationQPS
+			AdditionalVars["jobIterationDelay"] = jobIterationDelay
+			AdditionalVars["namespaceDelay"] = namespaceDelay
 
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
@@ -104,5 +108,7 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&loadVMsPerIteration, "load-per-iteration", virtMigrationDefaultLoadVMsPerIteration, "Number of VMs to create in each load VM iteration")
 	cmd.Flags().IntVar(&migrationQPS, "migration-qps", virtMigrationDefaultMigrationQPS, "Number of concurrent calls to migrate")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

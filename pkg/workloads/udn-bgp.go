@@ -17,6 +17,7 @@ package workloads
 import (
 	"fmt"
 	"os"
+	"time"
 
 	kubeburnermeasurements "github.com/kube-burner/kube-burner/pkg/measurements"
 	"github.com/kube-burner/kube-burner/pkg/workloads"
@@ -32,6 +33,7 @@ var additionalMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasu
 // NewUdnBgp holds udn-bgp workload
 func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, namespacePerCudn int
+	var jobIterationDelay, namespaceDelay time.Duration
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -41,6 +43,8 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacePerCudn
+			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, additionalMeasurementFactoryMap)
 		},
@@ -51,5 +55,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

@@ -215,6 +215,14 @@ The workloads of this family create a single namespace with a set of pods, deplo
 
 This workload is meant to fill with pause pods all the worker nodes from the cluster. It can be customized with the following flags. This workload is usually used to measure the Pod's ready latency KPI.
 
+#### Common Flags
+
+The following flags are available for all workloads:
+
+- `--job-iteration-delay` - Time in `Duration` to wait between job iterations (i.e., between each pod creation). Default is `0`. This can be used to add a delay between iterations to reduce load on the cluster. For example: `--job-iteration-delay=1s` will add a 1 second delay between each pod creation.
+
+- `--namespace-delay` - Time in `Duration` to wait after completing all iterations in a namespace before starting the next namespace. Default is `0`. This delay occurs after filling up a namespace (completing all `iterations-per-namespace` pods) and before starting the next namespace. For example: `--namespace-delay=30s` will wait 30 seconds after completing all pods in a namespace before starting the next namespace.
+
 ### node-density-cni
 
 It creates two deployments, a client/curl and a server/nxing, and 1 service backed by the previous server pods. The client application has configured an startup probe that makes requests to the previous service every second with a timeout of 600s.

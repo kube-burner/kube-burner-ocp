@@ -17,6 +17,7 @@ package workloads
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/kube-burner/kube-burner/pkg/workloads"
 	"github.com/spf13/cobra"
@@ -29,6 +30,7 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var claimSize string
 	var containerImage, storageClassName string
+	var jobIterationDelay, namespaceDelay time.Duration
 	var rc int
 
 	cmd := &cobra.Command{
@@ -40,6 +42,8 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CONTAINER_IMAGE"] = containerImage
 			AdditionalVars["CLAIM_SIZE"] = claimSize
 			AdditionalVars["STORAGE_CLASS_NAME"] = storageClassName
+			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
@@ -53,5 +57,7 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&claimSize, "claim-size", "256Mi", "claim-size=256Mi")
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

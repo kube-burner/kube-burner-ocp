@@ -32,7 +32,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var churnPercent, churnCycles int
 	var churn, l3 bool
-	var churnDelay, churnDuration time.Duration
+	var churnDelay, churnDuration, jobIterationDelay, namespaceDelay time.Duration
 	var deletionStrategy, jobPause, vmImage, bindingMethod string
 	var rc int
 	cmd := &cobra.Command{
@@ -67,6 +67,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["UDN_BINDING_METHOD"] = bindingMethod
 			AdditionalVars["ENABLE_LAYER_3"] = l3
+			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 
 			if l3 {
 				log.Info("Layer 3 is enabled")
@@ -96,5 +98,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 50, "VMs per node")
 	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 60*time.Second, "VMI ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

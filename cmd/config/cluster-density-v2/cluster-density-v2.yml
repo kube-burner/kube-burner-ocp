@@ -76,7 +76,7 @@ jobs:
 
       - objectTemplate: service.yml
         replicas: 5
-        
+
       - objectTemplate: route.yml
         replicas: 2
 

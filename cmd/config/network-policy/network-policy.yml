@@ -9,7 +9,7 @@ global:
         - conditionType: Ready
           metric: P99
           threshold: {{.NETPOL_READY_THRESHOLD}}
-{{ end }}        
+{{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
