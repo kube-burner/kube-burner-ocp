@@ -217,9 +217,11 @@ This workload is meant to fill with pause pods all the worker nodes from the clu
 
 #### Common Flags
 
-The following flag is available for all workloads:
+The following flags are available for all workloads:
 
 - `--job-iteration-delay` - Time in `Duration` to wait between job iterations (i.e., between each pod creation). Default is `0`. This can be used to add a delay between iterations to reduce load on the cluster. For example: `--job-iteration-delay=1s` will add a 1 second delay between each pod creation.
+
+- `--namespace-delay` - Time in `Duration` to wait after completing all iterations in a namespace before starting the next namespace. Default is `0`. This delay occurs after filling up a namespace (completing all `iterations-per-namespace` pods) and before starting the next namespace. For example: `--namespace-delay=30s` will wait 30 seconds after completing all pods in a namespace before starting the next namespace.
 
 ### node-density-cni
 
