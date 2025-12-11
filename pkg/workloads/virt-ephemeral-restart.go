@@ -43,7 +43,7 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	var testNamespace string
 	var metricsProfiles []string
 	var volumeAccessMode string
-	var jobIterationDelay time.Duration
+	var jobIterationDelay, namespaceDelay time.Duration
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtEphemeralRestartTestName,
@@ -75,6 +75,7 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
 			AdditionalVars["vmGroups"] = generateLoopCounterSlice(iterations, 0)
 			AdditionalVars["jobIterationDelay"] = jobIterationDelay
+			AdditionalVars["namespaceDelay"] = namespaceDelay
 
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
@@ -92,5 +93,6 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

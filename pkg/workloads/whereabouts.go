@@ -27,7 +27,7 @@ import (
 func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations int
 	var fast bool
-	var podReadyThreshold, jobIterationDelay time.Duration
+	var podReadyThreshold, jobIterationDelay, namespaceDelay time.Duration
 	var containerImage string
 	var metricsProfiles []string
 	var rc int
@@ -41,6 +41,7 @@ func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CONTAINER_IMAGE"] = containerImage
 			AdditionalVars["FAST"] = fast
 			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -54,5 +55,6 @@ func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

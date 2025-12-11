@@ -53,7 +53,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var cleanupOnly bool
 	var cleanup bool
-	var jobIterationDelay time.Duration
+	var jobIterationDelay, namespaceDelay time.Duration
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtCapacityBenchmarkTestName,
@@ -131,6 +131,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["volumeSizeIncrement"] = volumeSizeIncrement
 			AdditionalVars["skipResizeJob"] = skipResizeJob
 			AdditionalVars["jobIterationDelay"] = jobIterationDelay
+			AdditionalVars["namespaceDelay"] = namespaceDelay
 
 			setMetrics(cmd, metricsProfiles)
 
@@ -176,5 +177,6 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&cleanupOnly, "cleanup-only", false, "Only cleanup the resource created by the previous run. Do not run the test.")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup the resource created by the test.")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

@@ -29,7 +29,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
 	var churn, l3, simple, pprof bool
 	var jobPause time.Duration
-	var churnDelay, churnDuration, podReadyThreshold, jobIterationDelay time.Duration
+	var churnDelay, churnDuration, podReadyThreshold, jobIterationDelay, namespaceDelay time.Duration
 	var deletionStrategy string
 	var metricsProfiles []string
 	var rc int
@@ -62,6 +62,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
 			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 
 			rc = wh.RunWithAdditionalVars("udn-density-pods.yml", AdditionalVars, nil)
 		},
@@ -83,6 +84,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }

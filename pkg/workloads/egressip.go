@@ -146,7 +146,7 @@ func generateEgressIPs(numJobIterations int, addressesPerIteration int, external
 func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, addressesPerIteration int
 	var externalServerIP string
-	var podReadyThreshold, jobIterationDelay time.Duration
+	var podReadyThreshold, jobIterationDelay, namespaceDelay time.Duration
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -161,6 +161,7 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["EXTERNAL_SERVER_IP"] = externalServerIP
 			AdditionalVars["EIP_ADDRESSES"] = eipAddresses
 			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -173,6 +174,7 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&addressesPerIteration, "addresses-per-iteration", 1, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-egressip.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	cmd.MarkFlagRequired("iterations")
 	cmd.MarkFlagRequired("external-server-ip")
 	return cmd

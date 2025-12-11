@@ -25,7 +25,7 @@ import (
 
 func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churn, namespacedIterations, svcLatency bool
-	var churnDelay, churnDuration, podReadyThreshold, jobIterationDelay time.Duration
+	var churnDelay, churnDuration, podReadyThreshold, jobIterationDelay, namespaceDelay time.Duration
 	var configFile, deletionStrategy string
 	var iterations, churnPercent, churnCycles, iterationsPerNamespace, podsPerNode int
 	var rc int
@@ -68,6 +68,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 
 			rc = wh.RunWithAdditionalVars(configFile, AdditionalVars, nil)
 		},
@@ -89,6 +90,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 0, "Pods per node. Mutually exclusive with '--iterations'")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	// pods-per-node calculates iterations, thus the two are mutually exclusive.
 	cmd.MarkFlagsMutuallyExclusive("iterations", "pods-per-node")
 	cmd.MarkFlagRequired("config")

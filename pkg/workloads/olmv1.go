@@ -33,7 +33,7 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var metricsProfiles []string
 	var rc, iterationsPerNamespace, churnCycles, churnPercent int
 	var pprof, namespacedIterations, churn bool
-	var churnDuration, churnDelay, jobIterationDelay time.Duration
+	var churnDuration, churnDelay, jobIterationDelay, namespaceDelay time.Duration
 
 	cmd := &cobra.Command{
 		Use:   variant,
@@ -60,6 +60,7 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["PREFIX_PKG_NAME_V1"] = prefixPkgName
 			AdditionalVars["PREFIX_IMG_NAME"] = prefixImgName
 			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -77,6 +78,7 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 20, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 10, "Iterations per namespace")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().StringVar(&catalogImage, "catalogImage", "registry.redhat.io/redhat/redhat-operator-index:v4.18", "the ClusterCatalog ref image")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")

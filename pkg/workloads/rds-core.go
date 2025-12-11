@@ -28,7 +28,7 @@ import (
 func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, churnPercent, churnCycles, dpdkCores int
 	var churn, svcLatency bool
-	var churnDelay, churnDuration, podReadyThreshold, jobIterationDelay time.Duration
+	var churnDelay, churnDuration, podReadyThreshold, jobIterationDelay, namespaceDelay time.Duration
 	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool string
 	var metricsProfiles []string
 	var rc int
@@ -58,6 +58,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
 			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -80,5 +81,6 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

@@ -29,7 +29,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var rc int
 	var metricsProfiles []string
 	var iterations, churnCycles, churnPercent, cpu, memory, maxPods int
-	var podReadyThreshold, churnDuration, churnDelay, jobIterationDelay, probesPeriod time.Duration
+	var podReadyThreshold, churnDuration, churnDelay, jobIterationDelay, namespaceDelay, probesPeriod time.Duration
 	var deletionStrategy, tag string
 	var churn bool
 	cmd := &cobra.Command{
@@ -51,6 +51,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["TAG"] = tag
 			AdditionalVars["MAX_PODS"] = maxPods
 			AdditionalVars["JOB_ITERATION_DELAY"] = jobIterationDelay
+			AdditionalVars["NAMESPACE_DELAY"] = namespaceDelay
 			setMetrics(cmd, metricsProfiles)
 			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
 		},
@@ -72,5 +73,6 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
+	cmd.Flags().DurationVar(&namespaceDelay, "namespace-delay", 0, "Delay after completing all iterations in a namespace before starting the next namespace")
 	return cmd
 }

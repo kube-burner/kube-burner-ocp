@@ -193,6 +193,7 @@ jobs:
   podWait: {{ .verifyEachIteration }}
   # time between job iterations
   jobIterationDelay: {{ .jobIterationDelay }}
+  namespaceDelay: {{ .namespaceDelay }}
   # timeout time after waiting for all object creation
   maxWaitTimeout: {{ .verifyMaxWaitTime }}
   jobPause: 10s
