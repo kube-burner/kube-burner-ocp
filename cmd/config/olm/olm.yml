@@ -113,7 +113,7 @@ jobs:
         replicas: 1
 
       - objectTemplate: sa.yml
-        replicas: {{.JOB_ITERATIONS}}
+        replicas: 1
         inputVars:
           prefixNamespace: {{.NAMESPACE}}
 
