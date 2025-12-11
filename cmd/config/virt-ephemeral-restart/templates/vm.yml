@@ -43,6 +43,9 @@ spec:
               bus: virtio
             name: rootdisk
             bootOrder: 1
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
           interfaces:
           - name: default
             masquerade: {}

@@ -60,6 +60,9 @@ spec:
               bus: virtio
             name: "data-{{ $dataVolumeIndex }}"
           {{ end }}
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
           interfaces:
           - name: default
             masquerade: {}
