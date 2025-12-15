@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"os"
 
-	kubeburnermeasurements "github.com/kube-burner/kube-burner/pkg/measurements"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	kubeburnermeasurements "github.com/kube-burner/kube-burner/v2/pkg/measurements"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	"github.com/spf13/cobra"
 
 	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"

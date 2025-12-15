@@ -128,7 +128,7 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml
@@ -160,7 +160,7 @@ jobs:
   objects:
   - kubeVirtOp: stop
     labelSelector:
-      kube-burner-job: {{ $createVMsJobName }}
+      kube-burner.io/job: {{ $createVMsJobName }}
 
 - name: start-vms
   jobType: read
@@ -174,7 +174,7 @@ jobs:
   - apiVersion: kubevirt.io/v1
     kind: VirtualMachine
     labelSelector:
-      kube-burner-job: {{ $createVMsJobName }}
+      kube-burner.io/job: {{ $createVMsJobName }}
 
 {{ range $vmGroupIndex := .vmGroups }}
 - name: "delete-ephemeral-volumes-{{ $vmGroupIndex }}"
@@ -212,9 +212,9 @@ jobs:
   maxWaitTimeout: 1h
   waitWhenFinished: true
   jobPause: 1m
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
   objects:
   - apiVersion: kubevirt.io/v1
     kind: VirtualMachine
     labelSelector:
-      kube-burner-job: {{ $createVMsJobName }}
+      kube-burner.io/job: {{ $createVMsJobName }}
