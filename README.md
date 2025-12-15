@@ -782,6 +782,10 @@ All `VirtualMachines` are created in the same namespace.
 
 By default, the namespace is `virt-migation`. Set it by passing `--namespace` (or `-n`)
 
+#### L2-UDN 
+
+If `--udn-layer-2` is set to `true`, a Primary L2-UDN will be deployed on the test namespace. All the VMs will use the L2-UDN interface for the migration. The default network is `[\"10.132.0.0/24\"]` and can be modified by the option `--udn-subnets`.
+
 ### DataVolume Clone
 
 Test the capacity and performance of creating multiple data volumes that are clones of a single data volume
