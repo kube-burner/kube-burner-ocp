@@ -226,3 +226,18 @@ teardown_file() {
   git clean -fd
 }
 
+@test "build-farm: basic execution with churn" {
+  run_cmd ${KUBE_BURNER_OCP} build-farm \
+    --job-iterations=1 \
+    --iterations-per-namespace=10 \
+    --namespaced-iterations=true \
+    --churn=true \
+    --churn-cycles=1 \
+    --churn-percent=60 \
+    --num-controllers=1 \
+    --num-threads=1 \
+    --metadata-iterations=1 \
+    --metadata-iterations-delay=1s \
+    --num-watchers=1 \
+    --uuid=${UUID}
+}

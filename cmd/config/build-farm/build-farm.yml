@@ -32,13 +32,13 @@ jobs:
     namespacedIterations: false
     preLoadImages: false
     objects:
-      - objectTemplate: config/build-farm/build-farm-controller-sa.yml
+      - objectTemplate: build-farm-controller-sa.yml
         replicas: 1
-      - objectTemplate: config/build-farm/build-farm-controller-role.yml
+      - objectTemplate: build-farm-controller-role.yml
         replicas: 1
-      - objectTemplate: config/build-farm/build-farm-controller-rolebinding.yml
+      - objectTemplate: build-farm-controller-rolebinding.yml
         replicas: 1
-      - objectTemplate: config/build-farm/build-farm-controller-deployment.yml
+      - objectTemplate: build-farm-controller-deployment.yml
         replicas: 1
         inputVars:
           numControllers: {{ .NUM_CONTROLLERS }}
@@ -66,22 +66,22 @@ jobs:
       delay: {{ .CHURN_DELAY }}
       mode: objects
     objects:
-      - objectTemplate: config/build-farm/build-job-sa.yml
+      - objectTemplate: build-job-sa.yml
         replicas: 1
         churn: false
-      - objectTemplate: config/build-farm/build-job-role.yml
+      - objectTemplate: build-job-role.yml
         replicas: 1
         churn: false
-      - objectTemplate: config/build-farm/build-job-rolebinding.yml
+      - objectTemplate: build-job-rolebinding.yml
         replicas: 1
         churn: false
-      - objectTemplate: config/build-farm/build-job-secret.yml
+      - objectTemplate: build-job-secret.yml
         replicas: {{ div (mul .ITERATIONS_PER_NAMESPACE 3) 2 }}
         churn: false
-      - objectTemplate: config/build-farm/build-job-configmap.yml
+      - objectTemplate: build-job-configmap.yml
         replicas: {{ div .ITERATIONS_PER_NAMESPACE 2 }}
         churn: false
-      - objectTemplate: config/build-farm/build-job-small.yml
+      - objectTemplate: build-job-small.yml
         replicas: {{ div (mul .ITERATIONS_PER_NAMESPACE .SMALL_JOB_PERCENT) 100 }}
         churn: true
         inputVars:
@@ -92,7 +92,7 @@ jobs:
           buildImage: "{{ .BUILD_IMAGE }}"
           buildPlatform: "{{ .BUILD_PLATFORM }}"
           targetImage: "{{ .TARGET_IMAGE }}"
-      - objectTemplate: config/build-farm/build-job-large.yml
+      - objectTemplate: build-job-large.yml
         replicas: {{ div (mul .ITERATIONS_PER_NAMESPACE .LARGE_JOB_PERCENT) 100 }}
         churn: true
         inputVars:
