@@ -19,7 +19,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
