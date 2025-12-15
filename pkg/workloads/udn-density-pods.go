@@ -18,8 +18,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -27,10 +27,10 @@ import (
 // NewUDNDensityPods holds udn-density-pods workload
 func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
-	var churn, l3, simple, pprof bool
+	var l3, simple, pprof bool
 	var jobPause time.Duration
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var deletionStrategy string
+	var deletionStrategy, churnMode string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -45,23 +45,22 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			} else {
 				log.Info("Layer 2 is enabled")
 			}
-			if churn {
+			if churnDuration > 0 || churnCycles > 0 {
 				log.Info("Churn is enabled, there will not be a pause after UDN creation")
 			}
 
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["JOB_PAUSE"] = jobPause
 			AdditionalVars["SIMPLE"] = simple
-			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
-
 			rc = wh.RunWithAdditionalVars("udn-density-pods.yml", AdditionalVars, nil)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -72,12 +71,12 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&jobPause, "job-pause", 0, "Time to pause after finishing the job that creates the UDN")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
-	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
-	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
+	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", config.DefaultDeletionStrategy, "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnNamespaces), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")

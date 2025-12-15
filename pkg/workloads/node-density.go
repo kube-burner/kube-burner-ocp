@@ -19,7 +19,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -31,8 +32,8 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	var metricsProfiles []string
 	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
-	var containerImage, deletionStrategy string
-	var namespacedIterations, churn, pprof, svcLatency bool
+	var containerImage, deletionStrategy, churnMode string
+	var namespacedIterations, pprof, svcLatency bool
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
@@ -43,11 +44,11 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["PROBES_PERIOD"] = probesPeriod.Seconds()
 			AdditionalVars["CONTAINER_IMAGE"] = containerImage
@@ -69,12 +70,12 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().BoolVar(&churn, "churn", false, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
-	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
+	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "gvr", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	switch variant {

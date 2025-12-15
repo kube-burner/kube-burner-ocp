@@ -26,7 +26,7 @@ setup() {
 }
 
 teardown() {
-  oc delete ns -l kube-burner-uuid="${UUID}" --ignore-not-found
+  oc delete ns -l kube-burner.io/uuid="${UUID}" --ignore-not-found
 }
 
 teardown_file() {
@@ -38,7 +38,7 @@ teardown_file() {
 }
 
 @test "olmv1 benchmark" {
-  run_cmd ${KUBE_BURNER_OCP} olm --log-level debug --uuid=${UUID} --iterations 5 --catalogImage registry.redhat.io/redhat/redhat-operator-index:v4.18
+  run_cmd ${KUBE_BURNER_OCP} olm --log-level debug --uuid=${UUID} --iterations 2 --catalogImage registry.redhat.io/redhat/redhat-operator-index:v4.18
   # no need, the created test clustercatalog resource has been removed
   # run_cmd oc delete clustercatalog --all
 }
@@ -51,7 +51,7 @@ teardown_file() {
 @test "node-density: es-indexing=true" {
   PODS_PER_NODE=$(calculate_pods_per_node)
   echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
-  run_cmd ${KUBE_BURNER_OCP} node-density --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m ${INDEXING_FLAGS} --churn=true --churn-duration=1m --churn-delay=5s
+  run_cmd ${KUBE_BURNER_OCP} node-density --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m ${INDEXING_FLAGS} --churn-duration=1m --churn-delay=5s
   check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
@@ -59,12 +59,12 @@ teardown_file() {
   unset UUID
   PODS_PER_NODE=$(calculate_pods_per_node)
   echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
-  run_cmd ${KUBE_BURNER_OCP} node-density-heavy --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m --uuid=abcd --local-indexing --gc-metrics=true --churn=true --churn-cycles=1 --churn-delay=2s
+  run_cmd ${KUBE_BURNER_OCP} node-density-heavy --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m --uuid=abcd --local-indexing --gc-metrics=true --churn-cycles=1 --churn-delay=2s
   check_file_list collected-metrics-abcd/etcdVersion.json collected-metrics-abcd/jobSummary.json collected-metrics-abcd/podLatencyMeasurement-node-density-heavy.json collected-metrics-abcd/podLatencyQuantilesMeasurement-node-density-heavy.json
 }
 
 @test "cluster-density-ms: metrics-endpoint=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-ms --iterations=1 --churn=false --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-ms --iterations=1 --uuid=${UUID}
 }
 
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
@@ -73,7 +73,7 @@ teardown_file() {
 }
 
 @test "cluster-density-v2: custom-metrics=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --churn=false --iterations=3 --metrics-profile=custom-metrics.yml ${INDEXING_FLAGS} --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=3 --metrics-profile=custom-metrics.yml ${INDEXING_FLAGS} --uuid=${UUID}
   check_metric_value prometheusRSS jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
@@ -82,7 +82,7 @@ teardown_file() {
   PODS_PER_NODE=$(calculate_pods_per_node)
   echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
   run_cmd ${KUBE_BURNER_OCP} node-density-cni --pods-per-node=${PODS_PER_NODE} --gc=false --uuid=${UUID} --alerting=false
-  oc delete ns -l kube-burner-uuid=${UUID} --wait=false
+  oc delete ns -l kube-burner.io/uuid=${UUID} --wait=false
   trap - ERR
 }
 
@@ -125,7 +125,10 @@ teardown_file() {
 }
 
 @test "udn-density-l3-pods: churning=false" {
-  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --churn=false
+  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --extract
+  # Disable garbage-collection through using the config file
+  sed -i 's/jobPause: 5m/jobPause: 5s/g' udn-density-pods.yml
+  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true
 }
 
 @test "cluster-health" {
@@ -218,8 +221,8 @@ teardown_file() {
   # Disable garbage-collection through using the config file
   sed -i 's/gc: {{.GC}}/gc: false/g' crd-scale.yml
   run_cmd ${KUBE_BURNER_OCP} crd-scale --iterations=5
-  verify_object_count crd 5 "" "kube-burner-job=crd-scale"
-  oc delete crd -l kube-burner-job=crd-scale
+  verify_object_count crd 5 "" "kube-burner.io/job=crd-scale"
+  oc delete crd -l kube-burner.io/job=crd-scale
   git clean -fd
 }
 

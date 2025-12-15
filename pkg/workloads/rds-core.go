@@ -18,7 +18,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -27,9 +28,9 @@ import (
 // NewNodeDensity holds node-density-cni workload
 func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, churnPercent, churnCycles, dpdkCores int
-	var churn, svcLatency bool
+	var svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool string
+	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool, churnMode string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -42,11 +43,11 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal("Error obtaining default ingress domain: ", err.Error())
 			}
-			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
 			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["DPDK_CORES"] = dpdkCores
 			AdditionalVars["DPDK_HUGEPAGES"] = dpdkHugepages
@@ -63,12 +64,12 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
-	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
+	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnNamespaces), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().IntVar(&dpdkCores, "dpdk-cores", 2, "Number of cores per DPDK pod")
 	cmd.Flags().StringVar(&dpdkHugepages, "dpdk-hugepages", "16Gi", "Number of hugepages per DPDK pod. Must be a multiple of 1Gi")
 	cmd.Flags().StringVar(&sriovDpdkDevicepool, "dpdk-devicepool", "intelnics2", "SRIOV Device pool name for DPDK VFs in the cluster")
