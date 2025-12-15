@@ -14,27 +14,27 @@ LONG_WAIT=30
 SSH_SERVICE=direct-ssh
 
 
-get_pods_virt_handler() {
+get_pods_virt_launcher() {
     local namespace=$1
     local label_key=$2
     local label_value=$3
 
-    local virt_handler_pods
+    local virt_launcher_pods
 
-    virt_handler_pods=$(kubectl get pod -n "${namespace}" -l "${label_key}"="${label_value}" --field-selector=status.phase==Running -o json | jq .items | jq -r '.[] | .metadata.name')
+    virt_launcher_pods=$(kubectl get pod -n "${namespace}" -l "${label_key}"="${label_value}" --field-selector=status.phase==Running -o json | jq .items | jq -r '.[] | .metadata.name')
     local ret=$?
     if [ $ret -ne 0 ]; then
         echo "Failed to get pod list"
         exit 1
     fi
-    echo "${virt_handler_pods}"
+    echo "${virt_launcher_pods}"
 }
 
 set_up_ssh() {
     local identity_file=$1
     local remote_user=$2
     local namespace=$3
-    local virt_handler_pod_name=$4
+    local virt_launcher_pod_name=$4
 
     local host_ip
     local node_port
@@ -43,8 +43,8 @@ set_up_ssh() {
     #Create a nodeport service for the ssh
     kubectl apply -f <(kubectl create svc nodeport ${SSH_SERVICE} --tcp=22 -o yaml --dry-run=client) -n "${namespace}" >/dev/null 2>&1
     node_port=$(kubectl get svc ${SSH_SERVICE} -n "${namespace}" -o jsonpath='{.spec.ports[0].nodePort}')
-    kubectl label pod "${virt_handler_pod_name}" -n "${namespace}" app=${SSH_SERVICE} --overwrite  >/dev/null 2>&1
-    host_ip=$(kubectl get pod "${virt_handler_pod_name}" -n "${namespace}" -o jsonpath='{.status.hostIP}')
+    kubectl label pod "${virt_launcher_pod_name}" -n "${namespace}" app=${SSH_SERVICE} --overwrite  >/dev/null 2>&1
+    host_ip=$(kubectl get pod "${virt_launcher_pod_name}" -n "${namespace}" -o jsonpath='{.status.hostIP}')
     ssh -A -i "${identity_file}" "${remote_user}"@"${host_ip}" -p "${node_port}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ls >/dev/null 2>&1
     echo "${host_ip} ${node_port}"
 }
@@ -65,7 +65,7 @@ remote_command() {
     echo "${output}"
 }
 
-VIRT_PODS=$(get_pods_virt_handler "${NAMESPACE}" "${LABEL_KEY}" "${LABEL_VALUE}")
+VIRT_PODS=$(get_pods_virt_launcher "${NAMESPACE}" "${LABEL_KEY}" "${LABEL_VALUE}")
 read -r first_pod VIRT_PODS <<< "${VIRT_PODS}"
 SSH_INFO=$(set_up_ssh "${IDENTITY_FILE}" "${REMOTE_USER}" "${NAMESPACE}" "${first_pod}")
 read -r host_ip node_port <<< "${SSH_INFO}"
