@@ -166,6 +166,14 @@ teardown_file() {
   check_destroyed_ns virt-capacity-benchmark
 }
 
+@test "virt-migration" {
+  local STORAGE_PARAMETER
+  if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
+    STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
+  fi
+  run_cmd ${KUBE_BURNER_OCP} virt-migration ${STORAGE_PARAMETER} --iterations 2 --udn-layer-2
+}
+
 @test "virt-clone" {
   local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
