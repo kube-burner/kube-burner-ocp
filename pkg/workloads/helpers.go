@@ -27,6 +27,7 @@ import (
 	k8sstorage "github.com/cloud-bulldozer/go-commons/v2/k8s-storage"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	kubeburnerutil "github.com/kube-burner/kube-burner/v2/pkg/util"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -303,6 +304,8 @@ func cleanupTestNamespaces(ctx context.Context, labelSelector string) {
 		log.Info("No Namespaces were found for previous test")
 		return
 	}
+
+	kubeburnerutil.CleanupNamespacesByLabel(ctx, k8sConnector.ClientSet(), labelSelector)
 
 	namespaceNamesMap := make(map[string]struct{}, len(ns.Items))
 	for _, ns := range ns.Items {
