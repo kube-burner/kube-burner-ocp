@@ -41,8 +41,9 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacePerCudn
-
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, additionalMeasurementFactoryMap)
+			wh.SetMeasurements(additionalMeasurementFactoryMap)
+			wh.SetVariables(AdditionalVars, nil)
+			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

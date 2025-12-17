@@ -64,7 +64,8 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
 			AdditionalVars["CHURN_MODE"] = churnMode
 
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, nil)
+			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

@@ -61,7 +61,8 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
-			rc = wh.RunWithAdditionalVars("udn-density-pods.yml", AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, nil)
+			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
