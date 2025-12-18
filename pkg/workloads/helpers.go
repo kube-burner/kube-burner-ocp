@@ -305,7 +305,7 @@ func cleanupTestNamespaces(ctx context.Context, labelSelector string) {
 		return
 	}
 
-	kubeburnerutil.CleanupNamespaces(ctx, k8sConnector.ClientSet(), labelSelector)
+	kubeburnerutil.CleanupNamespacesByLabel(ctx, k8sConnector.ClientSet(), labelSelector)
 
 	namespaceNamesMap := make(map[string]struct{}, len(ns.Items))
 	for _, ns := range ns.Items {

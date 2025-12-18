@@ -53,7 +53,8 @@ func NewKueueOperator(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			AdditionalVars["QPS"] = QPS
 			AdditionalVars["BURST"] = burst
 			setMetrics(cmd, metricsProfiles)
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, nil)
+			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

@@ -69,7 +69,8 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 
-			rc = wh.RunWithAdditionalVars(configFile, AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, nil)
+			rc = wh.Run(configFile)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
