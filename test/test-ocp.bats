@@ -37,6 +37,24 @@ teardown_file() {
   fi
 }
 
+@test "build-farm: basic execution with churn" {
+  oc delete namespace build-farm-tenant-0 --ignore-not-found
+  run_cmd ${KUBE_BURNER_OCP} build-farm \
+    --job-iterations=1 \
+    --iterations-per-namespace=10 \
+    --namespaced-iterations=true \
+    --churn=true \
+    --churn-cycles=1 \
+    --churn-percent=60 \
+    --churn-delay=5s \
+    --num-controllers=1 \
+    --num-threads=1 \
+    --metadata-iterations=1 \
+    --metadata-iterations-delay=1s \
+    --num-watchers=1 \
+    --uuid=${UUID}
+}
+
 @test "olmv1 benchmark" {
   run_cmd ${KUBE_BURNER_OCP} olm --log-level debug --uuid=${UUID} --iterations 2 --catalogImage registry.redhat.io/redhat/redhat-operator-index:v4.18
   # no need, the created test clustercatalog resource has been removed
@@ -226,18 +244,3 @@ teardown_file() {
   git clean -fd
 }
 
-@test "build-farm: basic execution with churn" {
-  run_cmd ${KUBE_BURNER_OCP} build-farm \
-    --job-iterations=1 \
-    --iterations-per-namespace=10 \
-    --namespaced-iterations=true \
-    --churn=true \
-    --churn-cycles=1 \
-    --churn-percent=60 \
-    --num-controllers=1 \
-    --num-threads=1 \
-    --metadata-iterations=1 \
-    --metadata-iterations-delay=1s \
-    --num-watchers=1 \
-    --uuid=${UUID}
-}
