@@ -202,7 +202,7 @@ func (plmf raLatencyMeasurementFactory) NewMeasurement(jobConfig *config.Job, cl
 // we create list of cudn subnet and pod ip mappings. CUdn subnet is considered as a route exported to outside the cluster. When KB wants to ping test the cudn, it pings cudn's pods.
 func (r *raLatency) getPods() error {
 	var err error
-	listOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("kube-burner-uuid=%s", r.Uuid)}
+	listOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", config.KubeBurnerLabelUUID, r.Uuid)}
 	nsList, err := r.ClientSet.CoreV1().Namespaces().List(context.TODO(), listOptions)
 	if err != nil {
 		log.Errorf("Error listing namespaces: %v", err)
