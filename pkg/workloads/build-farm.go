@@ -19,6 +19,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 
@@ -117,10 +118,8 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	// Standard workload flags
 	cmd.Flags().IntVar(&jobIterations, "job-iterations", 100, "Number of job iterations to create")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 100, "Number of iterations per namespace")
-	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Use namespaced iterations")
 	cmd.Flags().Float64Var(&qps, "qps", 40, "QPS for client rate limiting")
 	cmd.Flags().Float64Var(&burst, "burst", 40, "Burst for client rate limiting")
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 
 	// Churn flags
 	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
@@ -128,7 +127,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 3*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 50, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&deletionStrategy, "churn-deletion-strategy", "default", "Churn deletion strategy to use")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 
 	// Controller configuration flags
 	cmd.Flags().IntVar(&numControllers, "num-controllers", 3, "Number of controller replicas")

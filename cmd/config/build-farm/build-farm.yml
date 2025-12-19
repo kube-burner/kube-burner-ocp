@@ -55,7 +55,7 @@ jobs:
   - name: build-farm-create
     namespace: build-farm-tenant
     jobIterations: {{ .JOB_ITERATIONS }}
-    namespacedIterations: {{ .NAMESPACED_ITERATIONS }}
+    namespacedIterations: true
     iterationsPerNamespace: 1
     preLoadImages: false
     qps: {{ .QPS }}
