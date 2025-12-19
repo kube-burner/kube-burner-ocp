@@ -15,6 +15,7 @@ Usage:
   kube-burner-ocp [command]
 
 Available Commands:
+  build-farm                 Runs build-farm workload
   cluster-density-ms         Runs cluster-density-ms workload
   cluster-density-v2         Runs cluster-density-v2 workload
   cluster-health             Checks for ocp cluster health
@@ -1007,6 +1008,63 @@ This workload creates jobs in multiple namespaces that are handled by 10 shared 
 
 This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
 
+
+## Build-Farm workload
+
+The build-farm workload simulates a realistic build farm environment where build jobs are continuously created and churned. This workload is designed to stress-test the control plane by creating controllers that watch jobs and pods, while simultaneously creating and churning build jobs across multiple namespaces.
+
+### Architecture
+
+The workload consists of two main components:
+
+1. **Build Farm Controller**: Deployed in the `build-farm-controllers` namespace this controller simulate build farm operators that watch and manage build jobs.
+
+2. **Build Jobs**: Created in `build-farm-tenant` namespaces with:
+   - Service accounts, roles and role bindings for RBAC
+   - Secrets (1.5x iterations per namespace)
+   - ConfigMaps (0.5x iterations per namespace)
+   - Small build jobs (default 80% of total) - lighter weight builds
+   - Large build jobs (default 20% of total) - heavier builds
+   - Job distribution is configurable via `--small-job-percent` flag
+   - Support metadata updates and label distribution for watchers sharding
+
+### Churn Behavior
+
+By default, churning is enabled to simulate realistic build farm behavior where jobs are continuously created, completed and cleaned up. The churn configuration allows you to:
+- Define the number of churn cycles (default: 5)
+- Set the percentage of jobs to churn each round (default: 60%)
+- Configure delays between churn cycles (default: 10 minutes)
+
+### Configuration Flags
+
+The build-farm workload supports customization through command-line flags:
+
+**Controller configuration flags:**
+- `--num-controllers`: Number of controller replicas (default: 4)
+- `--num-threads`: Number of threads per controller (default: 4)
+- `--enable-job-watcher`: Enable job watcher (default: true)
+- `--enable-pod-watcher`: Enable pod watcher (default: true)
+- `--enable-jobs-listing`: Enable periodic jobs listing (default: true)
+- `--enable-secrets-listing`: Enable periodic secrets listing (default: false)
+- `--watcher-restart-interval`: Watcher restart interval (default: 600s)
+- `--sleep-before-restart`: Sleep duration before restarting watchers (default: 60s)
+- `--secrets-list-interval`: Secrets list interval (default: 5s)
+- `--jobs-list-interval`: Jobs list interval (default: 5s)
+- `--namespace-filter-regex`: Namespace filter regex. Allows filtering namespaces for list operations
+
+**Build job configuration flags:**
+- `--metadata-iterations`: Number of metadata update iterations per job (default: 2)
+- `--metadata-iterations-delay`: Delay between metadata iterations (default: 5s)
+- `--num-watchers`: Number of watchers for label distribution (default: 32)
+- `--build-image`: Container image for build simulation (default: "quay.io/prometheus/busybox")
+- `--small-job-percent`: Percentage of small build jobs (0-100, large jobs get remainder) (default: 80)
+
+### Use Cases
+
+This workload is particularly useful for:
+- Simulating realistic build farm behavior with Jobs churn
+- Measuring the impact of periodic list operations on the API server memory
+- Testing metadata updates impact on etcd db size with frequent changes
 
 ## Custom Workload: Bring your own workload
 
