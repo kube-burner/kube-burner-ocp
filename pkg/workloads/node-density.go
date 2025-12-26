@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -22,8 +23,9 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
-
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // NewNodeDensity holds node-density workload
@@ -32,18 +34,44 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	var metricsProfiles []string
 	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
-	var containerImage, deletionStrategy, churnMode string
+	var containerImage, deletionStrategy, churnMode, selector string
 	var namespacedIterations, pprof, svcLatency bool
+	var nodeSelector corev1.NodeSelector
+	var matchExpressions []corev1.NodeSelectorRequirement
+	workerNodeSelector := "node-role.kubernetes.io/worker=,node-role.kubernetes.io/infra!=,node-role.kubernetes.io/workload!="
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			totalPods := clusterMetadata.WorkerNodesCount * podsPerNode
-			podCount, err := wh.MetadataAgent.GetCurrentPodCount()
+			podCount, err := wh.MetadataAgent.GetCurrentPodCount(selector)
 			if err != nil {
 				log.Fatal(err.Error())
 			}
+			labelSelector, err := labels.Parse(selector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+			reqList, _ := labelSelector.Requirements()
+			for _, req := range reqList {
+				matchExpression := corev1.NodeSelectorRequirement{
+					Key: req.Key(),
+				}
+				// Even with a nil value, the list is not empty, so we need to check its value
+				if req.Values().List()[0] == "" {
+					if req.Operator() == "=" {
+						matchExpression.Operator = corev1.NodeSelectorOpExists
+					} else if req.Operator() == "!=" {
+						matchExpression.Operator = corev1.NodeSelectorOpDoesNotExist
+					}
+				} else {
+					matchExpression.Operator = corev1.NodeSelectorOpIn
+					matchExpression.Values = req.Values().List()
+				}
+				matchExpressions = append(matchExpressions, matchExpression)
+			}
+			nodeSelector.NodeSelectorTerms = []corev1.NodeSelectorTerm{{MatchExpressions: matchExpressions}}
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -57,7 +85,11 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
-
+			nodeSelectorJson, err := json.Marshal(nodeSelector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+			AdditionalVars["NODE_SELECTOR"] = string(nodeSelectorJson)
 			if variant == "node-density" {
 				AdditionalVars["JOB_ITERATIONS"] = totalPods - podCount
 			} else {
@@ -94,5 +126,6 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1000, "Iterations per namespace")
+	cmd.Flags().StringVar(&selector, "selector", workerNodeSelector, "Node selector")
 	return cmd
 }
