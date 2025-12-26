@@ -27,7 +27,7 @@ import (
 func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	var namespacedIterations, svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
-	var configFile, deletionStrategy, churnMode string
+	var configFile, deletionStrategy, churnMode, selector string
 	var iterations, churnPercent, churnCycles, iterationsPerNamespace, podsPerNode int
 	var rc int
 	cmd := &cobra.Command{
@@ -49,7 +49,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 			if podsPerNode > 0 {
 				totalPods := clusterMetadata.WorkerNodesCount * podsPerNode
-				podCount, err := wh.MetadataAgent.GetCurrentPodCount()
+				podCount, err := wh.MetadataAgent.GetCurrentPodCount(selector)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -67,6 +67,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = jobIterations
 			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["SELECTOR"] = selector
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 
 			wh.SetVariables(AdditionalVars, nil)
@@ -91,6 +92,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	// pods-per-node calculates iterations, thus the two are mutually exclusive.
 	cmd.MarkFlagsMutuallyExclusive("iterations", "pods-per-node")
+	cmd.Flags().StringVar(&selector, "selector", "", "Node selector")
 	cmd.MarkFlagRequired("config")
 	return cmd
 }

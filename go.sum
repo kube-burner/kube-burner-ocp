@@ -56,6 +56,8 @@ github.com/chzyer/test v1.0.0/go.mod h1:2JlltgoNkt4TW/z9V/IzDdFaMTM2JPIi26O1pF38
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cloud-bulldozer/go-commons/v2 v2.2.0 h1:Hmt9HOYBOkkfksLSU3R33NeMvCnC6LKJmnBQf4e5iKc=
 github.com/cloud-bulldozer/go-commons/v2 v2.2.0/go.mod h1:aWgDuOnrSubDLZzAfIh2Qz0ewo4bouTBm7Sg0aeUjDA=
+github.com/cloud-bulldozer/go-commons/v2 v2.3.0 h1:1nnrvl7vtaFQGDagZKmIDYzfCPkRIrkusHdZOSlG69U=
+github.com/cloud-bulldozer/go-commons/v2 v2.3.0/go.mod h1:aWgDuOnrSubDLZzAfIh2Qz0ewo4bouTBm7Sg0aeUjDA=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
