@@ -40,7 +40,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	var namespacedIterations, pprof, svcLatency bool
 	var nodeSelector corev1.NodeSelector
 	var matchExpressions []corev1.NodeSelectorRequirement
-	workerNodeSelector := "node-role.kubernetes.io/worker=,node-role.kubernetes.io/infra!=,node-role.kubernetes.io/workload!="
+	const workerNodeSelector = "node-role.kubernetes.io/worker=,node-role.kubernetes.io/infra!=,node-role.kubernetes.io/workload!="
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
