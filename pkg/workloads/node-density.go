@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -25,6 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -44,7 +46,16 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			totalPods := clusterMetadata.WorkerNodesCount * podsPerNode
+			kubeClientProvider := config.NewKubeClientProvider("", "")
+			clientSet, _ := kubeClientProvider.ClientSet(0, 0)
+			nodes, err := clientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: selector})
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+			if len(nodes.Items) == 0 {
+				log.Fatalf("No nodes found with the selector: %s", selector)
+			}
+			totalPods := len(nodes.Items) * podsPerNode
 			podCount, err := wh.MetadataAgent.GetCurrentPodCount(selector)
 			if err != nil {
 				log.Fatal(err.Error())
