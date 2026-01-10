@@ -53,11 +53,12 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: {{.NAMESPACED_ITERATIONS}}
     iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
-    churn: {{.CHURN}}
-    churnCycles: {{.CHURN_CYCLES}}
-    churnDuration: {{.CHURN_DURATION}}
-    churnPercent: {{.CHURN_PERCENT}}
-    churnDelay: {{.CHURN_DELAY}}
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
@@ -71,11 +72,15 @@ jobs:
 
       - objectTemplate: postgres-deployment.yml
         replicas: 1
+        churn: false    # If the posgres database gets restarted it will lose the table schema and leading failures in the client side readiness probes
+        inputVars:
+          nodeSelector: {{.NODE_SELECTOR}}
 
       - objectTemplate: app-deployment.yml
         replicas: 1
         inputVars:
           probesPeriod: {{.PROBES_PERIOD}}
+          nodeSelector: {{.NODE_SELECTOR}}
 
       - objectTemplate: postgres-service.yml
         replicas: 1

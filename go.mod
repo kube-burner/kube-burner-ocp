@@ -5,9 +5,9 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/cloud-bulldozer/go-commons/v2 v2.1.1
+	github.com/cloud-bulldozer/go-commons/v2 v2.3.0
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner v1.17.7
+	github.com/kube-burner/kube-burner/v2 v2.1.0
 	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
 	github.com/openshift/client-go v0.0.0-20240821135114-75c118605d5f
 	github.com/praserx/ipconv v1.2.1
@@ -75,7 +75,7 @@ require (
 	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
-	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
+	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.15.0 // indirect
@@ -102,3 +102,5 @@ require (
 )
 
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // Replacements are not inherited from dependencies, this replacement is required by kubevirt.io/client-go prevents updating this module accidentally
+
+exclude github.com/kube-burner/kube-burner v1.20.6 // Published accidentally

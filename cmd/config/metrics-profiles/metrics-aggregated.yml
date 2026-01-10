@@ -1,8 +1,5 @@
 # API server
 
-- query: irate(apiserver_request_total{verb="POST", resource="pods", subresource="binding",code="201"}[2m]) > 0
-  metricName: schedulingThroughput
-
 - query: histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", verb=~"LIST|GET", subresource!~"log|exec|portforward|attach|proxy"}[2m])) by (le, resource, verb, scope)) > 0
   metricName: readOnlyAPICallsLatency
 
@@ -117,13 +114,6 @@
 - query: sum(kube_node_status_condition{status="true"}) by (condition)
   metricName: nodeStatus
 
-- query: count(kube_replicaset_spec_replicas{})
-  metricName: replicaSetCount
-  instant: true
-
-- query: count(kube_pod_info{} AND ON (pod) kube_pod_status_phase{phase="Running"}==1) by (node)
-  metricName: podDistribution
-
 # Prometheus metrics
 
 - query: openshift:prometheus_tsdb_head_series:sum{job="prometheus-k8s"}
@@ -148,32 +138,32 @@
   instant: true
   captureStart: true
 
-- query: sum (  container_cpu_usage_seconds_total {  id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" } and on (node) kube_node_role{ role = "worker",role != "infra" } )  by   (   id  )
+- query: sum (  container_cpu_usage_seconds_total {  id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" } and on (node) kube_node_role{ role = "worker",role != "infra" } )  by   (   id  )
   metricName: cgroupCPUSeconds-Workers
   instant: true
   captureStart: true
 
-- query: sum (  container_memory_rss {  id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" } and on (node) kube_node_role{ role = "worker",role != "infra" } )  by   (   id  )
+- query: sum (  container_memory_rss {  id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" } and on (node) kube_node_role{ role = "worker",role != "infra" } )  by   (   id  )
   metricName: cgroupMemoryRSS-Workers
   instant: true
   captureStart: true
 
-- query: sum (  container_cpu_usage_seconds_total {  id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }  and on (node) kube_node_role{ role = "master" } )  by   (   id  )
+- query: sum (  container_cpu_usage_seconds_total {  id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }  and on (node) kube_node_role{ role = "master" } )  by   (   id  )
   metricName: cgroupCPUSeconds-Masters
   instant: true
   captureStart: true
 
-- query: sum (  container_memory_rss {  id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" } and on (node) kube_node_role{ role = "master" } )  by   (   id  )
+- query: sum (  container_memory_rss {  id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" } and on (node) kube_node_role{ role = "master" } )  by   (   id  )
   metricName: cgroupMemoryRSS-Masters
   instant: true
   captureStart: true
 
-- query: sum (  container_cpu_usage_seconds_total {  id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }  and on (node) kube_node_role{ role = "infra" } )  by   (   id  )
+- query: sum (  container_cpu_usage_seconds_total {  id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }  and on (node) kube_node_role{ role = "infra" } )  by   (   id  )
   metricName: cgroupCPUSeconds-Infra
   instant: true
   captureStart: true
 
-- query: sum (  container_memory_rss {  id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" } and on (node) kube_node_role{ role = "infra" } )  by   (   id  )
+- query: sum (  container_memory_rss {  id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" } and on (node) kube_node_role{ role = "infra" } )  by   (   id  )
   metricName: cgroupMemoryRSS-Infra
   instant: true
   captureStart: true
@@ -189,10 +179,10 @@
   captureStart: true
 
 # cgroup CPU instantaneous per-second rate of increase over the last 2 minutes
-- query: sum (  irate( container_cpu_usage_seconds_total { id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }[2m])  )  by   (   id , instance )
+- query: sum (  irate( container_cpu_usage_seconds_total { id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice" }[2m])  )  by   (   id , node )
   metricName: cgroupCPU
 
 # RSS Memory
-- query: sum( container_memory_rss { id =~ "/system.slice|/system.slice/kubelet.service|/system.slice/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice"}) by (id, instance)
+- query: sum( container_memory_rss { id =~ "/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice"}) by (id, node)
   metricName: cgroupMemoryRSS
 

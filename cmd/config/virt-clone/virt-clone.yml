@@ -68,7 +68,7 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createBaseVMJobName }} {{ $baseVMNamespace }} {{ .privateKey }} fedora"
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createBaseVMJobName }} {{ $baseVMNamespace }} {{ .privateKey }} fedora"
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml
@@ -101,7 +101,7 @@ jobs:
   objects:
   - kubeVirtOp: stop
     labelSelector:
-      kube-burner-job: {{ $createBaseVMJobName }}
+      kube-burner.io/job: {{ $createBaseVMJobName }}
 
 # Create the DV in a separate job to make sure it is ready before continuing
 - name: create-base-image-dv
@@ -213,7 +213,7 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner-job {{ $createCloneVMJobName }} {{ $cloneVMNamespace }} {{ .privateKey }} fedora"
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createCloneVMJobName }} {{ $cloneVMNamespace }} {{ .privateKey }} fedora"
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml

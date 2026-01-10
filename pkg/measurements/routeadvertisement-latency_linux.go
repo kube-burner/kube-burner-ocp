@@ -19,17 +19,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/measurements"
-	"github.com/kube-burner/kube-burner/pkg/measurements/metrics"
-	"github.com/kube-burner/kube-burner/pkg/measurements/types"
-	"github.com/kube-burner/kube-burner/pkg/util/fileutils"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/measurements"
+	"github.com/kube-burner/kube-burner/v2/pkg/measurements/metrics"
+	"github.com/kube-burner/kube-burner/v2/pkg/measurements/types"
+	"github.com/kube-burner/kube-burner/v2/pkg/util/fileutils"
 	probing "github.com/prometheus-community/pro-bing"
 	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
@@ -60,15 +61,19 @@ const (
 	exportPingerTimeoutMsec       = 100
 )
 
-// default values for the job's input variables. This will be overridden with user passed values in the job template
-// number of routes to be imported will be a multiple of numDummyIfaces and numAddressOnDummyIface
-var numDummyIfaces = 20
-var numAddressOnDummyIface = 10
-var importRoutesCount = numDummyIfaces * numAddressOnDummyIface
+var (
+	// default values for the job's input variables. This will be overridden with user passed values in the job template
+	// number of routes to be imported will be a multiple of numDummyIfaces and numAddressOnDummyIface
+	numDummyIfaces         = 20
+	numAddressOnDummyIface = 10
+	importRoutesCount      = numDummyIfaces * numAddressOnDummyIface
 
-// Max timeout to wait for finishing the import and export scenarios
-var exportScenarioMaxTimeout time.Duration = 1 * time.Minute
-var importScenarioMaxTimeout time.Duration = 1 * time.Minute
+	// Max timeout to wait for finishing the import and export scenarios
+	exportScenarioMaxTimeout time.Duration = 1 * time.Minute
+	importScenarioMaxTimeout time.Duration = 1 * time.Minute
+
+	supportedRaLatencyJobTypes = []config.JobType{config.CreationJob, config.PatchJob}
+)
 
 // Internal struct used to marshal PodAnnotation to the pod annotation
 // pod IP address is derived from podAnnotation when the pod is created on cudn network
@@ -197,7 +202,7 @@ func (plmf raLatencyMeasurementFactory) NewMeasurement(jobConfig *config.Job, cl
 // we create list of cudn subnet and pod ip mappings. CUdn subnet is considered as a route exported to outside the cluster. When KB wants to ping test the cudn, it pings cudn's pods.
 func (r *raLatency) getPods() error {
 	var err error
-	listOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("kube-burner-uuid=%s", r.Uuid)}
+	listOptions := metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", config.KubeBurnerLabelUUID, r.Uuid)}
 	nsList, err := r.ClientSet.CoreV1().Namespaces().List(context.TODO(), listOptions)
 	if err != nil {
 		log.Errorf("Error listing namespaces: %v", err)
@@ -825,4 +830,8 @@ func (r *raLatency) getLatency(normLatency any) map[string]float64 {
 		"MaxNetlinkRouteLatency": float64(raMetric.MaxNetlinkRouteLatency),
 		"P99NetlinkRouteLatency": float64(raMetric.P99NetlinkRouteLatency),
 	}
+}
+
+func (r *raLatency) IsCompatible() bool {
+	return slices.Contains(supportedRaLatencyJobTypes, r.JobConfig.JobType)
 }

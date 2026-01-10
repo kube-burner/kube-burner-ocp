@@ -1,0 +1,21 @@
+---
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetwork
+metadata:
+  name: sriov-dpdk-net-{{ .Iteration }}-{{ .Replica }}
+  namespace: openshift-sriov-network-operator
+spec:
+  ipam: |
+    {
+      "type": "static",
+      "addresses": [
+        {
+          "address": "10.1.54.0/24"
+        }
+      ]
+    }
+  logLevel: info #debug
+  spoofChk: "off"
+  trust: "on"
+  resourceName: {{ .sriovDpdkDevicepool }}
+  networkNamespace: rds-{{ .Iteration }}

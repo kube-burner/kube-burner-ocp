@@ -21,10 +21,11 @@ import (
 	"time"
 
 	uid "github.com/google/uuid"
-	ocp "github.com/kube-burner/kube-burner-ocp"
-	"github.com/kube-burner/kube-burner/pkg/config"
-	"github.com/kube-burner/kube-burner/pkg/util"
-	"github.com/kube-burner/kube-burner/pkg/workloads"
+	"github.com/kube-burner/kube-burner-ocp/pkg/clusterhealth"
+	ocpWorkloads "github.com/kube-burner/kube-burner-ocp/pkg/workloads"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/util"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -45,7 +46,7 @@ func openShiftCmd() *cobra.Command {
 	var metricsProfileType string
 	var esServer, esIndex string
 	var QPS, burst int
-	var gc, gcMetrics, alerting, checkHealth, localIndexing, extract, enableFileLogging bool
+	var gc, gcMetrics, alerting, ignoreHealthCheck, localIndexing, extract, enableFileLogging bool
 	ocpCmd := &cobra.Command{
 		Use:  "kube-burner-ocp",
 		Long: `kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads`,
@@ -55,7 +56,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().BoolVar(&localIndexing, "local-indexing", false, "Enable local indexing")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints, overrides the es-server and es-index flags")
 	ocpCmd.PersistentFlags().BoolVar(&alerting, "alerting", true, "Enable alerting")
-	ocpCmd.PersistentFlags().BoolVar(&checkHealth, "check-health", true, "Check cluster health before job")
+	ocpCmd.PersistentFlags().BoolVar(&ignoreHealthCheck, "ignore-health-check", false, "Run cluster health check, but ignore failures")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.UUID, "uuid", uid.NewString(), "Benchmark UUID")
 	ocpCmd.PersistentFlags().DurationVar(&workloadConfig.Timeout, "timeout", 4*time.Hour, "Benchmark timeout")
 	ocpCmd.PersistentFlags().IntVar(&QPS, "qps", 20, "QPS")
@@ -82,15 +83,15 @@ func openShiftCmd() *cobra.Command {
 		if enableFileLogging {
 			util.SetupFileLogging("ocp-" + workloadConfig.UUID)
 		}
-		if checkHealth && (cmd.Name() != "cluster-health" || cmd.Name() == "index") {
-			ocp.ClusterHealthCheck()
+		if cmd.Name() != "cluster-health" && cmd.Name() != "index" {
+			clusterhealth.ClusterHealthCheck(ignoreHealthCheck)
 		}
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		workloadDir := filepath.Join(rootDir, cmd.Name())
 		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, workloadDir, metricsProfilesDir, alertsDir, scriptsDir, kubeClientProvider)
 
 		// Set common variables that all workloads can use
-		ocp.AdditionalVars = map[string]any{
+		ocpWorkloads.AdditionalVars = map[string]any{
 			"UUID":           workloadConfig.UUID,
 			"QPS":            QPS,
 			"BURST":          burst,
@@ -99,52 +100,53 @@ func openShiftCmd() *cobra.Command {
 			"LOCAL_INDEXING": localIndexing,
 		}
 		if alerting {
-			ocp.AdditionalVars["ALERTS"] = "alerts.yml"
+			ocpWorkloads.AdditionalVars["ALERTS"] = "alerts.yml"
 		} else {
-			ocp.AdditionalVars["ALERTS"] = ""
+			ocpWorkloads.AdditionalVars["ALERTS"] = ""
 		}
 		if workloadConfig.MetricsEndpoint == "" {
-			ocp.AdditionalVars["ES_SERVER"] = esServer
-			ocp.AdditionalVars["ES_INDEX"] = esIndex
+			ocpWorkloads.AdditionalVars["ES_SERVER"] = esServer
+			ocpWorkloads.AdditionalVars["ES_INDEX"] = esIndex
 		}
 
-		if err := ocp.GatherMetadata(&wh, alerting); err != nil {
+		if err := ocpWorkloads.GatherMetadata(&wh, alerting); err != nil {
 			log.Fatal(err.Error())
 		}
 	}
 	ocpCmd.AddCommand(
-		ocp.NewClusterDensity(&wh, "cluster-density-v2"),
-		ocp.NewClusterDensity(&wh, "cluster-density-ms"),
-		ocp.NewCrdScale(&wh),
-		ocp.NewUdnBgp(&wh, "udn-bgp"),
-		ocp.NewNetworkPolicy(&wh, "network-policy"),
-		ocp.NewOLMv1(&wh, "olm"),
-		ocp.NewNodeDensity(&wh, "node-density"),
-		ocp.NewNodeDensity(&wh, "node-density-heavy"),
-		ocp.NewNodeDensity(&wh, "node-density-cni"),
-		ocp.NewNodeScale(&wh, "node-scale"),
-		ocp.NewUDNDensityPods(&wh),
-		ocp.NewIndex(&wh, ocpConfig),
-		ocp.NewPVCDensity(&wh),
-		ocp.NewRDSCore(&wh),
-		ocp.NewWebBurner(&wh, "web-burner-init"),
-		ocp.NewWebBurner(&wh, "web-burner-node-density"),
-		ocp.NewWebBurner(&wh, "web-burner-cluster-density"),
-		ocp.NewEgressIP(&wh, "egressip"),
-		ocp.NewWhereabouts(&wh),
-		ocp.NewVirtDensity(&wh),
-		ocp.NewVirtUDNDensity(&wh),
-		ocp.ClusterHealth(),
-		ocp.CustomWorkload(&wh),
-		ocp.NewVirtCapacityBenchmark(&wh),
-		ocp.NewVirtClone(&wh),
-		ocp.NewVirtEphemeralRestart(&wh),
-		ocp.NewDVClone(&wh),
-		ocp.NewVirtMigration(&wh),
-		ocp.NewKueueOperator(&wh, "kueue-operator-pods"),
-		ocp.NewKueueOperator(&wh, "kueue-operator-jobs"),
-		ocp.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
-		ocp.NewANPDensityPods(&wh, "anp-density-pods"),
+		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-v2"),
+		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-ms"),
+		ocpWorkloads.NewCrdScale(&wh),
+		ocpWorkloads.NewUdnBgp(&wh, "udn-bgp"),
+		ocpWorkloads.NewNetworkPolicy(&wh, "network-policy"),
+		ocpWorkloads.NewOLMv1(&wh, "olm"),
+		ocpWorkloads.NewNodeDensity(&wh, "node-density"),
+		ocpWorkloads.NewNodeDensity(&wh, "node-density-heavy"),
+		ocpWorkloads.NewNodeDensity(&wh, "node-density-cni"),
+		ocpWorkloads.NewNodeScale(&wh, "node-scale"),
+		ocpWorkloads.NewUDNDensityPods(&wh),
+		ocpWorkloads.NewIndex(&wh, ocpConfig),
+		ocpWorkloads.NewPVCDensity(&wh),
+		ocpWorkloads.NewRDSCore(&wh),
+		ocpWorkloads.NewWebBurner(&wh, "web-burner-init"),
+		ocpWorkloads.NewWebBurner(&wh, "web-burner-node-density"),
+		ocpWorkloads.NewWebBurner(&wh, "web-burner-cluster-density"),
+		ocpWorkloads.NewEgressIP(&wh, "egressip"),
+		ocpWorkloads.NewWhereabouts(&wh),
+		ocpWorkloads.NewVirtDensity(&wh),
+		ocpWorkloads.NewVirtUDNDensity(&wh),
+		clusterhealth.ClusterHealth(),
+		ocpWorkloads.CustomWorkload(&wh),
+		ocpWorkloads.NewVirtCapacityBenchmark(&wh),
+		ocpWorkloads.NewVirtClone(&wh),
+		ocpWorkloads.NewVirtEphemeralRestart(&wh),
+		ocpWorkloads.NewDVClone(&wh),
+		ocpWorkloads.NewVirtMigration(&wh),
+		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-pods"),
+		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-jobs"),
+		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
+		ocpWorkloads.NewANPDensityPods(&wh, "anp-density-pods"),
+		ocpWorkloads.NewBuildFarm(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd

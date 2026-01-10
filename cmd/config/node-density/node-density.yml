@@ -49,11 +49,12 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: {{.NAMESPACED_ITERATIONS}}
     iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
-    churn: {{.CHURN}}
-    churnCycles: {{.CHURN_CYCLES}}
-    churnDuration: {{.CHURN_DURATION}}
-    churnPercent: {{.CHURN_PERCENT}}
-    churnDelay: {{.CHURN_DELAY}}
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
@@ -69,3 +70,4 @@ jobs:
         replicas: 1
         inputVars:
           containerImage: registry.k8s.io/pause:3.1
+          nodeSelector: {{.NODE_SELECTOR}}

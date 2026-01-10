@@ -77,6 +77,9 @@ jobs:
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
   beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  measurements:
+  - name: pvcLatency
+  - name: dataVolumeLatency
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml

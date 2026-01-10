@@ -15,6 +15,7 @@ Usage:
   kube-burner-ocp [command]
 
 Available Commands:
+  build-farm                 Runs build-farm workload
   cluster-density-ms         Runs cluster-density-ms workload
   cluster-density-v2         Runs cluster-density-v2 workload
   cluster-health             Checks for ocp cluster health
@@ -177,7 +178,7 @@ This workload family is a control-plane density focused workload that that creat
 Each iteration of these create a new namespace, the three support similar configuration flags. Check them out from the subcommand help.
 
 !!! Info
-    Workload churning of 1h is enabled by default in the `cluster-density` workloads; you can disable it by passing `--churn=false` to the workload subcommand.
+    Workload churning of 1h is enabled by default in the `cluster-density` workloads; you can disable it by passing `--churn-duration=0` to the workload subcommand.
 
 ### cluster-density-v2
 
@@ -421,6 +422,79 @@ Pre-requisites:
          effect: "NoExecute"
      ```
  - **SRIOV operator** with its corresponding *SriovNetworkNodePolicy*
+
+    Note : Please find the recommended *SriovNetworkNodePolicy* for pod churn at high %
+
+    ```yaml
+    ---
+    apiVersion: sriovnetwork.openshift.io/v1
+    kind: SriovNetworkNodePolicy
+    metadata:
+      name: dpdk-vfs-policy
+      namespace: openshift-sriov-network-operator
+    spec:
+      deviceType: vfio-pci
+      isRdma: false
+      nicSelector:
+        pfNames:
+        - ens1f1#0-19
+      nodeSelector:
+        node-role.kubernetes.io/worker-dpdk: ""
+      numVfs: 60
+      priority: 99
+      resourceName: dpdkvfs
+    ---
+    apiVersion: sriovnetwork.openshift.io/v1
+    kind: SriovNetworkNodePolicy
+    metadata:
+      name: sriov-vfs-policy-worker-dpdk
+      namespace: openshift-sriov-network-operator
+    spec:
+      deviceType: netdevice
+      isRdma: false
+      nicSelector:
+        pfNames:
+        - ens1f1#20-59
+      nodeSelector:
+        node-role.kubernetes.io/worker-dpdk: ""
+      numVfs: 60
+      priority: 99
+      resourceName: servervfs
+    ---
+    apiVersion: sriovnetwork.openshift.io/v1
+    kind: SriovNetworkNodePolicy
+    metadata:
+      name: server-vfs-policy
+      namespace: openshift-sriov-network-operator
+    spec:
+      deviceType: netdevice
+      isRdma: false
+      nicSelector:
+        pfNames:
+        - ens1f1
+      nodeSelector:
+        node-role.kubernetes.io/customcnf: "enabled"
+      numVfs: 60
+      priority: 50
+      resourceName: servervfs
+    ---
+    apiVersion: sriovnetwork.openshift.io/v1
+    kind: SriovNetworkNodePolicy
+    metadata:
+      name: server-vfs-policy-metallb-workers
+      namespace: openshift-sriov-network-operator
+    spec:
+      deviceType: netdevice
+      isRdma: false
+      nicSelector:
+        pfNames:
+        - ens1f1
+      nodeSelector:
+        node-role.kubernetes.io/worker-metallb: ""
+      numVfs: 60
+      priority: 50
+      resourceName: servervfs
+    ```
  - Some nodes (i.e.: 25% of them) with the ***worker-dpdk*** label to host the DPDK pods, i.e.:
      ```
      $ kubectl label node worker1 node-role.kubernetes.io/worker-dpdk=
@@ -935,6 +1009,63 @@ This workload creates jobs in multiple namespaces that are handled by 10 shared 
 This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
 
 
+## Build-Farm workload
+
+The build-farm workload simulates a realistic build farm environment where build jobs are continuously created and churned. This workload is designed to stress-test the control plane by creating controllers that watch jobs and pods, while simultaneously creating and churning build jobs across multiple namespaces.
+
+### Architecture
+
+The workload consists of two main components:
+
+1. **Build Farm Controller**: Deployed in the `build-farm-controllers` namespace this controller simulate build farm operators that watch and manage build jobs.
+
+2. **Build Jobs**: Created in `build-farm-tenant` namespaces with:
+   - Service accounts, roles and role bindings for RBAC
+   - Secrets (1.5x iterations per namespace)
+   - ConfigMaps (0.5x iterations per namespace)
+   - Small build jobs (default 80% of total) - lighter weight builds
+   - Large build jobs (default 20% of total) - heavier builds
+   - Job distribution is configurable via `--small-job-percent` flag
+   - Support metadata updates and label distribution for watchers sharding
+
+### Churn Behavior
+
+By default, churning is enabled to simulate realistic build farm behavior where jobs are continuously created, completed and cleaned up. The churn configuration allows you to:
+- Define the number of churn cycles (default: 5)
+- Set the percentage of jobs to churn each round (default: 60%)
+- Configure delays between churn cycles (default: 10 minutes)
+
+### Configuration Flags
+
+The build-farm workload supports customization through command-line flags:
+
+**Controller configuration flags:**
+- `--num-controllers`: Number of controller replicas (default: 4)
+- `--num-threads`: Number of threads per controller (default: 4)
+- `--enable-job-watcher`: Enable job watcher (default: true)
+- `--enable-pod-watcher`: Enable pod watcher (default: true)
+- `--enable-jobs-listing`: Enable periodic jobs listing (default: true)
+- `--enable-secrets-listing`: Enable periodic secrets listing (default: false)
+- `--watcher-restart-interval`: Watcher restart interval (default: 600s)
+- `--sleep-before-restart`: Sleep duration before restarting watchers (default: 60s)
+- `--secrets-list-interval`: Secrets list interval (default: 5s)
+- `--jobs-list-interval`: Jobs list interval (default: 5s)
+- `--namespace-filter-regex`: Namespace filter regex. Allows filtering namespaces for list operations
+
+**Build job configuration flags:**
+- `--metadata-iterations`: Number of metadata update iterations per job (default: 2)
+- `--metadata-iterations-delay`: Delay between metadata iterations (default: 5s)
+- `--num-watchers`: Number of watchers for label distribution (default: 32)
+- `--build-image`: Container image for build simulation (default: "quay.io/prometheus/busybox")
+- `--small-job-percent`: Percentage of small build jobs (0-100, large jobs get remainder) (default: 80)
+
+### Use Cases
+
+This workload is particularly useful for:
+- Simulating realistic build farm behavior with Jobs churn
+- Measuring the impact of periodic list operations on the API server memory
+- Testing metadata updates impact on etcd db size with frequent changes
+
 ## Custom Workload: Bring your own workload
 
 To kickstart kube-burner-ocp with a custom workload, `init` becomes your go-to command. This command is equipped with flags that enable to seamlessly integrate and run your personalized workloads. Here's a breakdown of the flags accepted by the init command:
@@ -947,19 +1078,19 @@ Usage:
   kube-burner-ocp init [flags]
 
 Flags:
-    --churn                            Enable churning (default true)
-    --churn-cycles int                 Churn cycles to execute
-    --churn-delay duration             Time to wait between each churn (default 2m0s)
-    --churn-deletion-strategy string   Churn deletion strategy to use (default "default")
-    --churn-duration duration          Churn duration (default 5m0s)
-    --churn-percent int                Percentage of job iterations that kube-burner will churn each round (default 10)
-    -c, --config string                    Config file path or url
-    -h, --help                             help for init
-    --iterations int                   Job iterations. Mutually exclusive with '--pods-per-node' (default 1)
-    --iterations-per-namespace int     Iterations per namespace (default 1)
-    --namespaced-iterations            Namespaced iterations (default true)
-    --pods-per-node int                Pods per node. Mutually exclusive with '--iterations' (default 50)
-    --service-latency                  Enable service latency measurement
+      --churn-cycles int               Churn cycles to execute
+      --churn-delay duration           Time to wait between each churn (default 2m0s)
+      --churn-duration duration        Churn duration (default 5m0s)
+      --churn-mode string              Either namespaces, to churn entire namespaces or objects, to churn individual objects (default "namespaces")
+      --churn-percent int              Percentage of job iterations that kube-burner will churn each round (default 10)
+  -c, --config string                  Config file path or url
+      --deletion-strategy string       GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace (default "default")
+  -h, --help                           help for init
+      --iterations int                 Job iterations. Mutually exclusive with '--pods-per-node'
+      --iterations-per-namespace int   Iterations per namespace (default 1)
+      --namespaced-iterations          Namespaced iterations (default true)
+      --pods-per-node int              Pods per node. Mutually exclusive with '--iterations'
+      --service-latency                Enable service latency measurement
 ```
 
 Creating a custom workload for kube-burner-ocp is a seamless process, and you have the flexibility to craft it according to your specific needs. Below is a template to guide you through the customization of your workload:
@@ -1031,6 +1162,10 @@ By specifying `--profile-type`, kube-burner can use two different metrics profil
 When using the regular profiles ([metrics-aggregated](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics-aggregated.yml) or [metrics](https://github.com/kube-burner/kube-burner-ocp/blob/master/cmd/config/metrics.yml)), kube-burner scrapes and indexes metrics timeseries.
 
 The reporting profile is very useful to reduce the number of documents sent to the configured indexer. Thanks to the combination of aggregations and instant queries for prometheus metrics, and 4 summaries for latency measurements, only a few documents will be indexed per benchmark. This flag makes possible to specify one or both of these profiles indistinctly.
+
+## Grafana Dashboards
+
+Grafana dashboards are available to visualize kube-burner metrics and performance data. See the [dashboards documentation](dashboards/README.md) for details on how to import and use the dashboards with their corresponding metrics profiles.
 
 ## Customizing workloads
 

@@ -1,0 +1,84 @@
+// Copyright 2024 The Kube-burner Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package workloads
+
+import (
+	"os"
+	"time"
+
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/spf13/cobra"
+)
+
+// NewNodeDensity holds node-density-cni workload
+func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
+	var iterations, churnPercent, churnCycles, dpdkCores int
+	var svcLatency bool
+	var churnDelay, churnDuration, podReadyThreshold time.Duration
+	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool, churnMode string
+	var metricsProfiles []string
+	var rc int
+	cmd := &cobra.Command{
+		Use:          "rds-core",
+		Short:        "Runs rds-core workload",
+		SilenceUsage: true,
+		Run: func(cmd *cobra.Command, args []string) {
+			setMetrics(cmd, metricsProfiles)
+			ingressDomain, err := wh.MetadataAgent.GetDefaultIngressDomain()
+			if err != nil {
+				log.Fatal("Error obtaining default ingress domain: ", err.Error())
+			}
+			AdditionalVars["CHURN_CYCLES"] = churnCycles
+			AdditionalVars["CHURN_DURATION"] = churnDuration
+			AdditionalVars["CHURN_DELAY"] = churnDelay
+			AdditionalVars["CHURN_PERCENT"] = churnPercent
+			AdditionalVars["CHURN_MODE"] = churnMode
+			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
+			AdditionalVars["DPDK_CORES"] = dpdkCores
+			AdditionalVars["DPDK_HUGEPAGES"] = dpdkHugepages
+			AdditionalVars["SRIOV_DPDK_DEVICEPOOL"] = sriovDpdkDevicepool
+			AdditionalVars["SRIOV_NET_DEVICEPOOL"] = sriovNetDevicepool
+			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["PERF_PROFILE"] = perfProfile
+			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["SVC_LATENCY"] = svcLatency
+			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
+			wh.SetVariables(AdditionalVars, nil)
+			rc = wh.Run(cmd.Name() + ".yml")
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
+		},
+	}
+	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
+	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
+	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
+	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnNamespaces), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
+	cmd.Flags().IntVar(&dpdkCores, "dpdk-cores", 2, "Number of cores per DPDK pod")
+	cmd.Flags().StringVar(&dpdkHugepages, "dpdk-hugepages", "16Gi", "Number of hugepages per DPDK pod. Must be a multiple of 1Gi")
+	cmd.Flags().StringVar(&sriovDpdkDevicepool, "dpdk-devicepool", "intelnics2", "SRIOV Device pool name for DPDK VFs in the cluster")
+	cmd.Flags().StringVar(&sriovNetDevicepool, "net-devicepool", "intelnics2", "SRIOV Device pool name for Kernel VFs in the cluster")
+	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().StringVar(&perfProfile, "perf-profile", "default", "Performance profile implemented in the cluster")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
+	return cmd
+}
