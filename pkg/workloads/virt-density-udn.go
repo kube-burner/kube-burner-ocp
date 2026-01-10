@@ -74,7 +74,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Info("Layer 2 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer2", bindingMethod)
 			}
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, nil)
+			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

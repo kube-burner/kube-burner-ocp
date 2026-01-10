@@ -68,7 +68,7 @@ teardown_file() {
 }
 
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=2 --churn-cycles=1 --churn-delay=5s --profile-type=both ${INDEXING_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=12 --churn-cycles=1 --churn-percent=25 --churn-delay=5s --profile-type=both ${INDEXING_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID}
   check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion
 }
 
@@ -224,5 +224,21 @@ teardown_file() {
   verify_object_count crd 5 "" "kube-burner.io/job=crd-scale"
   oc delete crd -l kube-burner.io/job=crd-scale
   git clean -fd
+}
+
+@test "build-farm: basic execution with churn" {
+  run_cmd ${KUBE_BURNER_OCP} build-farm \
+    --job-iterations=1 \
+    --iterations-per-namespace=10 \
+    --churn=true \
+    --churn-cycles=1 \
+    --churn-percent=60 \
+    --churn-delay=5s \
+    --num-controllers=1 \
+    --num-threads=1 \
+    --metadata-iterations=1 \
+    --metadata-iterations-delay=1s \
+    --num-watchers=1 \
+    --uuid=${UUID}
 }
 

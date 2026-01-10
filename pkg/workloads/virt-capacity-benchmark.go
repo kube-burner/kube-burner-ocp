@@ -139,7 +139,8 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				AdditionalVars["storageClassName"] = storageClassName
 
 				os.Setenv("counter", fmt.Sprint(counter))
-				rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
+				wh.SetVariables(AdditionalVars, nil)
+				rc = wh.Run(cmd.Name() + ".yml")
 				if rc != 0 {
 					log.Infof("Capacity failed in loop #%d", counter)
 					break

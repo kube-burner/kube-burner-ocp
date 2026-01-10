@@ -160,7 +160,8 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["ADDRESSES_PER_ITERATION"] = addressesPerIteration
 			AdditionalVars["EXTERNAL_SERVER_IP"] = externalServerIP
 			AdditionalVars["EIP_ADDRESSES"] = eipAddresses
-			rc = wh.RunWithAdditionalVars(cmd.Name()+".yml", AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, nil)
+			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

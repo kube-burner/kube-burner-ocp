@@ -85,6 +85,7 @@ jobs:
       duration: {{.CHURN_DURATION}}
       percent: {{.CHURN_PERCENT}}
       delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
     executionMode: parallel
     verifyObjects: true
     errorOnVerify: true

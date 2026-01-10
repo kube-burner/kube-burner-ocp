@@ -1,0 +1,105 @@
+---
+global:
+  gc: {{ .GC }}
+  gcMetrics: {{ .GC_METRICS }}
+  deletionStrategy: {{ .DELETION_STRATEGY }}
+  measurements:
+    - name: podLatency
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [metrics.yml]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  - name: build-farm-controller
+    namespace: build-farm-controllers
+    jobIterations: 1
+    skipIndexing: true
+    namespacedIterations: false
+    preLoadImages: false
+    objects:
+      - objectTemplate: build-farm-controller-sa.yml
+        replicas: 1
+      - objectTemplate: build-farm-controller-role.yml
+        replicas: 1
+      - objectTemplate: build-farm-controller-rolebinding.yml
+        replicas: 1
+      - objectTemplate: build-farm-controller-deployment.yml
+        replicas: 1
+        inputVars:
+          numControllers: {{ .NUM_CONTROLLERS }}
+          numThreads: "{{ .NUM_THREADS }}"
+          enableJobWatcher: {{ .ENABLE_JOB_WATCHER }}
+          enablePodWatcher: {{ .ENABLE_POD_WATCHER }}
+          enableJobsListing: {{ .ENABLE_JOBS_LISTING }}
+          enableSecretsListing: {{ .ENABLE_SECRETS_LISTING }}
+          watcherRestartInterval: "{{ .WATCHER_RESTART_INTERVAL }}"
+          sleepBeforeRestart: "{{ .SLEEP_BEFORE_RESTART }}"
+          secretsListInterval: "{{ .SECRETS_LIST_INTERVAL }}"
+          jobsListInterval: "{{ .JOBS_LIST_INTERVAL }}"
+          namespaceFilterRegEx: "{{ .NAMESPACE_FILTER_REGEX }}"
+  - name: build-farm-create
+    namespace: build-farm-tenant
+    jobIterations: {{ .JOB_ITERATIONS }}
+    namespacedIterations: true
+    iterationsPerNamespace: 1
+    preLoadImages: false
+    qps: {{ .QPS }}
+    burst: {{ .BURST }}
+    churnConfig:
+      cycles: {{ .CHURN_CYCLES }}
+      percent: {{ .CHURN_PERCENT }}
+      delay: {{ .CHURN_DELAY }}
+      mode: objects
+    objects:
+      - objectTemplate: build-job-sa.yml
+        replicas: 1
+        churn: false
+      - objectTemplate: build-job-role.yml
+        replicas: 1
+        churn: false
+      - objectTemplate: build-job-rolebinding.yml
+        replicas: 1
+        churn: false
+      - objectTemplate: build-job-secret.yml
+        replicas: {{ div (mul .ITERATIONS_PER_NAMESPACE 3) 2 }}
+        churn: false
+      - objectTemplate: build-job-configmap.yml
+        replicas: {{ div .ITERATIONS_PER_NAMESPACE 2 }}
+        churn: false
+      - objectTemplate: build-job-small.yml
+        replicas: {{ div (mul .ITERATIONS_PER_NAMESPACE .SMALL_JOB_PERCENT) 100 }}
+        churn: true
+        inputVars:
+          iterationsPerNamespace: {{ .ITERATIONS_PER_NAMESPACE }}
+          metadataIterations: "{{ .METADATA_ITERATIONS }}"
+          metadataIterationsDelay: "{{ .METADATA_ITERATIONS_DELAY }}"
+          numWatchers: "{{ .NUM_WATCHERS }}"
+          buildImage: "{{ .BUILD_IMAGE }}"
+          buildPlatform: "{{ .BUILD_PLATFORM }}"
+          targetImage: "{{ .TARGET_IMAGE }}"
+      - objectTemplate: build-job-large.yml
+        replicas: {{ div (mul .ITERATIONS_PER_NAMESPACE .LARGE_JOB_PERCENT) 100 }}
+        churn: true
+        inputVars:
+          iterationsPerNamespace: {{ .ITERATIONS_PER_NAMESPACE }}
+          buildImage: "{{ .BUILD_IMAGE }}"
+          buildPlatform: "{{ .BUILD_PLATFORM }}"
+          targetImage: "{{ .TARGET_IMAGE }}"
+          metadataIterations: "{{ .METADATA_ITERATIONS }}"
+          metadataIterationsDelay: "{{ .METADATA_ITERATIONS_DELAY }}"
+          numWatchers: "{{ .NUM_WATCHERS }}"
