@@ -70,7 +70,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["SELECTOR"] = selector
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 
-			wh.SetVariables(AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(configFile)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

@@ -107,7 +107,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 				AdditionalVars["JOB_ITERATIONS"] = (totalPods - podCount) / 2
 			}
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

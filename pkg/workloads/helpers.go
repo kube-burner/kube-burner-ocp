@@ -43,9 +43,9 @@ const (
 )
 
 var (
-	clusterMetadata ocpmetadata.ClusterMetadata
-	AdditionalVars  map[string]any
-
+	clusterMetadata      ocpmetadata.ClusterMetadata
+	AdditionalVars       map[string]any
+	SetVars              map[string]any
 	accessModeTranslator = map[string]string{
 		"RO":  "ReadOnly",
 		"RWO": "ReadWriteOnce",

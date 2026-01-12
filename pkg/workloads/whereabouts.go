@@ -41,7 +41,7 @@ func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CONTAINER_IMAGE"] = containerImage
 			AdditionalVars["FAST"] = fast
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

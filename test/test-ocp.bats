@@ -43,8 +43,10 @@ teardown_file() {
   # run_cmd oc delete clustercatalog --all
 }
 
-@test "custom-workload as node-density" {
-  run_cmd ${KUBE_BURNER_OCP} init --config=custom-workload.yml --metrics-endpoint metrics-endpoints.yaml --uuid=${UUID}
+@test "custom-workload" {
+  run_cmd ${KUBE_BURNER_OCP} init --config=custom-workload.yml --metrics-endpoint metrics-endpoints.yaml --uuid=${UUID} --set=global.gc=false
+  verify_object_count namespace 1 "" kube-burner.io/job=custom-workload
+  oc delete ns -l kube-burner.io/job=custom-workload
   check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 

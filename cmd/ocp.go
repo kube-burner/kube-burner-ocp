@@ -47,10 +47,12 @@ func openShiftCmd() *cobra.Command {
 	var esServer, esIndex string
 	var QPS, burst int
 	var gc, gcMetrics, alerting, ignoreHealthCheck, localIndexing, extract, enableFileLogging bool
+	var setValues []string
 	ocpCmd := &cobra.Command{
 		Use:  "kube-burner-ocp",
 		Long: `kube-burner plugin designed to be used with OpenShift clusters as a quick way to run well-known workloads`,
 	}
+	ocpCmd.PersistentFlags().StringSliceVar(&setValues, "set", []string{}, "Set arbitrary key=value pairs to override values in the config file")
 	ocpCmd.PersistentFlags().StringVar(&esServer, "es-server", "", "Elastic Search endpoint")
 	ocpCmd.PersistentFlags().StringVar(&esIndex, "es-index", "", "Elastic Search index")
 	ocpCmd.PersistentFlags().BoolVar(&localIndexing, "local-indexing", false, "Enable local indexing")
@@ -70,6 +72,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.MarkFlagsRequiredTogether("es-server", "es-index")
 	ocpCmd.MarkFlagsMutuallyExclusive("es-server", "metrics-endpoint")
 	ocpCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		var err error
 		if cmd.Name() == "version" || cmd.Name() == "help" || (cmd.HasParent() && cmd.Parent().Name() == "completion") {
 			return
 		}
@@ -110,6 +113,10 @@ func openShiftCmd() *cobra.Command {
 		}
 
 		if err := ocpWorkloads.GatherMetadata(&wh, alerting); err != nil {
+			log.Fatal(err.Error())
+		}
+		ocpWorkloads.SetVars, err = config.ParseSetValues(setValues)
+		if err != nil {
 			log.Fatal(err.Error())
 		}
 	}
