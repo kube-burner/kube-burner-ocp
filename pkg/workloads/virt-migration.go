@@ -52,6 +52,8 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	var loadVMsIterations int
 	var loadVMsPerIteration int
 	var migrationQPS int
+	var udnLayer2 bool
+	var udnSubnets string
 
 	var rc int
 	cmd := &cobra.Command{
@@ -77,6 +79,8 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["storageClassName"] = storageClassName
+			AdditionalVars["udnLayer2"] = udnLayer2
+			AdditionalVars["udnSubnets"] = udnSubnets
 			AdditionalVars["testNamespace"] = testNamespace
 			AdditionalVars["vmCreateIterations"] = iterations
 			AdditionalVars["vmCreatePerIteration"] = vmsPerIteration
@@ -105,5 +109,7 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&loadVMsPerIteration, "load-per-iteration", virtMigrationDefaultLoadVMsPerIteration, "Number of VMs to create in each load VM iteration")
 	cmd.Flags().IntVar(&migrationQPS, "migration-qps", virtMigrationDefaultMigrationQPS, "Number of concurrent calls to migrate")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&udnLayer2, "udn-layer-2", false, "Enable UDN Layer 2")
+	cmd.Flags().StringVar(&udnSubnets, "udn-subnets", "[\"10.132.0.0/24\"]", "UDN only -- Subnets used by the L2 UDN")
 	return cmd
 }
