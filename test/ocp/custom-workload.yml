@@ -1,7 +1,6 @@
 ---
 global:
-  gc: {{.GC}}
-  gcMetrics: {{.GC_METRICS}}
+  gc: true
   measurements:
     - name: podLatency
       thresholds:
@@ -22,8 +21,8 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 jobs:
-  - name: node-density
-    namespace: node-density
+  - name: custom-workload
+    namespace: custom-workload
     jobIterations: 75
     qps: {{.QPS}}
     burst: {{.BURST}}

@@ -107,7 +107,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 			log.Infof("Controller config: %d controllers, %d threads per controller", numControllers, numThreads)
 
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

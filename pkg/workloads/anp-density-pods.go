@@ -306,7 +306,7 @@ func NewANPDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["SVC_LATENCY"] = svcLatency
-			wh.SetVariables(AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 
 			sourceNsPrefix := "anp-cidr"

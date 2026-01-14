@@ -74,7 +74,7 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["clonesPerIteration"] = clonesPerIteration
 
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

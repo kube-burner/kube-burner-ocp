@@ -63,7 +63,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			AdditionalVars["NETPOL_LATENCY"] = netpolLatency
 			AdditionalVars["NETPOL_READY_THRESHOLD"] = netpolReadyThreshold
 
-			wh.SetVariables(AdditionalVars, nil)
+			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
