@@ -11,6 +11,6 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/measurements/types"
 )
 
-func NewRaLatencyMeasurementFactory(configSpec config.Spec, measurement types.Measurement, metadata map[string]any) (measurements.MeasurementFactory, error) {
+func NewRaLatencyMeasurementFactory(configSpec config.Spec, measurement types.Measurement, metadata map[string]any, labelSelector string) (measurements.MeasurementFactory, error) {
 	return nil, fmt.Errorf("raLatencyMeasurement is supported only when running on Linux")
 }
