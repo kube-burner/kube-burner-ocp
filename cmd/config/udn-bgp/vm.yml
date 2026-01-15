@@ -1,0 +1,53 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: vm-test-{{.Replica}}
+  labels:
+    kubevirt.io/os: fedora
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        kubevirt.io/os: fedora
+    spec:
+      terminationGracePeriodSeconds: 0
+      domain:
+        resources:
+          requests:
+            memory: 256Mi
+        devices:
+          disks:
+          - name: containerdisk
+            disk:
+              bus: virtio
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          - name: emptydisk
+            disk:
+              bus: virtio
+          interfaces:
+          - name: default
+            binding:
+              name: l2bridge
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - name: containerdisk
+        containerDisk:
+          image: quay.io/openshift-cnv/qe-cnv-tests-fedora:40
+          imagePullPolicy: IfNotPresent
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            password: perfscale
+            chpasswd: { expire: False }
+            runcmd:
+              - dnf install -y --nodocs httpd
+              - httpd -p 8080 -h /var/www/html
+      - name: emptydisk
+        emptyDisk:
+          capacity: "50Mi"
