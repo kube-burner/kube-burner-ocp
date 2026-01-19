@@ -32,6 +32,7 @@ var additionalMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasu
 // NewUdnBgp holds udn-bgp workload
 func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, namespacePerCudn int
+	var enableVm bool
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -41,6 +42,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacePerCudn
+			AdditionalVars["ENABLE_VM"] = enableVm
 			wh.SetMeasurements(additionalMeasurementFactoryMap)
 			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
@@ -50,6 +52,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
+	cmd.Flags().BoolVar(&enableVm, "vm", false, "Deploy a VM for the test instead of a pod")
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd

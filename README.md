@@ -870,7 +870,7 @@ Unlike a UDN network, a CUDN network will be cluster scoped and can be used by m
 
 This workload defines multiple jobs as per CUDN requirement. Some of the requirements:
 1. Namespace with label "k8s.ovn.org/primary-user-defined-network" before the CUDN creation
-2. OVN should create all the necessary resources for CUDN before a pod is created on it. Currently we don't have a mechanism to detect if the OVN has created all CUDN's resources. So we are using separate jobs for CUDN and pods with jobPause. Workload defines only one pod per CUDN.
+2. OVN should create all the necessary resources for CUDN before a pod (or VM) is created on it. Currently we don't have a mechanism to detect if the OVN has created all CUDN's resources. So we are using separate jobs for CUDN and pods/VMs with jobPause. Workload defines only one pod or VM per CUDN.
 3. RouteAdvertiments CRD selecting the CUDN. We use 1:1 RA:CUDN mapping.
 
 As we want to measure BGP route exchange latency, this workload skips measurements for all the resources except RouteAdvertisements.
@@ -881,7 +881,7 @@ When a RouteAdvertisement is created, it advertises the selected CUDN's subnet t
 Sequent of events during workload execution
 1. Job1 creates namespaces
 2. Job2 creates CUDNs
-3. Job3 creates Pods
+3. Job3 creates Pods (or VMs if `--vm` flag is used)
 4. When Job4 execution starts, Kube burner calls start measurement.
    RouteAdvertisment Latency measurement code then
    a. Maintains a list of CUDN subnets and the pod addresses.
@@ -908,6 +908,36 @@ Sequent of events during workload execution
       vii) Import worker records the ping success timestamp
    c. Waits for import scenario complettion
 8. kube burner indexes all the latency measurements
+
+### Testing with VMs
+
+The CUDN BGP workload supports testing with Virtual Machines (VMs) instead of pods. This allows you to measure BGP route advertisement latency for VMs running on CUDN networks, which is useful for validating virtualization workloads in OpenShift Virtualization environments.
+
+#### Prerequisites
+
+- OpenShift Virtualization (KubeVirt) must be installed and operational on the cluster
+- The cluster must support CUDN networks (OCP 4.18+)
+- External FRR router configured as described in the [CUDN BGP Workload](#cudn-bgp-workload) section
+
+#### Usage
+
+To run the workload with VMs instead of pods, use the `--vm` flag:
+
+```console
+kube-burner-ocp udn-bgp --iterations=10 --vm
+```
+
+When the `--vm` flag is enabled:
+- The workload creates `VirtualMachine` resources instead of `Pod` resources in Job3
+- Each VM is configured to use the CUDN network through the namespace label `k8s.ovn.org/primary-user-defined-network`
+- VMs are created with a Fedora-based container disk image and automatically start an HTTP server on port 8080
+- The measurement code works seamlessly with VMs since KubeVirt creates VirtualMachineInstances (VMIs) which are pods under the hood
+
+#### Differences from Pod-based Testing
+
+- **Boot Time**: VMs take longer to boot compared to pods, which may affect the overall test duration
+- **Resource Usage**: VMs consume more resources (memory, CPU) than lightweight pods
+- **Network Behavior**: Network behavior should be identical since both pods and VMIs use the same CUDN network attachment mechanism
 
 ### RouteAdvertisement Latency Metrics
 
