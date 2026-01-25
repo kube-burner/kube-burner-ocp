@@ -97,6 +97,16 @@
   metricName: etcdVersion
   instant: true
 
+# Scheduler
+
+# Scheduler Throughput: Successful pod placements per second
+- query: sum(rate(scheduler_schedule_attempts_total{result="scheduled"}[2m]))
+  metricName: schedulerThroughput
+
+# Scheduler P99 Latency: Time taken for the end-to-end scheduling algorithm..
+- query: histogram_quantile(0.99, sum(rate(scheduler_e2e_scheduling_duration_seconds_bucket[2m])) by (le))
+  metricName: 99thSchedulerE2ELatency
+
 # Cluster metrics
 
 - query: sum(kube_namespace_status_phase) by (phase) > 0
