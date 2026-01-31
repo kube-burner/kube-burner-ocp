@@ -445,7 +445,7 @@ func (n *netpolLatency) processResults() {
 					npResults[netpolName] = []float64{}
 				}
 				if connLatency < 0 {
-					log.Warnf("🚨 Network policy %s has negitive latency %v for connection test from %v to %v", netpolName, connLatency, pod, res.Address)
+					log.Warnf("🚨 Network policy %s has negative latency %v for connection test from %v to %v", netpolName, connLatency, pod, res.Address)
 				}
 				npResults[netpolName] = append(npResults[netpolName], connLatency)
 			}
@@ -454,8 +454,8 @@ func (n *netpolLatency) processResults() {
 	resp.Body.Close()
 	for name, npl := range npResults {
 		latencySummary := metrics.NewLatencySummary(npl, name)
-		log.Tracef("netpol %s latency slice %v\n", name, npl)
-		log.Tracef("%s: 50th: %d 95th: %d 99th: %d min: %d max: %d avg: %d\n", name, latencySummary.P50, latencySummary.P95, latencySummary.P99, latencySummary.Min, latencySummary.Max, latencySummary.Avg)
+		log.Tracef("netpol %s latency slice %v", name, npl)
+		log.Tracef("%s: 50th: %d 95th: %d 99th: %d min: %d max: %d avg: %d", name, latencySummary.P50, latencySummary.P95, latencySummary.P99, latencySummary.Min, latencySummary.Max, latencySummary.Avg)
 
 		// Use minVal for reporting as ping test tool might have delayed initiating ping tests from some remote addresses.
 		// This can happen when remote pod was busy pinging other pods before trying our network policy pod
