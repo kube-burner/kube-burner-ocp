@@ -20,6 +20,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
+	kubeburnermeasurements "github.com/kube-burner/kube-burner/v2/pkg/measurements"
 	"github.com/kube-burner/kube-burner/v2/pkg/util"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	"github.com/spf13/cobra"
@@ -27,6 +29,9 @@ import (
 
 // NewNetworkPolicy holds network-policy workload
 func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
+	var additionalMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurementFactory{
+		"netpolLatency": measurements.NewNetpolLatencyMeasurementFactory,
+	}
 	var iterations, podsPerNamespace, netpolPerNamespace, localPods, podSelectors, singlePorts, portRanges, remoteNamespaces, remotePods, cidrs, exceptRules int
 	var netpolLatency bool
 	var metricsProfiles []string
@@ -62,7 +67,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			AdditionalVars["EXCEPT_RULES"] = exceptRules
 			AdditionalVars["NETPOL_LATENCY"] = netpolLatency
 			AdditionalVars["NETPOL_READY_THRESHOLD"] = netpolReadyThreshold
-
+			wh.SetMeasurements(additionalMeasurementFactoryMap)
 			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},
