@@ -19,6 +19,7 @@ require (
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.1
+	k8s.io/kubectl v0.30.3
 )
 
 require (
@@ -90,7 +91,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.31.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.31.0 // indirect
-	k8s.io/kubectl v0.30.3 // indirect
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 	kubevirt.io/api v1.4.0 // indirect
 	kubevirt.io/client-go v1.4.0 // indirect
@@ -104,3 +104,5 @@ require (
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // Replacements are not inherited from dependencies, this replacement is required by kubevirt.io/client-go prevents updating this module accidentally
 
 exclude github.com/kube-burner/kube-burner v1.20.6 // Published accidentally
+
+replace github.com/kube-burner/kube-burner/v2 => github.com/rsevilla87/kube-burner/v2 v2.0.0-20260130135938-526c4743567a
