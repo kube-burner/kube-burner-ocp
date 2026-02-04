@@ -750,6 +750,7 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 // Stop stops raLatency measurement
 func (r *raLatency) Stop() error {
 	var err error
+	close(r.stopCh)
 	if r.JobConfig.SkipIndexing {
 		return nil
 	}
