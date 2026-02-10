@@ -3,6 +3,7 @@ global:
   gc: {{.GC}}
   measurements:
     - name: podLatency
+    - name: pvcLatency
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
