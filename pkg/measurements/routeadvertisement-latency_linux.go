@@ -104,9 +104,6 @@ type routeImport struct {
 	pods []string
 }
 
-// channel for route advertisement informer
-var stopCh = make(chan struct{})
-
 type raMetric struct {
 	Timestamp  time.Time `json:"timestamp"`
 	MetricName string    `json:"metricName"`
@@ -168,6 +165,7 @@ type raLatency struct {
 	routeImportChan chan routeImport
 	wg              sync.WaitGroup
 	connector       k8sconnector.K8SConnector
+	stopCh          chan struct{}
 }
 
 type raLatencyMeasurementFactory struct {
@@ -643,13 +641,15 @@ func (r *raLatency) startExportScenario() error {
 		return err
 	}
 	r.connector = connector
+	// channel for route advertisement informer
+	r.stopCh = make(chan struct{})
 	raFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(r.connector.DynamicClient(), time.Minute, metav1.NamespaceAll, nil)
 	raInformer := raFactory.ForResource(raGVR).Informer()
 	raInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: r.handleAdd,
 	})
-	raFactory.Start(stopCh)
-	raFactory.WaitForCacheSync(stopCh)
+	raFactory.Start(r.stopCh)
+	raFactory.WaitForCacheSync(r.stopCh)
 	return nil
 }
 
@@ -680,6 +680,7 @@ func (r *raLatency) setInputVars() {
 
 // start raLatency measurement
 func (r *raLatency) Start(measurementWg *sync.WaitGroup) error {
+
 	// Reset latency slices, required in multi-job benchmarks
 	var err error
 	r.LatencyQuantiles, r.NormLatencies = nil, nil
@@ -749,6 +750,7 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 // Stop stops raLatency measurement
 func (r *raLatency) Stop() error {
 	var err error
+	close(r.stopCh)
 	if r.JobConfig.SkipIndexing {
 		return nil
 	}
