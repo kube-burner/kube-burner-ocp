@@ -65,20 +65,13 @@ func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 }
 
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner
-func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
+func GatherMetadata(wh *workloads.WorkloadHelper) error {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	_, restConfig := kubeClientProvider.DefaultClientSet()
 	wh.MetadataAgent, err = ocpmetadata.NewMetadata(restConfig)
 	if err != nil {
 		return err
-	}
-	// When either indexing or alerting are enabled
-	if alerting && wh.Config.MetricsEndpoint == "" {
-		wh.Config.PrometheusURL, wh.Config.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
-		if err != nil {
-			return fmt.Errorf("error obtaining Prometheus information: %v", err)
-		}
 	}
 	clusterMetadata, err = wh.MetadataAgent.GetClusterMetadata()
 	if err != nil {
