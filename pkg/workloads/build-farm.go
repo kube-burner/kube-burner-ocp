@@ -152,7 +152,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&smallJobPercent, "small-job-percent", 80, "Percentage of small build jobs (0-100, large jobs get remainder)")
 
 	// Metrics profile
-	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"build-farm-metrics.yml", "metrics.yml"}, "Comma separated list of metrics profiles to use")
 
 	return cmd
 }

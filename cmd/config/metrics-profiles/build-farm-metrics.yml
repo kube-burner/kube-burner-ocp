@@ -1,0 +1,10 @@
+# etcd DB Size
+
+- query: avg(etcd_mvcc_db_total_size_in_bytes)
+  metricName: etcdDBTotalSize
+
+- query: avg(etcd_mvcc_db_total_size_in_use_in_bytes)
+  metricName: etcdDBSizeInUse
+
+- query: avg(etcd_mvcc_db_total_size_in_bytes) - avg(etcd_mvcc_db_total_size_in_use_in_bytes)
+  metricName: etcdDBFragmentationBytes
