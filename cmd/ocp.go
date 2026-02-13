@@ -107,13 +107,20 @@ func openShiftCmd() *cobra.Command {
 		} else {
 			ocpWorkloads.AdditionalVars["ALERTS"] = ""
 		}
+		if err := ocpWorkloads.GatherMetadata(&wh); err != nil {
+			log.Fatal(err.Error())
+		}
+		// When metrics-endpoint is specified, the user is supposed to provide the indexer and prometheus configuration
 		if workloadConfig.MetricsEndpoint == "" {
 			ocpWorkloads.AdditionalVars["ES_SERVER"] = esServer
 			ocpWorkloads.AdditionalVars["ES_INDEX"] = esIndex
-		}
-
-		if err := ocpWorkloads.GatherMetadata(&wh, alerting); err != nil {
-			log.Fatal(err.Error())
+			if alerting || esServer != "" || localIndexing {
+				wh.Config.PrometheusURL, wh.Config.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
+				if err != nil {
+					log.Fatalf("Error obtaining Prometheus token: %v", err)
+				}
+				log.Debugf("Obtained prometheus endpoint: %s", wh.Config.PrometheusURL)
+			}
 		}
 		ocpWorkloads.SetVars, err = config.ParseSetValues(setValues)
 		if err != nil {
