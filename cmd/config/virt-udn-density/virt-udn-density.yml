@@ -26,6 +26,7 @@ metricsEndpoints:
       type: local
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
+
 jobs:
   {{ if .ENABLE_LAYER_3 }}
   - name: create-udn-l3

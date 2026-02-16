@@ -37,7 +37,6 @@ metricsEndpoints:
     indexer:
       type: local
       metricsDirectory: "./{{ $metricsBaseDirectory }}/iteration-{{ .counter | toString }}"
-      metricsDirectory: "./{{ $metricsBaseDirectory }}/iteration-{{ .counter | toString }}"
 {{ end }}
 
 jobs:
