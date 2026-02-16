@@ -40,7 +40,7 @@ jobs:
       {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
 {{ end }}
 
-- name: create-vms
+- name: create-vms-{{ .counter }}
   jobType: create
   jobIterations: 1
   qps: 20
@@ -105,7 +105,7 @@ jobs:
       accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
 
 {{ if not .skipResizeJob }}
-- name: resize-volumes
+- name: resize-volumes-{{ .counter }}
   jobType: patch
   jobIterations: 1
   jobIterationDelay: 15s
@@ -149,7 +149,7 @@ jobs:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 {{ end }}
 
-- name: restart-vms
+- name: restart-vms-{{ .counter }}
   jobType: kubevirt
   qps: 20
   burst: 20
@@ -163,7 +163,7 @@ jobs:
     labelSelector:
       {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 
-- name: snapshot-vms
+- name: snapshot-vms-{{ .counter }}
   jobType: create
   qps: 20
   burst: 20
@@ -201,7 +201,7 @@ jobs:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 
 {{ if not .skipMigrationJob }}
-- name: migrate-vms
+- name: migrate-vms-{{ .counter }}
   jobType: kubevirt
   qps: 20
   burst: 20
