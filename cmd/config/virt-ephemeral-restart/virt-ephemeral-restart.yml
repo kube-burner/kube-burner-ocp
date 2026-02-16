@@ -7,11 +7,6 @@
 {{- $vmName := "ephemeral-vm" -}}
 {{- $sshPublicKeySecretName := "burner-clone-virt-ephemeral-restart" -}}
 
-global:
-  measurements:
-  - name: vmiLatency
-  - name: dataVolumeLatency
-
 metricsEndpoints:
 - indexer:
     type: local
@@ -29,7 +24,9 @@ jobs:
       {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
 
 # Create the DV in a separate job to make sure it is ready before continuing
-- name: create-base-image-dv
+- name: create-base-image-dv-ephemeral
+  measurements:
+  - name: dataVolumeLatency
   jobType: create
   jobIterations: 1
   qps: 20
@@ -109,6 +106,9 @@ jobs:
         value: "True"
 
 - name: {{ $createVMsJobName }}
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
   jobType: create
   jobIterations: {{ .vmGroups | len }}
   qps: 20

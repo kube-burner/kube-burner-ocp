@@ -12,11 +12,6 @@
 {{- $createCloneVMJobName := "create-clone-vms" -}}
 {{- $cloneVMName := "clone-vm" -}}
 
-global:
-  measurements:
-  - name: vmiLatency
-  - name: dataVolumeLatency
-
 metricsEndpoints:
 - indexer:
     type: local
@@ -34,6 +29,9 @@ jobs:
       {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
 
 - name: {{ $createBaseVMJobName }}
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
   jobType: create
   jobIterations: 1
   qps: 20
@@ -92,6 +90,8 @@ jobs:
 
 # Create the DV in a separate job to make sure it is ready before continuing
 - name: create-base-image-dv
+  measurements:
+  - name: dataVolumeLatency
   jobType: create
   jobIterations: 1
   qps: 20
@@ -179,6 +179,9 @@ jobs:
         value: "True"
 
 - name: {{ $createCloneVMJobName }}
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
   jobType: create
   jobIterations: {{ .iterations }}
   qps: 20

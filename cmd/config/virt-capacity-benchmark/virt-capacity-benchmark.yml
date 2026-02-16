@@ -17,10 +17,6 @@
 {{- $testNamespacesLabelValue := $testName -}}
 {{- $metricsBaseDirectory := $testName -}}
 ---
-global:
-  measurements:
-  - name: vmiLatency
-
 metricsEndpoints:
 - indexer:
     type: local
@@ -41,6 +37,9 @@ jobs:
 {{ end }}
 
 - name: create-vms
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
   jobType: create
   jobIterations: 1
   qps: 20
@@ -164,6 +163,8 @@ jobs:
       {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 
 - name: snapshot-vms
+  measurements:
+  - name: volumeSnapshotLatency
   jobType: create
   qps: 20
   burst: 20
@@ -202,6 +203,8 @@ jobs:
 
 {{ if not .skipMigrationJob }}
 - name: migrate-vms
+  measurements:
+  - name: vmimLatency
   jobType: kubevirt
   qps: 20
   burst: 20
