@@ -22,9 +22,23 @@ global:
   - name: vmiLatency
 
 metricsEndpoints:
-- indexer:
-    type: local
-    metricsDirectory: "./{{ $metricsBaseDirectory }}/iteration-{{ .counter | toString }}"
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: "./{{ $metricsBaseDirectory }}/iteration-{{ .counter | toString }}"
+      metricsDirectory: "./{{ $metricsBaseDirectory }}/iteration-{{ .counter | toString }}"
+{{ end }}
 
 jobs:
 # Run cleanup only when counter is 0
