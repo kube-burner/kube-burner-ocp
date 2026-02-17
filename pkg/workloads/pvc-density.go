@@ -42,6 +42,7 @@ func NewPVCDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["STORAGE_CLASS_NAME"] = storageClassName
 
 			setMetrics(cmd, metricsProfiles)
+			AddWorkloadFlagsToMetadata(cmd, wh)
 			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},
