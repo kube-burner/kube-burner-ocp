@@ -160,7 +160,7 @@ The `jobSummary` document will include:
 This metadata can be used for filtering and analysis in your metrics backend.
 
 !!! Note
-    Only local flags specific to each workload are captured. Persistent flags from the parent command (such as `--uuid`, `--qps`, `--burst`, etc.) are not included in `workloadFlags` to avoid duplication..
+    Only local flags specific to each workload are captured. Persistent flags from the parent command (such as `--uuid`, `--qps`, `--burst`, etc.) are not included in `workloadFlags` to avoid duplication.
 
 ## Multiple endpoints support
 
