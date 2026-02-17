@@ -85,6 +85,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
 
 			setMetrics(cmd, metricsProfiles)
+			AddWorkloadFlagsToMetadata(cmd, wh)
 			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},

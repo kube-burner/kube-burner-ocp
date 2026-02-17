@@ -130,6 +130,38 @@ kube-burner-ocp node-density --pods-per-node=100
 
 With the command above, the wrapper will calculate the required number of pods to deploy across all worker nodes of the cluster.
 
+### Workload Flags Metadata
+
+All workload-specific flags (local flags defined on each workload command) are automatically captured and added to the `SummaryMetadata` in the `workloadFlags` field. This allows you to track exactly which flags were used when running a workload, making it easier to correlate performance results with specific configurations.
+
+The flags are stored as a map where:
+- Keys are flag names converted from kebab-case to camelCase (e.g., `pods-per-node` becomes `podsPerNode`)
+- Values are the flag values as strings
+
+For example, when running:
+
+```console
+kube-burner-ocp node-density --pods-per-node=100 --churn-cycles=5 --churn-percent=10
+```
+
+The `jobSummary` document will include:
+
+```json
+{
+  "workloadFlags": {
+    "podsPerNode": "100",
+    "churnCycles": "5",
+    "churnPercent": "10",
+    ...
+  }
+}
+```
+
+This metadata can be used for filtering and analysis in your metrics backend.
+
+!!! Note
+    Only local flags specific to each workload are captured. Persistent flags from the parent command (such as `--uuid`, `--qps`, `--burst`, etc.) are not included in `workloadFlags` to avoid duplication..
+
 ## Multiple endpoints support
 
 The flag `--metrics-endpoint` can be used to interact with multiple Prometheus endpoints

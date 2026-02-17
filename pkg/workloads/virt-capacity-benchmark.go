@@ -130,6 +130,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["skipResizeJob"] = skipResizeJob
 
 			setMetrics(cmd, metricsProfiles)
+			AddWorkloadFlagsToMetadata(cmd, wh)
 
 			log.Infof("Running tests in Namespace [%s]", testNamespace)
 			counter := 0

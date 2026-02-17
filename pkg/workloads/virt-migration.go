@@ -87,6 +87,7 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["migrationQPS"] = migrationQPS
 
 			setMetrics(cmd, metricsProfiles)
+			AddWorkloadFlagsToMetadata(cmd, wh)
 			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},

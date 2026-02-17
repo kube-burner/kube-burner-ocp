@@ -46,6 +46,7 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["SCALE"] = scale
 			AdditionalVars["SRIOV"] = sriov
 
+			AddWorkloadFlagsToMetadata(cmd, wh)
 			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},

@@ -51,6 +51,7 @@ func NewNodeScale(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["TAG"] = tag
 			AdditionalVars["MAX_PODS"] = maxPods
 			setMetrics(cmd, metricsProfiles)
+			AddWorkloadFlagsToMetadata(cmd, wh)
 			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},
