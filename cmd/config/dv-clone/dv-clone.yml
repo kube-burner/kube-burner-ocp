@@ -15,13 +15,13 @@ metricsEndpoints:
     type: local
     metricsDirectory: ./dv-clone-results
 {{ if .ES_SERVER }}
-  - metrics: [{{.METRICS}}]
-    alerts: [{{.ALERTS}}]
-    indexer:
-      esServers: ["{{.ES_SERVER}}"]
-      insecureSkipVerify: true
-      defaultIndex: {{.ES_INDEX}}
-      type: opensearch
+- metrics: [{{.METRICS}}]
+  alerts: [{{.ALERTS}}]
+  indexer:
+    esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: true
+    defaultIndex: {{.ES_INDEX}}
+    type: opensearch
 {{ end }}
 
 jobs:
