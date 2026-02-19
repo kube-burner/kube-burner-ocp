@@ -60,6 +60,7 @@ func NewOLMv1(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["PREFIX_PKG_NAME_V1"] = prefixPkgName
 			AdditionalVars["PREFIX_IMG_NAME"] = prefixImgName
 
+			AddWorkloadFlagsToMetadata(cmd, wh)
 			wh.SetVariables(AdditionalVars, SetVars)
 			rc = wh.Run(cmd.Name() + ".yml")
 		},

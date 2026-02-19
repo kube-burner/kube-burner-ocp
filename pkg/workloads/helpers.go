@@ -31,6 +31,7 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -105,6 +106,33 @@ func generateLoopCounterSlice(length, startValue int) []string {
 		counter[i] = fmt.Sprint(i + startValue)
 	}
 	return counter
+}
+
+// AddWorkloadFlagsToMetadata adds all flag values from the command to SummaryMetadata
+func AddWorkloadFlagsToMetadata(cmd *cobra.Command, wh *workloads.WorkloadHelper) {
+	workloadFlags := make(map[string]string)
+	// Use LocalFlags() instead of Flags() to only get flags specific to this command
+	cmd.LocalFlags().VisitAll(func(flag *pflag.Flag) {
+		if flag.Name == "help" {
+			return
+		}
+		flagName := kebabToCamelCase(flag.Name)
+		workloadFlags[flagName] = flag.Value.String()
+	})
+	wh.SummaryMetadata["workloadFlags"] = workloadFlags
+}
+
+// kebabToCamelCase converts a flag name from kebab-case to camelCase
+func kebabToCamelCase(word string) string {
+	parts := strings.Split(word, "-")
+	for i := range parts {
+		// First part stays lowercase, rest are capitalized
+		if i == 0 {
+			continue
+		}
+		parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+	}
+	return strings.Join(parts, "")
 }
 
 // Add metadata specific to the CNV workloads
