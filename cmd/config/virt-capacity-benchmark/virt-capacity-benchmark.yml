@@ -22,6 +22,9 @@ global:
   - name: vmiLatency
 
 metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "./{{ $metricsBaseDirectory }}/iteration-{{ .counter | toString }}"
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
@@ -30,13 +33,6 @@ metricsEndpoints:
       insecureSkipVerify: true
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
-{{ end }}
-{{ if .LOCAL_INDEXING }}
-  - metrics: [{{.METRICS}}]
-    alerts: [{{.ALERTS}}]
-    indexer:
-      type: local
-      metricsDirectory: "./{{ $metricsBaseDirectory }}/iteration-{{ .counter | toString }}"
 {{ end }}
 
 jobs:

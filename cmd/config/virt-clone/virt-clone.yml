@@ -18,6 +18,9 @@ global:
   - name: dataVolumeLatency
 
 metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: ./virt-clone-results
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
@@ -26,13 +29,6 @@ metricsEndpoints:
       insecureSkipVerify: true
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
-{{ end }}
-{{ if .LOCAL_INDEXING }}
-  - metrics: [{{.METRICS}}]
-    alerts: [{{.ALERTS}}]
-    indexer:
-      type: local
-      metricsDirectory: ./virt-clone-results
 {{ end }}
 
 jobs:

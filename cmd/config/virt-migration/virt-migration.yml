@@ -11,6 +11,9 @@ global:
   - name: vmimLatency
 
 metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: ./virt-migration-results
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
@@ -19,13 +22,6 @@ metricsEndpoints:
       insecureSkipVerify: true
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
-{{ end }}
-{{ if .LOCAL_INDEXING }}
-  - metrics: [{{.METRICS}}]
-    alerts: [{{.ALERTS}}]
-    indexer:
-      type: local
-      metricsDirectory: ./virt-migration-results
 {{ end }}
 
 jobs:
