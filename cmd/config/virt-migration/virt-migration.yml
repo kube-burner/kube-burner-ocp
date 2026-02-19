@@ -5,11 +5,6 @@
 {{- $createMigratingVMsJobName := "create-migrating-vms" -}}
 {{- $createLoadVMsJobName := "create-load-vms" -}}
 ---
-global:
-  measurements:
-  - name: vmiLatency
-  - name: vmimLatency
-
 metricsEndpoints:
 - indexer:
     type: local
@@ -27,6 +22,9 @@ jobs:
       {{ $testNamespacesLabelKey }}: {{ $testName }}
 
 - name: {{ $createMigratingVMsJobName }}
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
   jobType: create
   jobIterations: {{ .vmCreateIterations }}
   qps: 20
@@ -73,6 +71,9 @@ jobs:
 
 {{- if gt .loadVMsPerIteration 0 }}
 - name: {{ $createLoadVMsJobName }}
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
   jobType: create
   jobIterations: {{ .loadVMsIterations }}
   qps: 20
@@ -127,6 +128,8 @@ jobs:
       objectTemplate: templates/remove_affinity_patch.yml
 
 - name: migrate-vms
+  measurements:
+  - name: vmimLatency
   jobType: kubevirt
   qps: {{ .migrationQPS }}
   burst: {{ .migrationQPS }}
