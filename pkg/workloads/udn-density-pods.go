@@ -28,14 +28,13 @@ import (
 func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
 	var l3, simple, pprof bool
-	var jobPause time.Duration
 	var churnDelay, churnDuration, podReadyThreshold time.Duration
 	var deletionStrategy, churnMode string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "udn-density-pods",
-		Short:        "Runs node-density-udn workload",
+		Short:        "Runs udn-density-pods workload",
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
@@ -50,7 +49,6 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 
 			AdditionalVars["PPROF"] = pprof
-			AdditionalVars["JOB_PAUSE"] = jobPause
 			AdditionalVars["SIMPLE"] = simple
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
@@ -69,7 +67,6 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&l3, "layer3", true, "Layer3 UDN test")
-	cmd.Flags().DurationVar(&jobPause, "job-pause", 0, "Time to pause after finishing the job that creates the UDN")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
@@ -78,7 +75,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnNamespaces), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
-	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations")
+	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations, (One UDN will be created per iteration)")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")

@@ -56,8 +56,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: false
-    preLoadPeriod: 15s
-    jobPause: {{.JOB_PAUSE}}
     metricsClosing: afterJobPause
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
@@ -73,6 +71,10 @@ jobs:
       - objectTemplate: udn_l2.yml
         replicas: 1
       {{ end }}
+        waitOptions:
+          customStatusPaths:
+            - key: ".conditions[] | select(.type==\"NetworkCreated\") | .status"
+              value: "True"
   {{ end }}
 
 
@@ -99,12 +101,6 @@ jobs:
     jobPause: 5m
     metricsClosing: afterJobPause
     cleanup: false
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
     objects:
       {{ if and (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
       {{ if .ENABLE_LAYER_3 }}
