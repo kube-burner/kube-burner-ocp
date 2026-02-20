@@ -26,6 +26,21 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+  - name: egressip-server-check
+    namespace: egressip-server-check
+    jobIterations: 1
+    namespacedIterations: false
+    podWait: true
+    maxWaitTimeout: 2m
+    waitWhenFinished: true
+    preLoadImages: false
+    skipIndexing: true
+    objects:
+      - objectTemplate: server-check-pod.yml
+        replicas: 1
+        inputVars:
+          extServerHost: {{.EXTERNAL_SERVER_IP}}
+
   - name: egressip
     namespace: egressip
     jobIterations: {{.JOB_ITERATIONS}}
