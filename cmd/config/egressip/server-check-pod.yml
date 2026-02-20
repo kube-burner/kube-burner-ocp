@@ -3,14 +3,23 @@ kind: Pod
 metadata:
   name: server-check
 spec:
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
   containers:
   - name: check
     image: busybox:1.36
-    command: ["sh", "-c", "nc -w 5 -z {{.extServerHost}} 9002 && sleep infinity"]
+    command: ["sh", "-c", "for i in $(seq 0 $(({{.numPorts}}-1))); do nc -w 5 -z {{.extServerHost}} $((9002+i)) || exit 1; done && sleep infinity"]
     resources:
       requests:
         memory: "10Mi"
         cpu: "10m"
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
   restartPolicy: Never
   affinity:
     nodeAffinity:
