@@ -11,7 +11,7 @@ global:
           threshold: {{.POD_READY_THRESHOLD}}
 {{ if .PPROF }}
     - name: pprof
-      pprofInterval: 2m
+      pprofInterval: {{.PPROF_INTERVAL}}
       pprofDirectory: pprof-data
       pprofTargets:
       - name: ovnkube-controller
