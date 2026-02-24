@@ -72,7 +72,7 @@ teardown_file() {
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
   run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=12 --churn-cycles=1 --churn-percent=25 --churn-delay=5s --profile-type=both ${INDEXING_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID} --pprof --pprof-interval=0
   check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion
-  check_file_list pprof-data/pprof-data/ovnkube-controller-ovnkube-node-*-start.pprof pprof-data/ovnk-control-plane-ovnkube-control-plane*-end.pprof
+  check_file_list pprof-data/ovnkube-controller-ovnkube-node-*-start.pprof pprof-data/ovnk-control-plane-ovnkube-control-plane*-end.pprof
 }
 
 @test "cluster-density-v2: custom-metrics=true" {
