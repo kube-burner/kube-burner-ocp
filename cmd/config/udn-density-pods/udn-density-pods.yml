@@ -80,7 +80,7 @@ jobs:
       {{ end }}
         waitOptions:
           customStatusPaths:
-            - key: ".conditions[] | select(.type==\"NetworkCreated\") | .status"
+            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
               value: "True"
   {{ end }}
 
