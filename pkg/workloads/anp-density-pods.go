@@ -340,7 +340,7 @@ func NewANPDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	}
 	cmd.Flags().DurationVar(&jobPause, "job-pause", 0, "Time to pause after finishing the job that creates the UDN")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 2*time.Minute, "Interval between pprof collections")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")

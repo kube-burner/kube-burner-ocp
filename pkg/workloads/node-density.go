@@ -123,7 +123,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 2*time.Minute, "Interval between pprof collections")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	switch variant {
 	case "node-density":
 		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")

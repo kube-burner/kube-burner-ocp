@@ -28,10 +28,10 @@ import (
 // Returns virt-density workload
 func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, vmsPerNode int
-	var vmiRunningThreshold time.Duration
+	var vmiRunningThreshold, pprofInterval time.Duration
 	var metricsProfiles []string
 	var churnPercent, churnCycles int
-	var l3 bool
+	var l3, pprof bool
 	var churnDelay, churnDuration time.Duration
 	var deletionStrategy, jobPause, vmImage, bindingMethod, churnMode string
 	var rc int
@@ -67,6 +67,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["UDN_BINDING_METHOD"] = bindingMethod
 			AdditionalVars["ENABLE_LAYER_3"] = l3
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			if l3 {
 				log.Info("Layer 3 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer3", bindingMethod)
@@ -95,6 +97,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iteration", 1, "iterations")
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 50, "VMs per node")
 	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 60*time.Second, "VMI ready timeout threshold")
+	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }

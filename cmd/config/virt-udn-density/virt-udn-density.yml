@@ -9,6 +9,20 @@ global:
         - conditionType: VMIRunning
           metric: P99
           threshold: {{.VMI_RUNNING_THRESHOLD}}
+{{ if .PPROF }}
+    - name: pprof
+      pprofInterval: {{.PPROF_INTERVAL}}
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovnk-control-plane-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/heap
+{{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]

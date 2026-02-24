@@ -14,14 +14,14 @@ global:
       pprofDirectory: pprof-data
       pprofTargets:
       # the --pprof-bind-address was disabled as default, you can enable it by following https://github.com/openshift/operator-framework-operator-controller/blob/main/docs/draft/howto/profiling_with_pprof.md
-      - name: catalogd
+      - name: catalogd-heap
         namespace: "openshift-catalogd"
         labelSelector: {control-plane: catalogd-controller-manager}
-        url: http://localhost:8083/debug/pprof/profile?seconds=30
-      - name: operator-controller
+        url: http://localhost:8083/debug/pprof/heap
+      - name: operator-controller-heap
         namespace: "openshift-operator-controller"
         labelSelector: {control-plane: operator-controller-controller-manager}
-        url: http://localhost:8082/debug/pprof/profile?seconds=30
+        url: http://localhost:8082/debug/pprof/heap
 {{ end }}
 
 metricsEndpoints:
