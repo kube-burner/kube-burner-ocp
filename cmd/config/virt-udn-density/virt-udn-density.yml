@@ -37,17 +37,14 @@ jobs:
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    podWait: false
     waitWhenFinished: true
-    preLoadImages: true
-    preLoadPeriod: 15s
+    preLoadImages: false
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
       percent: {{.CHURN_PERCENT}}
       delay: {{.CHURN_DELAY}}
       mode: {{.CHURN_MODE}}
-    jobPause: {{.JOB_PAUSE}}
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -62,6 +59,10 @@ jobs:
       - objectTemplate: udn_l2.yml
         replicas: 1
       {{ end }}
+        waitOptions:
+          customStatusPaths:
+            - key: ".conditions[] | select(.type==\"NetworkCreated\") | .status"
+              value: "True"
 
   - name: virt-density-udn
     namespace: virt-density-udn
@@ -69,16 +70,10 @@ jobs:
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    preLoadImages: false
+    preLoadImages: true
     preLoadPeriod: 15s
     waitWhenFinished: true
     jobPause: 2m
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
     objects:
 
       - objectTemplate: vm-client.yml
