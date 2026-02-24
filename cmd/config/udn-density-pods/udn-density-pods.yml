@@ -18,10 +18,18 @@ global:
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-node}
         url: http://localhost:29103/debug/pprof/heap
+      - name: ovnkube-controller-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=30
       - name: ovnk-control-plane-heap
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-control-plane}
         url: http://localhost:29108/debug/pprof/heap
+      - name: ovnk-control-plane-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=30
 {{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
