@@ -112,7 +112,7 @@ jobs:
       percent: {{.CHURN_PERCENT}}
       delay: {{.CHURN_DELAY}}
       mode: {{.CHURN_MODE}}
-    jobPause: 5m
+    jobPause: 2m
     cleanup: false
     objects:
       {{ if and (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
