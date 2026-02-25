@@ -25,4 +25,5 @@ spec:
       containers:
       - name: pause
         image: quay.io/cloud-bulldozer/curl:latest
+        command: [sleep, inf]
         imagePullPolicy: IfNotPresent
