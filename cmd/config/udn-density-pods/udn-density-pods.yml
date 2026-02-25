@@ -49,21 +49,21 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
+{{ $jobName := ternary "create-udn-l3" "create-udn-l2" .ENABLE_LAYER_3 }}
 jobs:
   {{ if and (eq .CHURN_DURATION 0) (eq .CHURN_CYCLES 0) }}
-  {{ if .ENABLE_LAYER_3 }}
-  - name: create-udn-l3
-  {{ else }}
-  - name: create-udn-l2
-  {{ end }}
+  - name: {{ $jobName }}
     namespace: udn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    podWait: false
     waitWhenFinished: true
+<<<<<<< HEAD
     metricsClosing: afterJobPause
+=======
+    preLoadImages: false
+>>>>>>> ea9af232 (Use daemonset to validate UDNs readiness)
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -82,8 +82,20 @@ jobs:
           customStatusPaths:
             - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
               value: "True"
+      - objectTemplate: ds.yml
+        replicas: 1
   {{ end }}
 
+  - name: remove-ds
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: DaemonSet
+        apiVersion: apps/v1
+        labelSelector: {kube-burner.io/job: {{ $jobName }} }
 
   {{ if .ENABLE_LAYER_3 }}
   - name: udn-density-l3-pods
@@ -95,7 +107,6 @@ jobs:
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    podWait: false
     waitWhenFinished: true
     preLoadImages: true
     churnConfig:
