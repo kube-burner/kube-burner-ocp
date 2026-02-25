@@ -49,12 +49,9 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
+{{ $jobName := ternary "create-udn-l3" "create-udn-l2" .ENABLE_LAYER_3 }}
 jobs:
-  {{ if .ENABLE_LAYER_3 }}
-  - name: create-udn-l3
-  {{ else }}
-  - name: create-udn-l2
-  {{ end }}
+  - name: {{ $jobName }}
     namespace: virt-density-udn
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
@@ -85,6 +82,19 @@ jobs:
           customStatusPaths:
             - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
               value: "True"
+      - objectTemplate: ds.yml
+        replicas: 1
+
+  - name: remove-ds
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: DaemonSet
+        apiVersion: apps/v1
+        labelSelector: {kube-burner.io/job: {{ $jobName }} }
 
   - name: virt-density-udn
     namespace: virt-density-udn
@@ -93,6 +103,7 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: true
     preLoadImages: true
+    cleanup: false
     waitWhenFinished: true
     jobPause: 2m
     objects:
