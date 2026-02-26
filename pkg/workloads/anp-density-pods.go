@@ -284,7 +284,7 @@ func NewANPDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	var churnPercent, churnCycles, iterations int
 	var svcLatency, simple, pprof bool
 	var jobPause time.Duration
-	var churnDelay, churnDuration, podReadyThreshold time.Duration
+	var churnDelay, churnDuration, podReadyThreshold, pprofInterval time.Duration
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -298,6 +298,7 @@ func NewANPDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			}
 
 			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			AdditionalVars["SIMPLE"] = simple
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
@@ -339,6 +340,7 @@ func NewANPDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	}
 	cmd.Flags().DurationVar(&jobPause, "job-pause", 0, "Time to pause after finishing the job that creates the UDN")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
