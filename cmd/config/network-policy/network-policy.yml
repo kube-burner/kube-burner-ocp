@@ -2,14 +2,6 @@
 global:
   gc: true
   gcMetrics: false
-  measurements:
-{{ if .NETPOL_LATENCY }}
-    - name: netpolLatency-test
-      thresholds:
-        - conditionType: Ready
-          metric: P99
-          threshold: {{.NETPOL_READY_THRESHOLD}}
-{{ end }}        
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
@@ -58,6 +50,14 @@ jobs:
         replicas: 1
 
   - name: network-policy-perf
+  {{ if .NETPOL_LATENCY }}
+    measurements:
+      - name: netpolLatency-test
+        thresholds:
+          - conditionType: Ready
+            metric: P99
+            threshold: {{.NETPOL_READY_THRESHOLD}}
+  {{ end }}
     namespace: network-policy-perf
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}

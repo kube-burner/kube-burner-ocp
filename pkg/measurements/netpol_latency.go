@@ -51,7 +51,7 @@ import (
 )
 
 const (
-	networkPolicyProxyPort            = "9002"
+	networkPolicyProxyPort            = 9002
 	networkPolicyProxy                = "network-policy-proxy"
 	serverPingTestPort                = 8080
 	netpolLatencyMeasurement          = "netpolLatencyMeasurement"
@@ -66,7 +66,8 @@ var supportedNetpolLatencyJobTypes = map[config.JobType]struct{}{
 
 var proxyPortForwarder *mutil.PodPortForwarder
 var nsPodAddresses = make(map[string]map[string][]string)
-var proxyEndpoint string
+var proxyEndpoint = fmt.Sprintf("http://127.0.0.1:%d", networkPolicyProxyPort)
+var httpClient *http.Client
 
 type connection struct {
 	Addresses []string `json:"addresses"`
@@ -340,8 +341,8 @@ func sendConnections() {
 	if err != nil {
 		log.Fatalf("Failed to marshal payload: %v", err)
 	}
-	url := fmt.Sprintf("http://%s/initiate", proxyEndpoint)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
+	url := fmt.Sprintf("%s/initiate", proxyEndpoint)
+	resp, err := httpClient.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		log.Fatalf("Failed to send request: %v", err)
 	}
@@ -349,7 +350,7 @@ func sendConnections() {
 	if resp.StatusCode == http.StatusOK {
 		log.Debugf("Connection information sent successfully")
 	}
-	waitForCondition(fmt.Sprintf("http://%s/checkConnectionsStatus", proxyEndpoint))
+	waitForCondition(fmt.Sprintf("%s/checkConnectionsStatus", proxyEndpoint))
 }
 
 // Periodically check if proxy pod finished communication with all client pods,
@@ -363,25 +364,24 @@ func waitForCondition(url string) {
 		select {
 		case <-timeout:
 			log.Fatalf("Timeout reached. Stopping further checks.")
-			return
 		case <-ticker.C:
-			resp, err := http.Get(url)
+			resp, err := httpClient.Get(url)
 			if err != nil {
-				log.Fatalf("Failed to check status: %v", err)
+				log.Errorf("Failed to check status: %v", err)
 				continue
 			}
 
 			body, err := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			if err != nil {
-				log.Fatalf("Failed to read response body: %v", err)
+				log.Errorf("Failed to read response body: %v", err)
 				continue
 			}
 			var response ProxyResponse
 			err = json.Unmarshal(body, &response)
 			if err != nil {
-				log.Fatalf("Error decoding response: %v", err)
-				return
+				log.Errorf("Error decoding response: %v", err)
+				continue
 			}
 			if response.Result {
 				return
@@ -392,8 +392,7 @@ func waitForCondition(url string) {
 
 // Get results from proxy pod and parse them.
 func (n *netpolLatency) processResults() {
-	serverURL := fmt.Sprintf("http://%s", proxyEndpoint)
-	resp, err := http.Get(fmt.Sprintf("%s/stop", serverURL))
+	resp, err := httpClient.Get(fmt.Sprintf("%s/stop", proxyEndpoint))
 	if err != nil {
 		log.Fatalf("Failed to retrieve results: %v", err)
 	}
@@ -403,10 +402,10 @@ func (n *netpolLatency) processResults() {
 	}
 	resp.Body.Close()
 	// Wait till proxy got results from all pods
-	waitForCondition(fmt.Sprintf("%s/checkStopStatus", serverURL))
+	waitForCondition(fmt.Sprintf("%s/checkStopStatus", proxyEndpoint))
 
 	// Retrieve the results
-	resp, err = http.Get(fmt.Sprintf("%s/results", serverURL))
+	resp, err = httpClient.Get(fmt.Sprintf("%s/results", proxyEndpoint))
 	if err != nil {
 		log.Fatalf("Failed to retrieve results: %v", err)
 	}
@@ -506,29 +505,25 @@ func getObjectTypes(o config.Object, t []byte) []string {
 
 // Start network policy measurement
 func (n *netpolLatency) Start(measurementWg *sync.WaitGroup) error {
-	var err error
 	defer measurementWg.Done()
-	// Skip latency measurement for 1st job which creates only pods
-	if value, ok := n.JobConfig.NamespaceLabels["kube-burner.io/skip-networkpolicy-latency"]; ok {
-		if value == "true" {
-			log.Debugf("Discarding network policy latency measurement for the job %v", n.JobConfig.Name)
-			return nil
-		}
-	}
-	_, err = n.ClientSet.CoreV1().Pods(networkPolicyProxy).Get(context.TODO(), networkPolicyProxy, metav1.GetOptions{})
+	err := kutil.CleanupNamespacesByLabel(context.TODO(), n.ClientSet, fmt.Sprintf("kubernetes.io/metadata.name=%s", networkPolicyProxy))
 	if err != nil {
-		err = measurements.DeployPodInNamespace(n.ClientSet, networkPolicyProxy, networkPolicyProxy, "quay.io/cloud-bulldozer/netpolproxy:latest", nil)
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("Error cleaning up namespaces: %v", err)
 	}
+	err = measurements.DeployPodInNamespace(n.ClientSet, networkPolicyProxy, networkPolicyProxy, "quay.io/cloud-bulldozer/netpolproxy:latest", nil)
+	if err != nil {
+		return err
+	}
+
 	if proxyPortForwarder == nil {
-		proxyPortForwarder, err = mutil.NewPodPortForwarder(n.ClientSet, *n.RestConfig, networkPolicyProxyPort, networkPolicyProxy, networkPolicyProxy)
+		proxyPortForwarder, err = mutil.NewPodPortForwarder(n.ClientSet, *n.RestConfig, fmt.Sprintf("%d", networkPolicyProxyPort), networkPolicyProxy, networkPolicyProxy)
 		if err != nil {
 			return err
 		}
-		// Use proxyEndpoint to communicate with proxy pod
-		proxyEndpoint = fmt.Sprintf("127.0.0.1:%s", networkPolicyProxyPort)
+		// Initialize HTTP client with timeout to prevent hanging requests
+		httpClient = &http.Client{
+			Timeout: 30 * time.Second,
+		}
 	}
 	// Parse network policy template for each iteration and prepare connections for client pods
 	n.prepareConnections()
