@@ -187,17 +187,6 @@ func addPodsByLabel(clientSet kubernetes.Interface, ns string, ps *metav1.LabelS
 	return addresses
 }
 
-// Record the network policy creation timestamp when it is created.
-// We later do a diff with successful connection timestamp and define that as a network policy programming latency.
-func (n *netpolLatency) handleCreateNetpol(obj any) {
-	netpol, err := kutil.ConvertAnyToTyped[networkingv1.NetworkPolicy](obj)
-	if err != nil {
-		log.Errorf("failed to convert to NetworkPolicy: %v", err)
-		return
-	}
-	npCreationTime[netpol.Name] = netpol.CreationTimestamp.UTC()
-}
-
 // Render the network policy from the object template using iteration details as input
 func (n *netpolLatency) getNetworkPolicies(iteration int, replica int, obj config.Object, objectSpec []byte) []*networkingv1.NetworkPolicy {
 
@@ -351,14 +340,12 @@ func sendConnections() {
 	if err != nil {
 		log.Fatalf("Failed to marshal payload: %v", err)
 	}
-
 	url := fmt.Sprintf("http://%s/initiate", proxyEndpoint)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		log.Fatalf("Failed to send request: %v", err)
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode == http.StatusOK {
 		log.Debugf("Connection information sent successfully")
 	}
@@ -558,7 +545,10 @@ func (n *netpolLatency) Start(measurementWg *sync.WaitGroup) error {
 	npFactory := informers.NewSharedInformerFactory(connector.ClientSet(), 0)
 	npInformer := npFactory.Networking().V1().NetworkPolicies().Informer()
 	npInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: n.handleCreateNetpol,
+		AddFunc: func(obj any) {
+			netpol := obj.(*networkingv1.NetworkPolicy)
+			npCreationTime[netpol.Name] = netpol.CreationTimestamp.UTC()
+		},
 	})
 	npFactory.Start(n.stopCh)
 	npFactory.WaitForCacheSync(n.stopCh)
