@@ -49,28 +49,22 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
+{{ $jobName := ternary "create-udn-l3" "create-udn-l2" .ENABLE_LAYER_3 }}
 jobs:
-  {{ if .ENABLE_LAYER_3 }}
-  - name: create-udn-l3
-  {{ else }}
-  - name: create-udn-l2
-  {{ end }}
+  - name: {{ $jobName }}
     namespace: virt-density-udn
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    podWait: false
     waitWhenFinished: true
-    preLoadImages: true
-    preLoadPeriod: 15s
+    preLoadImages: false
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
       percent: {{.CHURN_PERCENT}}
       delay: {{.CHURN_DELAY}}
       mode: {{.CHURN_MODE}}
-    jobPause: {{.JOB_PAUSE}}
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -85,6 +79,23 @@ jobs:
       - objectTemplate: udn_l2.yml
         replicas: 1
       {{ end }}
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
+              value: "True"
+      - objectTemplate: ds.yml
+        replicas: 1
+
+  - name: remove-ds
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: DaemonSet
+        apiVersion: apps/v1
+        labelSelector: {kube-burner.io/job: {{ $jobName }} }
 
   - name: virt-density-udn
     namespace: virt-density-udn
@@ -92,16 +103,11 @@ jobs:
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    preLoadImages: false
+    preLoadImages: true
     preLoadPeriod: 15s
+    cleanup: false
     waitWhenFinished: true
     jobPause: 2m
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
     objects:
 
       - objectTemplate: vm-client.yml
