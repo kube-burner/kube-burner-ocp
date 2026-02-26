@@ -4,7 +4,7 @@ global:
   gcMetrics: false
   measurements:
 {{ if .NETPOL_LATENCY }}
-    - name: netpolLatency
+    - name: netpolLatency-test
       thresholds:
         - conditionType: Ready
           metric: P99

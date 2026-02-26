@@ -30,7 +30,7 @@ import (
 // NewNetworkPolicy holds network-policy workload
 func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var additionalMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurementFactory{
-		"netpolLatency": measurements.NewNetpolLatencyMeasurementFactory,
+		"netpolLatency-test": measurements.NewNetpolLatencyMeasurementFactory,
 	}
 	var iterations, podsPerNamespace, netpolPerNamespace, localPods, podSelectors, singlePorts, portRanges, remoteNamespaces, remotePods, cidrs, exceptRules int
 	var netpolLatency bool
