@@ -35,7 +35,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	var rc int
 	var metricsProfiles []string
 	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent int
-	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
+	var podReadyThreshold, churnDuration, churnDelay, probesPeriod, pprofInterval time.Duration
 	var containerImage, deletionStrategy, churnMode, selector string
 	var namespacedIterations, pprof, svcLatency bool
 	var nodeSelector corev1.NodeSelector
@@ -95,6 +95,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
 			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			nodeSelectorJson, err := json.Marshal(nodeSelector)
 			if err != nil {
@@ -122,6 +123,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	switch variant {
 	case "node-density":
 		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")
