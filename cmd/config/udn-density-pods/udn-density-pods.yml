@@ -64,7 +64,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: false
-    preLoadPeriod: 15s
     jobPause: {{.JOB_PAUSE}}
     metricsClosing: afterJobPause
     namespaceLabels:
@@ -97,7 +96,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 15s
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}

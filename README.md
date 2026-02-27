@@ -1150,7 +1150,6 @@ jobs:
     podWait: <bool>
     waitWhenFinished: <bool>
     preLoadImages: <bool>
-    preLoadPeriod: <preLoadPeriod_in_seconds>
     namespaceLabels:
       <namespaceLabels_key>: <namespaceLabels_value>
     objects:
