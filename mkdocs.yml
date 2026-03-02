@@ -2,6 +2,7 @@ docs_dir: docs/
 repo_url: https://github.com/kube-burner/kube-burner-ocp
 nav:
 - OpenShift: index.md
+- UDN BGP Latency Measurement: udn-bgp-latency-measurement.md
 site_name: Kube-burner-ocp
 plugins:
   - search
