@@ -26,6 +26,7 @@ metricsEndpoints:
       type: local
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
+
 jobs:
   - name: virt-density
     namespace: virt-density

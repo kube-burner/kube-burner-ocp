@@ -73,7 +73,10 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
 			}
-
+			wh.SummaryMetadata["OCPVirtualizationVersion"], err = wh.MetadataAgent.GetOCPVirtualizationVersion()
+			if err != nil {
+				log.Warnf("Failed to get OCP Virtualization version: %v", err)
+			}
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["storageClassName"] = storageClassName

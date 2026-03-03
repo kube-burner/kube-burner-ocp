@@ -58,12 +58,16 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-
+			var err error
 			log.Infof("All resources will be create in the namespace [%s]", testNamespace)
 			log.Infof("Using [%s] as the container disk image for the base DataVolume", containerDiskUrl)
 			log.Infof("DataVolume size set to [%v]", dataVolumeSize)
 			log.Infof("Clone DataVolumes will be created in [%v] iterations of [%v] each", iterations, clonesPerIteration)
 
+			wh.SummaryMetadata["OCPVirtualizationVersion"], err = wh.MetadataAgent.GetOCPVirtualizationVersion()
+			if err != nil {
+				log.Warnf("Failed to get OCP Virtualization version: %v", err)
+			}
 			AdditionalVars["storageClassName"] = storageClassName
 			AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
 			AdditionalVars["testNamespace"] = testNamespace

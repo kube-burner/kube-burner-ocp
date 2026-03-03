@@ -117,7 +117,10 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			if skipResizeJob {
 				log.Infof("skipResizeJob is set to true")
 			}
-
+			wh.SummaryMetadata["OCPVirtualizationVersion"], err = wh.MetadataAgent.GetOCPVirtualizationVersion()
+			if err != nil {
+				log.Warnf("Failed to get OCP Virtualization version: %v", err)
+			}
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["vmCount"] = fmt.Sprint(vmsPerIteration)
