@@ -43,10 +43,8 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacePerCudn
 			AdditionalVars["ENABLE_VM"] = enableVm
-			AddWorkloadFlagsToMetadata(cmd, wh)
 			wh.SetMeasurements(additionalMeasurementFactoryMap)
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

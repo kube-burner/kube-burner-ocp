@@ -108,8 +108,8 @@ func generateLoopCounterSlice(length, startValue int) []string {
 	return counter
 }
 
-// AddWorkloadFlagsToMetadata adds all flag values from the command to SummaryMetadata
-func AddWorkloadFlagsToMetadata(cmd *cobra.Command, wh *workloads.WorkloadHelper) {
+// addWorkloadFlagsToMetadata adds all flag values from the command to SummaryMetadata
+func addWorkloadFlagsToMetadata(cmd *cobra.Command, wh *workloads.WorkloadHelper) {
 	workloadFlags := make(map[string]string)
 	// Use LocalFlags() instead of Flags() to only get flags specific to this command
 	cmd.LocalFlags().VisitAll(func(flag *pflag.Flag) {
@@ -120,6 +120,13 @@ func AddWorkloadFlagsToMetadata(cmd *cobra.Command, wh *workloads.WorkloadHelper
 		workloadFlags[flagName] = flag.Value.String()
 	})
 	wh.SummaryMetadata["workloadFlags"] = workloadFlags
+}
+
+// RunWorkload executes the common workload pattern: adds flags to metadata, sets variables, and runs the workload
+func RunWorkload(cmd *cobra.Command, wh *workloads.WorkloadHelper, configFile string) int {
+	addWorkloadFlagsToMetadata(cmd, wh)
+	wh.SetVariables(AdditionalVars, SetVars)
+	return wh.Run(configFile)
 }
 
 // kebabToCamelCase converts a flag name from kebab-case to camelCase
