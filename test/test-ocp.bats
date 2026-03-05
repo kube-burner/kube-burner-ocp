@@ -17,6 +17,7 @@ setup_file() {
     setup-shared-network
     setup-opensearch
   fi
+  oc get ns -o name | grep preload-kube-burner | xargs -r oc delete
 }
 
 setup() {
