@@ -77,8 +77,7 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["vmGroups"] = generateLoopCounterSlice(iterations, 0)
 
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
