@@ -35,6 +35,12 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if exceptRules > 0 && netpolLatency {
+				return fmt.Errorf("cannot use --except-rules > 0 with --networkpolicy-latency=true: network policy latency measurement does not work correctly with except rules")
+			}
+			return nil
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			// Register template functions used only by network-policy templates
 			util.AddRenderingFunction("GetSubnet16", func(subnetIdx int) string {
@@ -80,7 +86,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd.Flags().IntVar(&remoteNamespaces, "remotes-namespaces", 2, "Number of remote namespaces to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().IntVar(&remotePods, "remotes-pods", 2, "Number of pods in remote namespaces to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().IntVar(&cidrs, "cidrs", 2, "Number of cidrs to accept traffic from or send traffic to in ingress and egress rules")
-	cmd.Flags().IntVar(&exceptRules, "except-rules", 3, "Number of except rules to exclude traffic from ingress and egress cidr blocks")
+	cmd.Flags().IntVar(&exceptRules, "except-rules", 0, "Number of except rules to exclude traffic from ingress and egress cidr blocks")
 	cmd.Flags().BoolVar(&netpolLatency, "networkpolicy-latency", true, "Enable network policy latency measurement")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
