@@ -10,7 +10,7 @@ spec:
         app: webserver
       annotations:
         test: ovsperf
-{{if gt .sriovs 0}}
+{{if gt .numSriovs 0}}
         k8s.v1.cni.cncf.io/networks: '[{{range $i := untilStep 1 (int (add .numSriovs 1)) 1}}{{if ne $i 1}},{{end}}{"name":"{{$.sriovNetworkName}}","interface":"sriov{{$i}}"}{{end}}]'
 {{end}}
 {{if .perfProfile}}
