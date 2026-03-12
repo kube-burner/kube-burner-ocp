@@ -36,7 +36,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	var metricsProfiles []string
 	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent, numSriovs int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod, pprofInterval time.Duration
-	var containerImage, deletionStrategy, churnMode, selector, perfProfile, sriovNet string
+	var containerImage, deletionStrategy, churnMode, selector, perfProfile, sriovNetDevicepool, sriovNetworkName string
 	var namespacedIterations, pprof, svcLatency bool
 	var nodeSelector corev1.NodeSelector
 	var matchExpressions []corev1.NodeSelectorRequirement
