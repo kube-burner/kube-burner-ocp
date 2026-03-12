@@ -49,23 +49,16 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
+{{ $jobName := ternary "create-udn-l3" "create-udn-l2" .ENABLE_LAYER_3 }}
 jobs:
   {{ if and (eq .CHURN_DURATION 0) (eq .CHURN_CYCLES 0) }}
-  {{ if .ENABLE_LAYER_3 }}
-  - name: create-udn-l3
-  {{ else }}
-  - name: create-udn-l2
-  {{ end }}
+  - name: {{ $jobName }}
     namespace: udn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    podWait: false
     waitWhenFinished: true
-    preLoadImages: false
-    jobPause: {{.JOB_PAUSE}}
-    metricsClosing: afterJobPause
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -80,8 +73,24 @@ jobs:
       - objectTemplate: udn_l2.yml
         replicas: 1
       {{ end }}
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
+              value: "True"
+      - objectTemplate: ds.yml
+        replicas: 1
   {{ end }}
 
+  - name: remove-ds
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: DaemonSet
+        apiVersion: apps/v1
+        labelSelector: {kube-burner.io/job: {{ $jobName }} }
 
   {{ if .ENABLE_LAYER_3 }}
   - name: udn-density-l3-pods
@@ -93,7 +102,6 @@ jobs:
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    podWait: false
     waitWhenFinished: true
     preLoadImages: true
     churnConfig:
@@ -102,15 +110,9 @@ jobs:
       percent: {{.CHURN_PERCENT}}
       delay: {{.CHURN_DELAY}}
       mode: {{.CHURN_MODE}}
-    jobPause: 5m
+    jobPause: 2m
     metricsClosing: afterJobPause
     cleanup: false
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
     objects:
       {{ if and (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
       {{ if .ENABLE_LAYER_3 }}
