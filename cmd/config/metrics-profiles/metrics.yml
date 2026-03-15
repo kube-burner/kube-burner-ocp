@@ -100,7 +100,7 @@
 # Scheduler
 
 # Scheduler Throughput: Successful pod placements per second
-- query: sum(rate(scheduler_schedule_attempts_total{result="scheduled"}[2m]))
+- query: sum(irate(scheduler_schedule_attempts_total{result="scheduled"}[2m]))
   metricName: schedulerThroughput
 
 # Scheduler P99 Latency: Time taken for the end-to-end scheduling algorithm..
