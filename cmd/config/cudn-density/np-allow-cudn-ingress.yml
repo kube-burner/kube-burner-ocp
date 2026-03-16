@@ -1,0 +1,61 @@
+# allow-cudn-ingress: Opens ingress to nginx server pods (app=nginx).
+#
+# Selects: pods with app=nginx (server-1 and server-2, 6 pods)
+# Allows ingress from:
+#   - Pods with app=client in any namespace within the CUDN group, on ports http + https
+#   - Pods with app=sampleapp in any namespace within the CUDN group, on ports http + https
+# Effect: Any client or sampleapp pod in the CUDN group can reach nginx in this namespace.
+#
+# Uses named ports (http, https) which forces OVN-K to resolve port names
+# against pod container specs — more expensive than numeric ports.
+#
+# The template computes the list of namespace names in the CUDN group using
+# the iteration index and namespaces_per_cudn to build the namespaceSelector.
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-cudn-ingress-{{.Replica}}
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx
+  ingress:
+  {{- $cudnGroupIdx := div .Iteration .namespaces_per_cudn }}
+  {{- $cudnBase := mul $cudnGroupIdx .namespaces_per_cudn }}
+  {{- $nsList := list }}
+  {{- range $i, $v := until .namespaces_per_cudn }}
+    {{- $nsIter := add $cudnBase $i }}
+    {{- $nsName := print "cudn-density-" $nsIter }}
+    {{- $nsList = append $nsList $nsName }}
+  {{- end }}
+  {{- $nsNames := toJson $nsList }}
+  - from:
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{$nsNames}}
+      podSelector:
+        matchLabels:
+          app: client
+    ports:
+    - protocol: TCP
+      port: http
+    - protocol: TCP
+      port: https
+  - from:
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{$nsNames}}
+      podSelector:
+        matchLabels:
+          app: sampleapp
+    ports:
+    - protocol: TCP
+      port: http
+    - protocol: TCP
+      port: https
+  policyTypes:
+  - Ingress

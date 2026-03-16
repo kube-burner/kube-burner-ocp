@@ -1,0 +1,47 @@
+# EgressFirewall: OVN-level firewall applied to all pods in the namespace.
+# Evaluated independently of NetworkPolicies — even if a NP allows egress,
+# the EgressFirewall can still block it at the OVN level.
+#
+# Rules (evaluated in order):
+#   1-3. Allow egress to RFC1918 private ranges (cluster-internal traffic)
+#   4.   Allow DNS to cluster.local
+#   5-6. Allow egress to container registries (quay.io, registry.redhat.io)
+#   7.   Allow egress to Prometheus monitoring endpoint
+#   8.   Deny everything else (block all external/internet traffic)
+#
+# Creates 8 OVN ACL rules per namespace for density testing.
+apiVersion: k8s.ovn.org/v1
+kind: EgressFirewall
+metadata:
+  name: default
+spec:
+  egress:
+  # Internal cluster networks
+  - type: Allow
+    to:
+      cidrSelector: 10.0.0.0/8
+  - type: Allow
+    to:
+      cidrSelector: 172.16.0.0/12
+  - type: Allow
+    to:
+      cidrSelector: 192.168.0.0/16
+  # Cluster DNS
+  - type: Allow
+    to:
+      dnsName: "cluster.local"
+  # Container registry
+  - type: Allow
+    to:
+      dnsName: "quay.io"
+  - type: Allow
+    to:
+      dnsName: "registry.redhat.io"
+  # Monitoring endpoints
+  - type: Allow
+    to:
+      dnsName: "prometheus-k8s.openshift-monitoring.svc"
+  # Deny everything else
+  - type: Deny
+    to:
+      cidrSelector: 0.0.0.0/0

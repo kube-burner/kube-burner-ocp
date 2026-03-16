@@ -1,0 +1,17 @@
+# cudn-app-headless: Headless service for sampleapp pods.
+# Selects pods with app=sampleapp (2 endpoints).
+# Returns individual pod IPs instead of a VIP — more expensive for OVN-K
+# endpoint tracking than ClusterIP services.
+kind: Service
+apiVersion: v1
+metadata:
+  name: cudn-app-headless
+spec:
+  selector:
+    app: sampleapp
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  clusterIP: None

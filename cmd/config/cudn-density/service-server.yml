@@ -1,0 +1,22 @@
+# Per-server-deployment service: Creates server-1-svc and server-2-svc.
+# Each selects only its own deployment's pods (3 endpoints each) using the
+# deployment-specific label (name=cudn-density-server-{replica}).
+# Exposes ports 8080 (http) and 8443 (https).
+# Creates additional OVN load balancer entries beyond the aggregate cudn-svc.
+kind: Service
+apiVersion: v1
+metadata:
+  name: server-{{.Replica}}-svc
+spec:
+  selector:
+    name: cudn-density-server-{{.Replica}}
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  - name: https
+    protocol: TCP
+    port: 8443
+    targetPort: 8443
+  type: ClusterIP
