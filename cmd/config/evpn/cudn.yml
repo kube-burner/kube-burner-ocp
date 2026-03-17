@@ -1,0 +1,64 @@
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-{{.Iteration}}
+  labels:
+    cudn-{{.Iteration}}: ""
+spec:
+  {{- $nsList := list }}
+  {{- $nsStart := mul $.Iteration $.namespaces_per_cudn }}
+  {{- range $i, $v := until $.namespaces_per_cudn }}
+    {{- $nextNs := mod (add $nsStart $i) $.total_namespaces }}
+    {{- $next_namespace := print "evpn-" $nextNs }}
+    {{- $nsList = append $nsList $next_namespace }}
+  {{- end }}
+  {{- $nsNames := toJson $nsList }}
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values: {{$nsNames}}
+  {{- $firstOctet := add (div $.Iteration 255) 40 }}
+  {{- $secondOctet := mod $.Iteration 255 }}
+  {{- $cudnCidr := print $firstOctet "." $secondOctet ".0.0/16" }}
+  {{- $l2vni := add 20000 $.Iteration }}
+  {{- $l3vni := add $.l3vni_start $.Iteration }}
+  network:
+{{ if eq .scenario "north-south-l3" }}
+    topology: Layer3
+    transport: EVPN
+    layer3:
+      role: Primary
+      subnets:
+        - cidr: {{$cudnCidr}}
+          hostSubnet: 24
+    evpn:
+      vtep: evpn-vtep
+      ipVRF:
+        vni: {{$l3vni}}
+{{ else if eq .scenario "north-south" }}
+    topology: Layer2
+    transport: EVPN
+    layer2:
+      role: Primary
+      subnets:
+        - {{$cudnCidr}}
+    evpn:
+      vtep: evpn-vtep
+      macVRF:
+        vni: {{$l2vni}}
+      ipVRF:
+        vni: {{$l3vni}}
+{{ else }}
+    topology: Layer2
+    transport: EVPN
+    layer2:
+      role: Primary
+      subnets:
+        - {{$cudnCidr}}
+    evpn:
+      vtep: evpn-vtep
+      macVRF:
+        vni: {{$l2vni}}
+        routeTarget: "64512:{{$l2vni}}"
+{{ end }}

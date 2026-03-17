@@ -132,6 +132,7 @@ func openShiftCmd() *cobra.Command {
 		ocpWorkloads.NewClusterDensity(&wh, "cluster-density-ms"),
 		ocpWorkloads.NewCrdScale(&wh),
 		ocpWorkloads.NewUdnBgp(&wh, "udn-bgp"),
+		ocpWorkloads.NewEVPN(&wh, "evpn"),
 		ocpWorkloads.NewNetworkPolicy(&wh, "network-policy"),
 		ocpWorkloads.NewOLMv1(&wh, "olm"),
 		ocpWorkloads.NewNodeDensity(&wh, "node-density"),
