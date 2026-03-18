@@ -79,6 +79,7 @@ jobs:
               value: "True"
       - objectTemplate: ds.yml
         replicas: 1
+        runOnce: true
   {{ end }}
 
   - name: remove-ds
