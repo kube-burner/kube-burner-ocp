@@ -31,7 +31,7 @@ import (
 func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, churnPercent, churnCycles int
 	var svcLatency, pprof bool
-	var churnDelay, churnDuration time.Duration
+	var churnDelay, churnDuration, pprofInterval time.Duration
 	var deletionStrategy, churnMode string
 	var podReadyThreshold time.Duration
 	var metricsProfiles []string
@@ -54,6 +54,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			}
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -64,8 +65,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
 			AdditionalVars["CHURN_MODE"] = churnMode
 
-			wh.SetVariables(AdditionalVars, nil)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -74,6 +74,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
@@ -81,7 +82,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
-	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }

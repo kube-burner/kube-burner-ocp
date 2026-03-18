@@ -65,6 +65,7 @@ jobs:
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
           total_namespaces: {{.JOB_ITERATIONS}}
+          enable_vm: {{.ENABLE_VM}}
 
   - name: udn-bgp-create-pods
     namespace: udn-bgp
@@ -75,7 +76,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 15s
     jobPause: 10m
     cleanup: false
     skipIndexing: true
@@ -86,10 +86,15 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
+    {{ if .ENABLE_VM }}
+      - objectTemplate: vm.yml
+        replicas: 1
+    {{ else }}
       - objectTemplate: pod.yml
         replicas: 1 
         inputVars:
           podReplicas: 1
+    {{ end }}
 
   - name: udn-bgp-route-advertisements
     {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}

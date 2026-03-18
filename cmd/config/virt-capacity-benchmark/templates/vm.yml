@@ -51,7 +51,7 @@ spec:
           requests:
             storage: {{ $dataVolumeSize }}
   {{ end }}
-  running: true
+  runStrategy: RerunOnFailure
   template:
     spec:
       accessCredentials:

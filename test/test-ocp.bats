@@ -6,7 +6,7 @@ load helpers.bash
 
 setup_file() {
   cd ocp
-  export BATS_TEST_TIMEOUT=1800
+  export BATS_TEST_TIMEOUT=2700
   export ES_SERVER=${PERFSCALE_PROD_ES_SERVER:-"http://localhost:9200"}
   export ES_INDEX="kube-burner-ocp"
   trap print_events ERR
@@ -17,6 +17,7 @@ setup_file() {
     setup-shared-network
     setup-opensearch
   fi
+  oc get ns -o name | grep preload-kube-burner | xargs -r oc delete
 }
 
 setup() {
@@ -43,8 +44,10 @@ teardown_file() {
   # run_cmd oc delete clustercatalog --all
 }
 
-@test "custom-workload as node-density" {
-  run_cmd ${KUBE_BURNER_OCP} init --config=custom-workload.yml --metrics-endpoint metrics-endpoints.yaml --uuid=${UUID}
+@test "custom-workload" {
+  run_cmd ${KUBE_BURNER_OCP} init --config=custom-workload.yml --metrics-endpoint metrics-endpoints.yaml --uuid=${UUID} --set=global.gc=false
+  verify_object_count namespace 1 "" kube-burner.io/job=custom-workload
+  oc delete ns -l kube-burner.io/job=custom-workload
   check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
@@ -68,8 +71,9 @@ teardown_file() {
 }
 
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
-  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=12 --churn-cycles=1 --churn-percent=25 --churn-delay=5s --profile-type=both ${INDEXING_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=12 --churn-cycles=1 --churn-percent=25 --churn-delay=5s --profile-type=both ${INDEXING_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID} --pprof --pprof-interval=0
   check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion
+  ls pprof-data/ovnkube-controller-heap-ovnkube-node-*-start.pprof pprof-data/ovnk-control-plane-heap-ovnkube-control-plane-*-end.pprof
 }
 
 @test "cluster-density-v2: custom-metrics=true" {

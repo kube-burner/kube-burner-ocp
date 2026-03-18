@@ -10,21 +10,21 @@ global:
           threshold: {{.POD_READY_THRESHOLD}}
 {{ if .PPROF }}
     - name: pprof
-      pprofInterval: 2m
+      pprofInterval: {{.PPROF_INTERVAL}}
       pprofDirectory: pprof-data
       pprofTargets:
-      - name: ovnkube-controller
+      - name: ovnkube-controller-heap
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-node}
-        url: http://localhost:29103/debug/pprof/profile?seconds=30
-      - name: ovn-controller
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovn-controller-heap
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-node}
-        url: http://localhost:29105/debug/pprof/profile?seconds=30
-      - name: ovnk-control-plane
+        url: http://localhost:29105/debug/pprof/heap
+      - name: ovnk-control-plane-heap
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-control-plane}
-        url: http://localhost:29108/debug/pprof/profile?seconds=30
+        url: http://localhost:29108/debug/pprof/heap
 {{ end }}
 {{ if .SVC_LATENCY }}
     - name: serviceLatency
@@ -59,7 +59,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -91,7 +90,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -137,7 +135,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -183,7 +180,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -230,7 +226,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     objects:
       - objectTemplate: banp-default-deny-traffic.yml
         replicas: 1

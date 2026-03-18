@@ -101,7 +101,7 @@ check_resize() {
     fi
 
     local datavolume_sizes
-    datavolume_sizes=$(echo "${blk_devices}" | jq .blockdevices | jq -r --arg name "vda" '.[] | select(.name != $name) | .size')
+    datavolume_sizes=$(echo "${blk_devices}" | jq -r --arg name "vda" '.blockdevices[] | select(.name != $name and .size != "1M") | .size')
     for datavolume_size in ${datavolume_sizes}; do
         if [[ $datavolume_size != "${EXPECTED_DATA_SIZE}" ]]; then
             return 1

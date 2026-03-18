@@ -107,8 +107,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 			log.Infof("Controller config: %d controllers, %d threads per controller", numControllers, numThreads)
 
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, nil)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -152,7 +151,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&smallJobPercent, "small-job-percent", 80, "Percentage of small build jobs (0-100, large jobs get remainder)")
 
 	// Metrics profile
-	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"build-farm-metrics.yml", "metrics.yml"}, "Comma separated list of metrics profiles to use")
 
 	return cmd
 }

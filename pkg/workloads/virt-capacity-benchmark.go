@@ -117,7 +117,10 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			if skipResizeJob {
 				log.Infof("skipResizeJob is set to true")
 			}
-
+			wh.SummaryMetadata["OCPVirtualizationVersion"], err = wh.MetadataAgent.GetOCPVirtualizationVersion()
+			if err != nil {
+				log.Warnf("Failed to get OCP Virtualization version: %v", err)
+			}
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["vmCount"] = fmt.Sprint(vmsPerIteration)
@@ -130,7 +133,6 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["skipResizeJob"] = skipResizeJob
 
 			setMetrics(cmd, metricsProfiles)
-
 			log.Infof("Running tests in Namespace [%s]", testNamespace)
 			counter := 0
 			for {
@@ -139,10 +141,9 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				AdditionalVars["storageClassName"] = storageClassName
 
 				os.Setenv("counter", fmt.Sprint(counter))
-				wh.SetVariables(AdditionalVars, nil)
-				rc = wh.Run(cmd.Name() + ".yml")
+				rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 				if rc != 0 {
-					log.Infof("Capacity failed in loop #%d", counter)
+					log.Errorf("Capacity failed in loop #%d", counter)
 					break
 				}
 				counter += 1

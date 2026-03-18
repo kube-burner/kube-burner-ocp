@@ -11,17 +11,17 @@ global:
           threshold: {{.POD_READY_THRESHOLD}}
 {{ if .PPROF }}
     - name: pprof
-      pprofInterval: 2m
+      pprofInterval: {{.PPROF_INTERVAL}}
       pprofDirectory: pprof-data
       pprofTargets:
-      - name: ovnkube-controller
+      - name: ovnkube-controller-heap
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-node}
-        url: http://localhost:29103/debug/pprof/profile?seconds=30
-      - name: ovnk-control-plane
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovnk-control-plane-heap
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-control-plane}
-        url: http://localhost:29108/debug/pprof/profile?seconds=30
+        url: http://localhost:29108/debug/pprof/heap
 {{ end }}
 {{ if .SVC_LATENCY }}
     - name: serviceLatency
@@ -62,7 +62,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 15s
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -73,11 +72,14 @@ jobs:
       - objectTemplate: postgres-deployment.yml
         replicas: 1
         churn: false    # If the posgres database gets restarted it will lose the table schema and leading failures in the client side readiness probes
+        inputVars:
+          nodeSelector: {{.NODE_SELECTOR}}
 
       - objectTemplate: app-deployment.yml
         replicas: 1
         inputVars:
           probesPeriod: {{.PROBES_PERIOD}}
+          nodeSelector: {{.NODE_SELECTOR}}
 
       - objectTemplate: postgres-service.yml
         replicas: 1

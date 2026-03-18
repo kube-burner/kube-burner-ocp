@@ -8,7 +8,7 @@ global:
 
 metricsEndpoints:
 {{ if .ES_SERVER }}
-  - metrics: [metrics.yml]
+  - metrics: [{{.METRICS}}]
     alerts: [{{.ALERTS}}]
     indexer:
       esServers: ["{{.ES_SERVER}}"]

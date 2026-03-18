@@ -28,16 +28,16 @@ import (
 // Returns virt-density workload
 func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, vmsPerNode int
-	var vmiRunningThreshold time.Duration
+	var vmiRunningThreshold, pprofInterval time.Duration
 	var metricsProfiles []string
 	var churnPercent, churnCycles int
-	var l3 bool
+	var l3, pprof bool
 	var churnDelay, churnDuration time.Duration
-	var deletionStrategy, jobPause, vmImage, bindingMethod, churnMode string
+	var deletionStrategy, vmImage, bindingMethod, churnMode string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "virt-udn-density",
-		Short:        "Runs virt-density-udn workload",
+		Short:        "Runs virt-udn-density workload",
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			if bindingMethod != "passt" && bindingMethod != "l2bridge" {
@@ -50,11 +50,10 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			vmsPerUdn := totalVMs/iterations - 1 // -1 because there is always one server vm per udn
 
 			if vmsPerUdn < 1 {
-				log.Warn("Nb of total VMs deployed is less than the number of iterations, at least one vm per udn will be deployed")
+				log.Warn("Nb of total client VMs to deploy is less than the number of UDNs, only the server VM will be deployed")
 				AdditionalVars["VMS_PER_ITERATION"] = 0
 			}
 
-			AdditionalVars["JOB_PAUSE"] = jobPause
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -67,6 +66,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["UDN_BINDING_METHOD"] = bindingMethod
 			AdditionalVars["ENABLE_LAYER_3"] = l3
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			if l3 {
 				log.Info("Layer 3 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer3", bindingMethod)
@@ -74,8 +75,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Info("Layer 2 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer2", bindingMethod)
 			}
-			wh.SetVariables(AdditionalVars, nil)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -83,7 +83,6 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&l3, "layer3", false, "Enable Layer3 UDN instead of Layer2, default: false - layer2 enabled")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
-	cmd.Flags().StringVar(&jobPause, "job-pause", "1ms", "Time to pause after finishing the job")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
 	cmd.Flags().StringVar(&bindingMethod, "binding-method", "l2bridge", "Binding method for the VM UDN network interface - acceptable values: 'l2bridge' | 'passt'")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
@@ -91,10 +90,11 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnNamespaces), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
-	cmd.Flags().IntVar(&iterations, "iterations", 1, "Job iterations")
-	cmd.Flags().IntVar(&iterations, "iteration", 1, "iterations")
+	cmd.Flags().IntVar(&iterations, "iterations", 1, "Job iterations, (One UDN will be created per iteration)")
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 50, "VMs per node")
 	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 60*time.Second, "VMI ready timeout threshold")
+	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }

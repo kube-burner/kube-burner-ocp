@@ -26,6 +26,7 @@ metricsEndpoints:
       type: local
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
+
 jobs:
   - name: virt-density
     namespace: virt-density
@@ -49,7 +50,14 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
     objects:
 
+{{ if .MOUNTS }}
       - objectTemplate: vm.yml
         replicas: 1
         inputVars:
           vmImage: {{.VM_IMAGE}}
+{{ else }}
+      - objectTemplate: vm-nomnt.yml
+        replicas: 1
+        inputVars:
+          vmImage: {{.VM_IMAGE}}
+{{ end }}

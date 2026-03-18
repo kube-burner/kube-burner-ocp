@@ -31,6 +31,7 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,9 +44,9 @@ const (
 )
 
 var (
-	clusterMetadata ocpmetadata.ClusterMetadata
-	AdditionalVars  map[string]any
-
+	clusterMetadata      ocpmetadata.ClusterMetadata
+	AdditionalVars       map[string]any
+	SetVars              map[string]any
 	accessModeTranslator = map[string]string{
 		"RO":  "ReadOnly",
 		"RWO": "ReadWriteOnce",
@@ -65,20 +66,13 @@ func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 }
 
 // SetKubeBurnerFlags configures the required environment variables and flags for kube-burner
-func GatherMetadata(wh *workloads.WorkloadHelper, alerting bool) error {
+func GatherMetadata(wh *workloads.WorkloadHelper) error {
 	var err error
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	_, restConfig := kubeClientProvider.DefaultClientSet()
 	wh.MetadataAgent, err = ocpmetadata.NewMetadata(restConfig)
 	if err != nil {
 		return err
-	}
-	// When either indexing or alerting are enabled
-	if alerting && wh.Config.MetricsEndpoint == "" {
-		wh.Config.PrometheusURL, wh.Config.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
-		if err != nil {
-			return fmt.Errorf("error obtaining Prometheus information: %v", err)
-		}
 	}
 	clusterMetadata, err = wh.MetadataAgent.GetClusterMetadata()
 	if err != nil {
@@ -112,6 +106,40 @@ func generateLoopCounterSlice(length, startValue int) []string {
 		counter[i] = fmt.Sprint(i + startValue)
 	}
 	return counter
+}
+
+// addWorkloadFlagsToMetadata adds all flag values from the command to SummaryMetadata
+func addWorkloadFlagsToMetadata(cmd *cobra.Command, wh *workloads.WorkloadHelper) {
+	workloadFlags := make(map[string]string)
+	// Use LocalFlags() instead of Flags() to only get flags specific to this command
+	cmd.LocalFlags().VisitAll(func(flag *pflag.Flag) {
+		if flag.Name == "help" {
+			return
+		}
+		flagName := kebabToCamelCase(flag.Name)
+		workloadFlags[flagName] = flag.Value.String()
+	})
+	wh.SummaryMetadata["workloadFlags"] = workloadFlags
+}
+
+// RunWorkload executes the common workload pattern: adds flags to metadata, sets variables, and runs the workload
+func RunWorkload(cmd *cobra.Command, wh *workloads.WorkloadHelper, configFile string) int {
+	addWorkloadFlagsToMetadata(cmd, wh)
+	wh.SetVariables(AdditionalVars, SetVars)
+	return wh.Run(configFile)
+}
+
+// kebabToCamelCase converts a flag name from kebab-case to camelCase
+func kebabToCamelCase(word string) string {
+	parts := strings.Split(word, "-")
+	for i := range parts {
+		// First part stays lowercase, rest are capitalized
+		if i == 0 {
+			continue
+		}
+		parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
+	}
+	return strings.Join(parts, "")
 }
 
 // Add metadata specific to the CNV workloads

@@ -70,7 +70,10 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
 			}
-
+			wh.SummaryMetadata["OCPVirtualizationVersion"], err = wh.MetadataAgent.GetOCPVirtualizationVersion()
+			if err != nil {
+				log.Warnf("Failed to get OCP Virtualization version: %v", err)
+			}
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["storageClassName"] = storageClassName
@@ -85,8 +88,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
 
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, nil)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
