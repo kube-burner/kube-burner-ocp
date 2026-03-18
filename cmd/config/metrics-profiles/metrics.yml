@@ -141,6 +141,10 @@
 - query: sum(kube_node_status_condition{status="true"}) by (condition)
   metricName: nodeStatus
 
+- query: topk(1, ovs_build_info)
+  metricName: ovsBuildInfo
+  instant: true
+
 # Prometheus metrics
 
 - query: openshift:prometheus_tsdb_head_series:sum{job="prometheus-k8s"}
