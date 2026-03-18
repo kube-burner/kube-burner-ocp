@@ -58,8 +58,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)

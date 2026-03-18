@@ -38,7 +38,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: false
-    preLoadPeriod: 1s
     jobPause: 15s
     skipIndexing: true
     namespaceLabels:
@@ -66,7 +65,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: false
-    preLoadPeriod: 15s
     jobPause: 1m
     cleanup: false
     namespaceLabels:
