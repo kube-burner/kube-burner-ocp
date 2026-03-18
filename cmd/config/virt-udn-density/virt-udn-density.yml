@@ -58,7 +58,6 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: true
     waitWhenFinished: true
-    runOnce: true
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -85,6 +84,7 @@ jobs:
               value: "True"
       - objectTemplate: ds.yml
         replicas: 1
+        runOnce: true
 
   - name: remove-ds
     jobType: delete
