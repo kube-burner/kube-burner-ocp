@@ -36,7 +36,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	var metricsProfiles []string
 	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent, numSriovs int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod, pprofInterval time.Duration
-	var containerImage, deletionStrategy, churnMode, selector, perfProfile, sriovNetDevicepool, sriovNetworkName string
+	var containerImage, deletionStrategy, churnMode, selector, perfProfile, sriovNetworkName string
 	var namespacedIterations, pprof, svcLatency bool
 	var nodeSelector corev1.NodeSelector
 	var matchExpressions []corev1.NodeSelectorRequirement
@@ -99,7 +99,6 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["PERF_PROFILE"] = perfProfile
 			AdditionalVars["NUM_SRIOVS"] = numSriovs
-			AdditionalVars["SRIOV_NET_DEVICEPOOL"] = sriovNetDevicepool
 			AdditionalVars["SRIOV_NETWORK_NAME"] = sriovNetworkName
 			nodeSelectorJson, err := json.Marshal(nodeSelector)
 			if err != nil {
@@ -139,7 +138,6 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
 		cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 		cmd.Flags().IntVar(&numSriovs, "num-sriovs", 0, "Number of SR-IOV interfaces per pod")
-		cmd.Flags().StringVar(&sriovNetDevicepool, "net-devicepool", "servervfs", "SRIOV Device pool name for Kernel VFs in the cluster")
 		cmd.Flags().StringVar(&sriovNetworkName, "sriov-networkname", "sriov-net", "SR-IOV network name for IPAM configuration")
 		cmd.Flags().StringVar(&perfProfile, "perf-profile", "", "Performance profile name in the Cluster")
 	}

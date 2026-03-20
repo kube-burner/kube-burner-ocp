@@ -71,14 +71,8 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
+
     objects:
-{{ if .NUM_SRIOVS }}
-      - objectTemplate: sriov-network.yml
-        replicas: 1
-        inputVars:
-          sriovNetDevicepool: {{.SRIOV_NET_DEVICEPOOL}}
-          sriovNetworkName: {{.SRIOV_NETWORK_NAME}}
-{{ end }}
       - objectTemplate: webserver-deployment.yml
         replicas: 1
         inputVars:
