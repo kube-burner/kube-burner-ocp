@@ -254,6 +254,37 @@ It creates two deployments, a client/curl and a server/nxing, and 1 service back
 
 Note: This workload calculates the number of iterations to create from the number of nodes and desired pods per node.  In order to keep the test scalable and performant, chunks of 1000 iterations will by broken into separate namespaces, using the config variable `iterationsPerNamespace`.
 
+### node-density-cni with SRIOV VFs
+
+It creates two deployments, a client/curl and a server/nxing, and 1 service backed by the previous server pods along with secondary network interfaces with SRIOV VFs. The client application has configured an startup probe that makes requests to the previous service every second with a timeout of 600s.
+
+#### Pre-requisites for running with SRIOV VFs
+- Cluster should be installed with DAY-2 SRIOV Operator
+- If User want to run workload with Performance profile, It should be created.
+- Below SRIOV-network should be created before running the workload
+  ```yaml
+  ---
+  apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetwork
+  metadata:
+    name: sriov-net-node-density
+    namespace: openshift-sriov-network-operator
+  spec:
+    ipam: |
+      {
+        "type": "whereabouts",
+        "range": "172.20.0.0/16"
+      }
+    logLevel: info
+    networkNamespace: node-density-cni-0
+    resourceName: servervfs
+    spoofChk: "off"
+    trust: "on"
+  ```
+
+
+Note: This workload calculates the number of iterations to create from the number of nodes and desired pods per node.  In order to keep the test scalable and performant, chunks of 1000 iterations will by broken into separate namespaces, using the config variable `iterationsPerNamespace`.
+
 ### node-density-heavy
 
 Creates two deployments, a postgresql database, and a simple client that performs periodic insert queries (configured through liveness and readiness probes) on the previous database and a service that is used by the client to reach the database.

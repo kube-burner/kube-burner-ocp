@@ -46,7 +46,11 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+{{ if .NUM_SRIOVS }}
+  - name: node-density-cni-sriov
+{{else}}
   - name: node-density-cni
+{{ end }}
     namespace: node-density-cni
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
@@ -67,12 +71,15 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
-    objects:
 
+    objects:
       - objectTemplate: webserver-deployment.yml
         replicas: 1
         inputVars:
           nodeSelector: {{.NODE_SELECTOR}}
+          perfProfile: {{.PERF_PROFILE}}
+          numSriovs: {{.NUM_SRIOVS}}
+          sriovNetworkName: {{.SRIOV_NETWORK_NAME}}
 
       - objectTemplate: webserver-service.yml
         replicas: 1
@@ -81,3 +88,6 @@ jobs:
         replicas: 1
         inputVars:
           nodeSelector: {{.NODE_SELECTOR}}
+          perfProfile: {{.PERF_PROFILE}}
+          numSriovs: {{.NUM_SRIOVS}}
+          sriovNetworkName: {{.SRIOV_NETWORK_NAME}}
