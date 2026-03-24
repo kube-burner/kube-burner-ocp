@@ -1,3 +1,9 @@
+# DaemonSet to trigger CUDN network allocation on every worker node.
+# Runs a minimal pod on each node, forcing OVN-K to plumb the CUDN network.
+# The pod reaching Running state confirms the CNI plugin successfully set up
+# the network interface. Deleted in Job 4 after allocation is complete.
+# Cross-node CUDN connectivity is validated later in Job 6 via the client
+# readiness probes that curl cudn-svc in peer namespaces.
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
