@@ -5,15 +5,16 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/cloud-bulldozer/go-commons/v2 v2.3.0
+	github.com/cloud-bulldozer/go-commons/v2 v2.3.1
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner/v2 v2.4.2
+	github.com/kube-burner/kube-burner/v2 v2.5.0
 	github.com/openshift/api v0.0.0-20240527133614-ba11c1587003
 	github.com/openshift/client-go v0.0.0-20240821135114-75c118605d5f
 	github.com/praserx/ipconv v1.2.1
 	github.com/prometheus-community/pro-bing v0.7.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
+	github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20231024175852-77df5d35f725
 	golang.org/x/sys v0.33.0
 	k8s.io/api v0.31.1
@@ -71,7 +72,6 @@ require (
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.7.0 // indirect
-	github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace // indirect
 	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.39.0 // indirect
