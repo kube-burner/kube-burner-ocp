@@ -2,13 +2,8 @@
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
-  measurements:
-    - name: podLatency
-      thresholds:
-        - conditionType: Ready
-          metric: P99
-          threshold: {{.POD_READY_THRESHOLD}}
 {{ if .PPROF }}
+  measurements:
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}
       pprofDirectory: pprof-data
@@ -77,7 +72,6 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: false
     waitWhenFinished: true
-    jobPause: 2m
     measurements:
       - name: cudnLatency
     objects:
@@ -202,6 +196,12 @@ jobs:
     namespacedIterations: true
     waitWhenFinished: true
     preLoadImages: true
+    measurements:
+      - name: podLatency
+        thresholds:
+          - conditionType: Ready
+            metric: P99
+            threshold: {{.POD_READY_THRESHOLD}}
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}

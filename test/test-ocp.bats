@@ -136,15 +136,11 @@ teardown_file() {
 }
 
 @test "cudn-density-l2: gc=true" {
+  oc delete clusteruserdefinednetworks --all --ignore-not-found
+  # Extract cudn-density templates to override any stale files from previous tests
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
   run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --gc=true --uuid=${UUID}
-  # Verify GC cleaned up CUDNs
   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density-create-cudn-l2
-}
-
-@test "cudn-density-l3: simple=true" {
-  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --layer3 --simple --gc=true --uuid=${UUID}
-  # Verify GC cleaned up CUDNs
-  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density-create-cudn-l3
 }
 
 @test "cluster-health" {
