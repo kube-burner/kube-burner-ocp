@@ -5,6 +5,17 @@ metadata:
   labels:
     num: "{{.Replica}}"
 spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.kubernetes.io/worker
+            operator: Exists
+          - key: node-role.kubernetes.io/infra
+            operator: DoesNotExist
+          - key: node-role.kubernetes.io/workload
+            operator: DoesNotExist
   containers:
   - name: webserver
     image: quay.io/cloud-bulldozer/sampleapp:latest
