@@ -1,0 +1,268 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+{{ if .PPROF }}
+  measurements:
+    - name: pprof
+      pprofInterval: {{.PPROF_INTERVAL}}
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovnkube-controller-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=30
+      - name: ovnk-control-plane-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/heap
+      - name: ovnk-control-plane-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=30
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+{{ $cudnJobName := ternary "cudn-density-create-cudn-l3" "cudn-density-create-cudn-l2" .ENABLE_LAYER_3 }}
+jobs:
+  # Job 1: Create namespaces with CUDN labels
+  - name: cudn-density-create-namespaces
+    namespace: cudn-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: configmap.yml
+        replicas: 1
+
+  # Job 2: Create CUDNs (cluster-scoped)
+  - name: {{ $cudnJobName }}
+    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
+    jobIterations: {{$numCudn}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    measurements:
+      - name: cudnLatency
+    objects:
+      {{ if .ENABLE_LAYER_3 }}
+      - objectTemplate: cudn-l3.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          total_namespaces: {{.JOB_ITERATIONS}}
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkCreated") | .status
+              value: "True"
+      {{ else }}
+      - objectTemplate: cudn-l2.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          total_namespaces: {{.JOB_ITERATIONS}}
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkCreated") | .status
+              value: "True"
+      {{ end }}
+
+  # Job 3: Deploy DaemonSets to trigger network allocation on all nodes
+  - name: cudn-density-ds
+    namespace: cudn-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: ds.yml
+        replicas: 1
+
+  # Job 4: Remove DaemonSets
+  - name: cudn-density-remove-ds
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: DaemonSet
+        apiVersion: apps/v1
+        labelSelector: {kube-burner.io/job: cudn-density-ds}
+
+  # Job 5: Deploy infrastructure objects (services, NPs, EgressFirewall, quotas)
+  {{ if not .SIMPLE }}
+  - name: cudn-density-infra
+    namespace: cudn-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: service.yml
+        replicas: 1
+
+      - objectTemplate: service-headless.yml
+        replicas: 1
+
+      - objectTemplate: service-server.yml
+        replicas: 2
+
+      - objectTemplate: np-deny-all.yml
+        replicas: 1
+
+      - objectTemplate: np-allow-cudn-ingress.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+
+      - objectTemplate: np-allow-cudn-egress.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+
+      - objectTemplate: np-allow-app-ingress.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+
+      - objectTemplate: np-allow-app-egress.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+
+      - objectTemplate: egressfirewall.yml
+        replicas: 1
+
+      - objectTemplate: resourcequota.yml
+        replicas: 1
+
+      - objectTemplate: limitrange.yml
+        replicas: 1
+  {{ end }}
+
+  # Job 6: Deploy workload (servers + clients with tiered pipeline communication)
+  - name: cudn-density-workload
+    namespace: cudn-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    preLoadImages: true
+    measurements:
+      - name: podLatency
+        thresholds:
+          - conditionType: Ready
+            metric: P99
+            threshold: {{.POD_READY_THRESHOLD}}
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
+    jobPause: 2m
+    metricsClosing: afterJobPause
+    cleanup: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      {{ if .SIMPLE }}
+      - objectTemplate: service.yml
+        replicas: 1
+      {{ end }}
+
+      - objectTemplate: deployment-server.yml
+        replicas: 2
+        inputVars:
+          podReplicas: 3
+
+      - objectTemplate: deployment-app.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 2
+
+      - objectTemplate: deployment-client.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+
+{{ if .GC }}
+  # Job 7: Delete workload namespaces (kills pods, NADs start terminating)
+  # Uses waitForDeletion: false because namespaces will be stuck in Terminating
+  # until CUDNs are deleted in Job 8 (NAD finalizers block namespace deletion).
+  - name: cudn-density-cleanup-namespaces
+    jobType: delete
+    waitForDeletion: false
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: Namespace
+        apiVersion: v1
+        labelSelector: {kube-burner.io/job: cudn-density-create-namespaces}
+
+  # Job 8: Delete CUDNs (releases NAD finalizers, namespaces finish terminating)
+  - name: cudn-density-cleanup-cudns
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: ClusterUserDefinedNetwork
+        apiVersion: k8s.ovn.org/v1
+        labelSelector: {kube-burner.io/job: {{ $cudnJobName }} }
+{{ end }}
