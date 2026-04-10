@@ -149,7 +149,7 @@ func verifyAdminNetworkPolicies(config *rest.Config, expectedANPs int) error {
 	}
 	log.Info("adminnetworkpolicies found: ", len(anpList.Items), " Expected: ", expectedANPs)
 	if len(anpList.Items) == 0 || len(anpList.Items) != expectedANPs {
-		return fmt.Errorf("No adminnetworkpolicies found or mismatch expect number of ANPs.: %v", err)
+		return fmt.Errorf("no adminnetworkpolicies found or mismatch expect number of ANPs.: %v", err)
 	}
 	return nil
 }
@@ -169,7 +169,7 @@ func generateCidrSelectorAnpMultiPolicyWithMultiRulesMultiIPsByTenant(
 
 	sourceNsList, err := getNamespacesByPrefix(sourceNsPrefix)
 	if err != nil || len(sourceNsList) == 0 {
-		return fmt.Errorf("No source namespace with prefix %s was found", sourceNsPrefix)
+		return fmt.Errorf("no source namespace with prefix %s was found", sourceNsPrefix)
 	}
 
 	// For simplicity, only use the first source ns
@@ -213,7 +213,7 @@ func generateCidrSelectorAnpMultiPolicyWithMultiRulesMultiIPsByTenant(
 		denyPods, _ := getPodsByNamespaceAndPattern(targetNsPrefix, targetNsDenyPod)
 
 		var yaml bytes.Buffer
-		yaml.WriteString(fmt.Sprintf(`apiVersion: policy.networking.k8s.io/v1alpha1
+		fmt.Fprintf(&yaml, `apiVersion: policy.networking.k8s.io/v1alpha1
 kind: AdminNetworkPolicy
 metadata:
   name: anp-cidr-selector-policy-rules-%s-to-%s-network-tenant%d-p%d
@@ -243,14 +243,14 @@ spec:
     to:
     - networks:
       - 10.128.0.0/14
-`, sourceNsPrefix, targetNsPrefix, tenantID, priority, priority, tenantID, tenantID))
+`, sourceNsPrefix, targetNsPrefix, tenantID, priority, priority, tenantID, tenantID)
 
 		// Allow rules for allowPods
 		appRuleIndex := 1
 		for i := 0; i < len(allowPods); i += totalIpBlockNumByRule {
-			yaml.WriteString(fmt.Sprintf("  - name: \"allow-egress-to-%s-network-%d\"\n    action: \"Allow\"\n    ports:\n      - portNumber:\n          port: %s\n      - portNumber:\n          port: 8080\n          protocol: TCP\n      - portRange:\n          start: 9201\n          end: 9205\n          protocol: TCP\n    to:\n    - networks:\n", targetNsPrefix, appRuleIndex, targetNsAllowPort))
+			fmt.Fprintf(&yaml, "  - name: \"allow-egress-to-%s-network-%d\"\n    action: \"Allow\"\n    ports:\n      - portNumber:\n          port: %s\n      - portNumber:\n          port: 8080\n          protocol: TCP\n      - portRange:\n          start: 9201\n          end: 9205\n          protocol: TCP\n    to:\n    - networks:\n", targetNsPrefix, appRuleIndex, targetNsAllowPort)
 			for j := i; j < i+totalIpBlockNumByRule && j < len(allowPods); j++ {
-				yaml.WriteString(fmt.Sprintf("      - %s/32\n", allowPods[j].IP))
+				fmt.Fprintf(&yaml, "      - %s/32\n", allowPods[j].IP)
 			}
 			appRuleIndex++
 		}
@@ -258,9 +258,9 @@ spec:
 		// Deny rules for denyPods
 		dbRuleIndex := 1
 		for i := 0; i < len(denyPods); i += totalIpBlockNumByRule {
-			yaml.WriteString(fmt.Sprintf("  - name: \"deny-egress-to-%s-network-%d\"\n    action: \"Deny\"\n    ports:\n      - portNumber:\n          port: %s\n      - portNumber:\n          port: 5432\n          protocol: TCP\n      - portNumber:\n          port: 60000\n          protocol: TCP\n      - portNumber:\n          port: 9099\n          protocol: TCP\n      - portNumber:\n          port: 9393\n          protocol: TCP\n    to:\n    - networks:\n", targetNsPrefix, dbRuleIndex, targetNsDenyPort))
+			fmt.Fprintf(&yaml, "  - name: \"deny-egress-to-%s-network-%d\"\n    action: \"Deny\"\n    ports:\n      - portNumber:\n          port: %s\n      - portNumber:\n          port: 5432\n          protocol: TCP\n      - portNumber:\n          port: 60000\n          protocol: TCP\n      - portNumber:\n          port: 9099\n          protocol: TCP\n      - portNumber:\n          port: 9393\n          protocol: TCP\n    to:\n    - networks:\n", targetNsPrefix, dbRuleIndex, targetNsDenyPort)
 			for j := i; j < i+totalIpBlockNumByRule && j < len(denyPods); j++ {
-				yaml.WriteString(fmt.Sprintf("      - %s/32\n", denyPods[j].IP))
+				fmt.Fprintf(&yaml, "      - %s/32\n", denyPods[j].IP)
 			}
 			dbRuleIndex++
 		}

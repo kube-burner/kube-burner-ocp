@@ -487,10 +487,10 @@ func (r *raLatency) exportWorker() {
 				return
 			}
 			if update.Type == unix.RTM_NEWROUTE {
-				cudnpods, exists := r.cudnSubnet[update.Route.Dst.String()]
+				cudnpods, exists := r.cudnSubnet[update.Dst.String()]
 				if exists {
 					// linux doesn't allow adding duplicate routes, so new routeTimestamp should be added
-					log.Debugf("Netlink route: %s received for udn: %s at: %v", update.Route.Dst.String(), cudnpods.cudn, time.Now().UTC())
+					log.Debugf("Netlink route: %s received for udn: %s at: %v", update.Dst.String(), cudnpods.cudn, time.Now().UTC())
 					val, _ := r.cudnConnTimestamp.LoadOrStore(cudnpods.cudn, netlinkRoutes{
 						routeTimestamp: time.Now().UTC(),
 						pingTimestamps: []time.Time{}})
@@ -499,7 +499,7 @@ func (r *raLatency) exportWorker() {
 						for _, pod := range cudnpods.pods {
 							for range pingAttempts {
 								if err := pingAddress("", pod, exportPingerTimeoutMsec); err == nil {
-									log.Debugf("Ping success to pod %s for the Netlink route: %s received for udn: %s at: %v", pod, update.Route.Dst.String(), cudnpods.cudn, time.Now().UTC())
+									log.Debugf("Ping success to pod %s for the Netlink route: %s received for udn: %s at: %v", pod, update.Dst.String(), cudnpods.cudn, time.Now().UTC())
 									pingSuccess = append(pingSuccess, time.Now().UTC())
 									break
 								}
