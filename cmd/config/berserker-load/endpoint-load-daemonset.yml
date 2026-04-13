@@ -12,8 +12,6 @@ spec:
       labels:
         app: endpoint-load-{{.Replica}}
     spec:
-      imagePullSecrets:
-      - name: {{.JobName}}-{{.Replica}}
       containers:
       - image: {{.endpointLoadImage}}
         resources:

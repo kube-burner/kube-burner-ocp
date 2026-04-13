@@ -29,12 +29,11 @@ func NewBerserkerLoad(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var jobIterations int
 	var processLoadReplicas, endpointLoadReplicas, connectionLoadReplicas int
-	var serviceReplicas, secretReplicas, configmapReplicas int
+	var serviceReplicas, configmapReplicas int
 	var churnCycles, churnPercent int
 	var churnDuration, churnDelay, jobPause, maxWaitTimeout, podReadyThreshold time.Duration
 	var deletionStrategy, churnMode string
 	var processLoadImage, endpointLoadImage, connectionLoadImage string
-	var dockerConfigJson string
 
 	cmd := &cobra.Command{
 		Use:          "berserker-load",
@@ -58,16 +57,12 @@ func NewBerserkerLoad(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["ENDPOINT_LOAD_REPLICAS"] = endpointLoadReplicas
 			AdditionalVars["CONNECTION_LOAD_REPLICAS"] = connectionLoadReplicas
 			AdditionalVars["SERVICE_REPLICAS"] = serviceReplicas
-			AdditionalVars["SECRET_REPLICAS"] = secretReplicas
 			AdditionalVars["CONFIGMAP_REPLICAS"] = configmapReplicas
 
 			// Container images
 			AdditionalVars["PROCESS_LOAD_IMAGE"] = processLoadImage
 			AdditionalVars["ENDPOINT_LOAD_IMAGE"] = endpointLoadImage
 			AdditionalVars["CONNECTION_LOAD_IMAGE"] = connectionLoadImage
-
-			// Docker config for image pull secret
-			AdditionalVars["DOCKER_CONFIG_JSON"] = dockerConfigJson
 
 			setMetrics(cmd, metricsProfiles)
 			rc = RunWorkload(cmd, wh, "berserker-load.yml")
@@ -96,20 +91,15 @@ func NewBerserkerLoad(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&endpointLoadReplicas, "endpoint-load-replicas", 6, "Number of endpoint-load DaemonSets")
 	cmd.Flags().IntVar(&connectionLoadReplicas, "connection-load-replicas", 6, "Number of connection-load DaemonSets")
 	cmd.Flags().IntVar(&serviceReplicas, "service-replicas", 10, "Number of services")
-	cmd.Flags().IntVar(&secretReplicas, "secret-replicas", 10, "Number of image pull secrets")
 	cmd.Flags().IntVar(&configmapReplicas, "configmap-replicas", 10, "Number of ConfigMaps")
 
 	// Container image flags
 	cmd.Flags().StringVar(&processLoadImage, "process-load-image",
-		"quay.io/rhacs-eng/qa:berserker-1.0-63-g7b0a20bf5f", "Process load container image")
+		"quay.io/stackrox-io/berserker:1.0-86-g3464e60064", "Process load container image")
 	cmd.Flags().StringVar(&endpointLoadImage, "endpoint-load-image",
-		"quay.io/rhacs-eng/qa:berserker-1.0-40-ge3bd96aa5a", "Endpoint load container image")
+		"quay.io/stackrox-io/berserker:1.0-86-g3464e60064", "Endpoint load container image")
 	cmd.Flags().StringVar(&connectionLoadImage, "connection-load-image",
-		"quay.io/rhacs-eng/qa:berserker-network-1.0-85-g1b7ab034aa", "Connection load container image")
-
-	// Image pull secret configuration
-	cmd.Flags().StringVar(&dockerConfigJson, "docker-config-json", "",
-		"Docker config JSON for image pull secret (base64 encoded or plain JSON)")
+		"quay.io/stackrox-io/berserker:network-1.0-85-g1b7ab034aa", "Connection load container image")
 
 	// Metrics profile
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"},
