@@ -34,11 +34,8 @@ var additionalMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasu
 
 // validateFrrExternalIP validates the external FRR router IP address format and connectivity
 func validateFrrExternalIP(frrExternalIP string) error {
-	if frrExternalIP == "" {
-		return fmt.Errorf("--frr-external-ip is required. Please provide the IP address of your external FRR router")
-	}
 	if ip := net.ParseIP(frrExternalIP); ip == nil {
-		return fmt.Errorf("Invalid IP address format: %s", frrExternalIP)
+		return fmt.Errorf("invalid IP address format: %s", frrExternalIP)
 	}
 
 	log.Infof("Validating external FRR router connectivity at %s:179...", frrExternalIP)
@@ -88,5 +85,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
 	cmd.Flags().StringVar(&frrExternalIP, "frr-external-ip", "", "IP address of the external FRR router (required)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.MarkFlagRequired("iterations")
+	cmd.MarkFlagRequired("frr-external-ip")
 	return cmd
 }

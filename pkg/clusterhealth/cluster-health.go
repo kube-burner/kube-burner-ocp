@@ -48,7 +48,7 @@ func ClusterHealthCheck(ignoreHealthCheck bool) {
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
 	openshiftClientset, err := versioned.NewForConfig(restConfig)
 	if err != nil {
-		log.Fatalf("Error creating OpenShift clientset: %v", err)
+		log.Fatalf("error creating OpenShift clientset: %v", err)
 	}
 	if util.ClusterHealthyVanillaK8s(clientSet) && isClusterHealthy(clientSet, openshiftClientset) {
 		log.Infof("Cluster is Healthy")
@@ -74,7 +74,7 @@ func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versio
 		for _, condition := range operator.Status.Conditions {
 			if condition.Type == v1.OperatorAvailable && condition.Status != v1.ConditionTrue {
 				isHealthy = false
-				log.Errorf("Cluster Operator: %s, Condition: %s, Status: %v, Reason: %s", operator.Name, condition.Type, condition.Status, condition.Reason)
+				log.Errorf("cluster Operator: %s, Condition: %s, Status: %v, Reason: %s", operator.Name, condition.Type, condition.Status, condition.Reason)
 			}
 		}
 	}
@@ -101,23 +101,23 @@ func isClusterHealthy(clientset kubernetes.Interface, openshiftClientset *versio
 func IsClusterImageRegistryAvailable(clientset kubernetes.Interface) error {
 	deployment, err := clientset.AppsV1().Deployments("openshift-image-registry").Get(context.TODO(), "image-registry", metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Error getting deployment: %v", err)
+		return fmt.Errorf("error getting deployment: %v", err)
 	}
 	if deployment.Status.AvailableReplicas > 0 {
 		log.Debugf("Deployment image-registry in namespace openshift-image-registry is available with %d replicas", deployment.Status.AvailableReplicas)
 		return nil
 	}
-	return fmt.Errorf("Deployment image-registry in namespace openshift-image-registry doesn't have available replicas")
+	return fmt.Errorf("deployment image-registry in namespace openshift-image-registry doesn't have available replicas")
 }
 
 func IsOLMv1Enabled(clientset kubernetes.Interface) error {
 	deployment, err := clientset.AppsV1().Deployments("openshift-catalogd").Get(context.TODO(), "catalogd-controller-manager", metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("Error getting deployment: %v", err)
+		return fmt.Errorf("error getting deployment: %v", err)
 	}
 	if deployment.Status.AvailableReplicas > 0 {
 		log.Debugf("Deployment catalogd-controller-manager in namespace openshift-catalogd is available with %d replicas", deployment.Status.AvailableReplicas)
 		return nil
 	}
-	return fmt.Errorf("Deployment catalogd-controller-manager in namespace openshift-catalogd doesn't have available replicas")
+	return fmt.Errorf("deployment catalogd-controller-manager in namespace openshift-catalogd doesn't have available replicas")
 }

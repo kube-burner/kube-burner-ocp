@@ -115,11 +115,11 @@ func openShiftCmd() *cobra.Command {
 			ocpWorkloads.AdditionalVars["ES_SERVER"] = esServer
 			ocpWorkloads.AdditionalVars["ES_INDEX"] = esIndex
 			if alerting || esServer != "" || localIndexing {
-				wh.Config.PrometheusURL, wh.Config.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
+				wh.PrometheusURL, wh.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
 				if err != nil {
 					log.Fatalf("Error obtaining Prometheus token: %v", err)
 				}
-				log.Debugf("Obtained prometheus endpoint: %s", wh.Config.PrometheusURL)
+				log.Debugf("Obtained prometheus endpoint: %s", wh.PrometheusURL)
 			}
 		}
 		ocpWorkloads.SetVars, err = config.ParseSetValues(setValues)
