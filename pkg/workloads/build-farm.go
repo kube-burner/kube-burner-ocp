@@ -115,7 +115,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 
 	// Standard workload flags
-	cmd.Flags().IntVar(&jobIterations, "job-iterations", 100, "Number of job iterations to create")
+	cmd.Flags().IntVar(&jobIterations, "job-iterations", 12, "Number of job iterations to create")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 100, "Number of iterations per namespace")
 	cmd.Flags().Float64Var(&qps, "qps", 40, "QPS for client rate limiting")
 	cmd.Flags().Float64Var(&burst, "burst", 40, "Burst for client rate limiting")
