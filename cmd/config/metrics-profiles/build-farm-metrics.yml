@@ -8,3 +8,8 @@
 
 - query: avg(etcd_mvcc_db_total_size_in_bytes) - avg(etcd_mvcc_db_total_size_in_use_in_bytes)
   metricName: etcdDBFragmentationBytes
+
+# Cluster events
+
+- query: cluster:usage:resources:sum{resource="events"}
+  metricName: clusterEventCount
