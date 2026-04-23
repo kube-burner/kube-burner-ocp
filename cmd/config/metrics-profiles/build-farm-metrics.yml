@@ -13,3 +13,9 @@
 
 - query: cluster:usage:resources:sum{resource="events"}
   metricName: clusterEventCount
+
+- query: sum(rate(etcd_requests_total{resource="events", operation=~"create|update|delete"}[2m]))
+  metricName: etcdEventWriteRate
+
+- query: sum(rate(etcd_requests_total{resource="events", operation=~"get|list|listWithCount"}[2m]))
+  metricName: etcdEventReadRate
