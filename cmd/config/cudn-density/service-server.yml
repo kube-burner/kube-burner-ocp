@@ -1,5 +1,5 @@
-# Per-server-deployment service: Creates server-1-svc and server-2-svc.
-# Each selects only its own deployment's pods (3 endpoints each) using the
+# Per-server-deployment service: Creates server-1-svc.
+# Selects the deployment's pods (2 endpoints) using the
 # deployment-specific label (name=cudn-density-server-{replica}).
 # Exposes ports 8080 (http) and 8443 (https).
 # Creates additional OVN load balancer entries beyond the aggregate cudn-svc.

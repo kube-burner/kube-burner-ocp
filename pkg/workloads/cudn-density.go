@@ -34,8 +34,8 @@ var cudnMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurement
 // NewCudnDensity holds cudn-density workload
 func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations, namespacesPerCudn int
-	var l3, simple, pprof bool
-	var churnDelay, churnDuration, podReadyThreshold, pprofInterval time.Duration
+	var l3, pprof bool
+	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause time.Duration
 	var churnMode string
 	var metricsProfiles []string
 	var rc int
@@ -58,16 +58,13 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			} else {
 				log.Info("Layer 2 topology enabled")
 			}
-			if simple {
-				log.Info("Simple mode: skipping network policies, services, egressfirewall, quotas")
-			}
 			if churnDuration > 0 || churnCycles > 0 {
 				log.Info("Churn is enabled")
 			}
 
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
-			AdditionalVars["SIMPLE"] = simple
+			AdditionalVars["JOB_PAUSE"] = jobPause
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -87,7 +84,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&l3, "layer3", false, "Use Layer3 topology instead of Layer2")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection for ovnkube components")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
-	cmd.Flags().BoolVar(&simple, "simple", false, "Skip network policies, egressfirewall, quotas, and extra services")
+	cmd.Flags().DurationVar(&jobPause, "job-pause", 1*time.Minute, "Pause after CUDN creation to allow OVN-K network settling before workload deployment")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
