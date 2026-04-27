@@ -13,14 +13,18 @@ global:
           threshold: 15s
 metricsEndpoints:
 {{ if .ES_SERVER }}
-  - indexer:
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
       esServers: ["{{.ES_SERVER}}"]
       insecureSkipVerify: true
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
 {{ if .LOCAL_INDEXING }}
-  - indexer:
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
       type: local
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
