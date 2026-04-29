@@ -14,6 +14,10 @@ spec:
         name: cudn-density-client-{{.Replica}}
         app: client
     spec:
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "3"
       topologySpreadConstraints:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname

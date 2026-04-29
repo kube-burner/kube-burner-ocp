@@ -139,7 +139,7 @@ teardown_file() {
   oc delete clusteruserdefinednetworks --all --ignore-not-found
   # Extract cudn-density templates to override any stale files from previous tests
   run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
-  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --gc=true --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --gc=true --job-pause=0s --uuid=${UUID}
   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density-create-cudn-l2
 }
 
