@@ -77,10 +77,10 @@ jobs:
         replicas: {{.SERVICE_REPLICAS}}
 
       - objectTemplate: berserker-configmap-endpoints-zipf.yml
-        replicas: {{.CONFIGMAP_REPLICAS}}
+        replicas: 1
 
       - objectTemplate: berserker-configmap-connections.yml
-        replicas: {{.CONFIGMAP_REPLICAS}}
+        replicas: 1
 
       - objectTemplate: berserker-configmap-processes.yml
-        replicas: {{.CONFIGMAP_REPLICAS}}
+        replicas: 1

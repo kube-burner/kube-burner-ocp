@@ -35,11 +35,6 @@ spec:
           value: "1"
         - name: RUST_LOG
           value: "error"
-        downwardAPI:
-          items:
-            - path: "labels"
-              fieldRef:
-                fieldPath: metadata.labels
       volumes:
       - name: config
         configMap:
