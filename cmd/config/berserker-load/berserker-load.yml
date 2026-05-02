@@ -37,7 +37,7 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: true
     podWait: false
-    waitWhenFinished: true
+    waitWhenFinished: false
     errorOnVerify: false
     preLoadImages: true
     preLoadPeriod: 30s
