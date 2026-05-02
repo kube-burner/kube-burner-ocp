@@ -1,0 +1,86 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  - name: berserker-load
+    namespace: berserker
+    jobIterations: {{.JOB_ITERATIONS}}
+    jobPause: {{.JOB_PAUSE}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: false
+    errorOnVerify: false
+    preLoadImages: true
+    preLoadPeriod: 30s
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
+    maxWaitTimeout: {{.MAX_WAIT_TIMEOUT}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+
+      - objectTemplate: process-load-daemonset.yml
+        replicas: {{.PROCESS_LOAD_REPLICAS}}
+        churn: true
+        inputVars:
+          processLoadImage: {{.PROCESS_LOAD_IMAGE}}
+
+      - objectTemplate: endpoint-load-daemonset.yml
+        replicas: {{.ENDPOINT_LOAD_REPLICAS}}
+        churn: true
+        inputVars:
+          endpointLoadImage: {{.ENDPOINT_LOAD_IMAGE}}
+
+      - objectTemplate: connection-load-daemonset.yml
+        replicas: {{.CONNECTION_LOAD_REPLICAS}}
+        churn: true
+        inputVars:
+          connectionLoadImage: {{.CONNECTION_LOAD_IMAGE}}
+
+      - objectTemplate: service.yml
+        replicas: {{.SERVICE_REPLICAS}}
+
+      - objectTemplate: berserker-configmap-endpoints-zipf.yml
+        replicas: 1
+
+      - objectTemplate: berserker-configmap-connections.yml
+        replicas: 1
+
+      - objectTemplate: berserker-configmap-processes.yml
+        replicas: 1
