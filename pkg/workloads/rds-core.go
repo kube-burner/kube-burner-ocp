@@ -77,7 +77,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&perfProfile, "perf-profile", "default", "Performance profile implemented in the cluster")
-	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	return cmd
 }

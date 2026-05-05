@@ -92,7 +92,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Churn mode: objects (namespaces mode is not supported due to CUDN finalizer constraints)")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Total number of namespaces to create")
 	cmd.Flags().IntVar(&namespacesPerCudn, "namespaces-per-cudn", 5, "Number of namespaces sharing the same CUDN")
-	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
