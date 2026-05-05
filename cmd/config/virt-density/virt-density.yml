@@ -5,10 +5,12 @@ global:
   deletionStrategy: {{.DELETION_STRATEGY}}
   measurements:
     - name: vmiLatency
+{{ if ne .VMI_RUNNING_THRESHOLD 0 }}
       thresholds:
         - conditionType: VMIRunning
           metric: P99
           threshold: {{.VMI_RUNNING_THRESHOLD}}
+{{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]

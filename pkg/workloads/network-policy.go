@@ -76,7 +76,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
-	cmd.Flags().DurationVar(&netpolReadyThreshold, "netpol-ready-threshold", 10*time.Second, "Network policy ready timeout threshold")
+	cmd.Flags().DurationVar(&netpolReadyThreshold, "netpol-ready-threshold", 0, "Network policy ready timeout threshold")
 	cmd.Flags().IntVar(&podsPerNamespace, "pods-per-namespace", 10, "Number of pods created in a namespace")
 	cmd.Flags().IntVar(&netpolPerNamespace, "netpol-per-namespace", 10, "Number of network policies created in a namespace")
 	cmd.Flags().IntVar(&localPods, "local-pods", 2, "Number of pods on the local namespace to receive traffic from remote namespace pods")

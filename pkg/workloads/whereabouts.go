@@ -49,7 +49,7 @@ func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 10, "Number of iterations - each iteration is 1 ns and 6 pods")
 	cmd.Flags().BoolVar(&fast, "fast", false, "Use Fast IPAM")
-	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd

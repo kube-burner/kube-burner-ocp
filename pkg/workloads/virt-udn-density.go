@@ -92,7 +92,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "Job iterations, (One UDN will be created per iteration)")
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 50, "VMs per node")
-	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 60*time.Second, "VMI ready timeout threshold")
+	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 0, "VMI ready timeout threshold")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")

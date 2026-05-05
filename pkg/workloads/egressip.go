@@ -166,7 +166,7 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().StringVar(&externalServerIP, "external-server-ip", "", "External server IP address")
 	cmd.Flags().IntVar(&addressesPerIteration, "addresses-per-iteration", 1, fmt.Sprintf("%v iterations", variant))
