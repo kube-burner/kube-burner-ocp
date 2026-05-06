@@ -1,0 +1,13 @@
+# deny-all: Baseline policy that blocks ALL ingress and egress for every pod
+# in the namespace. All other NetworkPolicies punch specific holes through this.
+# Without this, pods would have unrestricted network access by default.
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: deny-all
+spec:
+  podSelector: {}
+  ingress: []
+  policyTypes:
+  - Ingress
+  - Egress

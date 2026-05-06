@@ -1,0 +1,65 @@
+# allow-cudn-egress: Opens egress from client pods (app=client).
+#
+# Selects: pods with app=client (1 pod)
+# Allows egress to:
+#   - Pods with app=nginx in any namespace within the CUDN group, on ports http + https
+#   - Pods with app=sampleapp in any namespace within the CUDN group, on port 8080
+#   - Any destination on port 53 UDP/TCP (DNS resolution)
+# Effect: The client pod can reach any nginx or sampleapp in the CUDN group,
+#         and can resolve DNS for cross-namespace service discovery.
+#
+# This is the actively exercised egress policy — client pods generate continuous
+# HTTP traffic to cudn-svc in peer namespaces and use DNS to resolve service names.
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-cudn-egress-{{.Replica}}
+spec:
+  podSelector:
+    matchLabels:
+      app: client
+  egress:
+  {{- $cudnGroupIdx := div .Iteration .namespaces_per_cudn }}
+  {{- $cudnBase := mul $cudnGroupIdx .namespaces_per_cudn }}
+  {{- $nsList := list }}
+  {{- range $i, $v := until .namespaces_per_cudn }}
+    {{- $nsIter := add $cudnBase $i }}
+    {{- $nsName := print "cudn-density-" $nsIter }}
+    {{- $nsList = append $nsList $nsName }}
+  {{- end }}
+  {{- $nsNames := toJson $nsList }}
+  - to:
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{$nsNames}}
+      podSelector:
+        matchLabels:
+          app: nginx
+    ports:
+    - protocol: TCP
+      port: http
+    - protocol: TCP
+      port: https
+  - to:
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{$nsNames}}
+      podSelector:
+        matchLabels:
+          app: sampleapp
+    ports:
+    - protocol: TCP
+      port: 8080
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  policyTypes:
+  - Egress

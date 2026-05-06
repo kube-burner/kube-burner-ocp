@@ -1,0 +1,129 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ if .PPROF }}
+    - name: pprof
+      pprofInterval: {{.PPROF_INTERVAL}}
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovnkube-controller-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=30
+      - name: ovnk-control-plane-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/heap
+      - name: ovnk-control-plane-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=30
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+{{ $jobName := ternary "create-udn-l3" "create-udn-l2" .ENABLE_LAYER_3 }}
+jobs:
+  {{ if and (eq .CHURN_DURATION 0) (eq .CHURN_CYCLES 0) }}
+  - name: {{ $jobName }}
+    namespace: udn-density-pods
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      {{ if .ENABLE_LAYER_3 }}
+      - objectTemplate: udn_l3.yml
+        replicas: 1
+        stage:
+          number: 1
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
+              value: "True"
+      {{ else }}
+      - objectTemplate: udn_l2.yml
+        replicas: 1
+        stage:
+          number: 1
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
+              value: "True"
+      {{ end }}
+
+      - objectTemplate: ds.yml
+        replicas: 1
+        runOnce: true
+        stage:
+          number: 2
+          pauseBeforeCleanup: 1m
+          cleanup: true
+          pauseAfterCleanup: 1m
+  {{ end }}
+
+      {{ if not .SIMPLE}}
+      - objectTemplate: np-deny-all.yml
+        replicas: 1
+        stage:
+          number: 3
+
+      - objectTemplate: np-allow-from-clients.yml
+        replicas: 1
+        stage:
+          number: 3
+
+      - objectTemplate: service.yml
+        replicas: 5
+        stage:
+          number: 3
+      {{ end }}
+
+      - objectTemplate: deployment-server.yml
+        replicas: 3
+        inputVars:
+          podReplicas: 2
+        stage:
+          number: 3
+
+      - objectTemplate: deployment-client.yml
+        replicas: 2
+        inputVars:
+          podReplicas: 2
+          simple: {{.SIMPLE}}
+        stage:
+          number: 3
