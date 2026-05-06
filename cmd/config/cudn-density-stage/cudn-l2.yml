@@ -1,0 +1,25 @@
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-{{.Replica}}
+  labels:
+    cudn-{{.Replica}}: ""
+spec:
+  {{- $nsList := list }}
+  {{- $nsStart := mul $.Replica $.namespaces_per_cudn }}
+  {{- range $i, $v := until $.namespaces_per_cudn }}
+    {{- $nextNs := mod (add $nsStart $i) $.total_namespaces }}
+    {{- $next_namespace := print "cudn-density-" $nextNs }}
+    {{- $nsList = append $nsList $next_namespace }}
+  {{- end }}
+  {{- $nsNames := toJson $nsList }}
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values: {{$nsNames}}
+  network:
+    topology: Layer2
+    layer2:
+      role: Primary
+      subnets: ["10.132.0.0/16"]

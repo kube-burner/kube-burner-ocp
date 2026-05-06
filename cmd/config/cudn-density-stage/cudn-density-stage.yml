@@ -1,0 +1,206 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+{{ if .PPROF }}
+  measurements:
+    - name: pprof
+      pprofInterval: {{.PPROF_INTERVAL}}
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovnkube-controller-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=30
+      - name: ovnk-control-plane-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/heap
+      - name: ovnk-control-plane-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=30
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+{{ $cudnJobName := ternary "cudn-density-create-cudn-l3" "cudn-density-create-cudn-l2" .ENABLE_LAYER_3 }}
+jobs:
+  - name: {{ $cudnJobName }}
+    namespace: cudn-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    preLoadImages: true
+    measurements:
+      - name: cudnLatency
+      - name: podLatency
+        thresholds:
+          - conditionType: Ready
+            metric: P99
+            threshold: {{.POD_READY_THRESHOLD}}
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
+    jobPause: 2m
+    metricsClosing: afterJobPause
+    cleanup: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
+    objects:
+      {{ if .ENABLE_LAYER_3 }}
+      - objectTemplate: cudn-l3.yml
+        replicas: {{$numCudn}}
+        runOnce: true
+        scope: cluster
+        stage:
+          number: 1
+          pauseBeforeCleanup: {{.JOB_PAUSE}}
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          total_namespaces: {{.JOB_ITERATIONS}}
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkCreated") | .status
+              value: "True"
+      {{ else }}
+      - objectTemplate: cudn-l2.yml
+        replicas: {{$numCudn}}
+        runOnce: true
+        scope: cluster
+        stage:
+          number: 1
+          pauseBeforeCleanup: {{.JOB_PAUSE}}
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          total_namespaces: {{.JOB_ITERATIONS}}
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkCreated") | .status
+              value: "True"
+      {{ end }}
+      - objectTemplate: service.yml
+        replicas: 1
+        churn: false
+        stage:
+          number: 2
+
+      - objectTemplate: service-headless.yml
+        replicas: 1
+        churn: false
+        stage:
+          number: 2
+
+      - objectTemplate: service-server.yml
+        replicas: 1
+        churn: false
+        stage:
+          number: 2
+
+      - objectTemplate: np-deny-all.yml
+        replicas: 1
+        churn: false
+        stage:
+          number: 2
+
+      - objectTemplate: np-allow-cudn-ingress.yml
+        replicas: 1
+        churn: false
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+        stage:
+          number: 2
+
+      - objectTemplate: np-allow-cudn-egress.yml
+        replicas: 1
+        churn: false
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+        stage:
+          number: 2
+
+      - objectTemplate: np-allow-app-ingress.yml
+        replicas: 1
+        churn: false
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+        stage:
+          number: 2
+
+      - objectTemplate: np-allow-app-egress.yml
+        replicas: 1
+        churn: false
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+        stage:
+          number: 2
+
+      - objectTemplate: egressfirewall.yml
+        replicas: 1
+        churn: false
+        stage:
+          number: 2
+
+      - objectTemplate: resourcequota.yml
+        replicas: 1
+        churn: false
+        stage:
+          number: 2
+
+      - objectTemplate: limitrange.yml
+        replicas: 1
+        churn: false
+        stage:
+          number: 2
+
+      - objectTemplate: deployment-server.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 2
+        stage:
+          number: 2
+
+      - objectTemplate: deployment-app.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+        stage:
+          number: 3
+
+      - objectTemplate: deployment-client.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+        stage:
+          number: 3
+

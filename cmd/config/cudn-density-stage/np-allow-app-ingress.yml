@@ -1,0 +1,43 @@
+# allow-app-ingress: Opens ingress to sampleapp middleware pods (app=sampleapp).
+#
+# Selects: pods with app=sampleapp (2 pods)
+# Allows ingress from:
+#   - Pods with app=client in any namespace within the CUDN group, on port 8080
+# Effect: Any client pod in the CUDN group can reach sampleapp in this namespace.
+#
+# Note: This policy exists primarily for OVN-K load generation. No actual traffic
+# exercises this rule in the current workload — clients only curl cudn-svc (nginx),
+# not sampleapp. The policy creates ACLs, address sets, and port group entries
+# that OVN-K must compute and maintain.
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-app-ingress-{{.Replica}}
+spec:
+  podSelector:
+    matchLabels:
+      app: sampleapp
+  ingress:
+  {{- $cudnGroupIdx := div .Iteration .namespaces_per_cudn }}
+  {{- $cudnBase := mul $cudnGroupIdx .namespaces_per_cudn }}
+  {{- $nsList := list }}
+  {{- range $i, $v := until .namespaces_per_cudn }}
+    {{- $nsIter := add $cudnBase $i }}
+    {{- $nsName := print "cudn-density-" $nsIter }}
+    {{- $nsList = append $nsList $nsName }}
+  {{- end }}
+  {{- $nsNames := toJson $nsList }}
+  - from:
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{$nsNames}}
+      podSelector:
+        matchLabels:
+          app: client
+    ports:
+    - protocol: TCP
+      port: 8080
+  policyTypes:
+  - Ingress

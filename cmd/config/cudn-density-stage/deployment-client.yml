@@ -1,0 +1,93 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: client-{{.Replica}}
+spec:
+  replicas: {{.podReplicas}}
+  selector:
+    matchLabels:
+      name: cudn-density-client-{{.Replica}}
+  template:
+    metadata:
+      labels:
+        name: cudn-density-client-{{.Replica}}
+        app: client
+    spec:
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "3"
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: client
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - name: client-app
+        image: quay.io/cloud-bulldozer/curl:latest
+        {{- $position := mod .Iteration .namespaces_per_cudn }}
+        {{- $cudnBase := mul (div .Iteration .namespaces_per_cudn) .namespaces_per_cudn }}
+        {{- $lastPosition := sub .namespaces_per_cudn 1 }}
+        {{ if lt $position $lastPosition }}
+        command:
+          - "/bin/sh"
+          - "-c"
+          - |
+            while true; do
+              {{- range $offset := until (int $lastPosition) }}
+                {{- $peerOffset := add $offset 1 }}
+                {{- if lt (add $position $peerOffset) $.namespaces_per_cudn }}
+                  {{- $peerIter := add $cudnBase (add $position $peerOffset) }}
+              curl --fail -sS http://cudn-svc.cudn-density-{{ $peerIter }}.svc.cluster.local:8080 -o /dev/null 2>/dev/null && echo "OK->ns-{{ $peerIter }}" || echo "FAIL->ns-{{ $peerIter }}";
+                {{- end }}
+              {{- end }}
+              sleep 10
+            done
+        {{ else }}
+        command: ["sleep", "inf"]
+        {{ end }}
+        resources:
+          requests:
+            memory: "10Mi"
+            cpu: "10m"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: false
+        {{- $nextPosition := mod (add $position 1) .namespaces_per_cudn }}
+        {{- $peerNs := add $cudnBase $nextPosition }}
+        readinessProbe:
+          exec:
+            command:
+            - "/bin/sh"
+            - "-c"
+            - "curl --fail -sS http://cudn-svc.cudn-density-{{ $peerNs }}.svc.cluster.local:8080/ -o /dev/null"
+          periodSeconds: 1
+          timeoutSeconds: 5
+          failureThreshold: 60
+        volumeMounts:
+        - name: podinfo
+          mountPath: /etc/podlabels
+      volumes:
+      - name: podinfo
+        downwardAPI:
+          items:
+            - path: "labels"
+              fieldRef:
+                fieldPath: metadata.labels
+      restartPolicy: Always
+  strategy:
+    type: RollingUpdate
