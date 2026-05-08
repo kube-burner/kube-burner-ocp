@@ -66,7 +66,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 245, "VMs per node")
-	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 25*time.Second, "VMI ready timeout threshold")
+	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 0, "VMI ready timeout threshold")
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", false, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 10, "Iterations per namespace")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")

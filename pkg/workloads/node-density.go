@@ -128,14 +128,14 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	switch variant {
 	case "node-density":
-		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")
+		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 		cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
 	case "node-density-heavy":
-		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 		cmd.Flags().DurationVar(&probesPeriod, "probes-period", 10*time.Second, "Perf app readiness/liveness probes period")
 		cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	case "node-density-cni":
-		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
+		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 		cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 		cmd.Flags().IntVar(&numSriovs, "num-sriovs", 0, "Number of SR-IOV interfaces per pod")
 		cmd.Flags().StringVar(&sriovNetworkName, "sriov-networkname", "sriov-net", "SR-IOV network name for IPAM configuration")

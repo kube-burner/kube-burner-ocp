@@ -5,10 +5,12 @@ global:
   deletionStrategy: {{.DELETION_STRATEGY}}
   measurements:
     - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
       thresholds:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
 {{ if .PPROF }}
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}

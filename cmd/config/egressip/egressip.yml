@@ -7,10 +7,12 @@ global:
   gcMetrics: {{.GC_METRICS}}
   measurements:
     - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
       thresholds:
         - conditionType: Ready
           metric: P99
-          threshold: 15s
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
   - metrics: [{{.METRICS}}]
