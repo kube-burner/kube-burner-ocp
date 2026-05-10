@@ -143,6 +143,18 @@ teardown_file() {
   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density-create-cudn-l2
 }
 
+@test "cudn-density-l2: pod-churn + cudn-churn" {
+  oc delete clusteruserdefinednetworks --all --ignore-not-found
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --gc=true --job-pause=0s \
+    --churn-cycles=1 --churn-percent=50 --churn-delay=5s \
+    --cudn-churn-cycles=1 --cudn-churn-percent=50 --cudn-churn-delay=5s \
+    --uuid=${UUID}
+  # Verify all resources cleaned up (both original and churn-recreated)
+  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density-create-cudn-l2
+  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-churn-create-cudns
+}
+
 @test "cluster-health" {
   run_cmd ${KUBE_BURNER_OCP} cluster-health
 }

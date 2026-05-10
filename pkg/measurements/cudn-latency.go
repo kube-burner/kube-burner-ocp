@@ -24,6 +24,7 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/measurements/types"
 	"github.com/kube-burner/kube-burner/v2/pkg/util/fileutils"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -36,7 +37,7 @@ import (
 const (
 	cudnLatencyMeasurementName      = "cudnLatencyMeasurement"
 	cudnLatencyQuantilesMeasurement = "cudnLatencyQuantilesMeasurement"
-	cudnReadyConditionType          = "NetworkCreated"
+	cudnReadyConditionType          = "NetworkAllocationSucceeded"
 )
 
 var (
@@ -49,13 +50,13 @@ var (
 )
 
 type cudnMetric struct {
-	Timestamp             time.Time `json:"timestamp"`
-	MetricName            string    `json:"metricName"`
-	UUID                  string    `json:"uuid"`
-	JobName               string    `json:"jobName,omitempty"`
-	Name                  string    `json:"cudnName"`
-	Metadata              any       `json:"metadata,omitempty"`
-	NetworkCreatedLatency int       `json:"networkAllocLatency"`
+	Timestamp                         time.Time `json:"timestamp"`
+	MetricName                        string    `json:"metricName"`
+	UUID                              string    `json:"uuid"`
+	JobName                           string    `json:"jobName,omitempty"`
+	Name                              string    `json:"cudnName"`
+	Metadata                          any       `json:"metadata,omitempty"`
+	NetworkAllocationSucceededLatency int       `json:"networkAllocLatency"`
 }
 
 type cudnLatency struct {
@@ -99,33 +100,33 @@ func (c *cudnLatency) handleAdd(obj any) {
 		return
 	}
 
-	// Check if NetworkCreated is already True at creation time
+	// Check if NetworkAllocationSucceeded is already True at creation time
 	if transitionTime, ok := getNetworkAllocTransitionTime(cudn); ok {
 		latency := transitionTime.Sub(t).Milliseconds()
-		log.Debugf("CUDN %s already has NetworkCreated=True, latency: %dms", cudnName, latency)
+		log.Debugf("CUDN %s already has NetworkAllocationSucceeded=True, latency: %dms", cudnName, latency)
 		c.Metrics.LoadOrStore(cudnName, cudnMetric{
-			Name:                  cudnName,
-			Timestamp:             t.UTC(),
-			MetricName:            cudnLatencyMeasurementName,
-			UUID:                  c.Uuid,
-			Metadata:              c.Metadata,
-			JobName:               c.JobConfig.Name,
-			NetworkCreatedLatency: int(latency),
+			Name:                              cudnName,
+			Timestamp:                         t.UTC(),
+			MetricName:                        cudnLatencyMeasurementName,
+			UUID:                              c.Uuid,
+			Metadata:                          c.Metadata,
+			JobName:                           c.JobConfig.Name,
+			NetworkAllocationSucceededLatency: int(latency),
 		})
 		return
 	}
 
 	// Store creation timestamp, latency will be computed on update
 	c.Metrics.LoadOrStore(cudnName, cudnMetric{
-		Name:                  cudnName,
-		Timestamp:             t.UTC(),
-		MetricName:            cudnLatencyMeasurementName,
-		UUID:                  c.Uuid,
-		Metadata:              c.Metadata,
-		JobName:               c.JobConfig.Name,
-		NetworkCreatedLatency: -1, // Not yet ready
+		Name:                              cudnName,
+		Timestamp:                         t.UTC(),
+		MetricName:                        cudnLatencyMeasurementName,
+		UUID:                              c.Uuid,
+		Metadata:                          c.Metadata,
+		JobName:                           c.JobConfig.Name,
+		NetworkAllocationSucceededLatency: -1, // Not yet ready
 	})
-	log.Debugf("CUDN %s created at %v, waiting for NetworkCreated", cudnName, t.UTC())
+	log.Debugf("CUDN %s created at %v, waiting for NetworkAllocationSucceeded", cudnName, t.UTC())
 }
 
 func (c *cudnLatency) handleUpdate(oldObj, newObj any) {
@@ -142,18 +143,18 @@ func (c *cudnLatency) handleUpdate(oldObj, newObj any) {
 		return
 	}
 	m := val.(cudnMetric)
-	if m.NetworkCreatedLatency >= 0 {
+	if m.NetworkAllocationSucceededLatency >= 0 {
 		return // Already recorded
 	}
 
 	latency := transitionTime.Sub(m.Timestamp).Milliseconds()
-	m.NetworkCreatedLatency = int(latency)
+	m.NetworkAllocationSucceededLatency = int(latency)
 	c.Metrics.Store(cudnName, m)
-	log.Debugf("CUDN %s NetworkCreated after %dms", cudnName, latency)
+	log.Debugf("CUDN %s NetworkAllocationSucceeded after %dms", cudnName, latency)
 }
 
 // getNetworkAllocTransitionTime returns the lastTransitionTime of the
-// NetworkCreated=True condition, and true if found.
+// NetworkAllocationSucceeded=True condition, and true if found.
 func getNetworkAllocTransitionTime(cudn *unstructured.Unstructured) (time.Time, bool) {
 	conditions, found, err := unstructured.NestedSlice(cudn.UnstructuredContent(), "status", "conditions")
 	if err != nil || !found {
@@ -172,7 +173,7 @@ func getNetworkAllocTransitionTime(cudn *unstructured.Unstructured) (time.Time, 
 				return t, true
 			}
 			// Fall back to current time if lastTransitionTime is missing
-			log.Warnf("CUDN %s: NetworkCreated=True but missing lastTransitionTime, using current time", cudn.GetName())
+			log.Warnf("CUDN %s: NetworkAllocationSucceeded=True but missing lastTransitionTime, using current time", cudn.GetName())
 			return time.Now().UTC(), true
 		}
 	}
@@ -190,7 +191,11 @@ func (c *cudnLatency) Start(measurementWg *sync.WaitGroup) error {
 	}
 
 	c.stopCh = make(chan struct{})
-	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c.dynamicClient, 0, "", nil)
+	factory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(c.dynamicClient, 0, "", func(opts *metav1.ListOptions) {
+		if c.LabelSelector != "" {
+			opts.LabelSelector = c.LabelSelector
+		}
+	})
 	cudnInformer := factory.ForResource(cudnGVRForLatency).Informer()
 	cudnInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    c.handleAdd,
@@ -218,8 +223,8 @@ func (c *cudnLatency) Stop() error {
 func (c *cudnLatency) normalizeMetrics() float64 {
 	c.Metrics.Range(func(key, value any) bool {
 		m := value.(cudnMetric)
-		if m.NetworkCreatedLatency < 0 {
-			log.Warnf("CUDN %s never reached NetworkCreated=True, excluding from latency metrics", m.Name)
+		if m.NetworkAllocationSucceededLatency < 0 {
+			log.Warnf("CUDN %s never reached NetworkAllocationSucceeded=True, excluding from latency metrics", m.Name)
 			return true
 		}
 		c.NormLatencies = append(c.NormLatencies, m)
@@ -231,7 +236,7 @@ func (c *cudnLatency) normalizeMetrics() float64 {
 func (c *cudnLatency) getLatency(normLatency any) map[string]float64 {
 	m := normLatency.(cudnMetric)
 	return map[string]float64{
-		"NetworkCreatedLatency": float64(m.NetworkCreatedLatency),
+		"NetworkAllocationSucceededLatency": float64(m.NetworkAllocationSucceededLatency),
 	}
 }
 
