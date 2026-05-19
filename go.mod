@@ -7,7 +7,7 @@ toolchain go1.25.9
 require (
 	github.com/cloud-bulldozer/go-commons/v2 v2.3.2
 	github.com/google/uuid v1.6.0
-	github.com/kube-burner/kube-burner/v2 v2.6.0
+	github.com/kube-burner/kube-burner/v2 v2.6.2
 	github.com/openshift/api v0.0.0-20260408160412-464776f95207
 	github.com/openshift/client-go v0.0.0-20260330134249-7e1499aaacd7
 	github.com/praserx/ipconv v1.2.1
@@ -17,6 +17,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20231024175852-77df5d35f725
 	golang.org/x/sys v0.43.0
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.35.2
 	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.2
@@ -112,9 +113,9 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.65.0 // indirect
-	go.opentelemetry.io/otel v1.40.0 // indirect
-	go.opentelemetry.io/otel/metric v1.40.0 // indirect
-	go.opentelemetry.io/otel/trace v1.40.0 // indirect
+	go.opentelemetry.io/otel v1.41.0 // indirect
+	go.opentelemetry.io/otel/metric v1.41.0 // indirect
+	go.opentelemetry.io/otel/trace v1.41.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/mock v0.5.1 // indirect
@@ -136,7 +137,6 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.34.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.31.0 // indirect
