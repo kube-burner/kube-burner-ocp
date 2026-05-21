@@ -9,6 +9,7 @@ global:
   measurements:
   - name: vmiLatency
   - name: vmimLatency
+  - name: dataVolumeLatency
 
 metricsEndpoints:
 - indexer:

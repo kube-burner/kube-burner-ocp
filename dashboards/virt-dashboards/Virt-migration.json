@@ -78,7 +78,7 @@
   "panels": [
     {
       "gridPos": {
-        "h": 11,
+        "h": 10,
         "w": 24,
         "x": 0,
         "y": 0
@@ -90,7 +90,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "# **🚀 kube-burner-ocp virt migration benchmark dashboard**\n\nThis dashboard provides deep insights into the results of the virt-migration benchmark execution using kube-burner-ocp. For a deep dive into workload parameters and metric definitions, refer to the [official kube-burner-ocp documentation](https://kube-burner.github.io/kube-burner-ocp/latest/#virt-migration).\n\n### ⚙️ How to configure your view\n\nUse the dropdown selectors at the top of the dashboard to filter the results:\n\n- **Run UUID 🔽:** Select the unique identifier for your benchmark execution to filter all visualizations for that specific test run.\n- **Latency Percentile 📊:** Toggle between median (50th) for typical performance or tail latencies (90th/95th/99th) to identify worst-case bottlenecks in your infrastructure.\n\n📌 **NOTE:**\n- All latency metrics in this dashboard are reported in seconds.\n- Since the OS image is provisioned through persistent storage instead of being pulled directly into the `virt-launcher` pod’s local directory, this scenario results in the creation and binding of DataVolumes and PVCs.\n- At the moment, kube-burner-ocp has a known issue in which the `nodeName` field is not populated when executing the virt-migration workload. See [\\[BUG\\] nodeName missing in Elasticsearch documents when using virt-clone scenario](https://github.com/kube-burner/kube-burner-ocp/issues/378)",
+        "content": "# **🚀 kube-burner-ocp virt migration benchmark dashboard**\n\nThis dashboard provides deep insights into the results of the virt-migration benchmark execution using kube-burner-ocp. For a deep dive into workload parameters and metric definitions, refer to the [official kube-burner-ocp documentation](https://kube-burner.github.io/kube-burner-ocp/latest/#virt-migration).\n\n### ⚙️ How to configure your view\n\nUse the dropdown selectors at the top of the dashboard to filter the results:\n\n- **Run UUID 🔽:** Select the unique identifier for your benchmark execution to filter all visualizations for that specific test run.\n- **Latency Percentile 📊:** Toggle between median (50th) for typical performance or tail latencies (90th/95th/99th) to identify worst-case bottlenecks in your infrastructure.\n\n📌 **NOTE:**\n- All latency metrics in this dashboard are reported in seconds.\n- Since the OS image is provisioned through persistent storage instead of being pulled directly into the `virt-launcher` pod’s local directory, this scenario results in the creation and binding of DataVolumes and PVCs.",
         "mode": "markdown"
       },
       "pluginVersion": "12.1.0",
@@ -102,7 +102,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 11
+        "y": 10
       },
       "id": 80,
       "panels": [],
@@ -136,7 +136,7 @@
         "h": 4,
         "w": 8,
         "x": 0,
-        "y": 12
+        "y": 11
       },
       "id": 81,
       "options": {
@@ -153,7 +153,7 @@
           "values": true
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -188,6 +188,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "OpenShift version",
       "transformations": [
         {
           "id": "labelsToFields",
@@ -239,7 +240,7 @@
         "h": 4,
         "w": 8,
         "x": 8,
-        "y": 12
+        "y": 11
       },
       "id": 83,
       "options": {
@@ -256,7 +257,7 @@
           "values": true
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -271,7 +272,7 @@
                 "min_doc_count": "1",
                 "order": "desc",
                 "orderBy": "_term",
-                "size": "1"
+                "size": "1000"
               },
               "type": "terms"
             }
@@ -292,6 +293,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Control plane node count",
       "transformations": [
         {
           "id": "organize",
@@ -336,7 +338,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 12
+        "y": 11
       },
       "id": 82,
       "options": {
@@ -353,7 +355,7 @@
           "values": true
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -368,7 +370,7 @@
                 "min_doc_count": "1",
                 "order": "desc",
                 "orderBy": "_term",
-                "size": "1"
+                "size": "1000"
               },
               "type": "terms"
             }
@@ -389,6 +391,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Worker node count",
       "transformations": [
         {
           "id": "organize",
@@ -412,7 +415,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 15
       },
       "id": 58,
       "panels": [],
@@ -424,7 +427,7 @@
         "type": "elasticsearch",
         "uid": "${DS_ELASTICSEARCH}"
       },
-      "description": "kube-burner-ocp virt-clone benchmark execution details",
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -451,10 +454,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 15,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 16
       },
       "id": 45,
       "options": {
@@ -467,216 +470,111 @@
           ],
           "show": false
         },
-        "showHeader": false,
+        "showHeader": true,
         "sortBy": []
       },
       "pluginVersion": "12.1.0",
       "targets": [
         {
           "alias": "",
-          "bucketAggs": [
-            {
-              "field": "uuid.keyword",
-              "id": "7",
-              "settings": {
-                "min_doc_count": "1",
-                "order": "desc",
-                "orderBy": "_term",
-                "size": "1000"
-              },
-              "type": "terms"
-            }
-          ],
+          "bucketAggs": [],
           "datasource": {
             "type": "elasticsearch",
             "uid": "${DS_ELASTICSEARCH}"
           },
           "metrics": [
             {
-              "field": "jobIteration",
               "id": "4",
-              "type": "max"
+              "settings": {
+                "limit": "1"
+              },
+              "type": "logs"
             }
           ],
-          "query": "jobName.keyword:\"create-migrating-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
+          "query": "jobConfig.name.keyword:\"create-migrating-vms\" AND metricName.keyword:\"jobSummary\" AND uuid:\"$uuid\"",
           "refId": "A",
-          "timeField": "timestamp"
-        },
-        {
-          "alias": "",
-          "bucketAggs": [
-            {
-              "field": "uuid.keyword",
-              "id": "2",
-              "settings": {
-                "min_doc_count": "1",
-                "order": "desc",
-                "orderBy": "_term",
-                "size": "1000"
-              },
-              "type": "terms"
-            }
-          ],
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_ELASTICSEARCH}"
-          },
-          "hide": false,
-          "metrics": [
-            {
-              "field": "replica",
-              "id": "1",
-              "type": "max"
-            }
-          ],
-          "query": "jobName.keyword:\"create-migrating-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND jobIteration: \"0\" AND uuid:\"$uuid\"",
-          "refId": "B",
-          "timeField": "timestamp"
-        },
-        {
-          "alias": "",
-          "bucketAggs": [
-            {
-              "field": "uuid.keyword",
-              "id": "2",
-              "settings": {
-                "min_doc_count": "1",
-                "order": "desc",
-                "orderBy": "_term",
-                "size": "1000"
-              },
-              "type": "terms"
-            }
-          ],
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_ELASTICSEARCH}"
-          },
-          "hide": false,
-          "metrics": [
-            {
-              "field": "jobIteration",
-              "id": "1",
-              "type": "max"
-            }
-          ],
-          "query": "jobName.keyword:\"create-load-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
-          "refId": "C",
-          "timeField": "timestamp"
-        },
-        {
-          "alias": "",
-          "bucketAggs": [
-            {
-              "field": "uuid.keyword",
-              "id": "2",
-              "settings": {
-                "min_doc_count": "1",
-                "order": "desc",
-                "orderBy": "_term",
-                "size": "1000"
-              },
-              "type": "terms"
-            }
-          ],
-          "datasource": {
-            "type": "elasticsearch",
-            "uid": "${DS_ELASTICSEARCH}"
-          },
-          "hide": false,
-          "metrics": [
-            {
-              "field": "replica",
-              "id": "1",
-              "type": "max"
-            }
-          ],
-          "query": "jobName.keyword:\"create-load-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
-          "refId": "D",
           "timeField": "timestamp"
         }
       ],
       "title": "Run details",
       "transformations": [
         {
-          "id": "joinByField",
-          "options": {
-            "byField": "uuid.keyword",
-            "mode": "outer"
-          }
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "alias": "Iterations",
-            "binary": {
-              "left": {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Max 1"
-                }
-              },
-              "right": {
-                "fixed": "1"
-              }
-            },
-            "mode": "binary",
-            "reduce": {
-              "reducer": "sum"
-            }
-          }
-        },
-        {
-          "id": "calculateField",
-          "options": {
-            "alias": "Load VMs per iteration",
-            "binary": {
-              "left": {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Max 3"
-                }
-              },
-              "right": {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Max 1"
-                }
-              }
-            },
-            "mode": "binary",
-            "reduce": {
-              "reducer": "sum"
-            }
-          }
-        },
-        {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Max 1": true,
-              "Max 3": true,
-              "uuid.keyword": true
+              "OCPVirtualizationVersion": true,
+              "_id": true,
+              "_index": true,
+              "_source": true,
+              "_type": true,
+              "clusterName": true,
+              "clusterType": true,
+              "controlPlaneArch": true,
+              "elapsedTime": true,
+              "endTimestamp": true,
+              "executionErrors": true,
+              "highlight": true,
+              "id": true,
+              "ipsecMode": true,
+              "jobConfig.beforeCleanup": true,
+              "jobConfig.burst": true,
+              "jobConfig.churnConfig": true,
+              "jobConfig.defaultMissingKeysWithZero": true,
+              "jobConfig.errorOnVerify": true,
+              "jobConfig.gc": true,
+              "jobConfig.iterationsPerNamespace": true,
+              "jobConfig.jobIterations": true,
+              "jobConfig.jobPause": true,
+              "jobConfig.jobType": true,
+              "jobConfig.maxWaitTimeout": true,
+              "jobConfig.metricsClosing": true,
+              "jobConfig.name": true,
+              "jobConfig.namespace": true,
+              "jobConfig.podWait": true,
+              "jobConfig.preLoadImages": true,
+              "jobConfig.preLoadPeriod": true,
+              "jobConfig.qps": true,
+              "jobConfig.verifyObjects": true,
+              "jobConfig.waitForDeletion": true,
+              "k8sVersion": true,
+              "masterNodesCount": true,
+              "metricName": true,
+              "ocpMajorVersion": true,
+              "ocpVersion": true,
+              "passed": true,
+              "platform": true,
+              "publish": true,
+              "sdnType": true,
+              "sort": true,
+              "timestamp": true,
+              "totalNodes": true,
+              "uuid": true,
+              "version": true,
+              "workerArch": true,
+              "workerNodesCount": true
             },
             "includeByName": {},
-            "indexByName": {
-              "Iterations": 2,
-              "Load VMs per iteration": 5,
-              "Max 1": 1,
-              "Max 2": 3,
-              "Max 3": 4,
-              "Max 4": 6,
-              "uuid.keyword": 0
-            },
+            "indexByName": {},
             "renameByName": {
-              "Max 2": "Iteration VMs",
-              "Max 4": "Load iterations"
+              "workloadFlags.dataVolumeCount": "--data-volume-count",
+              "workloadFlags.iterationVms": "--iteration-vms",
+              "workloadFlags.iterations": "--iterations",
+              "workloadFlags.loadIterations": "--load-iterations",
+              "workloadFlags.loadPerIteration": "--load-per-iteration",
+              "workloadFlags.metricsProfile": "--metrics-profile",
+              "workloadFlags.migrationQps": "--migration-qps",
+              "workloadFlags.namespace": "--namespace",
+              "workloadFlags.sshKeyPath": "--ssh-key-path",
+              "workloadFlags.storageClass": "--storage-class",
+              "workloadFlags.workerNode": "--worker-node"
             }
           }
         },
         {
           "id": "transpose",
-          "options": {}
+          "options": {
+            "firstFieldName": "--data-volume-count"
+          }
         }
       ],
       "type": "table"
@@ -710,7 +608,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 31
       },
       "id": 36,
       "options": {
@@ -727,7 +625,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -763,6 +661,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Total benchmark duration",
       "transformations": [
         {
           "id": "reduce",
@@ -825,7 +724,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 28
+        "y": 36
       },
       "id": 46,
       "options": {
@@ -842,7 +741,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -878,6 +777,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Worker nodes to schedule and migrate from",
       "transformations": [
         {
           "id": "reduce",
@@ -943,7 +843,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 28
+        "y": 36
       },
       "id": 37,
       "options": {
@@ -960,7 +860,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -996,6 +896,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Total migrating VMs created",
       "transformations": [
         {
           "id": "reduce",
@@ -1059,7 +960,7 @@
         "h": 5,
         "w": 12,
         "x": 0,
-        "y": 33
+        "y": 41
       },
       "id": 67,
       "options": {
@@ -1076,7 +977,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -1112,6 +1013,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Worker nodes hosting load VMs",
       "transformations": [
         {
           "id": "reduce",
@@ -1177,7 +1079,7 @@
         "h": 5,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 41
       },
       "id": 68,
       "options": {
@@ -1194,7 +1096,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -1230,6 +1132,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Total load VMs created",
       "transformations": [
         {
           "id": "reduce",
@@ -1263,7 +1166,7 @@
         "type": "elasticsearch",
         "uid": "${DS_ELASTICSEARCH}"
       },
-      "description": "This panel compares the average wall-clock duration of each benchmark phase across all iterations. It highlights which job consumes the most time, identifying potential infrastructure bottlenecks.",
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1329,7 +1232,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 46
       },
       "id": 60,
       "options": {
@@ -1624,7 +1527,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 46
+        "y": 54
       },
       "id": 73,
       "options": {
@@ -1640,7 +1543,7 @@
         },
         "orientation": "auto",
         "showValue": "never",
-        "stacking": "none",
+        "stacking": "normal",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
@@ -1662,7 +1565,7 @@
                 "min_doc_count": "1",
                 "order": "desc",
                 "orderBy": "_term",
-                "size": "10"
+                "size": "1000"
               },
               "type": "terms"
             }
@@ -1691,7 +1594,7 @@
                 "min_doc_count": "1",
                 "order": "desc",
                 "orderBy": "_term",
-                "size": "10"
+                "size": "1000"
               },
               "type": "terms"
             }
@@ -1769,7 +1672,13 @@
               "Count 2": true
             },
             "includeByName": {},
-            "indexByName": {},
+            "indexByName": {
+              "Count 1": 1,
+              "Count 2": 2,
+              "Data Volumes": 3,
+              "VMs": 4,
+              "jobIteration": 0
+            },
             "renameByName": {}
           }
         },
@@ -1793,11 +1702,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 62
       },
       "id": 57,
       "panels": [],
-      "title": "Step 2: Create migrating VMs",
+      "title": "Workload preparation - Create migrating VMs",
       "type": "row"
     },
     {
@@ -1836,7 +1745,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 55
+        "y": 63
       },
       "id": 69,
       "options": {
@@ -1853,7 +1762,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -1862,12 +1771,15 @@
           "alias": "Avg VM Ready Latency",
           "bucketAggs": [
             {
-              "field": "timestamp",
+              "field": "vmiName.keyword",
               "id": "2",
               "settings": {
-                "interval": "auto"
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
               },
-              "type": "date_histogram"
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -1879,6 +1791,11 @@
               "field": "vmReadyLatency",
               "id": "1",
               "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
+              "type": "avg"
             }
           ],
           "query": "jobName.keyword:\"create-migrating-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -1886,6 +1803,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Avg VM ready latency (s)",
       "transformations": [
         {
           "id": "reduce",
@@ -1900,12 +1818,37 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "VMReadyLatency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmReadyLatency"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmiCreatedLatency"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
             "alias": "Avg VM ready latency (s)",
             "binary": {
               "left": {
                 "matcher": {
                   "id": "byName",
-                  "options": "Avg VM Ready Latency"
+                  "options": "VMReadyLatency"
                 }
               },
               "operator": "/",
@@ -1923,7 +1866,11 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Avg VM Ready Latency": true
+              "Average vmReadyLatency": true,
+              "Average vmiCreatedLatency": true,
+              "Avg VM Ready Latency": true,
+              "VMReadyLatency": true,
+              "vmiName.keyword": true
             },
             "includeByName": {},
             "indexByName": {},
@@ -1969,7 +1916,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 55
+        "y": 63
       },
       "id": 63,
       "options": {
@@ -1986,7 +1933,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -2019,6 +1966,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Avg DV bound latency (s)",
       "transformations": [
         {
           "id": "reduce",
@@ -2072,7 +2020,7 @@
         "type": "elasticsearch",
         "uid": "${DS_ELASTICSEARCH}"
       },
-      "description": "Breaks down the total VM creation time into six distinct phases:\n\n   1. VMI provisioning (Created): Captures API overhead and initial storage preparation. In Immediate binding mode, this includes the full DataVolume/PVC provisioning and binding time.\n   2. Controller handoff (Pending): Measures virt-controller efficiency in processing the VMI and generating the launcher Pod spec while waiting for storage availability.\n   3. Scheduling & Binding (Scheduling): Critical for WaitForFirstConsumer storage. Captures the dual latency of the Scheduler selecting a node and the Storage Provisioner binding the volume to that node's topology.\n   4. Node & Mount prep (Scheduled): Captures Kubelet overhead, including pulling the virt-launcher image and the physical attachment/mounting of storage volumes to the worker node.\n   5. Hypervisor startup (Running): Confirms the hypervisor is launched and all storage/network interfaces are attached and accessible to the virtual hardware.\n   6. Virtual Machine readiness (Ready): Time from Running to the Ready condition. Confirms all DataVolumes are ready and the KubeVirt Guest Agent has established a connection with the host handler.",
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2093,7 +2041,7 @@
         "h": 10,
         "w": 8,
         "x": 16,
-        "y": 55
+        "y": 63
       },
       "id": 62,
       "options": {
@@ -2192,6 +2140,7 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "1. VMI Pending",
             "binary": {
               "left": {
                 "matcher": {
@@ -2216,6 +2165,29 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "1. VMI Pending (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "1. VMI Pending"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "2. VMI Scheduling",
             "binary": {
               "left": {
                 "matcher": {
@@ -2240,6 +2212,29 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "2. VMI Scheduling (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "2. VMI Scheduling"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "3. VMI Scheduled",
             "binary": {
               "left": {
                 "matcher": {
@@ -2264,6 +2259,29 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "3. VMI Scheduled (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "3. VMI Scheduled"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "4. VMI Running",
             "binary": {
               "left": {
                 "matcher": {
@@ -2288,6 +2306,29 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "4. VMI Running (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "4. VMI Running"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "5. VM Ready",
             "binary": {
               "left": {
                 "matcher": {
@@ -2312,11 +2353,12 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "5. VM Ready (s)",
             "binary": {
               "left": {
                 "matcher": {
-                  "id": "byType",
-                  "options": "number"
+                  "id": "byName",
+                  "options": "5. VM Ready"
                 }
               },
               "operator": "/",
@@ -2334,37 +2376,22 @@
           "id": "organize",
           "options": {
             "excludeByName": {
+              "1. VMI Pending": true,
+              "2. VMI Scheduling": true,
+              "3. VMI Scheduled": true,
+              "4. VMI Running": true,
+              "5. VM Ready": true,
               "Average vmReadyLatency": true,
-              "Average vmReadyLatency - Average vmiRunningLatency": true,
-              "Average vmReadyLatency / 1000": true,
               "Average vmiCreatedLatency": true,
               "Average vmiPendingLatency": true,
-              "Average vmiPendingLatency - Average vmiCreatedLatency": true,
-              "Average vmiPendingLatency / 1000": true,
               "Average vmiRunningLatency": true,
-              "Average vmiRunningLatency - Average vmiScheduledLatency": true,
-              "Average vmiRunningLatency / 1000": true,
               "Average vmiScheduledLatency": true,
-              "Average vmiScheduledLatency - Average vmiSchedulingLatency": true,
-              "Average vmiScheduledLatency / 1000": true,
               "Average vmiSchedulingLatency": true,
-              "Average vmiSchedulingLatency - Average vmiPendingLatency": true,
-              "Average vmiSchedulingLatency / 1000": true,
-              "uuid.keyword": true,
-              "uuid.keyword / 1000": true
+              "uuid.keyword": true
             },
             "includeByName": {},
             "indexByName": {},
-            "renameByName": {
-              "Average vmReadyLatency - Average vmiRunningLatency / 1000": "6. Virtual Machine readiness",
-              "Average vmiCreatedLatency / 1000": "1. VMI provisioning",
-              "Average vmiPendingLatency - Average vmiCreatedLatency": "",
-              "Average vmiPendingLatency - Average vmiCreatedLatency / 1000": "2. Controller handoff",
-              "Average vmiRunningLatency - Average vmiScheduledLatency / 1000": "5. Hypervisor startup",
-              "Average vmiScheduledLatency - Average vmiSchedulingLatency / 1000": "4. Node & Mount prep",
-              "Average vmiSchedulingLatency - Average vmiPendingLatency": "",
-              "Average vmiSchedulingLatency - Average vmiPendingLatency / 1000": "3. Scheduling & Binding"
-            }
+            "renameByName": {}
           }
         }
       ],
@@ -2406,7 +2433,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 60
+        "y": 68
       },
       "id": 55,
       "options": {
@@ -2423,7 +2450,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -2432,12 +2459,15 @@
           "alias": "P$percentile VM Ready Latency",
           "bucketAggs": [
             {
-              "field": "timestamp",
+              "field": "vmiName.keyword",
               "id": "2",
               "settings": {
-                "interval": "auto"
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
               },
-              "type": "date_histogram"
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -2449,12 +2479,12 @@
             {
               "field": "vmReadyLatency",
               "id": "1",
-              "settings": {
-                "percents": [
-                  "$percentile"
-                ]
-              },
-              "type": "percentiles"
+              "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
+              "type": "avg"
             }
           ],
           "query": "jobName.keyword:\"create-migrating-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -2462,21 +2492,52 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "P$percentile VM Ready Latency",
       "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Net_Latency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmReadyLatency"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmiCreatedLatency"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        },
         {
           "id": "reduce",
           "options": {
-            "includeTimeField": false,
-            "mode": "reduceFields",
             "reducers": [
-              "mean"
+              "p50",
+              "p90",
+              "p95",
+              "p99"
             ]
           }
         },
         {
+          "id": "labelsToFields",
+          "options": {}
+        },
+        {
           "id": "calculateField",
           "options": {
-            "alias": "P$percentile VM Ready Latency",
             "binary": {
               "left": {
                 "matcher": {
@@ -2499,16 +2560,35 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "P50 VM Ready Latency": true,
-              "P90 VM Ready Latency": true,
-              "P95 VM Ready Latency": true,
-              "P99 VM Ready Latency": true
+              "50th %": true,
+              "90th %": true,
+              "95th %": true,
+              "99th %": true
             },
             "includeByName": {},
             "indexByName": {},
             "renameByName": {
-              "Value / 1000": "P$percentile VM ready latency (s)"
+              "50th % / 1000": "50",
+              "90th % / 1000": "90",
+              "95th % / 1000": "95",
+              "99th % / 1000": "99"
             }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "byVariable": true,
+            "include": {
+              "variable": "$percentile"
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*",
+            "renamePattern": "P${percentile} VM ready latency (s)"
           }
         }
       ],
@@ -2550,7 +2630,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 60
+        "y": 68
       },
       "id": 64,
       "options": {
@@ -2567,7 +2647,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -2606,6 +2686,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "P$percentile DV Bound Latency",
       "transformations": [
         {
           "id": "reduce",
@@ -2754,7 +2835,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 73
       },
       "id": 61,
       "options": {
@@ -2770,7 +2851,7 @@
         },
         "orientation": "auto",
         "showValue": "never",
-        "stacking": "none",
+        "stacking": "normal",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
@@ -2805,6 +2886,11 @@
             {
               "field": "vmReadyLatency",
               "id": "1",
+              "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
               "type": "avg"
             }
           ],
@@ -2844,7 +2930,7 @@
           "timeField": "timestamp"
         }
       ],
-      "title": "VM/Data Volume ready latency (Average)",
+      "title": "Total end-to-end provisioning time (DV+VM) (Average)",
       "transformations": [
         {
           "id": "convertFieldType",
@@ -2868,11 +2954,60 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "VMreadylatency",
             "binary": {
               "left": {
                 "matcher": {
-                  "id": "byType",
-                  "options": "number"
+                  "id": "byName",
+                  "options": "Average vmReadyLatency"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmiCreatedLatency"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "VM ready latency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "VMreadylatency"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Data Volume ready latency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average"
                 }
               },
               "operator": "/",
@@ -2890,12 +3025,24 @@
           "id": "organize",
           "options": {
             "excludeByName": {
+              "Average": true,
               "Average 1": true,
               "Average 2": true,
+              "Average vmReadyLatency": true,
+              "Average vmiCreatedLatency": true,
+              "VMreadylatency": true,
               "jobName.keyword": false
             },
             "includeByName": {},
-            "indexByName": {},
+            "indexByName": {
+              "Average": 3,
+              "Average vmReadyLatency": 1,
+              "Average vmiCreatedLatency": 2,
+              "Data Volume ready latency": 5,
+              "VM ready latency": 6,
+              "VMreadylatency": 4,
+              "jobIteration": 0
+            },
             "renameByName": {
               "Average / 1000 1": "VM ready latency",
               "Average / 1000 2": "Data Volume ready latency",
@@ -2965,7 +3112,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^p\\d+ VM ready latency$/"
+              "options": ".*VM ready latency.*"
             },
             "properties": [
               {
@@ -2980,7 +3127,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^p\\d+ Data Volume ready latency$/"
+              "options": ".*Data Volume ready latency.*"
             },
             "properties": [
               {
@@ -2998,7 +3145,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 82
       },
       "id": 74,
       "options": {
@@ -3014,7 +3161,7 @@
         },
         "orientation": "auto",
         "showValue": "never",
-        "stacking": "none",
+        "stacking": "normal",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
@@ -3039,6 +3186,17 @@
                 "size": "1000"
               },
               "type": "terms"
+            },
+            {
+              "field": "vmiName.keyword",
+              "id": "4",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
+              },
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -3049,12 +3207,12 @@
             {
               "field": "vmReadyLatency",
               "id": "1",
-              "settings": {
-                "percents": [
-                  "$percentile"
-                ]
-              },
-              "type": "percentiles"
+              "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
+              "type": "avg"
             }
           ],
           "query": "jobName.keyword:\"create-migrating-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -3074,6 +3232,17 @@
                 "size": "1000"
               },
               "type": "terms"
+            },
+            {
+              "field": "dvName.keyword",
+              "id": "3",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
+              },
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -3085,12 +3254,7 @@
             {
               "field": "dvReadyLatency",
               "id": "1",
-              "settings": {
-                "percents": [
-                  "$percentile"
-                ]
-              },
-              "type": "percentiles"
+              "type": "avg"
             }
           ],
           "query": "jobName.keyword:\"create-migrating-vms\" AND metricName.keyword:\"dvLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -3098,35 +3262,66 @@
           "timeField": "timestamp"
         }
       ],
-      "title": "VM/Data Volume ready latency (Percentile $percentile)",
+      "title": "Total end-to-end provisioning time (DV+VM) (Percentile $percentile)",
       "transformations": [
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "destinationType": "string",
-                "targetField": "jobIteration"
-              }
-            ],
-            "fields": {}
-          }
-        },
         {
           "id": "joinByField",
           "options": {
             "byField": "jobIteration",
-            "mode": "outer"
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "dvName.keyword": true,
+              "vmiName.keyword": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Average": "dv_latency",
+              "Average vmReadyLatency": "ready_raw",
+              "Average vmiCreatedLatency": "created_raw",
+              "jobIteration": "Iteration"
+            }
           }
         },
         {
           "id": "calculateField",
           "options": {
+            "alias": "net_vm_latency",
             "binary": {
               "left": {
                 "matcher": {
-                  "id": "byType",
-                  "options": "number"
+                  "id": "byName",
+                  "options": "ready_raw"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "created_raw"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "net_vm_latency_s",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "net_vm_latency"
                 }
               },
               "operator": "/",
@@ -3141,37 +3336,115 @@
           }
         },
         {
+          "id": "calculateField",
+          "options": {
+            "alias": "dv_latency_s",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "dv_latency"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Iteration": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "dv_latency_s": {
+                "aggregations": [
+                  "p50",
+                  "p90",
+                  "p95",
+                  "p99"
+                ],
+                "operation": "aggregate"
+              },
+              "net_vm_latency_s": {
+                "aggregations": [
+                  "p50",
+                  "p90",
+                  "p95",
+                  "p99"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
           "id": "organize",
           "options": {
-            "excludeByName": {
-              "Average 1": true,
-              "Average 2": true,
-              "jobName.keyword": false,
-              "p50.0 dvReadyLatency": true,
-              "p50.0 vmReadyLatency": true,
-              "p90.0 dvReadyLatency": true,
-              "p90.0 vmReadyLatency": true,
-              "p95.0 dvReadyLatency": true,
-              "p95.0 vmReadyLatency": true,
-              "p99.0 dvReadyLatency": true,
-              "p99.0 vmReadyLatency": true
-            },
+            "excludeByName": {},
             "includeByName": {},
-            "indexByName": {},
+            "indexByName": {
+              "Iteration": 0,
+              "dv_latency_s (p50)": 1,
+              "dv_latency_s (p90)": 2,
+              "dv_latency_s (p95)": 3,
+              "dv_latency_s (p99)": 4,
+              "net_vm_latency_s (p50)": 5,
+              "net_vm_latency_s (p90)": 6,
+              "net_vm_latency_s (p95)": 7,
+              "net_vm_latency_s (p99)": 8
+            },
             "renameByName": {
-              "Average / 1000 1": "VM ready latency",
-              "Average / 1000 2": "Data Volume ready latency",
-              "jobIteration": "Iteration",
-              "jobName.keyword": "Job Name",
-              "p50.0 dvReadyLatency / 1000": "p$percentile Data Volume ready latency",
-              "p50.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p90.0 dvReadyLatency / 1000": "p$percentile Data Volume ready latency",
-              "p90.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p95.0 dvReadyLatency / 1000": "p$percentile Data Volume ready latency",
-              "p95.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p99.0 dvReadyLatency / 1000": "p$percentile Data Volume ready latency",
-              "p99.0 vmReadyLatency / 1000": "p$percentile VM ready latency"
+              "dv_latency_s (p50)": "DV 50",
+              "dv_latency_s (p90)": "DV 90",
+              "dv_latency_s (p95)": "DV 95",
+              "dv_latency_s (p99)": "DV 99",
+              "net_vm_latency_s (p50)": "VM 50",
+              "net_vm_latency_s (p90)": "VM 90",
+              "net_vm_latency_s (p95)": "VM 95",
+              "net_vm_latency_s (p99)": "VM 99"
             }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "Iteration|.*${percentile}.*"
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*VM.*",
+            "renamePattern": "P${percentile} VM ready latency"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*DV.*",
+            "renamePattern": "P${percentile} Data Volume ready latency"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Iteration"
+              }
+            ]
           }
         }
       ],
@@ -3183,11 +3456,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 91
       },
       "id": 56,
       "panels": [],
-      "title": "Step 3: Create load VMs",
+      "title": "Workload preparation - Create load VMs",
       "type": "row"
     },
     {
@@ -3226,7 +3499,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 84
+        "y": 92
       },
       "id": 32,
       "options": {
@@ -3243,7 +3516,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -3252,12 +3525,15 @@
           "alias": "Avg VM Ready Latency",
           "bucketAggs": [
             {
-              "field": "timestamp",
+              "field": "vmiName.keyword",
               "id": "2",
               "settings": {
-                "interval": "auto"
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
               },
-              "type": "date_histogram"
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -3269,6 +3545,11 @@
               "field": "vmReadyLatency",
               "id": "1",
               "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
+              "type": "avg"
             }
           ],
           "query": "jobName.keyword:\"create-load-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -3276,6 +3557,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Avg VM ready latency (s)",
       "transformations": [
         {
           "id": "reduce",
@@ -3290,12 +3572,37 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "VMReadyLatency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmReadyLatency"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmiCreatedLatency"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
             "alias": "Avg VM ready latency (s)",
             "binary": {
               "left": {
                 "matcher": {
                   "id": "byName",
-                  "options": "Avg VM Ready Latency"
+                  "options": "VMReadyLatency"
                 }
               },
               "operator": "/",
@@ -3313,7 +3620,11 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Avg VM Ready Latency": true
+              "Average vmReadyLatency": true,
+              "Average vmiCreatedLatency": true,
+              "Avg VM Ready Latency": true,
+              "VMReadyLatency": true,
+              "vmiName.keyword": true
             },
             "includeByName": {},
             "indexByName": {},
@@ -3359,7 +3670,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 84
+        "y": 92
       },
       "id": 70,
       "options": {
@@ -3376,7 +3687,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -3409,6 +3720,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "Avg DV bound latency (s)",
       "transformations": [
         {
           "id": "reduce",
@@ -3462,7 +3774,7 @@
         "type": "elasticsearch",
         "uid": "${DS_ELASTICSEARCH}"
       },
-      "description": "Breaks down the total VM creation time into six distinct phases:\n\n   1. VMI provisioning (Created): Captures API overhead and initial storage preparation. In Immediate binding mode, this includes the full DataVolume/PVC provisioning and binding time.\n   2. Controller handoff (Pending): Measures virt-controller efficiency in processing the VMI and generating the launcher Pod spec while waiting for storage availability.\n   3. Scheduling & Binding (Scheduling): Critical for WaitForFirstConsumer storage. Captures the dual latency of the Scheduler selecting a node and the Storage Provisioner binding the volume to that node's topology.\n   4. Node & Mount prep (Scheduled): Captures Kubelet overhead, including pulling the virt-launcher image and the physical attachment/mounting of storage volumes to the worker node.\n   5. Hypervisor startup (Running): Confirms the hypervisor is launched and all storage/network interfaces are attached and accessible to the virtual hardware.\n   6. Virtual Machine readiness (Ready): Time from Running to the Ready condition. Confirms all DataVolumes are ready and the KubeVirt Guest Agent has established a connection with the host handler.",
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3483,7 +3795,7 @@
         "h": 10,
         "w": 8,
         "x": 16,
-        "y": 84
+        "y": 92
       },
       "id": 65,
       "options": {
@@ -3582,6 +3894,7 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "1. VMI Pending",
             "binary": {
               "left": {
                 "matcher": {
@@ -3606,6 +3919,29 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "1. VMI Pending (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "1. VMI Pending"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "2. VMI Scheduling",
             "binary": {
               "left": {
                 "matcher": {
@@ -3630,6 +3966,29 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "2. VMI Scheduling (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "2. VMI Scheduling"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "3. VMI Scheduled",
             "binary": {
               "left": {
                 "matcher": {
@@ -3654,6 +4013,29 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "3. VMI Scheduled (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "3. VMI Scheduled"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "4. VMI Running",
             "binary": {
               "left": {
                 "matcher": {
@@ -3678,6 +4060,29 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "4. VMI Running (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "4. VMI Running"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "5. VM Ready",
             "binary": {
               "left": {
                 "matcher": {
@@ -3702,11 +4107,12 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "5. VM Ready (s)",
             "binary": {
               "left": {
                 "matcher": {
-                  "id": "byType",
-                  "options": "number"
+                  "id": "byName",
+                  "options": "5. VM Ready"
                 }
               },
               "operator": "/",
@@ -3724,37 +4130,22 @@
           "id": "organize",
           "options": {
             "excludeByName": {
+              "1. VMI Pending": true,
+              "2. VMI Scheduling": true,
+              "3. VMI Scheduled": true,
+              "4. VMI Running": true,
+              "5. VM Ready": true,
               "Average vmReadyLatency": true,
-              "Average vmReadyLatency - Average vmiRunningLatency": true,
-              "Average vmReadyLatency / 1000": true,
               "Average vmiCreatedLatency": true,
               "Average vmiPendingLatency": true,
-              "Average vmiPendingLatency - Average vmiCreatedLatency": true,
-              "Average vmiPendingLatency / 1000": true,
               "Average vmiRunningLatency": true,
-              "Average vmiRunningLatency - Average vmiScheduledLatency": true,
-              "Average vmiRunningLatency / 1000": true,
               "Average vmiScheduledLatency": true,
-              "Average vmiScheduledLatency - Average vmiSchedulingLatency": true,
-              "Average vmiScheduledLatency / 1000": true,
               "Average vmiSchedulingLatency": true,
-              "Average vmiSchedulingLatency - Average vmiPendingLatency": true,
-              "Average vmiSchedulingLatency / 1000": true,
-              "uuid.keyword": true,
-              "uuid.keyword / 1000": true
+              "uuid.keyword": true
             },
             "includeByName": {},
             "indexByName": {},
-            "renameByName": {
-              "Average vmReadyLatency - Average vmiRunningLatency / 1000": "6. Virtual Machine readiness",
-              "Average vmiCreatedLatency / 1000": "1. VMI provisioning",
-              "Average vmiPendingLatency - Average vmiCreatedLatency": "",
-              "Average vmiPendingLatency - Average vmiCreatedLatency / 1000": "2. Controller handoff",
-              "Average vmiRunningLatency - Average vmiScheduledLatency / 1000": "5. Hypervisor startup",
-              "Average vmiScheduledLatency - Average vmiSchedulingLatency / 1000": "4. Node & Mount prep",
-              "Average vmiSchedulingLatency - Average vmiPendingLatency": "",
-              "Average vmiSchedulingLatency - Average vmiPendingLatency / 1000": "3. Scheduling & Binding"
-            }
+            "renameByName": {}
           }
         }
       ],
@@ -3796,7 +4187,7 @@
         "h": 5,
         "w": 8,
         "x": 0,
-        "y": 89
+        "y": 97
       },
       "id": 71,
       "options": {
@@ -3813,7 +4204,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -3822,12 +4213,15 @@
           "alias": "P$percentile VM Ready Latency",
           "bucketAggs": [
             {
-              "field": "timestamp",
+              "field": "vmiName.keyword",
               "id": "2",
               "settings": {
-                "interval": "auto"
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
               },
-              "type": "date_histogram"
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -3839,12 +4233,12 @@
             {
               "field": "vmReadyLatency",
               "id": "1",
-              "settings": {
-                "percents": [
-                  "$percentile"
-                ]
-              },
-              "type": "percentiles"
+              "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
+              "type": "avg"
             }
           ],
           "query": "jobName.keyword:\"create-load-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -3852,21 +4246,52 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "P$percentile VM ready latency (s)",
       "transformations": [
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Net_Latency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmReadyLatency"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmiCreatedLatency"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            },
+            "replaceFields": true
+          }
+        },
         {
           "id": "reduce",
           "options": {
-            "includeTimeField": false,
-            "mode": "reduceFields",
             "reducers": [
-              "mean"
+              "p50",
+              "p90",
+              "p95",
+              "p99"
             ]
           }
         },
         {
+          "id": "labelsToFields",
+          "options": {}
+        },
+        {
           "id": "calculateField",
           "options": {
-            "alias": "P$percentile VM Ready Latency",
             "binary": {
               "left": {
                 "matcher": {
@@ -3889,16 +4314,37 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "P50 VM Ready Latency": true,
-              "P90 VM Ready Latency": true,
-              "P95 VM Ready Latency": true,
-              "P99 VM Ready Latency": true
+              "50th %": true,
+              "90th %": true,
+              "95th %": true,
+              "99th %": true
             },
             "includeByName": {},
             "indexByName": {},
             "renameByName": {
-              "Value / 1000": "P$percentile VM ready latency (s)"
+              "50th %": "",
+              "50th % / 1000": "50",
+              "90th %": "",
+              "90th % / 1000": "90",
+              "95th % / 1000": "95",
+              "99th % / 1000": "99"
             }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "byVariable": true,
+            "include": {
+              "variable": "$percentile"
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*",
+            "renamePattern": "P${percentile} VM ready latency (s)"
           }
         }
       ],
@@ -3940,7 +4386,7 @@
         "h": 5,
         "w": 8,
         "x": 8,
-        "y": 89
+        "y": 97
       },
       "id": 72,
       "options": {
@@ -3957,7 +4403,7 @@
           "values": false
         },
         "showPercentChange": false,
-        "textMode": "value_and_name",
+        "textMode": "value",
         "wideLayout": false
       },
       "pluginVersion": "12.1.0",
@@ -3996,6 +4442,7 @@
           "timeField": "timestamp"
         }
       ],
+      "title": "P$percentile DV Bound Latency",
       "transformations": [
         {
           "id": "reduce",
@@ -4144,7 +4591,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 94
+        "y": 102
       },
       "id": 75,
       "options": {
@@ -4160,7 +4607,7 @@
         },
         "orientation": "auto",
         "showValue": "never",
-        "stacking": "none",
+        "stacking": "normal",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
@@ -4195,6 +4642,11 @@
             {
               "field": "vmReadyLatency",
               "id": "1",
+              "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
               "type": "avg"
             }
           ],
@@ -4234,7 +4686,7 @@
           "timeField": "timestamp"
         }
       ],
-      "title": "VM/Data Volume ready latency (Average)",
+      "title": "Total end-to-end provisioning time (DV+VM) (Average)",
       "transformations": [
         {
           "id": "convertFieldType",
@@ -4258,11 +4710,59 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "VMreadylatency",
             "binary": {
               "left": {
                 "matcher": {
-                  "id": "byType",
-                  "options": "number"
+                  "id": "byName",
+                  "options": "Average vmReadyLatency"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmiCreatedLatency"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "VM ready latency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "VMreadylatency"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Data Volume ready latency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average"
                 }
               },
               "operator": "/",
@@ -4280,17 +4780,41 @@
           "id": "organize",
           "options": {
             "excludeByName": {
+              "Average": true,
               "Average 1": true,
               "Average 2": true,
+              "Average vmReadyLatency": true,
+              "Average vmiCreatedLatency": true,
+              "VMreadylatency": true,
               "jobName.keyword": false
             },
             "includeByName": {},
-            "indexByName": {},
+            "indexByName": {
+              "Average": 3,
+              "Average vmReadyLatency": 1,
+              "Average vmiCreatedLatency": 2,
+              "Data Volume ready latency": 5,
+              "VM ready latency": 6,
+              "VMreadylatency": 4,
+              "jobIteration": 0
+            },
             "renameByName": {
               "Average / 1000 1": "VM ready latency",
               "Average / 1000 2": "Data Volume ready latency",
+              "jobIteration": "Iteration",
               "jobName.keyword": "Job Name"
             }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Iteration"
+              }
+            ]
           }
         }
       ],
@@ -4355,7 +4879,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^p\\d+ VM ready latency$/"
+              "options": ".*VM ready latency.*"
             },
             "properties": [
               {
@@ -4370,7 +4894,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": "/^p\\d+ Data Volume ready latency$/"
+              "options": ".*Data Volume ready latency.*"
             },
             "properties": [
               {
@@ -4388,7 +4912,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 103
+        "y": 111
       },
       "id": 76,
       "options": {
@@ -4404,7 +4928,7 @@
         },
         "orientation": "auto",
         "showValue": "never",
-        "stacking": "none",
+        "stacking": "normal",
         "tooltip": {
           "hideZeros": false,
           "mode": "single",
@@ -4429,6 +4953,17 @@
                 "size": "1000"
               },
               "type": "terms"
+            },
+            {
+              "field": "vmiName.keyword",
+              "id": "4",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
+              },
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -4439,12 +4974,12 @@
             {
               "field": "vmReadyLatency",
               "id": "1",
-              "settings": {
-                "percents": [
-                  "$percentile"
-                ]
-              },
-              "type": "percentiles"
+              "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
+              "type": "avg"
             }
           ],
           "query": "jobName.keyword:\"create-load-vms\" AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -4464,6 +4999,17 @@
                 "size": "1000"
               },
               "type": "terms"
+            },
+            {
+              "field": "dvName.keyword",
+              "id": "3",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
+              },
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -4475,12 +5021,7 @@
             {
               "field": "dvReadyLatency",
               "id": "1",
-              "settings": {
-                "percents": [
-                  "$percentile"
-                ]
-              },
-              "type": "percentiles"
+              "type": "avg"
             }
           ],
           "query": "jobName.keyword:\"create-load-vms\" AND metricName.keyword:\"dvLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -4488,35 +5029,66 @@
           "timeField": "timestamp"
         }
       ],
-      "title": "VM/Data Volume ready latency (Percentile $percentile)",
+      "title": "Total end-to-end provisioning time (DV+VM) (Percentile $percentile)",
       "transformations": [
-        {
-          "id": "convertFieldType",
-          "options": {
-            "conversions": [
-              {
-                "destinationType": "string",
-                "targetField": "jobIteration"
-              }
-            ],
-            "fields": {}
-          }
-        },
         {
           "id": "joinByField",
           "options": {
             "byField": "jobIteration",
-            "mode": "outer"
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "dvName.keyword": true,
+              "vmiName.keyword": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Average": "dv_latency",
+              "Average vmReadyLatency": "ready_raw",
+              "Average vmiCreatedLatency": "created_raw",
+              "jobIteration": "Iteration"
+            }
           }
         },
         {
           "id": "calculateField",
           "options": {
+            "alias": "net_vm_latency",
             "binary": {
               "left": {
                 "matcher": {
-                  "id": "byType",
-                  "options": "number"
+                  "id": "byName",
+                  "options": "ready_raw"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "created_raw"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "net_vm_latency_s",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "net_vm_latency"
                 }
               },
               "operator": "/",
@@ -4531,37 +5103,115 @@
           }
         },
         {
+          "id": "calculateField",
+          "options": {
+            "alias": "dv_latency_s",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "dv_latency"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "Iteration": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "dv_latency_s": {
+                "aggregations": [
+                  "p50",
+                  "p90",
+                  "p95",
+                  "p99"
+                ],
+                "operation": "aggregate"
+              },
+              "net_vm_latency_s": {
+                "aggregations": [
+                  "p50",
+                  "p90",
+                  "p95",
+                  "p99"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
           "id": "organize",
           "options": {
-            "excludeByName": {
-              "Average 1": true,
-              "Average 2": true,
-              "jobName.keyword": false,
-              "p50.0 dvReadyLatency": true,
-              "p50.0 vmReadyLatency": true,
-              "p90.0 dvReadyLatency": true,
-              "p90.0 vmReadyLatency": true,
-              "p95.0 dvReadyLatency": true,
-              "p95.0 vmReadyLatency": true,
-              "p99.0 dvReadyLatency": true,
-              "p99.0 vmReadyLatency": true
-            },
+            "excludeByName": {},
             "includeByName": {},
-            "indexByName": {},
+            "indexByName": {
+              "Iteration": 0,
+              "dv_latency_s (p50)": 1,
+              "dv_latency_s (p90)": 2,
+              "dv_latency_s (p95)": 3,
+              "dv_latency_s (p99)": 4,
+              "net_vm_latency_s (p50)": 5,
+              "net_vm_latency_s (p90)": 6,
+              "net_vm_latency_s (p95)": 7,
+              "net_vm_latency_s (p99)": 8
+            },
             "renameByName": {
-              "Average / 1000 1": "VM ready latency",
-              "Average / 1000 2": "Data Volume ready latency",
-              "jobIteration": "Iteration",
-              "jobName.keyword": "Job Name",
-              "p50.0 dvReadyLatency / 1000": "p$percentile Data Volume ready latency",
-              "p50.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p90.0 dvReadyLatency / 1000": "p$percentile Data Volume ready latency",
-              "p90.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p95.0 dvReadyLatency / 1000": "p$percentile Data Volume ready latency",
-              "p95.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p99.0 dvReadyLatency / 1000": "p$percentile Data Volume ready latency",
-              "p99.0 vmReadyLatency / 1000": "p$percentile VM ready latency"
+              "dv_latency_s (p50)": "DV 50",
+              "dv_latency_s (p90)": "DV 90",
+              "dv_latency_s (p95)": "DV 95",
+              "dv_latency_s (p99)": "DV 99",
+              "net_vm_latency_s (p50)": "VM 50",
+              "net_vm_latency_s (p90)": "VM 90",
+              "net_vm_latency_s (p95)": "VM 95",
+              "net_vm_latency_s (p99)": "VM 99"
             }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "Iteration|.*${percentile}.*"
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*VM.*",
+            "renamePattern": "P${percentile} VM ready latency"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*DV.*",
+            "renamePattern": "P${percentile} Data Volume ready latency"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Iteration"
+              }
+            ]
           }
         }
       ],
@@ -4573,7 +5223,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 112
+        "y": 120
       },
       "id": 44,
       "panels": [],
@@ -4585,7 +5235,7 @@
         "type": "elasticsearch",
         "uid": "${DS_ELASTICSEARCH}"
       },
-      "description": "Displays the distribution of VMs across physical nodes to track workload density and cluster balance.",
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4681,7 +5331,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 113
+        "y": 121
       },
       "id": 38,
       "options": {
@@ -4810,7 +5460,7 @@
         "type": "elasticsearch",
         "uid": "${DS_ELASTICSEARCH}"
       },
-      "description": "Displays the distribution of VMs across physical nodes to track workload density and cluster balance.",
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4876,7 +5526,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 121
+        "y": 129
       },
       "id": 39,
       "options": {
@@ -4928,6 +5578,11 @@
               "field": "vmReadyLatency",
               "id": "1",
               "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
+              "type": "avg"
             }
           ],
           "query": "(jobName.keyword:\"create-migrating-vms\" OR jobName.keyword:\"create-load-vms\") AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -4940,12 +5595,37 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "VMReadyLatency",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmReadyLatency"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmiCreatedLatency"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
             "alias": "VM ready latency",
             "binary": {
               "left": {
                 "matcher": {
                   "id": "byName",
-                  "options": "Average"
+                  "options": "VMReadyLatency"
                 }
               },
               "operator": "/",
@@ -4963,7 +5643,10 @@
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Average": true
+              "Average": true,
+              "Average vmReadyLatency": true,
+              "Average vmiCreatedLatency": true,
+              "VMReadyLatency": true
             },
             "includeByName": {},
             "indexByName": {},
@@ -5071,7 +5754,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 129
+        "y": 137
       },
       "id": 40,
       "options": {
@@ -5112,6 +5795,17 @@
                 "size": "1000"
               },
               "type": "terms"
+            },
+            {
+              "field": "vmiName.keyword",
+              "id": "4",
+              "settings": {
+                "min_doc_count": "1",
+                "order": "desc",
+                "orderBy": "_term",
+                "size": "1000"
+              },
+              "type": "terms"
             }
           ],
           "datasource": {
@@ -5122,12 +5816,12 @@
             {
               "field": "vmReadyLatency",
               "id": "1",
-              "settings": {
-                "percents": [
-                  "$percentile"
-                ]
-              },
-              "type": "percentiles"
+              "type": "avg"
+            },
+            {
+              "field": "vmiCreatedLatency",
+              "id": "3",
+              "type": "avg"
             }
           ],
           "query": "(jobName.keyword:\"create-migrating-vms\" OR jobName.keyword:\"create-load-vms\") AND metricName.keyword:\"vmiLatencyMeasurement\" AND uuid:\"$uuid\"",
@@ -5140,11 +5834,37 @@
         {
           "id": "calculateField",
           "options": {
+            "alias": "VMReadyLatency",
             "binary": {
               "left": {
                 "matcher": {
-                  "id": "byType",
-                  "options": "number"
+                  "id": "byName",
+                  "options": "Average vmReadyLatency"
+                }
+              },
+              "operator": "-",
+              "right": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Average vmiCreatedLatency"
+                }
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "VMReadyLatency (s)",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "VMReadyLatency"
                 }
               },
               "operator": "/",
@@ -5155,49 +5875,72 @@
             "mode": "binary",
             "reduce": {
               "reducer": "sum"
-            },
-            "replaceFields": false
+            }
           }
         },
         {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Iteration": false,
-              "Iteration / 1000": true,
-              "jobName.keyword 1": true,
-              "jobName.keyword 2": true,
-              "p50.0 dvReadyLatency": true,
-              "p50.0 vmReadyLatency": true,
-              "p90.0 dvReadyLatency": true,
-              "p90.0 vmReadyLatency": true,
-              "p95.0 dvReadyLatency": true,
-              "p95.0 vmReadyLatency": true,
-              "p99.0 dvReadyLatency": true,
-              "p99.0 vmReadyLatency": true
+              "Average vmReadyLatency": true,
+              "Average vmiCreatedLatency": true,
+              "VMReadyLatency": true
             },
             "includeByName": {},
             "indexByName": {},
             "renameByName": {
-              "Iteration": "Iteration",
               "nodeName.keyword": "Worker node",
-              "p50.0 dvReadyLatency": "",
-              "p50.0 dvReadyLatency / 1000": "p$percentile Data Volume Ready Latency",
-              "p50.0 vmReadyLatency": "",
-              "p50.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p90.0 dvReadyLatency": "",
-              "p90.0 dvReadyLatency / 1000": "p$percentile Data Volume Ready Latency",
-              "p90.0 vmReadyLatency": "",
-              "p90.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p95.0 dvReadyLatency": "",
-              "p95.0 dvReadyLatency / 1000": "p$percentile Data Volume Ready Latency",
-              "p95.0 vmReadyLatency": "",
-              "p95.0 vmReadyLatency / 1000": "p$percentile VM ready latency",
-              "p99.0 dvReadyLatency": "",
-              "p99.0 dvReadyLatency / 1000": "p$percentile Data Volume Ready Latency",
-              "p99.0 vmReadyLatency": "",
-              "p99.0 vmReadyLatency / 1000": "p$percentile VM ready latency"
+              "vmiName.keyword": ""
             }
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "VMReadyLatency (s)": {
+                "aggregations": [
+                  "p50",
+                  "p90",
+                  "p95",
+                  "p99"
+                ],
+                "operation": "aggregate"
+              },
+              "Worker node": {
+                "aggregations": [],
+                "operation": "groupby"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "VMReadyLatency (s) (p50)": "VM 50",
+              "VMReadyLatency (s) (p90)": "VM 90",
+              "VMReadyLatency (s) (p95)": "VM 95",
+              "VMReadyLatency (s) (p99)": "VM 99"
+            }
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "pattern": "Worker node|.*${percentile}.*"
+            }
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": ".*VM.*",
+            "renamePattern": "P${percentile} VM ready latency"
           }
         },
         {
@@ -5206,7 +5949,7 @@
             "fields": {},
             "sort": [
               {
-                "field": "nodeName.keyword"
+                "field": "Worker node"
               }
             ]
           }
@@ -5220,11 +5963,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 137
+        "y": 145
       },
       "id": 78,
       "panels": [],
-      "title": "Step 5: Migrate VMs",
+      "title": "Migrate VMs",
       "type": "row"
     },
     {
@@ -5232,32 +5975,10 @@
         "type": "elasticsearch",
         "uid": "${DS_ELASTICSEARCH}"
       },
-      "description": "This panel displays the average time VMs take to complete migration and reach a Ready state.\n\nNOTE: Latency includes queuing time; if you trigger more than the KubeVirt parallel limit (default 5), values will increase as VMs wait to start.",
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "Ready latency (s)",
-            "axisPlacement": "auto",
-            "fillOpacity": 80,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "lineWidth": 1,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
+            "mode": "thresholds"
           },
           "decimals": 0,
           "mappings": [],
@@ -5270,64 +5991,45 @@
               },
               {
                 "color": "#EAB839",
-                "value": 60
+                "value": 25
               },
               {
                 "color": "red",
-                "value": 120
+                "value": 50
               }
             ]
           }
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Iteration"
-            },
-            "properties": [
-              {
-                "id": "custom.axisLabel",
-                "value": "Iterations"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 18,
+        "w": 9,
         "x": 0,
-        "y": 138
+        "y": 146
       },
-      "id": 77,
+      "id": 84,
       "options": {
-        "barRadius": 0,
-        "barWidth": 0.97,
-        "fullHighlight": false,
-        "groupWidth": 0.7,
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
         "orientation": "auto",
-        "showValue": "never",
-        "stacking": "none",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "xField": "Iteration",
-        "xTickLabelRotation": 0,
-        "xTickLabelSpacing": 0
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": false
       },
       "pluginVersion": "12.1.0",
       "targets": [
         {
-          "alias": "",
+          "alias": "Avg VM Ready Latency",
           "bucketAggs": [
             {
               "field": "vmiName.keyword",
@@ -5336,7 +6038,7 @@
                 "min_doc_count": "1",
                 "order": "desc",
                 "orderBy": "_term",
-                "size": "10"
+                "size": "1000"
               },
               "type": "terms"
             }
@@ -5357,49 +6059,27 @@
           "timeField": "timestamp"
         }
       ],
-      "title": "VM migration ready latency (Average)",
+      "title": "Avg VM migration ready latency (s)",
       "transformations": [
         {
-          "id": "extractFields",
+          "id": "reduce",
           "options": {
-            "delimiter": ",",
-            "format": "regexp",
-            "keepTime": false,
-            "regExp": "/-(?<Iteration>\\d+)-\\d+$/",
-            "replace": false,
-            "source": "vmiName.keyword"
-          }
-        },
-        {
-          "id": "groupBy",
-          "options": {
-            "fields": {
-              "Average": {
-                "aggregations": [
-                  "mean"
-                ],
-                "operation": "aggregate"
-              },
-              "Iteration": {
-                "aggregations": [],
-                "operation": "groupby"
-              },
-              "NewField": {
-                "aggregations": [],
-                "operation": "groupby"
-              }
-            }
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": [
+              "mean"
+            ]
           }
         },
         {
           "id": "calculateField",
           "options": {
-            "alias": "VM ready latency",
+            "alias": "Avg VM migration ready latency (s)",
             "binary": {
               "left": {
                 "matcher": {
                   "id": "byName",
-                  "options": "Average (mean)"
+                  "options": "Average"
                 }
               },
               "operator": "/",
@@ -5414,21 +6094,15 @@
           }
         },
         {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "field": "Iteration"
-              }
-            ]
-          }
-        },
-        {
           "id": "organize",
           "options": {
             "excludeByName": {
-              "Average (mean)": true
+              "Average": true,
+              "Average vmReadyLatency": true,
+              "Average vmiCreatedLatency": true,
+              "Avg VM Ready Latency": true,
+              "VMReadyLatency": true,
+              "vmiName.keyword": true
             },
             "includeByName": {},
             "indexByName": {},
@@ -5436,14 +6110,171 @@
           }
         }
       ],
-      "type": "barchart"
+      "type": "stat"
     },
     {
       "datasource": {
         "type": "elasticsearch",
         "uid": "${DS_ELASTICSEARCH}"
       },
-      "description": "Breaks down the total VM migration time into six distinct phases:\n   0. Pending: The migration is accepted by the system.\n   1. Scheduling: The migration's target pod is being scheduled.\n   2. Scheduled: The migration's target pod is running.\n   3. PreparingTarget:  The migration's target pod is being prepared for migration.\n   4. TargetReady: The migration's target pod is prepared and ready for migration.\n   5. Running: The migration is in progress.\n   6. Succeeded: The migration passed.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              },
+              {
+                "color": "#EAB839",
+                "value": 25
+              },
+              {
+                "color": "red",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 9,
+        "y": 146
+      },
+      "id": 85,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "value",
+        "wideLayout": false
+      },
+      "pluginVersion": "12.1.0",
+      "targets": [
+        {
+          "alias": "P$percentile VM migration Ready Latency",
+          "bucketAggs": [
+            {
+              "field": "timestamp",
+              "id": "2",
+              "settings": {
+                "interval": "auto",
+                "min_doc_count": "0",
+                "timeZone": "utc",
+                "trimEdges": "0"
+              },
+              "type": "date_histogram"
+            }
+          ],
+          "datasource": {
+            "type": "elasticsearch",
+            "uid": "${DS_ELASTICSEARCH}"
+          },
+          "hide": false,
+          "metrics": [
+            {
+              "field": "succeededLatency",
+              "id": "1",
+              "settings": {
+                "percents": [
+                  "$percentile"
+                ]
+              },
+              "type": "percentiles"
+            }
+          ],
+          "query": "jobName.keyword:\"migrate-vms\" AND metricName.keyword:\"vmimLatencyMeasurement\" AND uuid:\"$uuid\"",
+          "refId": "B",
+          "timeField": "timestamp"
+        }
+      ],
+      "title": "P$percentile VM migration ready latency (s)",
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "includeTimeField": false,
+            "mode": "reduceFields",
+            "reducers": [
+              "mean"
+            ]
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byType",
+                  "options": "number"
+                }
+              },
+              "operator": "/",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "reducer": "sum"
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "P50 VM migration Ready Latency": true,
+              "P90 VM migration Ready Latency": true,
+              "P95 VM migration Ready Latency": true,
+              "P99 VM migration Ready Latency": true,
+              "p50.0 succeededLatency": true,
+              "p90.0 succeededLatency": true,
+              "p95.0 succeededLatency": true,
+              "p99.0 succeededLatency": true,
+              "vmiName.keyword": true,
+              "vmiName.keyword / 1000": true
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Value / 1000": "P$percentile VM migration ready latency (s)",
+              "p50.0 succeededLatency / 1000": "P$percentile DV bound latency (s)",
+              "p90.0 succeededLatency / 1000": "P$percentile DV bound latency (s)",
+              "p95.0 succeededLatency / 1000": "P$percentile DV bound latency (s)",
+              "p99.0 succeededLatency / 1000": "P$percentile DV bound latency (s)"
+            }
+          }
+        }
+      ],
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "${DS_ELASTICSEARCH}"
+      },
+      "description": "",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -5464,7 +6295,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 138
+        "y": 146
       },
       "id": 79,
       "options": {
@@ -5798,15 +6629,15 @@
       {
         "allowCustomValue": false,
         "current": {
-          "text": "95",
-          "value": "95"
+          "text": "50",
+          "value": "50"
         },
         "description": "Selects the P-value (50th to 99th) for VM and DV latency calculations",
         "label": "Latency Percentile",
         "name": "percentile",
         "options": [
           {
-            "selected": false,
+            "selected": true,
             "text": "50",
             "value": "50"
           },
@@ -5816,7 +6647,7 @@
             "value": "90"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "95",
             "value": "95"
           },
@@ -5838,7 +6669,7 @@
   "timepicker": {},
   "timezone": "browser",
   "title": "kube-burner-virt-migration-benchmark",
-  "uid": "1009ad4a-2875-4744-a956-6d93ac3739bc",
-  "version": 3,
+  "uid": "b03cba7b-3269-4cac-88e5-7a751f21f0b0",
+  "version": 10,
   "weekStart": ""
 }
