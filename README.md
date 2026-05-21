@@ -78,7 +78,7 @@ Available Commands:
 Flags:
       --alerting                  Enable alerting (default true)
       --burst int                 Burst (default 20)
-      --check-health              Check cluster health before job (default true)
+      --ignore-health-check       Run cluster health check, but ignore failures (default false)
       --enable-file-logging       Enable file logging (default true)
       --es-index string           Elastic Search index
       --es-server string          Elastic Search endpoint
