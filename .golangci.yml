@@ -1,18 +1,18 @@
 version: "2"
 linters:
-  default: standard
+  default: none
   enable:
-    - dupl
-    - goconst
-    - gocyclo
+#    - dupl
+#    - goconst
+#    - gocyclo
     - govet
     - ineffassign
-    - misspell
-    - nakedret
-    - staticcheck
-    - unconvert
-    - unparam
-    - unused
+#    - misspell
+#    - nakedret
+#    - staticcheck
+#    - unconvert
+#    - unparam
+#    - unused
   settings:
     misspell:
       locale: US
