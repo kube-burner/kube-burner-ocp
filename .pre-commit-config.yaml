@@ -1,12 +1,12 @@
 repos:
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.60.3
+    rev: v2.12.2
     hooks:
       - id: golangci-lint
         entry: golangci-lint run
         args: [--timeout=5m]
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.34.0
+    rev: v0.48.0
     hooks:
       - id: markdownlint
         args: [--disable, MD013, MD002]
@@ -15,10 +15,10 @@ repos:
     hooks:
       - id: shellcheck
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
       - id: check-json
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
+    rev: v2.4.2
     hooks:
       - id: codespell
