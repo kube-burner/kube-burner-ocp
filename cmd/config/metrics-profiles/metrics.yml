@@ -100,7 +100,7 @@
 # Scheduler
 
 # Scheduler Throughput: Successful pod placements per second
-- query: sum(rate(scheduler_schedule_attempts_total{result="scheduled"}[2m]))
+- query: sum(irate(scheduler_schedule_attempts_total{result="scheduled"}[2m]))
   metricName: schedulerThroughput
 
 # Scheduler P99 Latency: Time taken for the end-to-end scheduling algorithm..
@@ -140,6 +140,10 @@
 
 - query: sum(kube_node_status_condition{status="true"}) by (condition)
   metricName: nodeStatus
+
+- query: topk(1, ovs_build_info)
+  metricName: ovsBuildInfo
+  instant: true
 
 # Prometheus metrics
 

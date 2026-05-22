@@ -4,10 +4,12 @@ global:
   gcMetrics: {{.GC_METRICS}}
   measurements:
     - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
       thresholds:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
 {{ if .PPROF }}
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}
@@ -59,7 +61,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -91,7 +92,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -137,7 +137,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -183,7 +182,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -230,7 +228,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 30s
     objects:
       - objectTemplate: banp-default-deny-traffic.yml
         replicas: 1

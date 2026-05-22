@@ -60,7 +60,6 @@ jobs:
     podWait: true
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 15s
     objects:
       - objectTemplate: clustercatalog.yml
         replicas: 1
@@ -93,7 +92,6 @@ jobs:
     podWait: true
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 2m
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged

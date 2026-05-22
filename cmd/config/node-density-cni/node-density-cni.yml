@@ -5,10 +5,12 @@ global:
   deletionStrategy: {{.DELETION_STRATEGY}}
   measurements:
     - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
       thresholds:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
 {{ if .PPROF }}
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}
@@ -18,10 +20,18 @@ global:
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-node}
         url: http://localhost:29103/debug/pprof/heap
+      - name: ovnkube-controller-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=60
       - name: ovnk-control-plane-heap
         namespace: "openshift-ovn-kubernetes"
         labelSelector: {app: ovnkube-control-plane}
         url: http://localhost:29108/debug/pprof/heap
+      - name: ovnk-control-plane-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=60
 {{ end }}
 {{ if .SVC_LATENCY }}
     - name: serviceLatency
@@ -46,7 +56,11 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+{{ if .NUM_SRIOVS }}
+  - name: node-density-cni-sriov
+{{else}}
   - name: node-density-cni
+{{ end }}
     namespace: node-density-cni
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
@@ -62,18 +76,20 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
-    preLoadPeriod: 15s
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
-    objects:
 
+    objects:
       - objectTemplate: webserver-deployment.yml
         replicas: 1
         inputVars:
           nodeSelector: {{.NODE_SELECTOR}}
+          perfProfile: {{.PERF_PROFILE}}
+          numSriovs: {{.NUM_SRIOVS}}
+          sriovNetworkName: {{.SRIOV_NETWORK_NAME}}
 
       - objectTemplate: webserver-service.yml
         replicas: 1
@@ -82,3 +98,6 @@ jobs:
         replicas: 1
         inputVars:
           nodeSelector: {{.NODE_SELECTOR}}
+          perfProfile: {{.PERF_PROFILE}}
+          numSriovs: {{.NUM_SRIOVS}}
+          sriovNetworkName: {{.SRIOV_NETWORK_NAME}}

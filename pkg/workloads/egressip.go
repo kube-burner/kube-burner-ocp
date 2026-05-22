@@ -45,7 +45,7 @@ func getEgressIPCidrNodeIPs() ([]string, string) {
 	for _, worker := range workers.Items {
 		nodeIPs = append(nodeIPs, worker.Status.Addresses[0].Address)
 		// Add gateway ip to nodeIPs to get excluded while creating egress ip list
-		gwconfig, exist := worker.ObjectMeta.Annotations["k8s.ovn.org/l3-gateway-config"]
+		gwconfig, exist := worker.Annotations["k8s.ovn.org/l3-gateway-config"]
 		if exist {
 			var item map[string]any
 			json.Unmarshal([]byte(gwconfig), &item)
@@ -55,14 +55,14 @@ func getEgressIPCidrNodeIPs() ([]string, string) {
 		// For cloud based OCP deployedments, egress IP cidr is added as part of cloud.network.openshift.io/egress-ipconfig annotation
 		// For baremetal, read the cidr from k8s.ovn.org/node-primary-ifaddr
 		if egressIPCidr == "" {
-			eipconfig, exist := worker.ObjectMeta.Annotations["cloud.network.openshift.io/egress-ipconfig"]
+			eipconfig, exist := worker.Annotations["cloud.network.openshift.io/egress-ipconfig"]
 			if exist {
 				var items []map[string]any
 				json.Unmarshal([]byte(eipconfig), &items)
 				ifaddr := items[0]["ifaddr"].(map[string]any)
 				egressIPCidr = ifaddr["ipv4"].(string)
 			} else {
-				nodeAddr, exist := worker.ObjectMeta.Annotations["k8s.ovn.org/node-primary-ifaddr"]
+				nodeAddr, exist := worker.Annotations["k8s.ovn.org/node-primary-ifaddr"]
 				if exist {
 					var ifaddr map[string]any
 					json.Unmarshal([]byte(nodeAddr), &ifaddr)
@@ -160,14 +160,13 @@ func NewEgressIP(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["ADDRESSES_PER_ITERATION"] = addressesPerIteration
 			AdditionalVars["EXTERNAL_SERVER_IP"] = externalServerIP
 			AdditionalVars["EIP_ADDRESSES"] = eipAddresses
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().StringVar(&externalServerIP, "external-server-ip", "", "External server IP address")
 	cmd.Flags().IntVar(&addressesPerIteration, "addresses-per-iteration", 1, fmt.Sprintf("%v iterations", variant))

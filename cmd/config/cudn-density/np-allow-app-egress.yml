@@ -1,0 +1,52 @@
+# allow-app-egress: Opens egress from sampleapp middleware pods (app=sampleapp).
+#
+# Selects: pods with app=sampleapp (2 pods)
+# Allows egress to:
+#   - Pods with app=nginx in any namespace within the CUDN group, on ports http + https
+#   - Any destination on port 53 UDP/TCP (DNS resolution)
+# Effect: Sampleapp pods can reach any nginx server in the CUDN group and resolve DNS.
+#
+# Note: This policy exists primarily for OVN-K load generation. No actual traffic
+# exercises this rule — sampleapp pods don't initiate connections to nginx.
+# The policy creates ACLs and address sets that OVN-K must maintain at scale.
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-app-egress-{{.Replica}}
+spec:
+  podSelector:
+    matchLabels:
+      app: sampleapp
+  egress:
+  {{- $cudnGroupIdx := div .Iteration .namespaces_per_cudn }}
+  {{- $cudnBase := mul $cudnGroupIdx .namespaces_per_cudn }}
+  {{- $nsList := list }}
+  {{- range $i, $v := until .namespaces_per_cudn }}
+    {{- $nsIter := add $cudnBase $i }}
+    {{- $nsName := print "cudn-density-" $nsIter }}
+    {{- $nsList = append $nsList $nsName }}
+  {{- end }}
+  {{- $nsNames := toJson $nsList }}
+  - to:
+    - namespaceSelector:
+        matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values: {{$nsNames}}
+      podSelector:
+        matchLabels:
+          app: nginx
+    ports:
+    - protocol: TCP
+      port: http
+    - protocol: TCP
+      port: https
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  policyTypes:
+  - Egress

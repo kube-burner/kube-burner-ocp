@@ -133,7 +133,6 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["skipResizeJob"] = skipResizeJob
 
 			setMetrics(cmd, metricsProfiles)
-
 			log.Infof("Running tests in Namespace [%s]", testNamespace)
 			counter := 0
 			for {
@@ -142,10 +141,9 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				AdditionalVars["storageClassName"] = storageClassName
 
 				os.Setenv("counter", fmt.Sprint(counter))
-				wh.SetVariables(AdditionalVars, SetVars)
-				rc = wh.Run(cmd.Name() + ".yml")
+				rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 				if rc != 0 {
-					log.Infof("Capacity failed in loop #%d", counter)
+					log.Errorf("Capacity failed in loop #%d", counter)
 					break
 				}
 				counter += 1

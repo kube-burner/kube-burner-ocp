@@ -34,9 +34,9 @@ import (
 func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var rc int
 	var metricsProfiles []string
-	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent int
+	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent, numSriovs int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod, pprofInterval time.Duration
-	var containerImage, deletionStrategy, churnMode, selector string
+	var containerImage, deletionStrategy, churnMode, selector, perfProfile, sriovNetworkName string
 	var namespacedIterations, pprof, svcLatency bool
 	var nodeSelector corev1.NodeSelector
 	var matchExpressions []corev1.NodeSelectorRequirement
@@ -97,6 +97,9 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["PERF_PROFILE"] = perfProfile
+			AdditionalVars["NUM_SRIOVS"] = numSriovs
+			AdditionalVars["SRIOV_NETWORK_NAME"] = sriovNetworkName
 			nodeSelectorJson, err := json.Marshal(nodeSelector)
 			if err != nil {
 				log.Fatal(err.Error())
@@ -108,8 +111,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 				AdditionalVars["JOB_ITERATIONS"] = (totalPods - podCount) / 2
 			}
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -126,15 +128,18 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	switch variant {
 	case "node-density":
-		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")
+		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 		cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
 	case "node-density-heavy":
-		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 		cmd.Flags().DurationVar(&probesPeriod, "probes-period", 10*time.Second, "Perf app readiness/liveness probes period")
 		cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	case "node-density-cni":
-		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 1*time.Minute, "Pod ready timeout threshold")
+		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 		cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
+		cmd.Flags().IntVar(&numSriovs, "num-sriovs", 0, "Number of SR-IOV interfaces per pod")
+		cmd.Flags().StringVar(&sriovNetworkName, "sriov-networkname", "sriov-net", "SR-IOV network name for IPAM configuration")
+		cmd.Flags().StringVar(&perfProfile, "perf-profile", "", "Performance profile name in the Cluster")
 	}
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")

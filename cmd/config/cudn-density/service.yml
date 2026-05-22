@@ -1,0 +1,21 @@
+# cudn-svc: Main ClusterIP service for nginx servers.
+# Selects all pods with app=nginx (both server-1 and server-2 = 6 endpoints).
+# Exposes ports 8080 (http) and 8443 (https).
+# This is the service targeted by client cross-namespace traffic and readiness probes.
+kind: Service
+apiVersion: v1
+metadata:
+  name: cudn-svc
+spec:
+  selector:
+    app: nginx
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+    targetPort: 8080
+  - name: https
+    protocol: TCP
+    port: 8443
+    targetPort: 8443
+  type: ClusterIP

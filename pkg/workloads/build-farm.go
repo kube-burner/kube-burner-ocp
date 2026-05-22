@@ -107,8 +107,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 			log.Infof("Controller config: %d controllers, %d threads per controller", numControllers, numThreads)
 
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -116,7 +115,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 
 	// Standard workload flags
-	cmd.Flags().IntVar(&jobIterations, "job-iterations", 100, "Number of job iterations to create")
+	cmd.Flags().IntVar(&jobIterations, "job-iterations", 12, "Number of job iterations to create")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 100, "Number of iterations per namespace")
 	cmd.Flags().Float64Var(&qps, "qps", 40, "QPS for client rate limiting")
 	cmd.Flags().Float64Var(&burst, "burst", 40, "Burst for client rate limiting")

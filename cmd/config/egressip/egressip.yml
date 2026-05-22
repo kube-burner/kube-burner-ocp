@@ -7,20 +7,26 @@ global:
   gcMetrics: {{.GC_METRICS}}
   measurements:
     - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
       thresholds:
         - conditionType: Ready
           metric: P99
-          threshold: 15s
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
-  - indexer:
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
       esServers: ["{{.ES_SERVER}}"]
       insecureSkipVerify: true
       defaultIndex: {{.ES_INDEX}}
       type: opensearch
 {{ end }}
 {{ if .LOCAL_INDEXING }}
-  - indexer:
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
       type: local
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
@@ -51,7 +57,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: false
-    preLoadPeriod: 15s
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged

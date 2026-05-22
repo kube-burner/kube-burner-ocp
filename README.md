@@ -23,6 +23,7 @@ Available Commands:
   crd-scale                  Runs crd-scale workload
   dv-clone                   Runs dv-clone workload
   egressip                   Runs egressip workload
+  evpn                       Runs evpn workload
   help                       Help about any command
   index                      Runs index sub-command
   init                       Runs custom workload
@@ -77,7 +78,7 @@ Available Commands:
 Flags:
       --alerting                  Enable alerting (default true)
       --burst int                 Burst (default 20)
-      --check-health              Check cluster health before job (default true)
+      --ignore-health-check       Run cluster health check, but ignore failures (default false)
       --enable-file-logging       Enable file logging (default true)
       --es-index string           Elastic Search index
       --es-server string          Elastic Search endpoint
@@ -129,6 +130,38 @@ kube-burner-ocp node-density --pods-per-node=100
 ```
 
 With the command above, the wrapper will calculate the required number of pods to deploy across all worker nodes of the cluster.
+
+### Workload Flags Metadata
+
+All workload-specific flags (local flags defined on each workload command) are automatically captured and added to the `SummaryMetadata` in the `workloadFlags` field. This allows you to track exactly which flags were used when running a workload, making it easier to correlate performance results with specific configurations.
+
+The flags are stored as a map where:
+- Keys are flag names converted from kebab-case to camelCase (e.g., `pods-per-node` becomes `podsPerNode`)
+- Values are the flag values as strings
+
+For example, when running:
+
+```console
+kube-burner-ocp node-density --pods-per-node=100 --churn-cycles=5 --churn-percent=10
+```
+
+The `jobSummary` document will include:
+
+```json
+{
+  "workloadFlags": {
+    "podsPerNode": "100",
+    "churnCycles": "5",
+    "churnPercent": "10",
+    ...
+  }
+}
+```
+
+This metadata can be used for filtering and analysis in your metrics backend.
+
+!!! Note
+    Only local flags specific to each workload are captured. Persistent flags from the parent command (such as `--uuid`, `--qps`, `--burst`, etc.) are not included in `workloadFlags` to avoid duplication..
 
 ## Multiple endpoints support
 
@@ -219,6 +252,37 @@ This workload is meant to fill with pause pods all the worker nodes from the clu
 ### node-density-cni
 
 It creates two deployments, a client/curl and a server/nxing, and 1 service backed by the previous server pods. The client application has configured an startup probe that makes requests to the previous service every second with a timeout of 600s.
+
+Note: This workload calculates the number of iterations to create from the number of nodes and desired pods per node.  In order to keep the test scalable and performant, chunks of 1000 iterations will by broken into separate namespaces, using the config variable `iterationsPerNamespace`.
+
+### node-density-cni with SRIOV VFs
+
+It creates two deployments, a client/curl and a server/nxing, and 1 service backed by the previous server pods along with secondary network interfaces with SRIOV VFs. The client application has configured an startup probe that makes requests to the previous service every second with a timeout of 600s.
+
+#### Pre-requisites for running with SRIOV VFs
+- Cluster should be installed with DAY-2 SRIOV Operator
+- If User want to run workload with Performance profile, It should be created.
+- Below SRIOV-network should be created before running the workload
+  ```yaml
+  ---
+  apiVersion: sriovnetwork.openshift.io/v1
+  kind: SriovNetwork
+  metadata:
+    name: sriov-net-node-density
+    namespace: openshift-sriov-network-operator
+  spec:
+    ipam: |
+      {
+        "type": "whereabouts",
+        "range": "172.20.0.0/16"
+      }
+    logLevel: info
+    networkNamespace: node-density-cni-0
+    resourceName: servervfs
+    spoofChk: "off"
+    trust: "on"
+  ```
+
 
 Note: This workload calculates the number of iterations to create from the number of nodes and desired pods per node.  In order to keep the test scalable and performant, chunks of 1000 iterations will by broken into separate namespaces, using the config variable `iterationsPerNamespace`.
 
@@ -825,6 +889,208 @@ Users may control the workload sizes by passing the following arguments:
 By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
 If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
 
+## EVPN Workload
+
+This workload tests EVPN (Ethernet VPN) scenarios using Cluster User Defined Networks (CUDN). EVPN provides Layer 2 and Layer 3 VPN services over an IP/MPLS network, enabling efficient multi-tenant networking in OpenShift clusters.
+
+### Scenarios
+
+The EVPN workload supports three scenarios, each designed to test different network traffic patterns:
+
+#### East-West Scenario (`--scenario east-west`)
+
+Tests **pod-to-pod communication within the cluster** using EVPN Layer 2 networks.
+
+- Creates webserver deployments and services within each CUDN namespace
+- Creates curl client deployments that communicate with the webservers
+- Configures EVPN with Layer 2 topology and `macVRF` with routeTarget
+- Traffic flows between pods within the same CUDN network
+
+**Use case**: Validate internal cluster networking performance and EVPN Layer 2 overlay functionality.
+
+#### North-South Scenario (`--scenario north-south`)
+
+Tests **pod-to-external communication** using EVPN with both MAC and IP VRF.
+
+- Creates only curl client deployments that communicate with an external webserver
+- Configures EVPN with Layer 2 topology, `macVRF` and `ipVRF`
+- Traffic flows from pods inside the cluster to an external endpoint
+- Requires `--external-webserver-ip` and `--external-webserver-port` flags
+
+**Use case**: Validate north-south traffic routing through EVPN with IP VRF for external connectivity.
+
+#### North-South L3 Scenario (`--scenario north-south-l3`)
+
+Tests **pod-to-external communication** using EVPN Layer 3 networks.
+
+- Creates only curl client deployments that communicate with an external webserver
+- Configures EVPN with Layer 3 topology and `ipVRF` only
+- Traffic flows from pods inside the cluster to an external endpoint using Layer 3 routing
+- Requires `--external-webserver-ip` and `--external-webserver-port` flags
+
+**Use case**: Validate north-south traffic routing through EVPN Layer 3 networks for external connectivity.
+
+### CUDN Configuration
+
+All scenarios use a single unified `cudn.yml` template that dynamically generates the appropriate CUDN configuration based on the `--scenario` flag:
+
+| Scenario | Network Topology | VRF Configuration | Use Case |
+|----------|------------------|-------------------|----------|
+| east-west | Layer2 | macVRF with routeTarget | Internal pod-to-pod traffic |
+| north-south | Layer2 | macVRF + ipVRF | External traffic via L2 overlay |
+| north-south-l3 | Layer3 | ipVRF only | External traffic via L3 routing |
+
+The CUDN template uses Go template conditionals to generate scenario-specific configurations:
+
+```yaml
+network:
+{{ if eq .scenario "north-south-l3" }}
+    topology: Layer3
+    layer3:
+      role: Primary
+      subnets:
+        - cidr: <generated-cidr>
+          hostSubnet: 24
+    evpn:
+      vtep: evpn-vtep
+      ipVRF:
+        vni: <l3vni>
+{{ else if eq .scenario "north-south" }}
+    topology: Layer2
+    layer2:
+      role: Primary
+      subnets:
+        - <generated-cidr>
+    evpn:
+      vtep: evpn-vtep
+      macVRF:
+        vni: <l2vni>
+      ipVRF:
+        vni: <l3vni>
+{{ else }}  # east-west (default)
+    topology: Layer2
+    layer2:
+      role: Primary
+      subnets:
+        - <generated-cidr>
+    evpn:
+      vtep: evpn-vtep
+      macVRF:
+        vni: <l2vni>
+        routeTarget: "65000:<l2vni>"
+{{ end }}
+```
+
+### Configuration Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--scenario` | Test scenario: east-west, north-south, or north-south-l3 | east-west |
+| `--iterations` | Number of job iterations (namespaces) | 10 |
+| `--namespaces-per-cudn` | Number of namespaces sharing the same CUDN | 1 |
+| `--external-webserver-ip` | External webserver IP (required for north-south scenarios) | - |
+| `--external-webserver-port` | External webserver port (required for north-south scenarios) | - |
+| `--connection-timeout` | Timeout for external webserver reachability check | 10s |
+| `--skip-reachability-check` | Skip the external webserver reachability validation | false |
+| `--create-ext-frr-vrf` | Setup external FRR VRF before workload and cleanup after completion | false |
+| `--l3vni-start` | Starting L3 VNI number for EVPN configuration | 100 |
+| `--pod-ready-threshold` | Pod ready timeout threshold | 2m |
+| `--metrics-profile` | Comma separated list of metrics profiles | metrics.yml |
+
+### Usage Examples
+
+#### East-West Scenario (Internal Traffic)
+
+```console
+# Test internal pod-to-pod communication with 10 namespaces
+kube-burner-ocp evpn --scenario east-west --iterations 10
+```
+
+#### North-South Scenario (External Traffic with L2+L3)
+
+```console
+# Test external connectivity - requires external webserver. "--create-ext-frr-vrf" runs the external webserver on the local host and does other necessary configuration
+kube-burner-ocp evpn --scenario north-south \
+  --create-ext-frr-vrf \
+  --external-webserver-ip 172.27.187.82 \
+  --external-webserver-port 80 \
+  --iterations 10
+```
+
+#### North-South L3 Scenario (External Traffic with L3 only).
+
+```console
+# Test Layer 3 external connectivity. "--create-ext-frr-vrf" runs the external webserver on the local host and does other necessary configuration
+kube-burner-ocp evpn --scenario north-south-l3 \
+  --create-ext-frr-vrf \
+  --external-webserver-ip 172.27.187.82 \
+  --external-webserver-port 80 \
+  --iterations 10
+```
+
+### Workload Jobs
+
+The EVPN workload executes the following jobs in sequence:
+
+1. **evpn-create-namespaces**: Creates namespaces with required labels for CUDN
+2. **evpn-create-cudn**: Creates ClusterUserDefinedNetwork resources using the unified `cudn.yml` template
+3. **evpn-route-advertisements**: Creates RouteAdvertisement resources for the CUDNs
+4. **evpn-{scenario}**: Creates the workload pods (webserver + curl for east-west, or curl only for north-south)
+
+### Template Files
+
+The EVPN workload uses the following template files, optimized to minimize duplication:
+
+| Template | Description |
+|----------|-------------|
+| `evpn.yml` | Main workload configuration with scenario-based conditionals |
+| `cudn.yml` | Unified CUDN template supporting all three scenarios |
+| `curl-deployment.yml` | Curl client deployment with configurable webserver target |
+| `webserver-deployment.yml` | Webserver deployment (east-west only) |
+| `webserver-service.yml` | Webserver service (east-west only) |
+| `ra.yml` | RouteAdvertisement template |
+| `configmap.yml` | ConfigMap for namespace initialization |
+| `setup_external_frr_vrf.sh` | Script to setup external FRR VRF (used with `--create-ext-frr-vrf`) |
+| `cleanup_external_frr_vrf.sh` | Script to cleanup external FRR VRF (used with `--create-ext-frr-vrf`) |
+
+### External FRR VRF Setup
+
+For north-south scenarios, you may need to set up an external FRR router with VRF configuration to simulate external connectivity. The `--create-ext-frr-vrf` flag automates this setup:
+
+- **Setup** (`setup_external_frr_vrf.sh`): Runs before CUDN creation (`evpn-create-cudn` job)
+  - Automatically detects the OCP node subnet (supports /8, /16, /24 and other CIDR masks)
+  - Finds local IP on the same network as OCP nodes
+  - Deploys FRR using the frr-k8s demo
+  - Configures BGP EVPN with all cluster nodes
+  - Creates VTEP with dynamically detected node subnet CIDR
+  - Sets up VRFs (number matches `JOB_ITERATIONS / NAMESPACES_PER_CUDN`)
+  - L3 VNI formula matches `cudn.yml`: `VNI = l3vni_start + iteration` (configurable via `--l3vni-start`)
+  - Assigns the external webserver IP as anycast IP on each VRF
+  - Starts an Nginx webserver on the host network
+
+- **Cleanup** (`cleanup_external_frr_vrf.sh`): Runs after the last job (`evpn-{scenario}`)
+  - Stops the Nginx container
+  - Removes FRR BGP VRF configurations
+  - Deletes network interfaces (SVIs, VRFs)
+  - Removes base bridge and VXLAN infrastructure
+  - Deletes the VTEP resource
+  - Cleans up frr-k8s directory
+
+```console
+# Run north-south scenario with automatic FRR VRF setup
+kube-burner-ocp evpn --scenario north-south \
+  --external-webserver-ip 172.27.187.82 \
+  --external-webserver-port 80 \
+  --create-ext-frr-vrf
+
+# With custom L3 VNI start
+kube-burner-ocp evpn --scenario north-south \
+  --external-webserver-ip 172.27.187.82 \
+  --external-webserver-port 80 \
+  --create-ext-frr-vrf \
+  --l3vni-start 200
+```
+
 ## CUDN BGP Workload
 
 This workload tests BGP route exchange import and export scenarios for the CUDNs.
@@ -1150,7 +1416,6 @@ jobs:
     podWait: <bool>
     waitWhenFinished: <bool>
     preLoadImages: <bool>
-    preLoadPeriod: <preLoadPeriod_in_seconds>
     namespaceLabels:
       <namespaceLabels_key>: <namespaceLabels_value>
     objects:

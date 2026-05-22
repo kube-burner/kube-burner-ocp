@@ -41,8 +41,7 @@ func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CONTAINER_IMAGE"] = containerImage
 			AdditionalVars["FAST"] = fast
 			setMetrics(cmd, metricsProfiles)
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -50,7 +49,7 @@ func NewWhereabouts(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 10, "Number of iterations - each iteration is 1 ns and 6 pods")
 	cmd.Flags().BoolVar(&fast, "fast", false, "Use Fast IPAM")
-	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 15*time.Second, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd

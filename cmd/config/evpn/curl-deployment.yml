@@ -1,0 +1,69 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: curl-{{.Replica}}-{{.Iteration}}
+spec:
+  template:
+    metadata:
+      labels:
+        name: curl-{{.Replica}}-{{.Iteration}}
+        app: curl
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1 
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway 
+        labelSelector: 
+          matchLabels:
+            app: curl
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: webserver
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: curlapp
+        image: quay.io/cloud-bulldozer/curl:latest
+        command: ["sleep", "inf"]
+        resources:
+          requests:
+            memory: "10Mi"
+            cpu: "10m"
+        env:
+        - name: WEBSERVER_HOSTNAME
+          value: "{{ if .webserver_hostname }}{{ .webserver_hostname }}{{ else }}webserver-{{.Replica}}-{{.Iteration}}{{ end }}"
+        - name: WEBSERVER_PORT
+          value: "{{ if .webserver_port }}{{ .webserver_port }}{{ else }}8080{{ end }}"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          privileged: false
+        startupProbe:
+          exec:
+            command: 
+              - "/bin/sh"
+              - "-c"
+              - "curl --fail -sS ${WEBSERVER_HOSTNAME}:${WEBSERVER_PORT} -o /dev/null"
+          periodSeconds: 1
+          timeoutSeconds: 2
+          failureThreshold: 120
+      restartPolicy: Always
+  replicas: 1
+  selector:
+    matchLabels:
+      name: curl-{{.Replica}}-{{.Iteration}}
+  strategy:
+    type: RollingUpdate

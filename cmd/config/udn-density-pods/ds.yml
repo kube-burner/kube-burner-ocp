@@ -1,0 +1,29 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: udn-density
+spec:
+  selector:
+    matchLabels:
+      name: udn-density
+  template:
+    metadata:
+      labels:
+        name: udn-density
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - name: pause
+        image: quay.io/cloud-bulldozer/curl:latest
+        command: [sleep, inf]
+        imagePullPolicy: IfNotPresent

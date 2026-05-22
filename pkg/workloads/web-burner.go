@@ -46,14 +46,13 @@ func NewWebBurner(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["SCALE"] = scale
 			AdditionalVars["SRIOV"] = sriov
 
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 2*time.Minute, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&limitcount, "limitcount", 1, "Limitcount")
 	cmd.Flags().IntVar(&scale, "scale", 1, "Scale")
 	cmd.Flags().BoolVar(&bfd, "bfd", true, "Enable BFD")

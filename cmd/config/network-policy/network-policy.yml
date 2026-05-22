@@ -5,10 +5,12 @@ global:
   measurements:
 {{ if .NETPOL_LATENCY }}
     - name: netpolLatency
+{{ if ne .NETPOL_READY_THRESHOLD 0 }}
       thresholds:
         - conditionType: Ready
           metric: P99
           threshold: {{.NETPOL_READY_THRESHOLD}}
+{{ end }}
 {{ end }}        
 metricsEndpoints:
 {{ if .ES_SERVER }}
@@ -38,7 +40,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: false
-    preLoadPeriod: 1s
     jobPause: 15s
     skipIndexing: true
     namespaceLabels:
@@ -66,7 +67,6 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: false
-    preLoadPeriod: 15s
     jobPause: 1m
     cleanup: false
     namespaceLabels:

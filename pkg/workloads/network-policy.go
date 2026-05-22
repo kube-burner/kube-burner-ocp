@@ -35,6 +35,12 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if exceptRules > 0 && netpolLatency {
+				return fmt.Errorf("cannot use --except-rules > 0 with --networkpolicy-latency=true: network policy latency measurement does not work correctly with except rules")
+			}
+			return nil
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			// Register template functions used only by network-policy templates
 			util.AddRenderingFunction("GetSubnet16", func(subnetIdx int) string {
@@ -63,15 +69,14 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			AdditionalVars["NETPOL_LATENCY"] = netpolLatency
 			AdditionalVars["NETPOL_READY_THRESHOLD"] = netpolReadyThreshold
 
-			wh.SetVariables(AdditionalVars, SetVars)
-			rc = wh.Run(cmd.Name() + ".yml")
+			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
-	cmd.Flags().DurationVar(&netpolReadyThreshold, "netpol-ready-threshold", 10*time.Second, "Network policy ready timeout threshold")
+	cmd.Flags().DurationVar(&netpolReadyThreshold, "netpol-ready-threshold", 0, "Network policy ready timeout threshold")
 	cmd.Flags().IntVar(&podsPerNamespace, "pods-per-namespace", 10, "Number of pods created in a namespace")
 	cmd.Flags().IntVar(&netpolPerNamespace, "netpol-per-namespace", 10, "Number of network policies created in a namespace")
 	cmd.Flags().IntVar(&localPods, "local-pods", 2, "Number of pods on the local namespace to receive traffic from remote namespace pods")
@@ -81,7 +86,7 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd.Flags().IntVar(&remoteNamespaces, "remotes-namespaces", 2, "Number of remote namespaces to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().IntVar(&remotePods, "remotes-pods", 2, "Number of pods in remote namespaces to accept traffic from or send traffic to in ingress and egress rules")
 	cmd.Flags().IntVar(&cidrs, "cidrs", 2, "Number of cidrs to accept traffic from or send traffic to in ingress and egress rules")
-	cmd.Flags().IntVar(&exceptRules, "except-rules", 3, "Number of except rules to exclude traffic from ingress and egress cidr blocks")
+	cmd.Flags().IntVar(&exceptRules, "except-rules", 0, "Number of except rules to exclude traffic from ingress and egress cidr blocks")
 	cmd.Flags().BoolVar(&netpolLatency, "networkpolicy-latency", true, "Enable network policy latency measurement")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
