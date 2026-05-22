@@ -1,39 +1,22 @@
-version: "2"
+run:
+  timeout: 5m
+linters-settings:
+  misspell:
+    locale: US
 linters:
-  default: none
+  disable-all: true
   enable:
-#    - dupl
-#    - goconst
-#    - gocyclo
-    - govet
+    - nakedret
+    - unused
+    - misspell
     - ineffassign
-#    - misspell
-#    - nakedret
-#    - staticcheck
-#    - unconvert
-#    - unparam
-#    - unused
-  settings:
-    misspell:
-      locale: US
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
-formatters:
-  enable:
-    - gofmt
+    - goconst
     - goimports
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    - dupl
+    - unparam
+    - staticcheck
+    - gosimple
+    - unconvert
+    - gocyclo
+    - gofmt
+    - govet
