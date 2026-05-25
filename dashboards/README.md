@@ -21,6 +21,30 @@ The `Kube-burner-report-profile.json` dashboard is designed to visualize metrics
 
 - `metrics-report.yml`
 
+### Virt-capacity-benchmark.json
+
+The `Virt-capacity-benchmark.json` dashboard is designed to visualize the results of the **virt-capacity-benchmark** workload, providing an overview of performance and metrics collected during its execution.
+
+### Virt-clone.json
+
+The `Virt-clone.json` dashboard is designed to visualize the results of the **virt-clone** workload, providing an overview of performance and metrics collected during its execution.
+
+### Virt-density.json
+
+The `Virt-density.json` dashboard is designed to visualize the results of the **virt-density** workload, providing an overview of performance and metrics collected during its execution.
+
+### Virt-udn-density.json
+
+The `Virt-udn-density.json` dashboard is designed to visualize the results of the **virt-udn-density** workload, providing an overview of performance and metrics collected during its execution.
+
+### Virt-ephemeral-restart.json
+
+The `Virt-ephemeral-restart.json` dashboard is designed to visualize the results of the **virt-ephemeral-restart** workload, providing an overview of performance and metrics collected during its execution.
+
+### Virt-migration.json
+
+The `Virt-migration.json` dashboard is designed to visualize the results of the **virt-migration** workload, providing an overview of performance and metrics collected during its execution.
+
 ## Importing Dashboards
 
 To import a dashboard into Grafana:
@@ -32,7 +56,7 @@ To import a dashboard into Grafana:
 
 ## Datasource Configuration
 
-Both dashboards require either Elasticsearch or OpenSearch datasources to be configured in Grafana.
+All dashboards require either Elasticsearch or OpenSearch datasources to be configured in Grafana.
 
 > [!NOTE]  
 > Remember to use `timestamp` as Time field name in the datasource

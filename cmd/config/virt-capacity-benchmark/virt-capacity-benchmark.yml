@@ -17,10 +17,6 @@
 {{- $testNamespacesLabelValue := $testName -}}
 {{- $metricsBaseDirectory := $testName -}}
 ---
-global:
-  measurements:
-  - name: vmiLatency
-
 metricsEndpoints:
 - indexer:
     type: local
@@ -49,7 +45,7 @@ jobs:
       {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
 {{ end }}
 
-- name: create-vms
+- name: create-vms-{{ .counter }}
   jobType: create
   jobIterations: 1
   qps: 20
@@ -74,6 +70,7 @@ jobs:
   defaultMissingKeysWithZero: true
   beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
   measurements:
+  - name: vmiLatency
   - name: pvcLatency
   - name: dataVolumeLatency
   objects:
@@ -114,7 +111,9 @@ jobs:
       accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
 
 {{ if not .skipResizeJob }}
-- name: resize-volumes
+- name: resize-volumes-{{ .counter }}
+  measurements:
+  - name: pvcLatency
   jobType: patch
   jobIterations: 1
   jobIterationDelay: 15s
@@ -158,7 +157,9 @@ jobs:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 {{ end }}
 
-- name: restart-vms
+- name: restart-vms-{{ .counter }}
+  measurements:
+  - name: vmiLatency
   jobType: kubevirt
   qps: 20
   burst: 20
@@ -172,7 +173,9 @@ jobs:
     labelSelector:
       {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 
-- name: snapshot-vms
+- name: snapshot-vms-{{ .counter }}
+  measurements:
+  - name: volumeSnapshotLatency
   jobType: create
   qps: 20
   burst: 20
@@ -210,7 +213,9 @@ jobs:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 
 {{ if not .skipMigrationJob }}
-- name: migrate-vms
+- name: migrate-vms-{{ .counter }}
+  measurements:
+  - name: vmimLatency
   jobType: kubevirt
   qps: 20
   burst: 20
