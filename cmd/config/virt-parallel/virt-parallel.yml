@@ -223,7 +223,7 @@ jobs:
   objects:
   - kubeVirtOp: migrate
     labelSelector:
-      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+      kubevirt.io/nodeName: {{ .selectedNode }}
 {{ end }}
 
 - name: delete-vms-{{ .counter }}

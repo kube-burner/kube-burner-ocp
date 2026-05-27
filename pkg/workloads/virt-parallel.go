@@ -143,6 +143,13 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 				AdditionalVars["storageClassName"] = storageClassName
 				AdditionalVars["vmCount"] = vmCount
 
+				// Randomly select a node for migration
+				if !skipMigrationJob {
+					selectedNode := verifyOrGetRandomWorkerNodeName("")
+					AdditionalVars["selectedNode"] = selectedNode
+					log.Infof("Selected node for migration: %s", selectedNode)
+				}
+
 				os.Setenv("counter", fmt.Sprint(counter))
 				wh.SetVariables(AdditionalVars, SetVars)
 				rc = wh.Run(cmd.Name() + ".yml")
@@ -169,7 +176,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringSliceVar(&storageClasses, "storage-class", nil, "Comma separated list of storage classes to use")
 	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generarated SSH keys - default to a temporary location")
 	cmd.Flags().IntVar(&maxIterations, "max-iterations", 0, "Maximum times to run the test sequence. Default - run until failure (0)")
-	cmd.Flags().IntVar(&initialVms, "initial-vms", 50, "Number of VMs to create in the first iteration")
+	cmd.Flags().IntVar(&initialVms, "initial-vms", 5, "Number of VMs to create in the first iteration")
 	cmd.Flags().IntVar(&vmsIncrement, "increment", 5, "Number of additional VMs to add in each subsequent iteration")
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", 9, "Number of data volumes per VM")
 	cmd.Flags().StringVarP(&testNamespace, "namespace", "n", virtParallelTestName, "Namespace to run the test in")
