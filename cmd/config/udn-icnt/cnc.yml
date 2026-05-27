@@ -1,0 +1,22 @@
+apiVersion: k8s.ovn.org/v1
+kind: ClusterNetworkConnect
+metadata:
+  name: udn-icnt-cnc-{{.Iteration}}
+spec:
+  networkSelectors:
+    - networkSelectionType: ClusterUserDefinedNetworks
+      clusterUserDefinedNetworkSelector:
+        networkSelector:
+          matchLabels:
+            udn-icnt-pair-{{.Iteration}}: ""
+  {{- $firstOctet := add (div .Iteration 256) 60 }}
+  {{- $secondOctet := mod .Iteration 256 }}
+  {{- $cncCidr := print $firstOctet "." $secondOctet ".0.0/16" }}
+  connectSubnets:
+  - cidr: "{{$cncCidr}}"
+    networkPrefix: 24
+  connectivity:
+  {{- $connectivityList := splitList "," .connectivity }}
+  {{- range $connectivityList }}
+    - {{ . | trim }}
+  {{- end }}
