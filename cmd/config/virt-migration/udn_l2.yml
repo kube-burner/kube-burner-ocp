@@ -1,0 +1,11 @@
+apiVersion: k8s.ovn.org/v1
+kind: UserDefinedNetwork
+metadata:
+  name: l2-network-migration
+spec:
+  topology: Layer2
+  layer2:
+    role: Primary
+    subnets: {{ .udnSubnets }}
+    ipam:
+      lifecycle: Persistent
