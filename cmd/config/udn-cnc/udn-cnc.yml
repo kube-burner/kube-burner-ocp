@@ -1,0 +1,183 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+{{ if .PPROF }}
+  measurements:
+    - name: pprof
+      pprofInterval: {{.PPROF_INTERVAL}}
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovnkube-controller-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=30
+      - name: ovnk-control-plane-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/heap
+      - name: ovnk-control-plane-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=30
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+{{ $numNamespaces := mul .JOB_ITERATIONS 2 }}
+jobs:
+  # Job 1: Create namespaces (2 per pair)
+  - name: udn-cnc-create-namespaces
+    namespace: udn-cnc
+    jobIterations: {{$numNamespaces}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: configmap.yml
+        replicas: 1
+
+  # Job 2: Create CUDNs (2 per pair, cluster-scoped)
+  - name: udn-cnc-create-cudns
+    jobIterations: {{$numNamespaces}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    measurements:
+      - name: cudnLatency
+    objects:
+      - objectTemplate: cudn.yml
+        replicas: 1
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkCreated") | .status
+              value: "True"
+
+  # Job 3: Create ClusterNetworkConnect (1 per pair, cluster-scoped)
+  - name: udn-cnc-create-cnc
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    jobPause: {{.JOB_PAUSE}}
+    measurements:
+      - name: cncLatency
+    objects:
+      - objectTemplate: cnc.yml
+        replicas: 1
+        inputVars:
+          connectivity: "{{.CONNECTIVITY}}"
+
+  # Job 4: Deploy workload into all namespaces
+  - name: udn-cnc-workload
+    namespace: udn-cnc
+    jobIterations: {{$numNamespaces}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    preLoadImages: true
+    measurements:
+      - name: podLatency
+        thresholds:
+          - conditionType: Ready
+            metric: P99
+            threshold: {{.POD_READY_THRESHOLD}}
+    jobPause: 2m
+    metricsClosing: afterJobPause
+    cleanup: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      - objectTemplate: service.yml
+        replicas: 1
+
+      - objectTemplate: np-deny-all.yml
+        replicas: 1
+
+      - objectTemplate: np-allow-cnc-ingress.yml
+        replicas: 1
+
+      - objectTemplate: np-allow-cnc-egress.yml
+        replicas: 1
+
+      - objectTemplate: deployment-server.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 2
+
+      - objectTemplate: deployment-client.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
+
+{{ if .GC }}
+  # Cleanup Job 5: Delete namespaces (waitForDeletion: false — CUDN finalizers block)
+  - name: udn-cnc-cleanup-namespaces
+    jobType: delete
+    waitForDeletion: false
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: Namespace
+        apiVersion: v1
+        labelSelector: {kube-burner.io/job: udn-cnc-create-namespaces}
+
+  # Cleanup Job 6: Delete CNCs
+  - name: udn-cnc-cleanup-cncs
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: ClusterNetworkConnect
+        apiVersion: k8s.ovn.org/v1
+        labelSelector: {kube-burner.io/job: udn-cnc-create-cnc}
+
+  # Cleanup Job 7: Delete CUDNs (releases NAD finalizers, namespaces finish terminating)
+  - name: udn-cnc-cleanup-cudns
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: ClusterUserDefinedNetwork
+        apiVersion: k8s.ovn.org/v1
+        labelSelector: {kube-burner.io/job: udn-cnc-create-cudns}
+{{ end }}
