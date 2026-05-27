@@ -46,10 +46,6 @@ jobs:
 {{ end }}
 
 - name: {{ $testName }}-create-vms-{{ .counter }}
-  measurements:
-  - name: pvcLatency
-  - name: dataVolumeLatency
-  - name: vmiLatency
   jobType: create
   jobIterations: 1
   qps: 20
@@ -73,6 +69,10 @@ jobs:
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
   beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
+  - name: pvcLatency
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml
@@ -110,24 +110,10 @@ jobs:
       {{ end }}
       accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
 
-{{ if not .skipRestartJob }}
-- name: {{ $testName }}-restart-vms-{{ .counter }}
-  jobType: kubevirt
-  qps: 20
-  burst: 20
-  jobIterations: 1
-  maxWaitTimeout: 1h
-  objectDelay: 1m
-  objectWait: true
-  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
-  objects:
-  - kubeVirtOp: restart
-    labelSelector:
-      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
-{{ end }}
-
 {{ if not .skipResizeJob }}
 - name: {{ $testName }}-resize-volumes-{{ .counter }}
+  measurements:
+  - name: pvcLatency
   jobType: patch
   jobIterations: 1
   jobIterationDelay: 15s
@@ -169,6 +155,24 @@ jobs:
       labelSelector:
         {{ $volumeLabelKey }}: {{ $volumeLabelValueRoot }}
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+{{ end }}
+
+{{ if not .skipRestartJob }}
+- name: {{ $testName }}-restart-vms-{{ .counter }}
+  measurements:
+  - name: vmiLatency
+  jobType: kubevirt
+  qps: 20
+  burst: 20
+  jobIterations: 1
+  maxWaitTimeout: 1h
+  objectDelay: 1m
+  objectWait: true
+  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  objects:
+  - kubeVirtOp: restart
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 {{ end }}
 
 {{ if not .skipSnapshotJob }}
