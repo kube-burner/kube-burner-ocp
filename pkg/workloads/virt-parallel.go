@@ -161,7 +161,6 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 				}
 
 				os.Setenv("counter", fmt.Sprint(counter))
-				wh.SetVariables(AdditionalVars, SetVars)
 				rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 				if rc != 0 {
 					log.Errorf("Capacity failed in loop #%d", counter)

@@ -224,7 +224,8 @@ jobs:
   jobIterations: 1
   preLoadImages: false
   objects:
-  - kind: VirtualMachine
+  - apiVersion: kubevirt.io/v1
+    kind: VirtualMachine
     labelSelector:
       {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
   beforeCleanup: "./propagate_node_labels.sh {{ .selectedNode }} {{ $nsName }}"
