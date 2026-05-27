@@ -217,6 +217,18 @@ jobs:
 {{ end }}
 
 {{ if not .skipMigrationJob }}
+- name: {{ $testName }}-propagate-labels-{{ .counter }}
+  jobType: read
+  qps: 1
+  burst: 1
+  jobIterations: 1
+  preLoadImages: false
+  objects:
+  - kind: VirtualMachine
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  beforeCleanup: "./propagate_node_labels.sh {{ .selectedNode }} {{ $nsName }}"
+
 - name: {{ $testName }}-migrate-vms-{{ .counter }}
   measurements:
   - name: vmimLatency
