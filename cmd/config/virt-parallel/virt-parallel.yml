@@ -34,7 +34,7 @@ metricsEndpoints:
 jobs:
 # Run cleanup only when counter is 0
 {{ if eq (.counter | int) 0 }}
-- name: start-fresh
+- name: {{ $testName }}-start-fresh
   jobType: delete
   waitForDeletion: true
   qps: 5
@@ -45,7 +45,7 @@ jobs:
       {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
 {{ end }}
 
-- name: create-vms-{{ .counter }}
+- name: {{ $testName }}-create-vms-{{ .counter }}
   measurements:
   - name: pvcLatency
   - name: dataVolumeLatency
@@ -111,7 +111,7 @@ jobs:
       accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
 
 {{ if not .skipRestartJob }}
-- name: restart-vms-{{ .counter }}
+- name: {{ $testName }}-restart-vms-{{ .counter }}
   jobType: kubevirt
   qps: 20
   burst: 20
@@ -127,7 +127,7 @@ jobs:
 {{ end }}
 
 {{ if not .skipResizeJob }}
-- name: resize-volumes-{{ .counter }}
+- name: {{ $testName }}-resize-volumes-{{ .counter }}
   jobType: patch
   jobIterations: 1
   jobIterationDelay: 15s
@@ -172,7 +172,7 @@ jobs:
 {{ end }}
 
 {{ if not .skipSnapshotJob }}
-- name: snapshot-vms-{{ .counter }}
+- name: {{ $testName }}-snapshot-vms-{{ .counter }}
   measurements:
   - name: volumeSnapshotLatency
   jobType: create
@@ -213,7 +213,7 @@ jobs:
 {{ end }}
 
 {{ if not .skipMigrationJob }}
-- name: migrate-vms-{{ .counter }}
+- name: {{ $testName }}-migrate-vms-{{ .counter }}
   measurements:
   - name: vmimLatency
   jobType: kubevirt
@@ -230,7 +230,7 @@ jobs:
       kubevirt.io/nodeName: {{ .selectedNode }}
 {{ end }}
 
-- name: delete-vms-{{ .counter }}
+- name: {{ $testName }}-delete-vms-{{ .counter }}
   jobType: delete
   waitForDeletion: true
   qps: 5
