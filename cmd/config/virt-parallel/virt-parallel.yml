@@ -110,6 +110,22 @@ jobs:
       {{ end }}
       accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
 
+{{ if not .skipRestartJob }}
+- name: restart-vms-{{ .counter }}
+  jobType: kubevirt
+  qps: 20
+  burst: 20
+  jobIterations: 1
+  maxWaitTimeout: 1h
+  objectDelay: 1m
+  objectWait: true
+  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  objects:
+  - kubeVirtOp: restart
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+{{ end }}
+
 {{ if not .skipResizeJob }}
 - name: resize-volumes-{{ .counter }}
   jobType: patch
@@ -155,20 +171,7 @@ jobs:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 {{ end }}
 
-- name: restart-vms-{{ .counter }}
-  jobType: kubevirt
-  qps: 20
-  burst: 20
-  jobIterations: 1
-  maxWaitTimeout: 1h
-  objectDelay: 1m
-  objectWait: true
-  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
-  objects:
-  - kubeVirtOp: restart
-    labelSelector:
-      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
-
+{{ if not .skipSnapshotJob }}
 - name: snapshot-vms-{{ .counter }}
   measurements:
   - name: volumeSnapshotLatency
@@ -207,6 +210,7 @@ jobs:
         value: "True"
       labelSelector:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+{{ end }}
 
 {{ if not .skipMigrationJob }}
 - name: migrate-vms-{{ .counter }}
