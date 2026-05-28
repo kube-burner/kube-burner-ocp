@@ -35,7 +35,7 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	var qps, burst float64
 	var churnDuration, churnDelay time.Duration
 	var deletionStrategy string
-	var namespacedIterations, churn, pprof bool
+	var namespacedIterations, pprof bool
 
 	// Controller configuration
 	var numControllers, numThreads int
@@ -70,7 +70,6 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["PPROF"] = pprof
 
 			// Set churn configuration
-			AdditionalVars["CHURN"] = churn
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -101,9 +100,6 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["LARGE_JOB_PERCENT"] = largeJobPercent
 
 			log.Infof("Running build-farm workload with %d job iterations across %d iterations per namespace", jobIterations, iterationsPerNamespace)
-			if churn {
-				log.Infof("Churn enabled: %d cycles, %d%% churn rate, %v delay", churnCycles, churnPercent, churnDelay)
-			}
 			log.Infof("Controller config: %d controllers, %d threads per controller", numControllers, numThreads)
 
 			setMetrics(cmd, metricsProfiles)
@@ -121,7 +117,6 @@ func NewBuildFarm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().Float64Var(&burst, "burst", 40, "Burst for client rate limiting")
 
 	// Churn flags
-	cmd.Flags().BoolVar(&churn, "churn", true, "Enable churning")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 5, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 1*time.Hour, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 3*time.Minute, "Time to wait between each churn")
