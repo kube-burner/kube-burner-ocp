@@ -29,6 +29,6 @@ echo "Found $VM_COUNT VMs running on node $NODE_NAME"
 
 # Label all VMs in a single API call
 echo "Labeling VMs: $VM_NAMES"
-oc label vm -n "$NAMESPACE" $VM_NAMES "kubevirt.io/nodeName=$NODE_NAME" --overwrite
+oc label vm -n "$NAMESPACE" "$VM_NAMES" "kubevirt.io/nodeName=$NODE_NAME" --overwrite
 
 echo "Successfully labeled $VM_COUNT VMs with kubevirt.io/nodeName=$NODE_NAME"
