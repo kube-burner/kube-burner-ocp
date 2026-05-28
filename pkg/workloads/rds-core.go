@@ -29,9 +29,10 @@ import (
 func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, churnPercent, churnCycles, dpdkCores int
 	var svcLatency bool
-	var churnDelay, churnDuration, podReadyThreshold time.Duration
+	var churnDelay, churnDuration, podReadyThreshold, idleDuration time.Duration
 	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool, churnMode string
 	var metricsProfiles []string
+	var phased bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "rds-core",
@@ -57,7 +58,9 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["PERF_PROFILE"] = perfProfile
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["SVC_LATENCY"] = svcLatency
+			AdditionalVars["IDLE_DURATION"] = idleDuration
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
+			AdditionalVars["PHASED"] = phased
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -78,6 +81,8 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&perfProfile, "perf-profile", "default", "Performance profile implemented in the cluster")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&idleDuration, "idle-duration", 3*time.Minute, "Duration of idle periods for baseline and post-churn metrics collection")
+	cmd.Flags().BoolVar(&phased, "phased", false, "Use phased config with idle periods for baseline and post-churn metrics collection")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
 	return cmd
 }
