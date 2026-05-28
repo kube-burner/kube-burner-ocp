@@ -37,6 +37,21 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+{{ if .PHASED }}
+  # Idle for baseline metrics collection
+  - name: rds-idle-pre
+    namespace: rds-idle
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    jobPause: {{.IDLE_DURATION}}
+    skipIndexing: true
+    objects:
+      - objectTemplate: configmap.yml
+        replicas: 1
+{{ end }}
+
   - name: bgp-setup
     namespace: metallb-system
     jobIterations: 1
@@ -62,6 +77,10 @@ jobs:
     podWait: false
     waitWhenFinished: true
     preLoadImages: true
+{{ if .PHASED }}
+    cleanup: false
+    gc: false
+{{ end }}
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -127,4 +146,19 @@ jobs:
           dpdk_cores: {{.DPDK_CORES}}
           dpdk_hugepages: {{.DPDK_HUGEPAGES}}
           perf_profile: {{.PERF_PROFILE}}
+
+{{ if .PHASED }}
+  # Post-churn idle for metrics collection
+  - name: rds-idle-post
+    namespace: rds-idle
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    jobPause: {{.IDLE_DURATION}}
+    skipIndexing: true
+    objects:
+      - objectTemplate: configmap.yml
+        replicas: 1
+{{ end }}
 
