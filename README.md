@@ -1095,6 +1095,8 @@ kube-burner-ocp evpn --scenario north-south \
 
 This workload tests BGP route exchange import and export scenarios for the CUDNs.
 
+For a detailed technical explanation of the latency measurement workflow, including architecture diagrams and the export/import scenario flows, see the [UDN BGP Latency Measurement](docs/udn-bgp-latency-measurement.md) documentation.
+
 Assumptions in this workload:
 1. Kube burner must be running on a Linux host
 2. Kube burner should be running on the host which is not used as a bastion host to deploy OCP cluster.
