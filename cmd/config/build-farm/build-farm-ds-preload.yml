@@ -1,0 +1,34 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: build-farm-preload-{{.preloadName}}
+spec:
+  selector:
+    matchLabels:
+      name: build-farm-preload-{{.preloadName}}
+  template:
+    metadata:
+      labels:
+        name: build-farm-preload-{{.preloadName}}
+    spec:
+      hostNetwork: true
+      tolerations:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - name: pause
+        image: {{.preloadImage}}
+        command: [sleep, inf]
+        imagePullPolicy: IfNotPresent
