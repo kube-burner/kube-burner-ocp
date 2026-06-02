@@ -242,7 +242,6 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} build-farm \
     --job-iterations=1 \
     --iterations-per-namespace=10 \
-    --churn=true \
     --churn-cycles=1 \
     --churn-percent=60 \
     --churn-delay=5s \
