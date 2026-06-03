@@ -10,12 +10,13 @@ spec:
     metadata:
       labels:
         kubevirt.io/os: fedora
+        app: client
     spec:
       terminationGracePeriodSeconds: 0
       domain:
         resources:
           requests:
-            memory: 256Mi
+            memory: 512Mi
         devices:
           disks:
           - name: containerdisk
@@ -39,15 +40,21 @@ spec:
         containerDisk:
           image: {{.vmImage}}
           imagePullPolicy: IfNotPresent
+
       - name: cloudinitdisk
         cloudInitNoCloud:
+          networkData: |
+            version: 2
+            ethernets:
+              eth0:
+                dhcp4: true
           userData: |-
             #cloud-config
             password: perfscale
             chpasswd: { expire: False }
             runcmd:
               - dnf install -y --nodocs curl
-              - curl -sS --fail 10.132.0.5 --retry 30 --retry-delay 10
+              - curl -sS --fail http://udn-density-{{.Replica}}.svc.cluster.local/256.html --retry 30 --retry-delay 10
       - name: emptydisk
         emptyDisk:
           capacity: "50Mi"

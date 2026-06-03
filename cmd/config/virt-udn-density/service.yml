@@ -2,7 +2,7 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: udn-density-svc
+  name: udn-density-{{.Replica}}
 spec:
   selector:
     app: nginx
@@ -10,5 +10,5 @@ spec:
   - name: http
     protocol: TCP
     port: 80
-    targetPort: 80
+    targetPort: 8080
   type: ClusterIP

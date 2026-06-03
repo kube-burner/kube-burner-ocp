@@ -110,7 +110,7 @@ jobs:
     waitWhenFinished: true
     jobPause: 2m
     objects:
-
+      - objectTemplate: service.yml
       - objectTemplate: vm-client.yml
         replicas: {{.VMS_PER_ITERATION}}
         inputVars:
