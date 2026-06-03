@@ -128,6 +128,10 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --vms-per-node=2
 }
 
+@test "virt-cudn-l2-density" {
+  run_cmd ${KUBE_BURNER_OCP} virt-cudn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2
+}
+
 @test "udn-density-l3-pods: churning=false" {
   run_cmd ${KUBE_BURNER_OCP} udn-density-pods --extract
   # Disable garbage-collection through using the config file

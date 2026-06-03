@@ -54,7 +54,7 @@ spec:
             chpasswd: { expire: False }
             runcmd:
               - dnf install -y --nodocs curl
-              - curl -sS --fail http://udn-density-{{.Replica}}.svc.cluster.local/256.html --retry 30 --retry-delay 10
+              - curl -sS --fail http://udn-density-{{.Replica}}.svc.cluster.local --retry 30 --retry-delay 10
       - name: emptydisk
         emptyDisk:
           capacity: "50Mi"

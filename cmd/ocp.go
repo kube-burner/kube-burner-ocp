@@ -90,7 +90,12 @@ func openShiftCmd() *cobra.Command {
 			clusterhealth.ClusterHealthCheck(ignoreHealthCheck)
 		}
 		kubeClientProvider := config.NewKubeClientProvider("", "")
-		workloadDir := filepath.Join(rootDir, cmd.Name())
+		configDir := cmd.Name()
+		if cmd.Annotations["configDir"] != "" {
+			log.Debugf("Using annotated config directory: %s", cmd.Annotations["configDir"])
+			configDir = cmd.Annotations["configDir"]
+		}
+		workloadDir := filepath.Join(rootDir, configDir)
 		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, workloadDir, metricsProfilesDir, alertsDir, scriptsDir, kubeClientProvider)
 
 		// Set common variables that all workloads can use
@@ -150,7 +155,8 @@ func openShiftCmd() *cobra.Command {
 		ocpWorkloads.NewEgressIP(&wh, "egressip"),
 		ocpWorkloads.NewWhereabouts(&wh),
 		ocpWorkloads.NewVirtDensity(&wh),
-		ocpWorkloads.NewVirtUDNDensity(&wh),
+		ocpWorkloads.NewVirtUDNDensity(&wh, "virt-udn-density"),
+		ocpWorkloads.NewVirtUDNDensity(&wh, "virt-cudn-density"),
 		clusterhealth.ClusterHealth(),
 		ocpWorkloads.CustomWorkload(&wh),
 		ocpWorkloads.NewVirtCapacityBenchmark(&wh),
