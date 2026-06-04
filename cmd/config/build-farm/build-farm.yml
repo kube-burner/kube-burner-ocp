@@ -25,6 +25,31 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+  - name: build-farm-preload-images
+    namespace: build-farm-preload
+    jobIterations: 1
+    skipIndexing: true
+    namespacedIterations: false
+    preLoadImages: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: "false"
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: build-farm-preload-rolebinding.yml
+        replicas: 1
+      - objectTemplate: build-farm-ds-preload.yml
+        replicas: 1
+        inputVars:
+          preloadName: build-image
+          preloadImage: "{{ .BUILD_IMAGE }}"
+      - objectTemplate: build-farm-ds-preload.yml
+        replicas: 1
+        inputVars:
+          preloadName: metadata-adder
+          preloadImage: "quay.io/kube-burner/build-farm-controller:metadata-adder"
+
   - name: build-farm-controller
     namespace: build-farm-controllers
     jobIterations: 1
