@@ -750,14 +750,12 @@ Test high-scale VM cloning by deploying VMs across multiple namespaces with inde
 
 - **Multi-namespace architecture**: Each test namespace maintains its own master image (DataVolume/VolumeSnapshot/DataSource)
 - **Namespace isolation**: Clones within a namespace are created from that namespace's master image, not a centralized source
-- **Scalable cloning**: Multiple namespaces can clone VMs in parallel from their respective master images
-- **Flexible batching**: VMs are created in iterations within each namespace (controlled by `--iterations` and `--vms-per-iteration`)
 
 #### Test Sequence
 
 The test follows this workflow:
 
-1. **Create base VMs**: Create N base VMs in a base namespace from a container disk (Fedora 41)
+1. **Create base VMs**: Create N base VMs in a base namespace from a container disk
 2. **Stop base VMs**: Stop all base VMs to ensure data consistency
 3. **Create test DataSources** (per namespace, in parallel):
    - Create a `DataVolume` from the corresponding base VM's PVC
@@ -766,9 +764,6 @@ The test follows this workflow:
 4. **Clone VMs** (per namespace, in batches):
    - Create VMs in iterations, cloning from the namespace's DataSource
    - Each VM optionally includes additional blank data volumes (controlled by `--data-volume-count`)
-   - VMs start automatically with `runStrategy: RerunOnFailure`
-5. **Verify connectivity**: Check all VMs are running and accessible via SSH
-6. **Optional cleanup**: Remove all resources if `--cleanup` is set
 
 #### Tested StorageClass
 
@@ -802,22 +797,11 @@ Users may control the workload scale by passing the following arguments:
 
 **Total PVCs** = `Total VMs × (1 + data-volume-count)` (1 root PVC + N data volumes per VM)
 
-Example: With `--namespaces=2 --iterations=3 --vms-per-iteration=4 --data-volume-count=2`:
-- Total VMs: 2 × 3 × 4 = 24 VMs
-- Total PVCs: 24 × (1 + 2) = 72 PVCs
-
 #### Batching Control
 
 - `--job-iteration-delay` - Delay between iterations within a namespace (default: 1m)
 
 Namespaces are processed in parallel. Within each namespace, VMs are created in batches (iterations) with the specified delay between batches.
-
-#### VM Configuration
-
-The workload uses hardcoded VM specs:
-- **Root volume size**: 6Gi (DataVolume cloned from base VM)
-- **VM memory**: 512Mi
-- **VM image**: Fedora 41 container disk (`quay.io/containerdisks/fedora:41`)
 
 #### Volume Access Mode
 
