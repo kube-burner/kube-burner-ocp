@@ -195,6 +195,22 @@ teardown_file() {
   run_cmd oc delete ns -l kube-burner.io/test-name=virt-clone
 }
 
+@test "virt-clone-multi" {
+  local STORAGE_PARAMETER
+  if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
+    STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
+  fi
+  run_cmd ${KUBE_BURNER_OCP} virt-clone-multi ${STORAGE_PARAMETER} --namespaces 2 --iterations 1 --vms-per-iteration 2 --data-volume-count 1 --cleanup
+  local jobs=("virt-clone-multi-create-base-vm" "virt-clone-multi-create-vms")
+  for job in "${jobs[@]}"; do
+    check_metric_recorded ./virt-clone-multi-results ${job} dvLatency dvReadyLatency
+    check_metric_recorded ./virt-clone-multi-results ${job} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-clone-multi-results ${job} dvLatency Ready
+    check_quantile_recorded ./virt-clone-multi-results ${job} vmiLatency VMReady
+  done
+  check_destroyed_ns virt-clone-multi
+}
+
 @test "pvc-density" {
   run_cmd ${KUBE_BURNER_OCP} pvc-density --iterations=2
 }
