@@ -16,6 +16,10 @@ spec:
         pattern: app-database
         role: client
     spec:
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -27,6 +31,10 @@ spec:
                 operator: DoesNotExist
               - key: node-role.kubernetes.io/workload
                 operator: DoesNotExist
+      volumes:
+      - name: uperf-profiles
+        configMap:
+          name: uperf-profiles
       containers:
       - name: uperf-client
         image: {{.uperfImage}}
@@ -37,11 +45,13 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "1000m"
+        volumeMounts:
+        - name: uperf-profiles
+          mountPath: /profiles
+          readOnly: true
         env:
         - name: METRICS_HOST
-          valueFrom:
-            fieldRef:
-              fieldPath: status.hostIP
+          value: "synthetic-app-metrics-store.synthetic-app-infra.svc"
         - name: METRICS_PORT
           value: "9999"
         - name: PATTERN_NAME
@@ -58,10 +68,6 @@ spec:
           value: "db-svc"
         - name: SERVER_PORT
           value: "20000"
-        - name: DB_CONNECTIONS
-          value: "{{.dbConnections}}"
-        - name: TRAFFIC_DURATION
-          value: "{{.trafficDuration}}"
         - name: REPORT_INTERVAL
           value: "{{.metricsReportInterval}}"
         command:
@@ -70,56 +76,30 @@ spec:
         - |
           set -e
           METRICS_URL="http://${METRICS_HOST}:${METRICS_PORT}/metrics"
-          PROFILE="/tmp/app-database.xml"
+          PROFILE_TEMPLATE="/profiles/app-database.xml"
+          PROFILE="/tmp/profile.xml"
 
-          # Create uperf profile for OLTP-style database traffic
-          cat > ${PROFILE} << 'PROFILE_EOF'
-          <?xml version="1.0"?>
-          <profile name="app-database">
-            <group nthreads="${DB_CONNECTIONS}">
-              <transaction iterations="1">
-                <flowop type="connect" options="remotehost=${SERVER_HOST} port=${SERVER_PORT} protocol=tcp tcp_nodelay"/>
-              </transaction>
-              <transaction duration="${TRAFFIC_DURATION}">
-                <flowop type="write" options="size=128"/>
-                <flowop type="read" options="size=1024"/>
-                <flowop type="write" options="size=512"/>
-                <flowop type="read" options="size=64"/>
-              </transaction>
-              <transaction iterations="1">
-                <flowop type="disconnect"/>
-              </transaction>
-            </group>
-          </profile>
-          PROFILE_EOF
-
-          # Substitute environment variables
-          envsubst < ${PROFILE} > /tmp/profile.xml
+          # Substitute environment variables in profile using sed
+          sed -e "s|\$SERVER_HOST|${SERVER_HOST}|g" \
+              -e "s|\$SERVER_PORT|${SERVER_PORT}|g" \
+              ${PROFILE_TEMPLATE} > ${PROFILE}
 
           echo "Starting uperf client for app-database pattern"
-          echo "Server: ${SERVER_HOST}:${SERVER_PORT}, DB Connections: ${DB_CONNECTIONS}"
+          echo "Server: ${SERVER_HOST}:${SERVER_PORT}"
+          cat ${PROFILE}
 
           # Run uperf and report metrics periodically
           while true; do
-            OUTPUT=$(timeout ${REPORT_INTERVAL}s uperf -m /tmp/profile.xml -a 2>&1 || true)
+            OUTPUT=$(timeout ${REPORT_INTERVAL}s uperf -m ${PROFILE} -a 2>&1 || true)
 
-            # Parse metrics
-            OPS_SEC=$(echo "$OUTPUT" | grep -oP 'Txn1\s+\K[\d.]+(?=\s+ops)' | tail -1 || echo "0")
-            BYTES_SEC=$(echo "$OUTPUT" | grep -oP '[\d.]+(?=\s+Mb/s)' | tail -1 || echo "0")
+            # Parse metrics from uperf output (from "Total" line)
+            # Example: "Total     22.89MB /   7.31(s) =    26.28Mb/s       51322op/s"
+            OPS_SEC=$(echo "$OUTPUT" | grep "^Total" | grep -oP '\d+(?=op/s)' || echo "0")
+            BYTES_SEC=$(echo "$OUTPUT" | grep "^Total" | grep -oP '[\d.]+(?=Mb/s)' || echo "0")
 
-            # Report to metrics store
-            curl -s -X POST "${METRICS_URL}" \
-              -H "Content-Type: application/json" \
-              -d "{
-                \"timestamp\": \"$(date -Iseconds)\",
-                \"namespace\": \"${POD_NAMESPACE}\",
-                \"pattern\": \"${PATTERN_NAME}\",
-                \"client\": \"${POD_NAME}\",
-                \"metrics\": {
-                  \"ops_per_sec\": ${OPS_SEC:-0},
-                  \"throughput_mbps\": ${BYTES_SEC:-0}
-                }
-              }" || echo "Failed to report metrics"
+            # Report to metrics store (single-line JSON for proper parsing)
+            JSON_DATA="{\"timestamp\":\"$(date -Iseconds)\",\"namespace\":\"${POD_NAMESPACE}\",\"pattern\":\"${PATTERN_NAME}\",\"client\":\"${POD_NAME}\",\"metrics\":{\"ops_per_sec\":${OPS_SEC:-0},\"throughput_mbps\":${BYTES_SEC:-0}}}"
+            curl -s -X POST "${METRICS_URL}" -H "Content-Type: application/json" -d "${JSON_DATA}" || echo "Failed to report metrics"
 
             echo "Reported metrics: ops/sec=${OPS_SEC}, throughput=${BYTES_SEC} Mb/s"
           done

@@ -12,7 +12,7 @@ spec:
   - from:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: {{.Namespace}}
+          kubernetes.io/metadata.name: {{.namespace}}-{{.Iteration}}
     - podSelector: {}
     ports:
     - protocol: TCP
@@ -21,7 +21,7 @@ spec:
   - to:
     - namespaceSelector:
         matchLabels:
-          kubernetes.io/metadata.name: {{.Namespace}}
+          kubernetes.io/metadata.name: {{.namespace}}-{{.Iteration}}
     - podSelector: {}
     ports:
     - protocol: TCP

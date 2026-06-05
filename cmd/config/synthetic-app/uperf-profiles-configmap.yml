@@ -7,11 +7,11 @@ data:
   users-frontend.xml: |
     <?xml version="1.0"?>
     <profile name="users-frontend">
-      <group nthreads="100">
+      <group nthreads="{{.users}}">
         <transaction iterations="1">
           <flowop type="connect" options="remotehost=$SERVER_HOST port=$SERVER_PORT protocol=tcp tcp_nodelay"/>
         </transaction>
-        <transaction duration="300s">
+        <transaction duration="{{.trafficDuration}}">
           <flowop type="write" options="size=512"/>
           <flowop type="read" options="size=2048"/>
           <flowop type="think" options="duration=50ms"/>
@@ -25,12 +25,12 @@ data:
   frontend-microservices.xml: |
     <?xml version="1.0"?>
     <profile name="frontend-microservices">
-      <group nthreads="50">
+      <group nthreads="{{.threads}}">
         <transaction iterations="1">
           <flowop type="connect" options="remotehost=$MS1_HOST port=$SERVER_PORT protocol=tcp"/>
           <flowop type="connect" options="conn=1 remotehost=$MS2_HOST port=$SERVER_PORT protocol=tcp"/>
         </transaction>
-        <transaction duration="300s">
+        <transaction duration="{{.trafficDuration}}">
           <flowop type="write" options="size=256"/>
           <flowop type="write" options="conn=1 size=256"/>
           <flowop type="read" options="size=1024"/>
@@ -46,11 +46,11 @@ data:
   app-database.xml: |
     <?xml version="1.0"?>
     <profile name="app-database">
-      <group nthreads="200">
+      <group nthreads="{{.dbConnections}}">
         <transaction iterations="1">
           <flowop type="connect" options="remotehost=$SERVER_HOST port=$SERVER_PORT protocol=tcp tcp_nodelay"/>
         </transaction>
-        <transaction duration="300s">
+        <transaction duration="{{.trafficDuration}}">
           <flowop type="write" options="size=128"/>
           <flowop type="read" options="size=1024"/>
           <flowop type="write" options="size=512"/>

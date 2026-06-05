@@ -86,9 +86,9 @@ from uperf clients and aggregates them for kube-burner indexing.`,
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "Number of synthetic app namespaces to create")
 
 	// Resource density configuration (filler resources for control plane load)
-	cmd.Flags().IntVar(&fillerDeployments, "filler-deployments", 63, "Number of filler deployments per namespace (adds to 70 total with traffic patterns)")
-	cmd.Flags().IntVar(&fillerServices, "filler-services", 45, "Number of filler services per namespace (adds to 50 total)")
-	cmd.Flags().IntVar(&networkPolicies, "network-policies", 200, "Number of network policies per namespace")
+	cmd.Flags().IntVar(&fillerDeployments, "filler-deployments", 1, "Number of filler deployments per namespace (adds to 70 total with traffic patterns)")
+	cmd.Flags().IntVar(&fillerServices, "filler-services", 1, "Number of filler services per namespace (adds to 50 total)")
+	cmd.Flags().IntVar(&networkPolicies, "network-policies", 5, "Number of network policies per namespace")
 
 	// Traffic pattern configuration
 	cmd.Flags().IntVar(&usersPerFrontend, "users-per-frontend", 100, "Number of concurrent user connections to frontend (Pattern 1 threads)")
