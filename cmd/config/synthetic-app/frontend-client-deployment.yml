@@ -1,0 +1,130 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: frontend-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-client
+      pattern: frontend-microservices
+  template:
+    metadata:
+      labels:
+        app: frontend-client
+        pattern: frontend-microservices
+        role: client
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - name: uperf-client
+        image: {{.uperfImage}}
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+        env:
+        - name: METRICS_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: METRICS_PORT
+          value: "9999"
+        - name: PATTERN_NAME
+          value: "frontend-microservices"
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MS1_HOST
+          value: "microservice-svc-1"
+        - name: MS2_HOST
+          value: "microservice-svc-2"
+        - name: SERVER_PORT
+          value: "20000"
+        - name: THREADS
+          value: "{{.threads}}"
+        - name: TRAFFIC_DURATION
+          value: "{{.trafficDuration}}"
+        - name: REPORT_INTERVAL
+          value: "{{.metricsReportInterval}}"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          METRICS_URL="http://${METRICS_HOST}:${METRICS_PORT}/metrics"
+          PROFILE="/tmp/frontend-microservices.xml"
+
+          # Create uperf profile for fan-out to multiple microservices
+          cat > ${PROFILE} << 'PROFILE_EOF'
+          <?xml version="1.0"?>
+          <profile name="frontend-microservices">
+            <group nthreads="${THREADS}">
+              <transaction iterations="1">
+                <flowop type="connect" options="remotehost=${MS1_HOST} port=${SERVER_PORT} protocol=tcp"/>
+                <flowop type="connect" options="conn=1 remotehost=${MS2_HOST} port=${SERVER_PORT} protocol=tcp"/>
+              </transaction>
+              <transaction duration="${TRAFFIC_DURATION}">
+                <flowop type="write" options="size=256"/>
+                <flowop type="write" options="conn=1 size=256"/>
+                <flowop type="read" options="size=1024"/>
+                <flowop type="read" options="conn=1 size=1024"/>
+              </transaction>
+              <transaction iterations="1">
+                <flowop type="disconnect"/>
+                <flowop type="disconnect" options="conn=1"/>
+              </transaction>
+            </group>
+          </profile>
+          PROFILE_EOF
+
+          # Substitute environment variables
+          envsubst < ${PROFILE} > /tmp/profile.xml
+
+          echo "Starting uperf client for frontend-microservices pattern"
+          echo "MS1: ${MS1_HOST}:${SERVER_PORT}, MS2: ${MS2_HOST}:${SERVER_PORT}, Threads: ${THREADS}"
+
+          # Run uperf and report metrics periodically
+          while true; do
+            OUTPUT=$(timeout ${REPORT_INTERVAL}s uperf -m /tmp/profile.xml -a 2>&1 || true)
+
+            # Parse metrics
+            OPS_SEC=$(echo "$OUTPUT" | grep -oP 'Txn1\s+\K[\d.]+(?=\s+ops)' | tail -1 || echo "0")
+            BYTES_SEC=$(echo "$OUTPUT" | grep -oP '[\d.]+(?=\s+Mb/s)' | tail -1 || echo "0")
+
+            # Report to metrics store
+            curl -s -X POST "${METRICS_URL}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"timestamp\": \"$(date -Iseconds)\",
+                \"namespace\": \"${POD_NAMESPACE}\",
+                \"pattern\": \"${PATTERN_NAME}\",
+                \"client\": \"${POD_NAME}\",
+                \"metrics\": {
+                  \"ops_per_sec\": ${OPS_SEC:-0},
+                  \"throughput_mbps\": ${BYTES_SEC:-0}
+                }
+              }" || echo "Failed to report metrics"
+
+            echo "Reported metrics: ops/sec=${OPS_SEC}, throughput=${BYTES_SEC} Mb/s"
+          done
+        imagePullPolicy: IfNotPresent

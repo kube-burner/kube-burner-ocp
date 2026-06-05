@@ -1,0 +1,15 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: db-svc
+spec:
+  selector:
+    app: db-server
+    pattern: app-database
+  ports:
+  - name: uperf
+    port: 20000
+    targetPort: 20000
+    protocol: TCP
+  type: ClusterIP

@@ -1,0 +1,180 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  # Phase 1: Create metrics infrastructure (run once)
+  - name: synthetic-app-metrics-store
+    namespace: synthetic-app-metrics
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    podWait: true
+    waitWhenFinished: true
+    cleanup: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: metrics-store-daemonset.yml
+        replicas: 1
+
+      - objectTemplate: metrics-store-service.yml
+        replicas: 1
+
+  # Phase 2: Create uperf profile ConfigMaps (shared across namespaces)
+  - name: synthetic-app-profiles
+    namespace: synthetic-app-profiles
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    podWait: false
+    waitWhenFinished: true
+    cleanup: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: uperf-profiles-configmap.yml
+        replicas: 1
+
+  # Phase 3: Create synthetic applications (one per namespace)
+  - name: synthetic-app
+    namespace: synthetic-app
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: true
+    waitWhenFinished: true
+    preLoadImages: true
+    jobPause: 10s
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      # Pattern 1: Users -> Frontend (many-to-one)
+      - objectTemplate: frontend-server-deployment.yml
+        replicas: 1
+        inputVars:
+          uperfImage: {{.UPERF_IMAGE}}
+
+      - objectTemplate: frontend-server-service.yml
+        replicas: 1
+
+      - objectTemplate: user-client-deployment.yml
+        replicas: 1
+        inputVars:
+          uperfImage: {{.UPERF_IMAGE}}
+          users: {{.USERS_PER_FRONTEND}}
+          trafficDuration: {{.TRAFFIC_DURATION}}
+          metricsReportInterval: {{.METRICS_REPORT_INTERVAL}}
+
+      # Pattern 2: Frontend -> Microservices (one-to-many, fan-out)
+      - objectTemplate: microservice-server-deployment.yml
+        replicas: 2
+        inputVars:
+          uperfImage: {{.UPERF_IMAGE}}
+
+      - objectTemplate: microservice-server-service.yml
+        replicas: 2
+
+      - objectTemplate: frontend-client-deployment.yml
+        replicas: 1
+        inputVars:
+          uperfImage: {{.UPERF_IMAGE}}
+          threads: {{.FRONTEND_THREADS}}
+          trafficDuration: {{.TRAFFIC_DURATION}}
+          metricsReportInterval: {{.METRICS_REPORT_INTERVAL}}
+
+      # Pattern 3: App -> Database (OLTP-style)
+      - objectTemplate: db-server-deployment.yml
+        replicas: 1
+        inputVars:
+          uperfImage: {{.UPERF_IMAGE}}
+
+      - objectTemplate: db-server-service.yml
+        replicas: 1
+
+      - objectTemplate: app-client-deployment.yml
+        replicas: 1
+        inputVars:
+          uperfImage: {{.UPERF_IMAGE}}
+          dbConnections: {{.DB_CONNECTIONS}}
+          trafficDuration: {{.TRAFFIC_DURATION}}
+          metricsReportInterval: {{.METRICS_REPORT_INTERVAL}}
+
+      # Filler deployments (control plane load)
+      - objectTemplate: filler-deployment.yml
+        replicas: {{.FILLER_DEPLOYMENTS}}
+
+      # Filler services
+      - objectTemplate: filler-service.yml
+        replicas: {{.FILLER_SERVICES}}
+
+      # Network policies (control plane load)
+      - objectTemplate: network-policy-deny-all.yml
+        replicas: 1
+
+      - objectTemplate: network-policy-allow-traffic.yml
+        replicas: 1
+
+      - objectTemplate: network-policy-filler.yml
+        replicas: {{.NETWORK_POLICIES}}
+
+{{ if .CHURN }}
+  # Phase 4: Control plane churn (optional - creates additional resources while traffic runs)
+  - name: synthetic-app-churn
+    namespace: synthetic-app-churn
+    jobIterations: 1
+    qps: 2
+    burst: 5
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: false
+    cleanup: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: filler-deployment.yml
+        replicas: {{.CHURN_DEPLOYMENTS}}
+
+      - objectTemplate: network-policy-filler.yml
+        replicas: {{.CHURN_NETWORK_POLICIES}}
+{{ end }}

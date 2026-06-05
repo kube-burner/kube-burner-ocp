@@ -1,0 +1,167 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: synthetic-app-metrics-store
+spec:
+  selector:
+    matchLabels:
+      app: synthetic-app-metrics-store
+  template:
+    metadata:
+      labels:
+        app: synthetic-app-metrics-store
+    spec:
+      tolerations:
+      - operator: Exists
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+      containers:
+      - name: metrics-store
+        image: quay.io/cloud-bulldozer/nginx:latest
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        ports:
+        - containerPort: 9999
+          hostPort: 9999
+          name: metrics
+          protocol: TCP
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+
+          # Create a simple metrics store using shell and netcat
+          METRICS_FILE="/tmp/metrics.json"
+          AGGREGATED_FILE="/tmp/aggregated.json"
+
+          # Initialize metrics files
+          echo '{"metrics": []}' > ${METRICS_FILE}
+          echo '{"summary": {}, "by_pattern": {}, "by_namespace": {}}' > ${AGGREGATED_FILE}
+
+          # Create CGI-style script to handle HTTP requests
+          cat > /tmp/metrics-handler.sh << 'HANDLER_EOF'
+          #!/bin/sh
+          read -r REQUEST_LINE
+          METHOD=$(echo "$REQUEST_LINE" | cut -d' ' -f1)
+          PATH=$(echo "$REQUEST_LINE" | cut -d' ' -f2)
+
+          # Read headers
+          CONTENT_LENGTH=0
+          while read -r header; do
+            header=$(echo "$header" | tr -d '\r')
+            [ -z "$header" ] && break
+            case "$header" in
+              Content-Length:*) CONTENT_LENGTH=$(echo "$header" | cut -d' ' -f2) ;;
+            esac
+          done
+
+          METRICS_FILE="/tmp/metrics.json"
+          AGGREGATED_FILE="/tmp/aggregated.json"
+
+          case "$METHOD $PATH" in
+            "POST /metrics")
+              # Read POST body
+              if [ "$CONTENT_LENGTH" -gt 0 ]; then
+                BODY=$(head -c "$CONTENT_LENGTH")
+                TIMESTAMP=$(date -Iseconds)
+
+                # Append metric to file (simple append, will aggregate on GET)
+                echo "$BODY" >> /tmp/metrics_raw.log
+
+                echo "HTTP/1.1 200 OK"
+                echo "Content-Type: application/json"
+                echo ""
+                echo '{"status": "ok", "received": true}'
+              else
+                echo "HTTP/1.1 400 Bad Request"
+                echo "Content-Type: application/json"
+                echo ""
+                echo '{"error": "no body"}'
+              fi
+              ;;
+            "GET /metrics")
+              # Return all collected metrics
+              echo "HTTP/1.1 200 OK"
+              echo "Content-Type: application/json"
+              echo ""
+              if [ -f /tmp/metrics_raw.log ]; then
+                # Aggregate metrics by pattern and namespace
+                echo '{"node": "'$NODE_NAME'", "metrics": ['
+                FIRST=true
+                while read -r line; do
+                  if [ "$FIRST" = true ]; then
+                    FIRST=false
+                  else
+                    echo ","
+                  fi
+                  echo "$line"
+                done < /tmp/metrics_raw.log
+                echo ']}'
+              else
+                echo '{"node": "'$NODE_NAME'", "metrics": []}'
+              fi
+              ;;
+            "GET /health")
+              echo "HTTP/1.1 200 OK"
+              echo "Content-Type: application/json"
+              echo ""
+              echo '{"status": "healthy", "node": "'$NODE_NAME'"}'
+              ;;
+            "DELETE /metrics")
+              # Clear metrics (for reset between runs)
+              rm -f /tmp/metrics_raw.log
+              echo "HTTP/1.1 200 OK"
+              echo "Content-Type: application/json"
+              echo ""
+              echo '{"status": "cleared"}'
+              ;;
+            *)
+              echo "HTTP/1.1 404 Not Found"
+              echo "Content-Type: application/json"
+              echo ""
+              echo '{"error": "not found", "path": "'$PATH'"}'
+              ;;
+          esac
+          HANDLER_EOF
+
+          chmod +x /tmp/metrics-handler.sh
+
+          echo "Starting metrics store on port 9999 (node: ${NODE_NAME})"
+
+          # Use busybox nc to serve HTTP requests
+          while true; do
+            nc -l -p 9999 -e /tmp/metrics-handler.sh 2>/dev/null || {
+              # If nc doesn't support -e, fall back to socat-style approach
+              while true; do
+                { echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nMetrics store ready"; } | nc -l -p 9999 -q 1 2>/dev/null || sleep 1
+              done
+            }
+          done
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          tcpSocket:
+            port: 9999
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          tcpSocket:
+            port: 9999
+          initialDelaySeconds: 5
+          periodSeconds: 10

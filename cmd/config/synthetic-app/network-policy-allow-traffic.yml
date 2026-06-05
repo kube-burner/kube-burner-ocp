@@ -1,0 +1,41 @@
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-synthetic-app-traffic
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{.Namespace}}
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 20000
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{.Namespace}}
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 20000
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 9999
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53

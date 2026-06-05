@@ -1,0 +1,126 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: app-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-client
+      pattern: app-database
+  template:
+    metadata:
+      labels:
+        app: app-client
+        pattern: app-database
+        role: client
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - name: uperf-client
+        image: {{.uperfImage}}
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+        env:
+        - name: METRICS_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: METRICS_PORT
+          value: "9999"
+        - name: PATTERN_NAME
+          value: "app-database"
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: SERVER_HOST
+          value: "db-svc"
+        - name: SERVER_PORT
+          value: "20000"
+        - name: DB_CONNECTIONS
+          value: "{{.dbConnections}}"
+        - name: TRAFFIC_DURATION
+          value: "{{.trafficDuration}}"
+        - name: REPORT_INTERVAL
+          value: "{{.metricsReportInterval}}"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          METRICS_URL="http://${METRICS_HOST}:${METRICS_PORT}/metrics"
+          PROFILE="/tmp/app-database.xml"
+
+          # Create uperf profile for OLTP-style database traffic
+          cat > ${PROFILE} << 'PROFILE_EOF'
+          <?xml version="1.0"?>
+          <profile name="app-database">
+            <group nthreads="${DB_CONNECTIONS}">
+              <transaction iterations="1">
+                <flowop type="connect" options="remotehost=${SERVER_HOST} port=${SERVER_PORT} protocol=tcp tcp_nodelay"/>
+              </transaction>
+              <transaction duration="${TRAFFIC_DURATION}">
+                <flowop type="write" options="size=128"/>
+                <flowop type="read" options="size=1024"/>
+                <flowop type="write" options="size=512"/>
+                <flowop type="read" options="size=64"/>
+              </transaction>
+              <transaction iterations="1">
+                <flowop type="disconnect"/>
+              </transaction>
+            </group>
+          </profile>
+          PROFILE_EOF
+
+          # Substitute environment variables
+          envsubst < ${PROFILE} > /tmp/profile.xml
+
+          echo "Starting uperf client for app-database pattern"
+          echo "Server: ${SERVER_HOST}:${SERVER_PORT}, DB Connections: ${DB_CONNECTIONS}"
+
+          # Run uperf and report metrics periodically
+          while true; do
+            OUTPUT=$(timeout ${REPORT_INTERVAL}s uperf -m /tmp/profile.xml -a 2>&1 || true)
+
+            # Parse metrics
+            OPS_SEC=$(echo "$OUTPUT" | grep -oP 'Txn1\s+\K[\d.]+(?=\s+ops)' | tail -1 || echo "0")
+            BYTES_SEC=$(echo "$OUTPUT" | grep -oP '[\d.]+(?=\s+Mb/s)' | tail -1 || echo "0")
+
+            # Report to metrics store
+            curl -s -X POST "${METRICS_URL}" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"timestamp\": \"$(date -Iseconds)\",
+                \"namespace\": \"${POD_NAMESPACE}\",
+                \"pattern\": \"${PATTERN_NAME}\",
+                \"client\": \"${POD_NAME}\",
+                \"metrics\": {
+                  \"ops_per_sec\": ${OPS_SEC:-0},
+                  \"throughput_mbps\": ${BYTES_SEC:-0}
+                }
+              }" || echo "Failed to report metrics"
+
+            echo "Reported metrics: ops/sec=${OPS_SEC}, throughput=${BYTES_SEC} Mb/s"
+          done
+        imagePullPolicy: IfNotPresent

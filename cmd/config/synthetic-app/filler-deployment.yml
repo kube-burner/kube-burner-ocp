@@ -1,0 +1,39 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: filler-{{.Replica}}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: filler-{{.Replica}}
+      type: filler
+  template:
+    metadata:
+      labels:
+        app: filler-{{.Replica}}
+        type: filler
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            memory: "10Mi"
+            cpu: "5m"
+          limits:
+            memory: "20Mi"
+            cpu: "10m"
+        imagePullPolicy: IfNotPresent
