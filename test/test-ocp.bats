@@ -186,14 +186,15 @@ teardown_file() {
   fi
   run_cmd ${KUBE_BURNER_OCP} virt-parallel ${STORAGE_PARAMETER} --max-iterations 2 --data-volume-count 2 --initial-vms 2 --increment 2 --skip-migration-job --skip-resize-job
   run_cmd kube-burner-ocp virt-parallel --cleanup-only
-  local jobs=("create-vms" "restart-vms")
-  for job in "${jobs[@]}"; do
-    check_metric_recorded ./virt-parallel/iteration-1 ${job} vmiLatency vmReadyLatency
-    check_quantile_recorded ./virt-parallel/iteration-1 ${job} vmiLatency VMReady
-  done
-  # check pvcLatency and dvLatency
-  check_metric_recorded ./virt-parallel/iteration-1 create-vms pvcLatency bindingLatency
-  check_metric_recorded ./virt-parallel/iteration-1 create-vms dvLatency dvReadyLatency
+  for iteration in 0 1; do
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} vmiLatency VMReady
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-restart-vms-${iteration} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-parallel/iteration-${iteration} virt-parallel-restart-vms-${iteration} vmiLatency VMReady
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} pvcLatency bindingLatency
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} dvLatency dvReadyLatency
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-snapshot-vms-${iteration} volumeSnapshotLatency vsReadyLatency
+    done
   check_destroyed_ns virt-parallel
 }
 
