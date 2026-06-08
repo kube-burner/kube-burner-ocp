@@ -146,6 +146,7 @@ jobs:
           dpdk_cores: {{.DPDK_CORES}}
           dpdk_hugepages: {{.DPDK_HUGEPAGES}}
           perf_profile: {{.PERF_PROFILE}}
+          worker_label: {{.DPDK_WORKER_LABEL}}
 
 {{ if .PHASED }}
   # Post-churn idle for metrics collection
