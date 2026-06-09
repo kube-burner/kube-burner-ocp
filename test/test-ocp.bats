@@ -136,11 +136,13 @@ teardown_file() {
 }
 
 @test "cudn-density-l3-pods: churning=false" {
+  oc delete ns -l kube-burner.io/job=create-cudn-pods
   oc delete clusteruserdefinednetworks --all --ignore-not-found
   run_cmd ${KUBE_BURNER_OCP} cudn-density-pods --iterations=2 --layer3=true --uuid=${UUID} --simple=false --set=jobs.2.jobPause=5s
 }
 
 @test "cudn-density-l2: gc=true" {
+  oc delete ns -l kube-burner.io/job=cudn-density-create-cudn-l2
   oc delete clusteruserdefinednetworks --all --ignore-not-found
   # Extract cudn-density templates to override any stale files from previous tests
   run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
