@@ -31,4 +31,4 @@ spec:
       - name: pause
         image: {{.preloadImage}}
         command: [sleep, inf]
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
