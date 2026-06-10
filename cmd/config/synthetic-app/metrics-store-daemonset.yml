@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synthetic-app-metrics-store
+spec:
+  replicas: {{.replicas}}
+  selector:
+    matchLabels:
+      app: synthetic-app-metrics-store
+  template:
+    metadata:
+      labels:
+        app: synthetic-app-metrics-store
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: synthetic-app-metrics-store
+              topologyKey: kubernetes.io/hostname
+      volumes:
+      - name: script
+        configMap:
+          name: metrics-store-script
+      containers:
+      - name: metrics-store
+        image: registry.access.redhat.com/ubi9/python-39:latest
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        ports:
+        - containerPort: 9999
+          name: metrics
+          protocol: TCP
+        volumeMounts:
+        - name: script
+          mountPath: /app
+          readOnly: true
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: PORT
+          value: "9999"
+        command:
+        - python3
+        - /app/server.py
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 9999
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 9999
+          initialDelaySeconds: 3
+          periodSeconds: 5
