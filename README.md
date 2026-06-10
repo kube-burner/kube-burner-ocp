@@ -45,6 +45,7 @@ Available Commands:
   version                    Print the version number of kube-burner
   virt-capacity-benchmark    Runs capacity-benchmark workload
   virt-clone                 Runs virt-clone workload
+  virt-clone-multi           Runs virt-clone-multi workload
   virt-density               Runs virt-density workload
   virt-ephemeral-restart     Runs virt-ephemeral-restart workload
   virt-migration             Runs virt-migration workload
@@ -582,6 +583,7 @@ The different variants are:
 - [virt-capacity-benchmark](#virt-capacity-benchmark)
 - [virt-parallel](#virt-parallel)
 - [virt-clone](#virt-clone)
+- [virt-clone-multi](#virt-clone-multi)
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
 - [virt-migration](#virt-migration)
 
@@ -595,6 +597,7 @@ Therefore, `virtctl` must be installed and available in the `PATH`.
 - [virt-capacity-benchmark](#virt-capacity-benchmark).
 - [virt-parallel](#virt-parallel)
 - [virt-clone](#virt-clone)
+- [virt-clone-multi](#virt-clone-multi)
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
 - [virt-migration](#virt-migration)
 
@@ -795,6 +798,78 @@ For example, to change the test to wait for a minute between iterations instead 
 
 By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
 If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
+
+### Virt Clone Multi
+
+Test high-scale VM cloning by deploying VMs across multiple namespaces with independent base images. This is a scalable version of the `virt-clone` workload, where each namespace has its own master image for cloning. The workload validates storage backend capacity, CDI (Containerized Data Importer) performance, and VM cloning efficiency at scale.
+
+#### Key Differentiators from virt-clone
+
+- **Multi-namespace architecture**: Each test namespace maintains its own master image (DataVolume/VolumeSnapshot/DataSource)
+- **Namespace isolation**: Clones within a namespace are created from that namespace's master image, not a centralized source
+
+#### Test Sequence
+
+The test follows this workflow:
+
+1. **Create base VMs**: Create N base VMs in a base namespace from a container disk
+2. **Stop base VMs**: Stop all base VMs to ensure data consistency
+3. **Create test DataSources** (per namespace, in parallel):
+   - Create a `DataVolume` from the corresponding base VM's PVC
+   - Optionally create a `VolumeSnapshot` of the DataVolume (if `--use-snapshot=true`)
+   - Create a `DataSource` pointing to either the snapshot or the DataVolume
+4. **Clone VMs** (per namespace, in batches):
+   - Create VMs in iterations, cloning from the namespace's DataSource
+   - Each VM optionally includes additional blank data volumes (controlled by `--data-volume-count`)
+
+#### Tested StorageClass
+
+By default, the test will search for the `StorageClass` to use:
+
+1. Use the default `StorageClass` for Virtualization annotated with `storageclass.kubevirt.io/is-default-virt-class`
+2. If does not exist, use general default `StorageClass` annotated with `storageclass.kubernetes.io/is-default-class`
+3. If does not exist, fail the test before starting
+
+To use a different one, use `--storage-class` to provide a different name.
+
+If `--use-snapshot` is set to `true` (default), a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
+If `--use-snapshot=false`, the test will clone directly from the PVC without creating snapshots.
+
+#### Test Namespaces
+
+Resources are distributed across multiple namespaces for scale testing.
+
+By default, namespaces follow the pattern `virt-clone-multi-0`, `virt-clone-multi-1`, etc. Set the base name by passing `--namespace` (or `-n`)
+
+#### Test Size Parameters
+
+Users may control the workload scale by passing the following arguments:
+
+- `--namespaces` - Number of test namespaces to create (default: 2)
+- `--iterations` - Number of batches per namespace (default: 5)
+- `--vms-per-iteration` - Number of VMs created per batch (default: 2)
+- `--data-volume-count` - Number of additional blank data volumes per VM (default: 0)
+
+**Total VMs** = `namespaces × iterations × vms-per-iteration`
+
+**Total PVCs** = `Total VMs × (1 + data-volume-count)` (1 root PVC + N data volumes per VM)
+
+#### Batching Control
+
+- `--job-iteration-delay` - Delay between iterations within a namespace (default: 1m)
+
+Namespaces are processed in parallel. Within each namespace, VMs are created in batches (iterations) with the specified delay between batches.
+
+#### Volume Access Mode
+
+By default, volumes are created with `ReadWriteMany` access mode. Since this workload does not perform migrations, `ReadWriteOnce` can be used for storage classes that don't support RWX.
+
+The access mode can be changed by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
+
+#### Cleanup
+
+To cleanup all allocated resources once the test is done set `--cleanup`.
+Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs.
 
 ### Virt Ephemeral Restart
 

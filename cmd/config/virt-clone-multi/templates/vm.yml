@@ -1,0 +1,94 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+    spec:
+    {{ if .rootdiskVolumeSource }}
+      source: {{ .rootdiskVolumeSource | mustToJson }}
+    {{ end }}
+    {{ if .cloneDataSourceName }}
+      sourceRef:
+        kind: DataSource
+        name: "{{ .cloneDataSourceName }}"
+    {{ end }}
+      storage:
+        accessModes:
+        - {{ .accessMode }}
+        storageClassName: {{ .storageClassName }}
+        resources:
+          requests:
+            storage: 6Gi
+  {{ range $dataVolumeIndex := .dataVolumeCounters }}
+  - metadata:
+      name: "{{ $.vmName }}-{{ $.Iteration }}-{{ $.Replica }}-data-{{ $dataVolumeIndex }}"
+    spec:
+      source:
+        blank: {}
+      storage:
+        accessModes:
+        - {{ $.accessMode }}
+        storageClassName: {{ $.storageClassName }}
+        resources:
+          requests:
+            storage: "1Gi"
+  {{ end }}
+  runStrategy: RerunOnFailure
+  template:
+    spec:
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: {{ .sshPublicKeySecret }}
+      architecture: amd64
+      domain:
+        resources:
+          requests:
+            memory: 512Mi
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+            bootOrder: 1
+          {{ range $dataVolumeIndex := .dataVolumeCounters }}
+          - disk:
+              bus: virtio
+            name: "data-{{ $dataVolumeIndex }}"
+          {{ end }}
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: default
+            masquerade: {}
+            bootOrder: 2
+        machine:
+          type: pc-q35-rhel9.4.0
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+        name: rootdisk
+      {{ range $dataVolumeIndex := .dataVolumeCounters }}
+      - dataVolume:
+          name: "{{ $.vmName }}-{{ $.Iteration }}-{{ $.Replica }}-data-{{ $dataVolumeIndex }}"
+        name: "data-{{ $dataVolumeIndex }}"
+      {{ end }}
+      - cloudInitNoCloud:
+          userData: |
+            #cloud-config
+            chpasswd:
+              expire: false
+            password: {{ uuidv4 }}
+            user: fedora
+            runcmd: []
+        name: cloudinitdisk
