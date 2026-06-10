@@ -1,0 +1,202 @@
+// Copyright 2026 The Kube-burner Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package workloads
+
+import (
+	"fmt"
+	"math"
+	"os"
+
+	k8sstorage "github.com/cloud-bulldozer/go-commons/v2/k8s-storage"
+	"github.com/cloud-bulldozer/go-commons/v2/ssh"
+	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
+	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+)
+
+const (
+	VirtParallelSSHKeyFileName = "ssh"
+	VirtParallelTmpDirPattern  = "kube-burner-parallel-*"
+	virtParallelTestName       = "virt-parallel"
+)
+
+var (
+	virtParallelNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, virtParallelTestName)
+)
+
+// NewVirtParallel holds the virt-parallel workload
+func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
+	var storageClasses []string
+	var sshKeyPairPath string
+	var maxIterations int
+	var initialVms int
+	var vmsIncrement int
+	var vmCount int
+	var dataVolumeCount int
+	var testNamespace string
+	var skipMigrationJob bool
+	var minimalVolumeSize int
+	var minimalVolumeIncreaseSize int
+	var skipResizeJob bool
+	var skipRestartJob bool
+	var skipSnapshotJob bool
+	var metricsProfiles []string
+	var cleanupOnly bool
+	var cleanup bool
+	var rc int
+	cmd := &cobra.Command{
+		Use:          virtParallelTestName,
+		Short:        "Runs virt-parallel workload",
+		SilenceUsage: true,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			if cleanupOnly {
+				return
+			}
+
+			if !virtctl.IsInstalled() {
+				log.Fatalf("Failed to run virtctl. Check that it is installed, in PATH and working")
+			}
+
+			if storageClasses == nil {
+				storageClassName, _ := getStorageAndSnapshotClasses("", true, true)
+				storageClasses = []string{storageClassName}
+			} else {
+				for _, storageClassName := range storageClasses {
+					_, _ = getStorageAndSnapshotClasses(storageClassName, true, true)
+				}
+			}
+
+			if !skipResizeJob {
+				for _, storageClassName := range storageClasses {
+					supported, err := k8sstorage.StorageClassSupportsVolumeExpansion(getK8SConnector(), storageClassName)
+					if err != nil {
+						log.Fatal(err)
+					}
+					if !supported {
+						log.Fatalf("Storage Class [%s] does not support volume expansion", storageClassName)
+					}
+				}
+			}
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			if cleanupOnly {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), virtParallelNamespaceLabelSelector)
+				return
+			}
+
+			privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, VirtParallelTmpDirPattern, VirtParallelSSHKeyFileName)
+			if err != nil {
+				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
+			}
+
+			rootVolumeSize := 6
+			dataVolumeSize := 1
+			if minimalVolumeSize != 0 {
+				rootVolumeSize = int(math.Max(float64(rootVolumeSize), float64(minimalVolumeSize)))
+				dataVolumeSize = int(math.Max(float64(dataVolumeSize), float64(minimalVolumeSize)))
+			}
+
+			volumeSizeIncrement := 1
+			if minimalVolumeIncreaseSize != 0 {
+				volumeSizeIncrement = int(math.Max(float64(volumeSizeIncrement), float64(minimalVolumeIncreaseSize)))
+			}
+
+			if skipMigrationJob {
+				log.Infof("skipMigrationJob is set to true")
+			}
+			if skipResizeJob {
+				log.Infof("skipResizeJob is set to true")
+			}
+			if skipRestartJob {
+				log.Infof("skipRestartJob is set to true")
+			}
+			if skipSnapshotJob {
+				log.Infof("skipSnapshotJob is set to true")
+			}
+
+			AdditionalVars["privateKey"] = privateKeyPath
+			AdditionalVars["publicKey"] = publicKeyPath
+			AdditionalVars["vmCount"] = fmt.Sprint(initialVms)
+			AdditionalVars["vmsIncrement"] = fmt.Sprint(vmsIncrement)
+			AdditionalVars["testNamespace"] = testNamespace
+			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
+			AdditionalVars["skipMigrationJob"] = skipMigrationJob
+			AdditionalVars["rootVolumeSize"] = rootVolumeSize
+			AdditionalVars["dataVolumeSize"] = dataVolumeSize
+			AdditionalVars["volumeSizeIncrement"] = volumeSizeIncrement
+			AdditionalVars["skipResizeJob"] = skipResizeJob
+			AdditionalVars["skipRestartJob"] = skipRestartJob
+			AdditionalVars["skipSnapshotJob"] = skipSnapshotJob
+
+			setMetrics(cmd, metricsProfiles)
+
+			log.Infof("Running tests in Namespace [%s]", testNamespace)
+			counter := 0
+			vmCount = initialVms
+			for {
+				storageClassName := storageClasses[counter%len(storageClasses)]
+				log.Infof("Running loop %d with Storage Class [%s]", counter, storageClassName)
+				AdditionalVars["storageClassName"] = storageClassName
+				AdditionalVars["vmCount"] = vmCount
+
+				// Randomly select a node for migration
+				if !skipMigrationJob {
+					selectedNode := verifyOrGetRandomWorkerNodeName("")
+					AdditionalVars["selectedNode"] = selectedNode
+					log.Infof("Selected node for migration: %s", selectedNode)
+				}
+
+				os.Setenv("counter", fmt.Sprint(counter))
+				rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
+				if rc != 0 {
+					log.Errorf("Capacity failed in loop #%d", counter)
+					break
+				}
+				counter += 1
+				vmCount += vmsIncrement
+				if maxIterations > 0 && counter >= maxIterations {
+					log.Infof("Reached maxIterations [%d]", maxIterations)
+					break
+				}
+			}
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the current run")
+				cleanupTestNamespaces(cmd.Context(), virtParallelNamespaceLabelSelector)
+			}
+		},
+		PostRun: func(cmd *cobra.Command, args []string) {
+			os.Exit(rc)
+		},
+	}
+	cmd.Flags().StringSliceVar(&storageClasses, "storage-class", nil, "Comma separated list of storage classes to use")
+	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generarated SSH keys - default to a temporary location")
+	cmd.Flags().IntVar(&maxIterations, "max-iterations", 0, "Maximum times to run the test sequence. Default - run until failure (0)")
+	cmd.Flags().IntVar(&initialVms, "initial-vms", 5, "Number of VMs to create in the first iteration")
+	cmd.Flags().IntVar(&vmsIncrement, "increment", 5, "Number of additional VMs to add in each subsequent iteration")
+	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", 9, "Number of data volumes per VM")
+	cmd.Flags().StringVarP(&testNamespace, "namespace", "n", virtParallelTestName, "Namespace to run the test in")
+	cmd.Flags().BoolVar(&skipMigrationJob, "skip-migration-job", false, "Skip the migration job - use when the StorageClass does not support RWX")
+	cmd.Flags().IntVar(&minimalVolumeSize, "min-vol-size", 0, "Minimal volume size - use when enforced or overridden by the StorageClass")
+	cmd.Flags().IntVar(&minimalVolumeIncreaseSize, "min-vol-inc-size", 0, "Minimal volume increment size - use when enforced or overridden by the StorageClass")
+	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
+	cmd.Flags().BoolVar(&skipRestartJob, "skip-restart-job", false, "Skip the VM restart job")
+	cmd.Flags().BoolVar(&skipSnapshotJob, "skip-snapshot-job", false, "Skip the VM snapshot job")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanupOnly, "cleanup-only", false, "Only cleanup the resource created by the previous run. Do not run the test.")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup the resource created by the test.")
+	return cmd
+}
