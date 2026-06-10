@@ -51,10 +51,10 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
-{{ $jobName := ternary "create-udn-l3" "create-udn-l2" .ENABLE_LAYER_3 }}
+{{ $jobName := ternary "create-cudn-l3" "create-cudn-l2" .ENABLE_LAYER_3 }}
 jobs:
   - name: {{ $jobName }}
-    namespace: virt-density-udn
+    namespace: virt-cudn-density
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
@@ -75,16 +75,12 @@ jobs:
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
       {{ if .ENABLE_LAYER_3 }}
-      - objectTemplate: udn_l3.yml
+      - objectTemplate: cudn_l3.yml
         replicas: 1
       {{ else }}
-      - objectTemplate: udn_l2.yml
+      - objectTemplate: cudn_l2.yml
         replicas: 1
       {{ end }}
-        waitOptions:
-          customStatusPaths:
-            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
-              value: "True"
       - objectTemplate: ds.yml
         replicas: 1
         runOnce: true
@@ -100,8 +96,8 @@ jobs:
         apiVersion: apps/v1
         labelSelector: {kube-burner.io/job: {{ $jobName }} }
 
-  - name: virt-density-udn
-    namespace: virt-density-udn
+  - name: virt-density-cudn
+    namespace: virt-cudn-density
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
