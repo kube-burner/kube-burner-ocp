@@ -1,0 +1,197 @@
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := "virt-clone-multi" -}}
+{{- $namespaceBaseName := .testNamespaceBaseName -}}
+{{- $baseNamespace := (list $namespaceBaseName "base") | join "-" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
+{{- $createBaseVMJobName := "create-base-vm" -}}
+{{- $sshPublicKeySecretName := "virt-clone-multi-ssh" -}}
+{{- $cloneVMName := "clone-vm" -}}
+{{- $metricsBaseDirectory := $testName -}}
+
+---
+global:
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: "./{{ $metricsBaseDirectory }}-results"
+{{ if .ES_SERVER }}
+- metrics: [{{.METRICS}}]
+  alerts: [{{.ALERTS}}]
+  indexer:
+    esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: true
+    defaultIndex: {{.ES_INDEX}}
+    type: opensearch
+{{ end }}
+
+jobs:
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+
+# Create N base VMs in the base namespace
+- name: {{ $testName }}-{{ $createBaseVMJobName }}
+  jobType: create
+  jobIterations: 1
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ $baseNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: false
+  podWait: true
+  maxWaitTimeout: 15m
+  jobPause: 10s
+  cleanup: false
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $testName }}-{{ $createBaseVMJobName }} {{ $baseNamespace }} {{ .privateKey }} fedora"
+  objects:
+
+  - objectTemplate: templates/secret_ssh_public.yml
+    runOnce: true
+    replicas: 1
+    inputVars:
+      name: {{ $sshPublicKeySecretName }}
+      publicKeyPath: {{ .publicKey }}
+
+  - objectTemplate: templates/vm.yml
+    replicas: {{ .namespaces }}
+    inputVars:
+      vmName: "base-vm"
+      rootdiskVolumeSource:
+        registry:
+          url: "docker://quay.io/containerdisks/fedora:41"
+      storageClassName: {{ .storageClassName }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      accessMode: {{ .accessMode }}
+      dataVolumeCounters: []
+
+# Stop all N base VMs
+- name: {{ $testName }}-stop-vm
+  jobType: kubevirt
+  qps: 20
+  burst: 20
+  jobIterations: 1
+  maxWaitTimeout: 1h
+  objectDelay: 30s
+  waitWhenFinished: true
+  objects:
+  - kubeVirtOp: stop
+    labelSelector:
+      kube-burner.io/job: {{ $testName }}-{{ $createBaseVMJobName }}
+
+# Create master-image DataVolumes + VolumeSnapshots + DataSources in each test namespace
+- name: {{ $testName }}-create-test-datasources
+  jobType: create
+  jobIterations: {{ .namespaces }}
+  qps: 20
+  burst: 20
+  namespacedIterations: true
+  namespace: {{ $namespaceBaseName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: false
+  podWait: false
+  maxWaitTimeout: 15m
+  jobPause: 10s
+  cleanup: false
+  defaultMissingKeysWithZero: true
+  objects:
+
+  - objectTemplate: templates/testNamespaceDataVolume.yml
+    replicas: 1
+    inputVars:
+      cloneDataVolumeName: "master-image"
+      storageClassName: {{ .storageClassName }}
+      baseVMNamespace: {{ $baseNamespace }}
+      baseVMRootDiskPVCName: "base-vm"
+      accessMode: {{ .accessMode }}
+    waitOptions:
+      customStatusPaths:
+      - key: '(.conditions.[] | select(.type == "Ready")).status'
+        value: "True"
+
+{{ if .useSnapshot }}
+  - objectTemplate: templates/testNamespaceVolumeSnapshot.yml
+    replicas: 1
+    inputVars:
+      cloneVolumeSnapshotName: "master-image"
+      volumeSnapshotClassName: {{ .volumeSnapshotClassName }}
+      cloneVolumeSnapshotPVCName: "master-image"
+    waitOptions:
+      customStatusPaths:
+      - key: '.readyToUse | tostring'
+        value: "true"
+{{ end }}
+
+  - objectTemplate: templates/testNamespaceDataSource.yml
+    replicas: 1
+    inputVars:
+      cloneDataSourceName: "master-image"
+      cloneDataSourcePVCName: "master-image"
+      cloneDataSourceSnapshotName: "master-image"
+      testNamespaceBaseName: "{{ $namespaceBaseName }}"
+      useSnapshot: {{ .useSnapshot }}
+    waitOptions:
+      customStatusPaths:
+      - key: '(.conditions.[] | select(.type == "Ready")).status'
+        value: "True"
+
+# Create VMs across multiple namespaces, each using its corresponding DataSource
+- name: {{ $testName }}-create-vms
+  jobType: create
+  jobIterations: {{ mul .namespaces .iterations }}
+  iterationsPerNamespace: {{ .iterations }}
+  qps: 20
+  burst: 20
+  namespacedIterations: true
+  namespace: {{ $namespaceBaseName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: false
+  podWait: true
+  jobIterationDelay: {{ .jobIterationDelay }}
+  maxWaitTimeout: 6h
+  jobPause: 10s
+  cleanup: false
+  defaultMissingKeysWithZero: true
+  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $testName }}-create-vms {{ $namespaceBaseName }} {{ .privateKey }} fedora"
+  objects:
+
+  - objectTemplate: templates/secret_ssh_public.yml
+    replicas: 1
+    inputVars:
+      name: {{ $sshPublicKeySecretName }}
+      publicKeyPath: {{ .publicKey }}
+
+  - objectTemplate: templates/vm.yml
+    replicas: {{ .vmsPerIteration }}
+    inputVars:
+      vmName: {{ $cloneVMName }}
+      sshPublicKeySecret: {{ $sshPublicKeySecretName }}
+      cloneDataSourceName: "master-image"
+      iterationsPerNamespace: {{ .iterations }}
+      storageClassName: {{ .storageClassName }}
+      accessMode: {{ .accessMode }}
+      dataVolumeCounters:
+      {{ range .dataVolumeCounters }}
+      - {{ . }}
+      {{ end }}
