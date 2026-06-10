@@ -15,21 +15,23 @@ Usage:
   kube-burner-ocp [command]
 
 Available Commands:
+  anp-density-pods           Runs anp-density-pods workload
   build-farm                 Runs build-farm workload
   cluster-density-ms         Runs cluster-density-ms workload
   cluster-density-v2         Runs cluster-density-v2 workload
   cluster-health             Checks for ocp cluster health
   completion                 Generate the autocompletion script for the specified shell
   crd-scale                  Runs crd-scale workload
+  cudn-density               Runs cudn-density workload with tiered cross-namespace communication
   dv-clone                   Runs dv-clone workload
   egressip                   Runs egressip workload
   evpn                       Runs evpn workload
   help                       Help about any command
   index                      Runs index sub-command
   init                       Runs custom workload
-  kueue-operator-pods        Runs kueue-operator-pods workload
   kueue-operator-jobs        Runs kueue-operator-jobs workload
   kueue-operator-jobs-shared Runs kueue-operator-jobs-shared workload
+  kueue-operator-pods        Runs kueue-operator-pods workload
   network-policy             Runs network-policy workload
   node-density               Runs node-density workload
   node-density-cni           Runs node-density-cni workload
@@ -39,46 +41,24 @@ Available Commands:
   pvc-density                Runs pvc-density workload
   rds-core                   Runs rds-core workload
   udn-bgp                    Runs udn-bgp workload
-  udn-density-pods           Runs node-density-udn workload
+  udn-density-pods           Runs udn-density-pods workload
   version                    Print the version number of kube-burner
   virt-capacity-benchmark    Runs capacity-benchmark workload
   virt-clone                 Runs virt-clone workload
+  virt-clone-multi           Runs virt-clone-multi workload
   virt-density               Runs virt-density workload
   virt-ephemeral-restart     Runs virt-ephemeral-restart workload
   virt-migration             Runs virt-migration workload
-  virt-udn-density           Runs virt-density-udn workload
+  virt-parallel              Runs virt-parallel workload
+  virt-udn-density           Runs virt-udn-density workload
   web-burner-cluster-density Runs web-burner-cluster-density workload
   web-burner-init            Runs web-burner-init workload
   web-burner-node-density    Runs web-burner-node-density workload
   whereabouts                Runs whereabouts workload
-  anp-density-pods               Runs anp-density-pods workload
-  cluster-density-ms             Runs cluster-density-ms workload
-  cluster-density-v2             Runs cluster-density-v2 workload
-  cluster-health                 Checks for ocp cluster health
-  completion                     Generate the autocompletion script for the specified shell
-  crd-scale                      Runs crd-scale workload
-  help                           Help about any command
-  index                          Runs index sub-command
-  init                           Runs custom workload
-  networkpolicy-matchexpressions Runs networkpolicy-matchexpressions workload
-  networkpolicy-matchlabels      Runs networkpolicy-matchlabels workload
-  networkpolicy-multitenant      Runs networkpolicy-multitenant workload
-  node-density                   Runs node-density workload
-  node-density-cni               Runs node-density-cni workload
-  node-density-heavy             Runs node-density-heavy workload
-  pvc-density                    Runs pvc-density workload
-  udn-density-l3-pods            Runs udn-density-l3-pods workload
-  version                        Print the version number of kube-burner
-  virt-capacity-benchmark        Runs capacity-benchmark workload
-  virt-density                   Runs virt-density workload
-  web-burner-cluster-density     Runs web-burner-cluster-density workload
-  web-burner-init                Runs web-burner-init workload
-  web-burner-node-density        Runs web-burner-node-density workload
 
 Flags:
       --alerting                  Enable alerting (default true)
       --burst int                 Burst (default 20)
-      --ignore-health-check       Run cluster health check, but ignore failures (default false)
       --enable-file-logging       Enable file logging (default true)
       --es-index string           Elastic Search index
       --es-server string          Elastic Search endpoint
@@ -86,14 +66,16 @@ Flags:
       --gc                        Garbage collect created resources (default true)
       --gc-metrics                Collect metrics during garbage collection
   -h, --help                      help for kube-burner-ocp
+      --ignore-health-check       Run cluster health check, but ignore failures
       --local-indexing            Enable local indexing
       --log-level string          Allowed values: debug, info, warn, error, fatal (default "info")
       --metrics-endpoint string   YAML file with a list of metric endpoints, overrides the es-server and es-index flags
       --profile-type string       Metrics profile to use, supported options are: regular, reporting or both (default "both")
       --qps int                   QPS (default 20)
+      --set strings               Set arbitrary key=value pairs to override values in the config file
       --timeout duration          Benchmark timeout (default 4h0m0s)
       --user-metadata string      User provided metadata file, in YAML format
-      --uuid string               Benchmark UUID (default "e5d2e34e-724d-4ba9-9eac-0379839d2e0a")
+      --uuid string               Benchmark UUID (default "46d08f73-1b12-4137-8e00-67d9c7f069b7")
 
 ```
 
@@ -136,6 +118,7 @@ With the command above, the wrapper will calculate the required number of pods t
 All workload-specific flags (local flags defined on each workload command) are automatically captured and added to the `SummaryMetadata` in the `workloadFlags` field. This allows you to track exactly which flags were used when running a workload, making it easier to correlate performance results with specific configurations.
 
 The flags are stored as a map where:
+
 - Keys are flag names converted from kebab-case to camelCase (e.g., `pods-per-node` becomes `podsPerNode`)
 - Values are the flag values as strings
 
@@ -594,10 +577,13 @@ Input parameters specific to the workload:
 This workload family is a focused on Virtualization creating different objects across the cluster.
 
 The different variants are:
+
 - [virt-density](#virt-density)
 - [virt-udn-density](#virt-density-udn)
-- [virt-capacity-benchmark](#virt-capacity-benchmark).
+- [virt-capacity-benchmark](#virt-capacity-benchmark)
+- [virt-parallel](#virt-parallel)
 - [virt-clone](#virt-clone)
+- [virt-clone-multi](#virt-clone-multi)
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
 - [virt-migration](#virt-migration)
 
@@ -609,7 +595,9 @@ The tests listed below verify that the `VirtualMachine` completed their boot usi
 Therefore, `virtctl` must be installed and available in the `PATH`.
 
 - [virt-capacity-benchmark](#virt-capacity-benchmark).
+- [virt-parallel](#virt-parallel)
 - [virt-clone](#virt-clone)
+- [virt-clone-multi](#virt-clone-multi)
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
 - [virt-migration](#virt-migration)
 
@@ -639,6 +627,7 @@ Test the capacity of Virtual Machines and Volumes supported by the cluster and a
 
 The test runs a workload in a loop without deleting previously created resources. By default it will continue until a failure occurs.
 Each loop is comprised of the following steps:
+
 - Create VMs
 - Resize the root and data volumes
 - Restart the VMs
@@ -659,6 +648,7 @@ In addition, multiple `StorageClasses` can be used by passing a comma separated 
 The test will then choose a different `StorageClass` for each loop in round robin.
 
 Please note that regardless to which `StorageClass` is used, it must:
+
 - Support Volume Expansion: `allowVolumeExpansion: true`.
 - Have a corresponding `VolumeSnapshotClass` using the same provisioner
 
@@ -671,6 +661,7 @@ By default, the namespace is `virt-capacity-benchmark`. Set it by passing `--nam
 #### Test Size Parameters
 
 Users may control the workload sizes by passing the following arguments:
+
 - `--max-iterations` - Maximum number of iterations, or 0 (default) for infinite. In any case, the test will stop upon failure
 - `--vms` - Number of VMs for each iteration (default 5)
 - `--data-volume-count` - Number of data volumes for each VM (default 9)
@@ -680,7 +671,76 @@ Users may control the workload sizes by passing the following arguments:
 #### Skip test parts
 
 Some storage classes have limitations requiring the test to skip some parts:
+
 - `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
+- `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
+
+#### Cleanup
+
+Since the test is expected to run until failure, it is designed to keep all allocated resources to allow investigating the failure.
+To cleanup all allocated resources once the test is done set `--cleanup`.
+Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs
+
+### Virt Parallel
+
+Test the parallel execution of virtualization workloads across increasing numbers of VMs. This workload progressively increases the VM count across iterations, performing a complete lifecycle of operations on each set of VMs before deletion.
+
+#### Test Sequence
+
+The test runs in a loop without preserving resources between iterations. Each iteration performs the following sequence:
+
+- Create N VMs with multiple data volumes and verify network connectivity to all VMs
+- Resize the root and data volumes of all VMs (optional, can be skipped with `--skip-resize-job`)
+- Restart the VMs to apply volume changes (optional, can be skipped with `--skip-restart-job`)
+- Snapshot all VMs (optional, can be skipped with `--skip-snapshot-job`)
+- Randomly select a worker node and migrate all VMs running on that node (optional, can be skipped with `--skip-migration-job`)
+- Delete all VMs and clean up resources
+- Increment N by the configured amount (`--increment`) and repeat
+
+Note: The only mandatory steps are VM creation and deletion. All other steps can be skipped based on storage class capabilities or test requirements.
+
+#### Tested StorageClass
+
+By default, the test will search for the `StorageClass` to use:
+
+1. Use the default `StorageClass` for Virtualization annotated with `storageclass.kubevirt.io/is-default-virt-class`
+2. If does not exist, use general default `StorageClass` annotated with `storageclass.kubernetes.io/is-default-class`
+3. If does not exist, fail the test before starting
+
+To use a different one, use `--storage-class` to provide a different name.
+
+In addition, multiple `StorageClasses` can be used by passing a comma separated list names.
+The test will then choose a different `StorageClass` for each loop in round robin.
+
+Please note that regardless to which `StorageClass` is used, it must:
+
+- Support Volume Expansion: `allowVolumeExpansion: true`
+- Have a corresponding `VolumeSnapshotClass` using the same provisioner
+
+#### Test Namespace
+
+All `VirtualMachines` are created in the same namespace.
+
+By default, the namespace is `virt-parallel`. Set it by passing `--namespace` (or `-n`)
+
+#### Test Size Parameters
+
+Users may control the workload sizes by passing the following arguments:
+
+- `--max-iterations` - Maximum number of iterations, or 0 (default) for infinite. In any case, the test will stop upon failure
+- `--initial-vms` - Number of VMs to create in the first iteration (default 5)
+- `--increment` - Number of additional VMs to add in each subsequent iteration (default 5)
+- `--data-volume-count` - Number of data volumes per VM (default 9)
+- `--min-vol-size` - Set the minimal volume size supported by the storage class
+- `--min-vol-inc-size` - Set the minimal volume size increment supported by the storage class
+
+#### Skip test parts
+
+Some storage classes have limitations requiring the test to skip some parts. All steps except VM creation and deletion can be skipped:
+
+- `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
+- `--skip-restart-job` - Skip the VM restart job. Use when you want to test without VM restarts
+- `--skip-snapshot-job` - Skip the VM snapshot job. Use when snapshots are not supported or not needed
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
 
 #### Cleanup
@@ -739,9 +799,81 @@ For example, to change the test to wait for a minute between iterations instead 
 By default, volumes are created with `ReadWriteMany` access mode as this is the recommended configuration for `VirtualMachines`.
 If not supported, the access mode may be changes by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
 
+### Virt Clone Multi
+
+Test high-scale VM cloning by deploying VMs across multiple namespaces with independent base images. This is a scalable version of the `virt-clone` workload, where each namespace has its own master image for cloning. The workload validates storage backend capacity, CDI (Containerized Data Importer) performance, and VM cloning efficiency at scale.
+
+#### Key Differentiators from virt-clone
+
+- **Multi-namespace architecture**: Each test namespace maintains its own master image (DataVolume/VolumeSnapshot/DataSource)
+- **Namespace isolation**: Clones within a namespace are created from that namespace's master image, not a centralized source
+
+#### Test Sequence
+
+The test follows this workflow:
+
+1. **Create base VMs**: Create N base VMs in a base namespace from a container disk
+2. **Stop base VMs**: Stop all base VMs to ensure data consistency
+3. **Create test DataSources** (per namespace, in parallel):
+   - Create a `DataVolume` from the corresponding base VM's PVC
+   - Optionally create a `VolumeSnapshot` of the DataVolume (if `--use-snapshot=true`)
+   - Create a `DataSource` pointing to either the snapshot or the DataVolume
+4. **Clone VMs** (per namespace, in batches):
+   - Create VMs in iterations, cloning from the namespace's DataSource
+   - Each VM optionally includes additional blank data volumes (controlled by `--data-volume-count`)
+
+#### Tested StorageClass
+
+By default, the test will search for the `StorageClass` to use:
+
+1. Use the default `StorageClass` for Virtualization annotated with `storageclass.kubevirt.io/is-default-virt-class`
+2. If does not exist, use general default `StorageClass` annotated with `storageclass.kubernetes.io/is-default-class`
+3. If does not exist, fail the test before starting
+
+To use a different one, use `--storage-class` to provide a different name.
+
+If `--use-snapshot` is set to `true` (default), a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
+If `--use-snapshot=false`, the test will clone directly from the PVC without creating snapshots.
+
+#### Test Namespaces
+
+Resources are distributed across multiple namespaces for scale testing.
+
+By default, namespaces follow the pattern `virt-clone-multi-0`, `virt-clone-multi-1`, etc. Set the base name by passing `--namespace` (or `-n`)
+
+#### Test Size Parameters
+
+Users may control the workload scale by passing the following arguments:
+
+- `--namespaces` - Number of test namespaces to create (default: 2)
+- `--iterations` - Number of batches per namespace (default: 5)
+- `--vms-per-iteration` - Number of VMs created per batch (default: 2)
+- `--data-volume-count` - Number of additional blank data volumes per VM (default: 0)
+
+**Total VMs** = `namespaces × iterations × vms-per-iteration`
+
+**Total PVCs** = `Total VMs × (1 + data-volume-count)` (1 root PVC + N data volumes per VM)
+
+#### Batching Control
+
+- `--job-iteration-delay` - Delay between iterations within a namespace (default: 1m)
+
+Namespaces are processed in parallel. Within each namespace, VMs are created in batches (iterations) with the specified delay between batches.
+
+#### Volume Access Mode
+
+By default, volumes are created with `ReadWriteMany` access mode. Since this workload does not perform migrations, `ReadWriteOnce` can be used for storage classes that don't support RWX.
+
+The access mode can be changed by setting `--access-mode`. The supported values are `RO`, `RWO` and `RWX`.
+
+#### Cleanup
+
+To cleanup all allocated resources once the test is done set `--cleanup`.
+Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs.
+
 ### Virt Ephemeral Restart
 
-Test the performance of restarting ephemeral `VirtalMachine`s. Kubernetes native ephemeral volumes use local node storage. As a result, the cannot be used on large scale deployment.
+Test the performance of restarting ephemeral `VirtualMachine`s. Kubernetes native ephemeral volumes use local node storage. As a result, they cannot be used on large scale deployment.
 Instead, a restart is implemented by stopping the `VirtualMachine`, deleting the `DataVolume` backing its root volume and starting it.
 
 #### Test Sequence

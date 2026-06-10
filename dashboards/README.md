@@ -25,6 +25,10 @@ The `Kube-burner-report-profile.json` dashboard is designed to visualize metrics
 
 The `Virt-capacity-benchmark.json` dashboard is designed to visualize the results of the **virt-capacity-benchmark** workload, providing an overview of performance and metrics collected during its execution.
 
+### Virt-parallel.json
+
+The `Virt-parallel.json` dashboard is designed to visualize the results of the **virt-parallel** workload, providing an overview of performance and metrics collected during its execution.
+
 ### Virt-clone.json
 
 The `Virt-clone.json` dashboard is designed to visualize the results of the **virt-clone** workload, providing an overview of performance and metrics collected during its execution.
