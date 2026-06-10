@@ -183,6 +183,25 @@ teardown_file() {
   check_destroyed_ns virt-capacity-benchmark
 }
 
+@test "virt-parallel" {
+  local STORAGE_PARAMETER
+  if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
+    STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
+  fi
+  run_cmd ${KUBE_BURNER_OCP} virt-parallel ${STORAGE_PARAMETER} --max-iterations 2 --data-volume-count 2 --initial-vms 2 --increment 2 --skip-migration-job --skip-resize-job
+  run_cmd kube-burner-ocp virt-parallel --cleanup-only
+  for iteration in 0 1; do
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} vmiLatency VMReady
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-restart-vms-${iteration} vmiLatency vmReadyLatency
+    check_quantile_recorded ./virt-parallel/iteration-${iteration} virt-parallel-restart-vms-${iteration} vmiLatency VMReady
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} pvcLatency bindingLatency
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} dvLatency dvReadyLatency
+    check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-snapshot-vms-${iteration} volumeSnapshotLatency vsReadyLatency
+    done
+  check_destroyed_ns virt-parallel
+}
+
 @test "virt-clone" {
   local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
