@@ -25,6 +25,7 @@ Available Commands:
   cudn-density               Runs cudn-density workload with tiered cross-namespace communication
   dv-clone                   Runs dv-clone workload
   egressip                   Runs egressip workload
+  etcd-density               Runs etcd-density workload
   evpn                       Runs evpn workload
   help                       Help about any command
   index                      Runs index sub-command
@@ -223,6 +224,64 @@ Lightest version of this workload family, each iteration the following objects i
 - 1 edge route pointing to the to first service.
 - 20 secrets containing a 2048-character random string.
 - 10 config maps containing a 2048-character random string.
+
+## Etcd density workload
+
+This workload stresses the etcd database by creating large custom resource objects to increase the database size. It is designed to measure control-plane performance degradation as etcd grows, tracking API server latency, etcd commit/fsync duration, compaction, defragmentation, and database size metrics.
+
+The workload operates in two phases:
+
+1. **CRD creation** (`crd-scale` job): Creates KubeBurner CustomResourceDefinitions and waits for them to become established.
+2. **Object creation** (`etcd-density` job): Creates custom resource instances across multiple namespaces. Objects are intentionally not cleaned up (`cleanup: false`) to preserve the database size for analysis.
+
+### Database size calculation
+
+The total etcd database size increase is: `ITERATIONS x KB_CHUNKS x KB_SIZE`.
+
+Suggested configurations:
+
+| `iterations` | `kb-chunks` | `kb-size` | Per-KB total | Total DB size | `iterations-per-namespace` |
+| ------------ | ----------- | --------- | ------------ | ------------- | -------------------------- |
+| 6,551        | 8           | 100kb     | 0.9GB        | 7GB           | 936                        |
+| 14,925       | 18          | 100kb     | 2GB          | 36GB          | 415                        |
+| 11,194       | 16          | 100kb     | 1.5GB        | 24GB          | 468                        |
+| 36,841       | 16          | 10kb      | 1.5GB        | 8GB           | 4,605                      |
+
+### Configuration flags
+
+| Flag                         | Description                                                     | Default               |
+| ---------------------------- | --------------------------------------------------------------- | --------------------- |
+| `--iterations`               | Number of object iterations for the etcd-density job (required) | -                     |
+| `--iterations-per-namespace` | Number of iterations per namespace (required)                   | -                     |
+| `--kb-chunks`                | Number of CRDs to create and object replicas per iteration (required) | -               |
+| `--kb-size`                  | Size of each object: `10kb` or `100kb`                          | `100kb`               |
+| `--metrics-profile`          | Comma separated list of metrics profiles                        | `metrics.yml,metrics-etcd-density.yml` |
+
+### Metrics
+
+In addition to the standard metrics (`metrics.yml`) and reporting metrics (`metrics-report.yml`), the workload collects etcd-specific metrics via `metrics-etcd-density.yml`:
+
+- `etcdDBTotalSize` - Total etcd database size in bytes
+- `etcdDBSizeInUse` - Actual used space in the database
+- `etcdDBFragmentationBytes` - Fragmented/unused space
+- `etcd-mvcc-db-total-size` - Per-member database size (instant)
+- `clusterEventCount` - Total cluster events
+- `etcdEventWriteRate` - Event write rate (create/update/delete)
+- `etcdEventReadRate` - Event read rate (get/list)
+
+### Usage examples
+
+```console
+kube-burner-ocp init -c etcd-density.yml --log-level=info \
+  --gc=false --gc-metrics=false \
+  --iterations=10 --iterations-per-namespace=10 \
+  --kb-chunks=8 --kb-size=100kb \
+  --qps=20 --burst=20 \
+  --local-indexing
+```
+
+!!! Note
+    This workload requires OpenShift clusters with sufficiently large control plane nodes (m6a.4xlarge or r6a.4xlarge minimum) if trying to load the DB.
 
 ## Node density workloads
 
