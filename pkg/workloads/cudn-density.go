@@ -36,7 +36,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations, namespacesPerCudn int
 	var l3, pprof bool
 	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause time.Duration
-	var churnMode string
+	var churnMode, churnTarget string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -44,11 +44,17 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs cudn-density workload with tiered cross-namespace communication",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			if churnTarget != "pods" && churnTarget != "cudns" {
+				log.Fatalf("--churn-target must be 'pods' or 'cudns', got '%s'", churnTarget)
+			}
 			if iterations%namespacesPerCudn != 0 {
 				log.Fatalf("iterations (%d) must be divisible by namespaces-per-cudn (%d)", iterations, namespacesPerCudn)
 			}
-			if churnMode == string(config.ChurnNamespaces) && (churnDuration > 0 || churnCycles > 0) {
-				log.Fatal("churn-mode=namespaces is not supported for cudn-density: CUDN finalizers block namespace deletion. Use --churn-mode=objects instead")
+			if churnTarget == "pods" && churnMode == string(config.ChurnNamespaces) && (churnDuration > 0 || churnCycles > 0) {
+				log.Fatal("churn-mode=namespaces is not supported with --churn-target=pods: CUDN finalizers block namespace deletion. Use --churn-mode=objects or --churn-target=cudns instead")
+			}
+			if churnTarget == "cudns" && churnDuration == 0 && churnCycles == 0 {
+				log.Warn("--churn-target=cudns specified but no --churn-duration or --churn-cycles set; no CUDN churn will occur")
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -59,7 +65,11 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Info("Layer 2 topology enabled")
 			}
 			if churnDuration > 0 || churnCycles > 0 {
-				log.Info("Churn is enabled")
+				log.Infof("Churn is enabled (target: %s)", churnTarget)
+			}
+
+			if churnTarget == "cudns" && !cmd.Flags().Changed("churn-mode") {
+				churnMode = string(config.ChurnNamespaces)
 			}
 
 			AdditionalVars["PPROF"] = pprof
@@ -75,7 +85,11 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
 			wh.SetMeasurements(cudnMeasurementFactoryMap)
-			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
+			configFile := "cudn-density.yml"
+			if churnTarget == "cudns" {
+				configFile = "cudn-density-cudn-churn.yml"
+			}
+			rc = RunWorkload(cmd, wh, configFile)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -89,7 +103,8 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Churn mode: objects (namespaces mode is not supported due to CUDN finalizer constraints)")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Churn mode: objects or namespaces (namespaces requires --churn-target=cudns)")
+	cmd.Flags().StringVar(&churnTarget, "churn-target", "pods", "What to churn: 'pods' churns deployments via object-mode, 'cudns' churns entire CUDN groups (CUDN + namespaces + pods) via namespace-mode")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Total number of namespaces to create")
 	cmd.Flags().IntVar(&namespacesPerCudn, "namespaces-per-cudn", 5, "Number of namespaces sharing the same CUDN")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")

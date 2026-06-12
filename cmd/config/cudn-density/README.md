@@ -170,7 +170,7 @@ Namespaces     Settling Pause     Workload           Namespaces    CUDNs
 ───────── ──►  ────────────── ──►  ────────────── ──►  ────────── ► ──────
  N ns          N/G CUDNs          Services, NPs      (GC only)    (GC only)
  + configmap   wait for           EgressFW, Quotas   no-wait       wait
-               NetworkCreated     + Deployments
+               NetworkAllocation  + Deployments
                measure latency    2m metrics pause
                + settling pause
 ```
@@ -178,7 +178,7 @@ Namespaces     Settling Pause     Workload           Namespaces    CUDNs
 | # | Job Name | Type | What It Does |
 |---|----------|------|-------------|
 | 1 | `cudn-density-create-namespaces` | create | Creates N namespaces with UDN labels + a configmap per namespace |
-| 2 | `cudn-density-create-cudn-l2/l3` | create | Creates N/group_size CUDNs, waits for `NetworkCreated=True`. [Measures CUDN latency](#cudn-latency-job-2). Then pauses for [`--job-pause`](#cudn-settling-pause) to allow OVN-K to settle |
+| 2 | `cudn-density-create-cudn-l2/l3` | create | Creates N/group_size CUDNs, waits for `NetworkAllocationSucceeded=True`. [Measures CUDN latency](#cudn-latency-job-2). Then pauses for [`--job-pause`](#cudn-settling-pause) to allow OVN-K to settle |
 | 3 | `cudn-density-workload` | create | Deploys infra (services, NPs, EgressFirewall, ResourceQuota, LimitRange) and workload (server, app, client deployments) in a single job. Infra objects have `churn: false`. Pauses 2m after deployment for [metrics collection](#metrics-profiles) |
 | 4 | `cudn-density-cleanup-namespaces` | delete | [Deletes namespaces](#why-the-cudn-cleanup-step) without waiting (only when `--gc=true`). Pods are killed, NADs start terminating |
 | 5 | `cudn-density-cleanup-cudns` | delete | [Deletes CUDNs](#why-the-cudn-cleanup-step), releasing NAD finalizers so namespaces finish terminating (only when `--gc=true`) |
@@ -212,7 +212,7 @@ Standard kube-burner pod latency measurement tracking `PodScheduled`, `Initializ
 
 ### CUDN Latency (Job 2)
 
-Custom measurement (`cudnLatency`) that tracks how long each CUDN takes from creation to `NetworkCreated=True`. Uses the condition's `lastTransitionTime` for accurate measurement rather than wall-clock time. Results are indexed as `cudnLatencyMeasurement` documents with `NetworkCreatedLatency` in milliseconds.
+Custom measurement (`cudnLatency`) that tracks how long each CUDN takes from creation to `NetworkAllocationSucceeded=True`. Uses the condition's `lastTransitionTime` for accurate measurement rather than wall-clock time. Results are indexed as `cudnLatencyMeasurement` documents with `NetworkAllocationSucceededLatency` in milliseconds.
 
 ### Metrics Profiles
 
@@ -252,16 +252,29 @@ kube-burner-ocp cudn-density \
   --local-indexing
 ```
 
-### With Churn
+### With Pod Churn
 
-> **Important:** Only `--churn-mode=objects` is supported. Namespace churn is not supported because [CUDN finalizers block namespace deletion](#why-the-cudn-cleanup-step).
+Churns deployments (server, app, client) while CUDNs, services, and network policies remain stable. Uses object-mode churn.
 
 ```bash
 kube-burner-ocp cudn-density \
   --iterations=50 \
   --churn-duration=30m \
-  --churn-percent=20 \
+  --churn-percent=50 \
   --churn-delay=1m
+```
+
+### With CUDN Churn
+
+Churns entire CUDN groups (CUDN + namespaces + pods) as atomic units using namespace-mode churn with grouped execution. Uses `repeatEveryNIterations` and `preCreateNamespaces` from kube-burner core.
+
+```bash
+kube-burner-ocp cudn-density \
+  --iterations=50 \
+  --churn-target=cudns \
+  --churn-percent=10 \
+  --churn-cycles=5 \
+  --churn-duration=10m
 ```
 
 ### With pprof and OpenSearch Indexing
@@ -292,7 +305,8 @@ kube-burner-ocp cudn-density \
 | `--churn-duration` | `0` | Total churn duration |
 | `--churn-delay` | `2m` | Delay between churn rounds |
 | `--churn-percent` | `10` | Percentage of iterations churned per round |
-| `--churn-mode` | `objects` | Churn mode (`objects` only; `namespaces` [not supported](#why-the-cudn-cleanup-step)) |
+| `--churn-mode` | `objects` | Churn mode: `objects` for pod churn, `namespaces` for CUDN churn (auto-set when `--churn-target=cudns`) |
+| `--churn-target` | `pods` | What to churn: `pods` churns deployments via object-mode, `cudns` churns entire CUDN groups via namespace-mode |
 | `--metrics-profile` | `metrics.yml,metrics-cudn.yml` | Comma-separated list of [metrics profiles](#metrics-profiles) to use |
 | `--gc` | `true` | Garbage collect created resources on completion. See [Cleanup](#cleanup) |
 
@@ -343,7 +357,8 @@ oc delete clusteruserdefinednetworks --all
 
 | File | Description |
 |------|-------------|
-| [`cudn-density.yml`](cudn-density.yml) | Main job configuration with 5-job pipeline |
+| [`cudn-density.yml`](cudn-density.yml) | Main job configuration with 5-job pipeline (pod churn) |
+| [`cudn-density-cudn-churn.yml`](cudn-density-cudn-churn.yml) | CUDN churn config with grouped execution (`--churn-target=cudns`) |
 
 ### Network Templates
 
