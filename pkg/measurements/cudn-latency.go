@@ -49,13 +49,13 @@ var (
 )
 
 type cudnMetric struct {
-	Timestamp             time.Time `json:"timestamp"`
-	MetricName            string    `json:"metricName"`
-	UUID                  string    `json:"uuid"`
-	JobName               string    `json:"jobName,omitempty"`
-	Name                  string    `json:"cudnName"`
-	Metadata              any       `json:"metadata,omitempty"`
-	NetworkAllocationSucceededLatency int `json:"networkAllocLatency"`
+	Timestamp                         time.Time `json:"timestamp"`
+	MetricName                        string    `json:"metricName"`
+	UUID                              string    `json:"uuid"`
+	JobName                           string    `json:"jobName,omitempty"`
+	Name                              string    `json:"cudnName"`
+	Metadata                          any       `json:"metadata,omitempty"`
+	NetworkAllocationSucceededLatency int       `json:"networkAllocLatency"`
 }
 
 type cudnLatency struct {
@@ -104,12 +104,12 @@ func (c *cudnLatency) handleAdd(obj any) {
 		latency := transitionTime.Sub(t).Milliseconds()
 		log.Debugf("CUDN %s already has NetworkAllocationSucceeded=True, latency: %dms", cudnName, latency)
 		c.Metrics.LoadOrStore(cudnName, cudnMetric{
-			Name:                  cudnName,
-			Timestamp:             t.UTC(),
-			MetricName:            cudnLatencyMeasurementName,
-			UUID:                  c.Uuid,
-			Metadata:              c.Metadata,
-			JobName:               c.JobConfig.Name,
+			Name:                              cudnName,
+			Timestamp:                         t.UTC(),
+			MetricName:                        cudnLatencyMeasurementName,
+			UUID:                              c.Uuid,
+			Metadata:                          c.Metadata,
+			JobName:                           c.JobConfig.Name,
 			NetworkAllocationSucceededLatency: int(latency),
 		})
 		return
@@ -117,12 +117,12 @@ func (c *cudnLatency) handleAdd(obj any) {
 
 	// Store creation timestamp, latency will be computed on update
 	c.Metrics.LoadOrStore(cudnName, cudnMetric{
-		Name:                  cudnName,
-		Timestamp:             t.UTC(),
-		MetricName:            cudnLatencyMeasurementName,
-		UUID:                  c.Uuid,
-		Metadata:              c.Metadata,
-		JobName:               c.JobConfig.Name,
+		Name:                              cudnName,
+		Timestamp:                         t.UTC(),
+		MetricName:                        cudnLatencyMeasurementName,
+		UUID:                              c.Uuid,
+		Metadata:                          c.Metadata,
+		JobName:                           c.JobConfig.Name,
 		NetworkAllocationSucceededLatency: -1,
 	})
 	log.Debugf("CUDN %s created at %v, waiting for NetworkAllocationSucceeded", cudnName, t.UTC())

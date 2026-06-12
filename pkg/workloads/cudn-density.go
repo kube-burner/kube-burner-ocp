@@ -27,6 +27,8 @@ import (
 	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 )
 
+const churnTargetCudns = "cudns"
+
 var cudnMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurementFactory{
 	"cudnLatency": measurements.NewCudnLatencyMeasurementFactory,
 }
@@ -44,7 +46,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs cudn-density workload with tiered cross-namespace communication",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			if churnTarget != "pods" && churnTarget != "cudns" {
+			if churnTarget != "pods" && churnTarget != churnTargetCudns {
 				log.Fatalf("--churn-target must be 'pods' or 'cudns', got '%s'", churnTarget)
 			}
 			if iterations%namespacesPerCudn != 0 {
@@ -53,7 +55,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			if churnTarget == "pods" && churnMode == string(config.ChurnNamespaces) && (churnDuration > 0 || churnCycles > 0) {
 				log.Fatal("churn-mode=namespaces is not supported with --churn-target=pods: CUDN finalizers block namespace deletion. Use --churn-mode=objects or --churn-target=cudns instead")
 			}
-			if churnTarget == "cudns" && churnDuration == 0 && churnCycles == 0 {
+			if churnTarget == churnTargetCudns && churnDuration == 0 && churnCycles == 0 {
 				log.Warn("--churn-target=cudns specified but no --churn-duration or --churn-cycles set; no CUDN churn will occur")
 			}
 		},
@@ -68,7 +70,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Infof("Churn is enabled (target: %s)", churnTarget)
 			}
 
-			if churnTarget == "cudns" && !cmd.Flags().Changed("churn-mode") {
+			if churnTarget == churnTargetCudns && !cmd.Flags().Changed("churn-mode") {
 				churnMode = string(config.ChurnNamespaces)
 			}
 
@@ -86,7 +88,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["ENABLE_LAYER_3"] = l3
 			wh.SetMeasurements(cudnMeasurementFactoryMap)
 			configFile := "cudn-density.yml"
-			if churnTarget == "cudns" {
+			if churnTarget == churnTargetCudns {
 				configFile = "cudn-density-cudn-churn.yml"
 			}
 			rc = RunWorkload(cmd, wh, configFile)
