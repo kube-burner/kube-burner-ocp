@@ -1,0 +1,58 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: podLatency
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  - name: churn-targets
+    namespace: etcd-churn
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    preLoadImages: false
+    waitWhenFinished: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: configmap-churn.yml
+        replicas: {{.CHURN_REPLICAS}}
+
+  - name: churn-patch
+    jobType: patch
+    jobIterations: {{.CHURN_ROUNDS}}
+    namespacedIterations: true
+    namespace: etcd-churn
+    jobPause: 1s
+    jobIterationDelay: 500ms
+    objects:
+      - kind: ConfigMap
+        apiVersion: v1
+        labelSelector:
+          test-scenario: annotation-churn
+        patchType: merge
+        objectTemplate: patch-annotation.yml

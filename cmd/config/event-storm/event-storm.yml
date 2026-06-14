@@ -1,0 +1,50 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
+
+jobs:
+  - name: victim-workload
+    namespace: etcd-victim
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    preLoadImages: true
+    maxWaitTimeout: 10m
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    hooks:
+      - cmd: ["create-event-storm.sh", "etcd-event-storm", "{{.EVENT_ITERATIONS}}", "{{.EVENT_REPLICAS}}", "{{.STORM_WORKERS}}"]
+        when: beforeJobExecution
+        background: true
+      - cmd: ["/bin/sh", "-c", "sleep {{.STORM_DELAY}}"]
+        when: beforeJobExecution
+      - cmd: ["/bin/sh", "-c", "oc delete namespace etcd-event-storm --ignore-not-found=true --force --grace-period=0"]
+        when: afterJobExecution
+        background: true
+    objects:
+      - objectTemplate: deployment.yml
+        replicas: 2
+        inputVars:
+          podReplicas: {{.POD_REPLICAS}}
+          containerImage: registry.k8s.io/pause:3.9
+
+      - objectTemplate: configmap.yml
+        replicas: 3
+
+      - objectTemplate: service.yml
+        replicas: 1

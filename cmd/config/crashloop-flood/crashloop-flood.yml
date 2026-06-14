@@ -1,0 +1,34 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
+
+jobs:
+  - name: crashloop-flood
+    namespace: etcd-crashloop
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: false
+    preLoadImages: true
+    jobPause: {{.SOAK_DURATION}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: event-generator-pod.yml
+        replicas: {{.CRASHLOOP_REPLICAS}}
+        inputVars:
+          containerImage: registry.access.redhat.com/ubi9/ubi-minimal:latest

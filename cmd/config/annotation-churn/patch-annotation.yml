@@ -1,0 +1,4 @@
+metadata:
+  annotations:
+    etcd-churn/round: "{{.Iteration}}"
+    etcd-churn/data: "{{randAlphaNum 256}}"
