@@ -126,18 +126,18 @@ The workload deploys a 3-tier structure (client, app, server) but only the **cli
 
 ### Cross-Namespace Traffic Pattern
 
-Each client generates continuous HTTP traffic to peer namespaces within its CUDN group:
+Each client generates continuous HTTP traffic to namespaces within its CUDN group, including the client's namespace:
 
 ```
 CUDN-0 group (namespaces 0-4):
 
   Continuous traffic (every 10s):             Readiness probes (every 1s):
   ─────────────────────────                   ────────────────────────────
-  client in ns-0 → curls ns-1, ns-2, ns-3, ns-4    probes ns-1
-  client in ns-1 → curls ns-2, ns-3, ns-4          probes ns-2
-  client in ns-2 → curls ns-3, ns-4                probes ns-3
-  client in ns-3 → curls ns-4                      probes ns-4
-  client in ns-4 → sleeps (last in group)           probes ns-0 (wraps)
+  client in ns-0 → curls ns-0(local), ns-1, ns-2, ns-3, ns-4    probes ns-1
+  client in ns-1 → curls ns-1(local), ns-2, ns-3, ns-4          probes ns-2
+  client in ns-2 → curls ns-2(local), ns-3, ns-4                probes ns-3
+  client in ns-3 → curls ns-3(local), ns-4                      probes ns-4
+  client in ns-4 → curls ns-4(local)                             probes ns-0 (wraps)
 ```
 
 **Key design choices:**
