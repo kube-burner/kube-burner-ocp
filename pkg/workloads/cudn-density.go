@@ -15,6 +15,8 @@
 package workloads
 
 import (
+	"context"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 )
@@ -31,10 +34,46 @@ var cudnMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurement
 	"cudnLatency": measurements.NewCudnLatencyMeasurementFactory,
 }
 
+// getDefaultGatewayIP reads the cluster's default gateway IP from the
+// k8s.ovn.org/l3-gateway-config annotation on a worker node.
+func getDefaultGatewayIP() string {
+	kubeClientProvider := config.NewKubeClientProvider("", "")
+	clientSet, _ := kubeClientProvider.ClientSet(0, 0)
+	nodes, err := clientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
+		LabelSelector: "node-role.kubernetes.io/worker",
+	})
+	if err != nil {
+		log.Fatalf("Error listing worker nodes: %v", err)
+	}
+	for _, node := range nodes.Items {
+		gwConfig, exists := node.Annotations["k8s.ovn.org/l3-gateway-config"]
+		if !exists {
+			continue
+		}
+		var parsed map[string]any
+		if err := json.Unmarshal([]byte(gwConfig), &parsed); err != nil {
+			log.Warnf("Failed to parse l3-gateway-config on node %s: %v", node.Name, err)
+			continue
+		}
+		defaultGW, ok := parsed["default"].(map[string]any)
+		if !ok {
+			continue
+		}
+		nextHop, ok := defaultGW["next-hop"].(string)
+		if !ok || nextHop == "" {
+			continue
+		}
+		log.Infof("Detected cluster default gateway IP: %s (from node %s)", nextHop, node.Name)
+		return nextHop
+	}
+	log.Fatal("Unable to detect default gateway IP: no worker node has the k8s.ovn.org/l3-gateway-config annotation with a valid next-hop")
+	return ""
+}
+
 // NewCudnDensity holds cudn-density workload
 func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations, namespacesPerCudn int
-	var l3, pprof bool
+	var l3, pprof, gatewayCheck bool
 	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause time.Duration
 	var churnMode string
 	var metricsProfiles []string
@@ -46,6 +85,9 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			if iterations%namespacesPerCudn != 0 {
 				log.Fatalf("iterations (%d) must be divisible by namespaces-per-cudn (%d)", iterations, namespacesPerCudn)
+			}
+			if gatewayCheck && !l3 {
+				log.Fatal("--gateway-check requires --layer3: gateway reachability testing is only supported with Layer3 topology")
 			}
 			if churnMode == string(config.ChurnNamespaces) && (churnDuration > 0 || churnCycles > 0) {
 				log.Fatal("churn-mode=namespaces is not supported for cudn-density: CUDN finalizers block namespace deletion. Use --churn-mode=objects instead")
@@ -74,6 +116,11 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacesPerCudn
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
+			AdditionalVars["GATEWAY_CHECK"] = gatewayCheck
+			if gatewayCheck {
+				gatewayIP := getDefaultGatewayIP()
+				AdditionalVars["GATEWAY_IP"] = gatewayIP
+			}
 			wh.SetMeasurements(cudnMeasurementFactoryMap)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
@@ -93,6 +140,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Total number of namespaces to create")
 	cmd.Flags().IntVar(&namespacesPerCudn, "namespaces-per-cudn", 5, "Number of namespaces sharing the same CUDN")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
+	cmd.Flags().BoolVar(&gatewayCheck, "gateway-check", false, "Enable default gateway reachability check from each namespace (requires --layer3)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
