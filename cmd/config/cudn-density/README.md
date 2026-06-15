@@ -126,7 +126,7 @@ The workload deploys a 3-tier structure (client, app, server) but only the **cli
 
 ### Cross-Namespace Traffic Pattern
 
-Each client generates continuous HTTP traffic to peer namespaces within its CUDN group:
+Each client generates continuous HTTP traffic to namespaces within its CUDN group, including the client's namespace:
 
 ```
 CUDN-0 group (namespaces 0-4):
