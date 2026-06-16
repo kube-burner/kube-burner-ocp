@@ -79,23 +79,13 @@ jobs:
           customStatusPaths:
             - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
               value: "True"
-      - objectTemplate: ds.yml
-        replicas: 1
-        runOnce: true
   {{ end }}
 
-  - name: remove-ds
-    jobType: delete
-    waitForDeletion: true
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    skipIndexing: true
-    objects:
-      - kind: DaemonSet
-        apiVersion: apps/v1
-        labelSelector: {kube-burner.io/job: create-udn-pods }
-
-  - name: udn-density-pods
+  {{ if .ENABLE_LAYER_3 }}
+  - name: udn-density-l3-pods
+  {{ else }}
+  - name: udn-density-l2-pods
+  {{ end }}
     namespace: udn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
