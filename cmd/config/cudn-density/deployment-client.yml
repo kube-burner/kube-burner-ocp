@@ -48,6 +48,7 @@ spec:
           - "-c"
           - |
             while true; do
+              curl --fail -sS http://cudn-svc.cudn-density-{{ $.Iteration }}.svc.cluster.local:8080 -o /dev/null 2>/dev/null && echo "OK->ns-{{ $.Iteration }}(local)" || echo "FAIL->ns-{{ $.Iteration }}(local)";
               {{- range $offset := until (int $lastPosition) }}
                 {{- $peerOffset := add $offset 1 }}
                 {{- if lt (add $position $peerOffset) $.namespaces_per_cudn }}
@@ -58,7 +59,14 @@ spec:
               sleep 10
             done
         {{ else }}
-        command: ["sleep", "inf"]
+        command:
+          - "/bin/sh"
+          - "-c"
+          - |
+            while true; do
+              curl --fail -sS http://cudn-svc.cudn-density-{{ $.Iteration }}.svc.cluster.local:8080 -o /dev/null 2>/dev/null && echo "OK->ns-{{ $.Iteration }}(local)" || echo "FAIL->ns-{{ $.Iteration }}(local)";
+              sleep 10
+            done
         {{ end }}
         resources:
           requests:

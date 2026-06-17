@@ -2,7 +2,7 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: udn-density-{{.Replica}}
+  name: {{.JobName}}-{{.Replica}}
 spec:
   selector:
     app: nginx
