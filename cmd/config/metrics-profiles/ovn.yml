@@ -1,0 +1,53 @@
+
+# OVN metrics:
+# OVS br-int OpenFlow flow churn rate (flows/sec)
+- query: irate(ovs_vswitchd_bridge_flows_total{bridge=~"br-int"}[2m]) > 0
+  metricName: ovsFlowsRateBrInt
+
+# the number of OpenFlow flows on the br-int OVS bridge
+- query: ovs_vswitchd_bridge_flows_total{bridge=~"br-int"}
+  metricName: ovsFlowsTotalBrInt
+
+# the number of Logical flows created by northd
+- query: ovn_northd_build_lflows_total_samples{}
+  metricName: ovnLFlowsTotal
+
+# OVN Controller Metrics
+#
+# ovn-controller runs on each node and translates logical flows from the OVN Southbound DB
+# into OpenFlow flows for the local OVS bridge (br-int). These metrics track the performance
+# of this translation process.
+#
+# flow_generation: Measures the time (in seconds) for ovn-controller's main loop iteration,
+# which includes reading logical flows from SB DB and computing the corresponding OpenFlow rules.
+# - short_term_avg: Exponentially weighted moving average (α=0.50), reacts quickly to recent changes
+# - long_term_avg: Exponentially weighted moving average (α=0.01), shows historical baseline
+# - 95th_percentile: 95% of iterations complete within this time, useful for SLO monitoring
+# High values indicate slow flow processing and flow installation, which can result in
+# packet drops and high delay network policy enforcement and pod networking setup.
+#
+- query: ovn_controller_flow_generation_short_term_avg
+  metricName: ovnControllerFlowGenShortTermAvg
+
+- query: ovn_controller_flow_generation_long_term_avg
+  metricName: ovnControllerFlowGenLongTermAvg
+
+- query: ovn_controller_flow_generation_95th_percentile
+  metricName: ovnControllerFlowGenP95
+
+# packet_in: Number of packet-in messages handled by ovn-controller from ovs-vswitchd.
+# Packet-ins occur when OVS encounters packets that don't match any installed flow and
+# need controller processing (e.g., ARP resolution, MAC learning, DNS replies).
+# High counts may indicate missing flows or high network activity requiring controller decisions.
+#
+- query: ovn_controller_packet_in
+  metricName: ovnControllerPacketIn
+
+# packet_in_drop: Number of packet-in messages dropped by ovn-controller due to resource
+# constraints (buffer overflow, rate limiting). Aggregates drops from MAC binding, buffered
+# packets, controller events, and vport binding queues.
+# Non-zero values indicate ovn-controller is overloaded and dropping traffic that needs
+# controller processing, which can cause connectivity issues.
+#
+- query: ovn_controller_packet_in_drop
+  metricName: ovnControllerPacketInDrop
