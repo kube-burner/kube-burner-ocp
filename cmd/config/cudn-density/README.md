@@ -304,7 +304,7 @@ kube-burner-ocp cudn-density \
 | `--churn-delay` | `2m` | Delay between churn rounds |
 | `--churn-percent` | `10` | Percentage of iterations churned per round |
 | `--churn-mode` | `objects` | Churn mode (`objects` only; `namespaces` [not supported](#why-the-cudn-cleanup-step)) |
-| `--gateway-check` | `false` | Enable [default gateway reachability check](#gateway-reachability-check) from each namespace (validates north-south connectivity under CUDN scale) |
+| `--gateway-check` | `false` | Enable [default gateway reachability check](#with-gateway-check) from each namespace (validates north-south connectivity under CUDN scale) |
 | `--metrics-profile` | `metrics.yml,metrics-cudn.yml` | Comma-separated list of [metrics profiles](#metrics-profiles) to use |
 | `--gc` | `true` | Garbage collect created resources on completion. See [Cleanup](#cleanup) |
 
@@ -372,7 +372,6 @@ oc delete clusteruserdefinednetworks --all
 | [`deployment-server.yml`](deployment-server.yml) | nginx server deployment (named ports: `http`/`https`) |
 | [`deployment-app.yml`](deployment-app.yml) | sampleapp middleware deployment |
 | [`deployment-client.yml`](deployment-client.yml) | curl client with cross-namespace traffic + [readiness probes](#cross-namespace-traffic-pattern) |
-| [`deployment-gateway-checker.yml`](deployment-gateway-checker.yml) | Gateway reachability checker (pings default gateway, `--gateway-check` only) |
 | [`configmap.yml`](configmap.yml) | Configmap to trigger namespace creation |
 
 ### Service Templates
