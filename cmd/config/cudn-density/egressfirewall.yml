@@ -32,6 +32,10 @@ spec:
   - type: Allow
     to:
       cidrSelector: {{.gatewayIP}}/32
+  # External IP reachability (8.8.8.8)
+  - type: Allow
+    to:
+      cidrSelector: 8.8.8.8/32
 {{ end }}
   # Cluster DNS
   - type: Allow

@@ -35,18 +35,15 @@ spec:
       containers:
       - name: gateway-checker
         image: quay.io/cloud-bulldozer/curl:latest
+        env:
+        - name: GATEWAY_IP
+          value: "{{.gatewayIP}}"
+        - name: EXTERNAL_IP
+          value: "8.8.8.8"
         command:
           - "/bin/sh"
           - "-c"
-          - |
-            while true; do
-              if ping -c 1 -W 3 {{.gatewayIP}} >/dev/null 2>&1; then
-                echo "OK gateway={{.gatewayIP}}"
-              else
-                echo "FAIL gateway={{.gatewayIP}}"
-              fi
-              sleep 120
-            done
+          - "while true; do echo ping on ${EXTERNAL_IP}; ping -c 1 -W 3 ${EXTERNAL_IP}; sleep 120; done"
         resources:
           requests:
             memory: "10Mi"
@@ -59,7 +56,7 @@ spec:
             command:
             - "/bin/sh"
             - "-c"
-            - "ping -c 1 -W 3 {{.gatewayIP}}"
+            - "if [ ! -f /tmp/ready.log ]; then ping -c 1 -W 3 ${GATEWAY_IP} && ping -c 1 -W 3 ${EXTERNAL_IP} && touch /tmp/ready.log; else ping -c 1 -W 3 ${GATEWAY_IP}; fi"
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3

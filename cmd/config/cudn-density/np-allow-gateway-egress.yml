@@ -1,10 +1,11 @@
 # allow-gateway-egress: Opens egress from gateway-checker pods to the cluster
-# default gateway IP. This enables ICMP (ping) traffic to validate north-south
-# reachability under CUDN scale.
+# default gateway IP and external IP (8.8.8.8). This enables ICMP (ping)
+# traffic to validate north-south reachability under CUDN scale.
 #
 # Selects: pods with app=gateway-checker (1 pod per namespace)
 # Allows egress to:
-#   - The cluster default gateway IP on all protocols (ICMP for ping)
+#   - The cluster default gateway IP (ICMP for ping)
+#   - 8.8.8.8 (external reachability validation)
 #   - Any destination on port 53 UDP/TCP (DNS resolution)
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
@@ -18,6 +19,8 @@ spec:
   - to:
     - ipBlock:
         cidr: {{.gatewayIP}}/32
+    - ipBlock:
+        cidr: 8.8.8.8/32
   - to: []
     ports:
     - protocol: UDP
