@@ -22,6 +22,7 @@
   - [Basic Run](#basic-run)
   - [Layer 3 with Local Indexing](#layer-3-with-local-indexing)
   - [With Churn](#with-churn)
+  - [With Gateway Check](#with-gateway-check)
   - [With pprof and OpenSearch Indexing](#with-pprof-and-opensearch-indexing)
 - [CLI Flags](#cli-flags)
 - [Scale Considerations](#scale-considerations)
@@ -264,6 +265,16 @@ kube-burner-ocp cudn-density \
   --churn-delay=1m
 ```
 
+### With Gateway Check
+
+Validates that UDN pods can reach the cluster default gateway as CUDN count scales. The gateway IP is auto-detected from node annotations.
+
+```bash
+kube-burner-ocp cudn-density \
+  --iterations=100 \
+  --gateway-check
+```
+
 ### With pprof and OpenSearch Indexing
 
 ```bash
@@ -293,6 +304,7 @@ kube-burner-ocp cudn-density \
 | `--churn-delay` | `2m` | Delay between churn rounds |
 | `--churn-percent` | `10` | Percentage of iterations churned per round |
 | `--churn-mode` | `objects` | Churn mode (`objects` only; `namespaces` [not supported](#why-the-cudn-cleanup-step)) |
+| `--gateway-check` | `false` | Enable [default gateway reachability check](#with-gateway-check) from each namespace (validates north-south connectivity under CUDN scale) |
 | `--metrics-profile` | `metrics.yml,metrics-cudn.yml` | Comma-separated list of [metrics profiles](#metrics-profiles) to use |
 | `--gc` | `true` | Garbage collect created resources on completion. See [Cleanup](#cleanup) |
 
@@ -318,6 +330,7 @@ OVN LB entries = services/ns x 2 ports x namespaces.
 | `--namespaces-per-cudn` | **High** | Most impactful for NP/address-set load. Each NP with cross-namespace selectors creates address sets spanning all namespaces in the CUDN group. Going from 5 → 20 quadruples the address set size |
 | `--iterations` | **High** | Controls total namespace count. More namespaces = more pods, services, NPs, and OVN logical ports |
 | `--layer3` | **Low** | L3 uses per-node subnets and routing, slightly more OVN-K work than flat L2 |
+| `--gateway-check` | **Low** | Adds 1 gateway-checker pod + 1 NP per namespace for north-south validation |
 
 ---
 
@@ -378,6 +391,7 @@ oc delete clusteruserdefinednetworks --all
 | [`np-allow-cudn-egress.yml`](np-allow-cudn-egress.yml) | Egress from client to nginx/app (named ports, CUDN group scoped) |
 | [`np-allow-app-ingress.yml`](np-allow-app-ingress.yml) | Ingress to sampleapp from client (CUDN group scoped) |
 | [`np-allow-app-egress.yml`](np-allow-app-egress.yml) | Egress from sampleapp to nginx (named ports, CUDN group scoped) |
+| [`np-allow-gateway-egress.yml`](np-allow-gateway-egress.yml) | Egress from gateway-checker to default gateway IP (`--gateway-check` only) |
 
 ### Infrastructure Templates
 
