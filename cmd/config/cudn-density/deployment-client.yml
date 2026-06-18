@@ -56,6 +56,9 @@ spec:
               curl --fail -sS http://cudn-svc.cudn-density-{{ $peerIter }}.svc.cluster.local:8080 -o /dev/null 2>/dev/null && echo "OK->ns-{{ $peerIter }}" || echo "FAIL->ns-{{ $peerIter }}";
                 {{- end }}
               {{- end }}
+              {{- if $.gatewayIP }}
+              ping -c 1 -W 3 {{$.gatewayIP}} >/dev/null 2>&1 && echo "OK->gateway" || echo "FAIL->gateway";
+              {{- end }}
               sleep 10
             done
         {{ else }}
@@ -82,7 +85,7 @@ spec:
             command:
             - "/bin/sh"
             - "-c"
-            - "curl --fail -sS http://cudn-svc.cudn-density-{{ $peerNs }}.svc.cluster.local:8080/ -o /dev/null"
+            - "curl --fail -sS http://cudn-svc.cudn-density-{{ $peerNs }}.svc.cluster.local:8080/ -o /dev/null{{ if .gatewayIP }} && ping -c 1 -W 3 {{.gatewayIP}}{{ end }}"
           periodSeconds: 1
           timeoutSeconds: 5
           failureThreshold: 60

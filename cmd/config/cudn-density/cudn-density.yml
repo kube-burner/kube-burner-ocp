@@ -174,10 +174,8 @@ jobs:
       - objectTemplate: egressfirewall.yml
         replicas: 1
         churn: false
-{{ if .GATEWAY_CHECK }}
         inputVars:
-          gatewayIP: {{.GATEWAY_IP}}
-{{ end }}
+          gatewayIP: "{{ if .GATEWAY_CHECK }}{{.GATEWAY_IP}}{{ end }}"
 
       - objectTemplate: resourcequota.yml
         replicas: 1
@@ -202,16 +200,12 @@ jobs:
         inputVars:
           podReplicas: 1
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          gatewayIP: "{{ if .GATEWAY_CHECK }}{{.GATEWAY_IP}}{{ end }}"
 
 {{ if .GATEWAY_CHECK }}
       - objectTemplate: np-allow-gateway-egress.yml
         replicas: 1
         churn: false
-        inputVars:
-          gatewayIP: {{.GATEWAY_IP}}
-
-      - objectTemplate: deployment-gateway-checker.yml
-        replicas: 1
         inputVars:
           gatewayIP: {{.GATEWAY_IP}}
 {{ end }}
