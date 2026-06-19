@@ -10,18 +10,20 @@
   - [Communication Model](#communication-model)
   - [Cross-Namespace Traffic Pattern](#cross-namespace-traffic-pattern)
   - [OVN-K Load Profile](#ovn-k-load-profile)
-- [Job Pipeline](#job-pipeline)
+- [Job Structure](#job-structure)
   - [CUDN Settling Pause](#cudn-settling-pause)
   - [Why the CUDN Cleanup Step?](#why-the-cudn-cleanup-step)
 - [Measurements](#measurements)
   - [Pod Latency](#pod-latency)
-  - [CUDN Latency](#cudn-latency-job-2)
+  - [CUDN Latency](#cudn-latency)
   - [Metrics Profiles](#metrics-profiles)
   - [pprof Collection](#pprof-collection)
 - [Usage](#usage)
   - [Basic Run](#basic-run)
   - [Layer 3 with Local Indexing](#layer-3-with-local-indexing)
   - [With Churn](#with-churn)
+  - [With CUDN Churn](#with-cudn-churn)
+  - [With Incremental Load](#with-incremental-load)
   - [With Gateway Check](#with-gateway-check)
   - [With pprof and OpenSearch Indexing](#with-pprof-and-opensearch-indexing)
 - [CLI Flags](#cli-flags)
@@ -162,31 +164,34 @@ CUDN-0 group (namespaces 0-4):
 
 ---
 
-## Job Pipeline
+## Job Structure
+
+Uses **grouped execution** — a single job (`cudn-density`) with two object groups that create CUDNs and workload objects in lockstep:
 
 ```
-Job 1          Job 2              Job 3              Job 4         Job 5
-Create         Create CUDNs +     Deploy Infra +     Cleanup       Cleanup
-Namespaces     Settling Pause     Workload           Namespaces    CUDNs
-───────── ──►  ────────────── ──►  ────────────── ──►  ────────── ► ──────
- N ns          N/G CUDNs          Services, NPs      (GC only)    (GC only)
- + configmap   wait for           EgressFW, Quotas   no-wait       wait
-               NetworkCreated     + Deployments
-               measure latency    2m metrics pause
-               + settling pause
+Job 1 (cudn-density)                               Job 2         Job 3
+┌──────────────────────────────────────────────┐    Cleanup       Cleanup
+│ Group 1: CUDNs (every Nth iteration)         │    Namespaces    CUDNs
+│ Group 2: Infra + Workload (every iteration)  │    (GC only)    (GC only)
+│ + churn / incremental load support           │
+│ + metrics pause                              │
+└──────────────────────────────────────────────┘
 ```
+
+| Group | What It Creates |
+|-------|----------------|
+| **1** | CUDNs (1 per `namespaces-per-cudn` iterations), waits for `NetworkAllocationSucceeded=True`, [measures CUDN latency](#cudn-latency-job-2). `churn: false` |
+| **2** | Services, NetworkPolicies, EgressFirewall, ResourceQuota, LimitRange, deployments (server, app, client). Infra objects have `churn: false`, deployments are churnable |
 
 | # | Job Name | Type | What It Does |
 |---|----------|------|-------------|
-| 1 | `cudn-density-create-namespaces` | create | Creates N namespaces with UDN labels + a configmap per namespace |
-| 2 | `cudn-density-create-cudn-l2/l3` | create | Creates N/group_size CUDNs, waits for `NetworkCreated=True`. [Measures CUDN latency](#cudn-latency-job-2). Then pauses for [`--job-pause`](#cudn-settling-pause) to allow OVN-K to settle |
-| 3 | `cudn-density-workload` | create | Deploys infra (services, NPs, EgressFirewall, ResourceQuota, LimitRange) and workload (server, app, client deployments) in a single job. Infra objects have `churn: false`. Pauses 2m after deployment for [metrics collection](#metrics-profiles) |
-| 4 | `cudn-density-cleanup-namespaces` | delete | [Deletes namespaces](#why-the-cudn-cleanup-step) without waiting (only when `--gc=true`). Pods are killed, NADs start terminating |
-| 5 | `cudn-density-cleanup-cudns` | delete | [Deletes CUDNs](#why-the-cudn-cleanup-step), releasing NAD finalizers so namespaces finish terminating (only when `--gc=true`) |
+| 1 | `cudn-density` | create | Creates namespaces, CUDNs (group 1), and all workload objects (group 2) in a single job. Supports churn and incremental load. Pauses for [`--job-pause`](#cudn-settling-pause) after completion for metrics collection |
+| 2 | `cudn-density-cleanup-namespaces` | delete | [Deletes namespaces](#why-the-cudn-cleanup-step) without waiting (only when `--gc=true`). Pods are killed, NADs start terminating |
+| 3 | `cudn-density-cleanup-cudns` | delete | [Deletes CUDNs](#why-the-cudn-cleanup-step), releasing NAD finalizers so namespaces finish terminating (only when `--gc=true`) |
 
 ### CUDN Settling Pause
 
-After CUDN creation (Job 2), a configurable pause (`--job-pause`, default 30m) allows OVN-K to finish compiling the CUDN logical topology in the NB/SB databases and programming OVS flows on all nodes before workload pods are deployed. This is particularly important for Layer 2 topologies with Interconnect enabled, where the OVN NB DB client becomes a bottleneck when processing CUDN topology changes and pod port bindings simultaneously.
+After job completion, a configurable pause (`--job-pause`, default 1m) allows OVN-K to finish compiling the CUDN logical topology in the NB/SB databases and programming OVS flows on all nodes. This is particularly important for Layer 2 topologies with Interconnect enabled, where the OVN NB DB client becomes a bottleneck when processing CUDN topology changes and pod port bindings simultaneously.
 
 ### Why the CUDN Cleanup Step?
 
@@ -196,7 +201,7 @@ CUDNs have a finalizer (`k8s.ovn.org/user-defined-network-protection`) that prev
 Namespace deletion blocked by → NAD finalizer blocked by → CUDN existence
 ```
 
-Job 4 deletes namespaces without waiting (`waitForDeletion: false`), then Job 5 deletes CUDNs (`waitForDeletion: true`), releasing the finalizers so namespaces finish terminating. See [Cleanup](#cleanup) for manual cleanup instructions.
+Job 2 deletes namespaces without waiting (`waitForDeletion: false`), then Job 3 deletes CUDNs (`waitForDeletion: true`), releasing the finalizers so namespaces finish terminating. See [Cleanup](#cleanup) for manual cleanup instructions.
 
 ---
 
@@ -211,9 +216,9 @@ Standard kube-burner pod latency measurement tracking `PodScheduled`, `Initializ
 
 > **Note:** The `Ready` latency in Job 3 is higher than typical workloads because the readiness probe validates **cross-namespace** connectivity over the CUDN, not just local container readiness. This is by design — it directly measures CUDN network plumbing time.
 
-### CUDN Latency (Job 2)
+### CUDN Latency
 
-Custom measurement (`cudnLatency`) that tracks how long each CUDN takes from creation to `NetworkCreated=True`. Uses the condition's `lastTransitionTime` for accurate measurement rather than wall-clock time. Results are indexed as `cudnLatencyMeasurement` documents with `NetworkCreatedLatency` in milliseconds.
+Custom measurement (`cudnLatency`) that tracks how long each CUDN takes from creation to `NetworkAllocationSucceeded=True`. Uses the condition's `lastTransitionTime` for accurate measurement rather than wall-clock time. Results are indexed as `cudnLatencyMeasurement` documents with `NetworkAllocationSucceededLatency` in milliseconds.
 
 ### Metrics Profiles
 
@@ -255,7 +260,9 @@ kube-burner-ocp cudn-density \
 
 ### With Churn
 
-> **Important:** Only `--churn-mode=objects` is supported. Namespace churn is not supported because [CUDN finalizers block namespace deletion](#why-the-cudn-cleanup-step).
+Pod churn (default) churns deployments using object-mode churn. CUDNs, services, and network policies remain stable.
+
+> **Important:** Only `--churn-mode=objects` is supported for pod churn. Namespace churn is not supported with `--churn-target=pods` because [CUDN finalizers block namespace deletion](#why-the-cudn-cleanup-step).
 
 ```bash
 kube-burner-ocp cudn-density \
@@ -264,6 +271,42 @@ kube-burner-ocp cudn-density \
   --churn-percent=20 \
   --churn-delay=1m
 ```
+
+### With CUDN Churn
+
+CUDN churn churns entire CUDN groups (CUDN + namespaces + pods) atomically using namespace-mode churn. Use `--churn-target=cudns` to enable this mode.
+
+```bash
+kube-burner-ocp cudn-density \
+  --iterations=50 \
+  --churn-target=cudns \
+  --churn-duration=30m \
+  --churn-percent=20 \
+  --churn-delay=1m
+```
+
+### With Incremental Load
+
+Gradually ramps up CUDN/namespace count in steps, collecting per-step measurements. Each step is cumulative (teardown + rebuild at new scale level). Useful for finding the scale point where OVN-K performance degrades.
+
+```bash
+# Linear: 5 → 10 → 15 → ... → 100 namespaces
+kube-burner-ocp cudn-density \
+  --iterations=100 \
+  --namespaces-per-cudn=5 \
+  --incremental-step-size=5 \
+  --incremental-step-delay=5m
+
+# Exponential: 5 → 10 → 20 → 40 → ... namespaces
+kube-burner-ocp cudn-density \
+  --iterations=100 \
+  --namespaces-per-cudn=5 \
+  --incremental-step-size=5 \
+  --incremental-pattern=exponential \
+  --incremental-exp-base=2.0
+```
+
+> **Note:** Incremental load and churn cannot be used together.
 
 ### With Gateway Check
 
@@ -303,7 +346,12 @@ kube-burner-ocp cudn-density \
 | `--churn-duration` | `0` | Total churn duration |
 | `--churn-delay` | `2m` | Delay between churn rounds |
 | `--churn-percent` | `10` | Percentage of iterations churned per round |
-| `--churn-mode` | `objects` | Churn mode (`objects` only; `namespaces` [not supported](#why-the-cudn-cleanup-step)) |
+| `--churn-mode` | `objects` | Churn mode: `objects` or `namespaces` (`namespaces` requires `--churn-target=cudns`) |
+| `--churn-target` | `pods` | What to churn: `pods` churns deployments, `cudns` churns entire CUDN groups |
+| `--incremental-step-size` | `0` | Namespaces per incremental step (0=disabled). Must be divisible by `namespaces-per-cudn` |
+| `--incremental-step-delay` | `5m` | Delay between incremental load steps |
+| `--incremental-pattern` | `linear` | Incremental load pattern: `linear` or `exponential` |
+| `--incremental-exp-base` | `2.0` | Base for exponential incremental pattern (must be > 1.0) |
 | `--gateway-check` | `false` | Enable [default gateway reachability check](#with-gateway-check) from each namespace (validates north-south connectivity under CUDN scale) |
 | `--metrics-profile` | `metrics.yml,metrics-cudn.yml` | Comma-separated list of [metrics profiles](#metrics-profiles) to use |
 | `--gc` | `true` | Garbage collect created resources on completion. See [Cleanup](#cleanup) |

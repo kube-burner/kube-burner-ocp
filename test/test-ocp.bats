@@ -172,12 +172,35 @@ teardown_file() {
 
 # bats test_tags=workload:cudn-density
 @test "cudn-density-l2: gc=true" {
-  oc delete ns -l kube-burner.io/job=cudn-density-create-cudn-l2
   oc delete clusteruserdefinednetworks --all --ignore-not-found
   # Extract cudn-density templates to override any stale files from previous tests
   run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
   run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --gc=true --job-pause=0s --uuid=${UUID}
-  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density-create-cudn-l2
+  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
+}
+
+@test "cudn-density-l2: pod-churn" {
+  oc delete clusteruserdefinednetworks --all --ignore-not-found
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --churn-percent=50 --churn-cycles=1 --churn-duration=1m --gc=true --job-pause=0s --uuid=${UUID}
+  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
+}
+
+@test "cudn-density-l2: cudn-churn" {
+  oc delete clusteruserdefinednetworks --all --ignore-not-found
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --churn-target=cudns --churn-percent=50 --churn-cycles=1 --churn-duration=1m --gc=true --job-pause=0s --uuid=${UUID}
+  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
+}
+
+@test "cudn-density-l2: incremental-load" {
+  oc delete clusteruserdefinednetworks --all --ignore-not-found
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=20 --namespaces-per-cudn=5 --gc=true --job-pause=0s \
+    --incremental-step-size=10 --incremental-step-delay=5s \
+    --uuid=${UUID}
+  # Incremental framework GCs between steps -- verify nothing remains
+  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
 }
 
 # bats test_tags=workload:cluster-health
