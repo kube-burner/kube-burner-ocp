@@ -74,7 +74,7 @@ func getDefaultGatewayIP() string {
 func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations, namespacesPerCudn, incrementalStepSize int
 	var incrementalExpBase float64
-	var l3, pprof, gatewayCheck bool
+	var l3, pprof, gatewayCheck, bgp bool
 	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay time.Duration
 	var churnMode, incrementalPattern string
 	var metricsProfiles []string
@@ -146,6 +146,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["INCREMENTAL_PATTERN"] = incrementalPattern
 			AdditionalVars["INCREMENTAL_EXP_BASE"] = incrementalExpBase
 			AdditionalVars["GATEWAY_CHECK"] = gatewayCheck
+			AdditionalVars["BGP"] = bgp
 			if gatewayCheck {
 				gatewayIP := getDefaultGatewayIP()
 				AdditionalVars["GATEWAY_IP"] = gatewayIP
@@ -158,6 +159,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&l3, "layer3", false, "Use Layer3 topology instead of Layer2")
+	cmd.Flags().BoolVar(&bgp, "bgp", false, "Enable BGP route advertisement for each CUDN (requires external FRR on the default gatewaynode)")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection for ovnkube components")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().DurationVar(&jobPause, "job-pause", 1*time.Minute, "Pause after CUDN creation to allow OVN-K network settling before workload deployment")

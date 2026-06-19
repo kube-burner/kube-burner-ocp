@@ -18,8 +18,11 @@ spec:
     - key: kubernetes.io/metadata.name
       operator: In
       values: {{$nsNames}}
+  {{- $firstOctet := add (div $.Iteration 256) 40 }}
+  {{- $secondOctet := mod $.Iteration 256 }}
+  {{- $cudnCidr := print $firstOctet "." $secondOctet ".0.0/16" }}
   network:
     topology: Layer2
     layer2:
       role: Primary
-      subnets: ["10.132.0.0/16"]
+      subnets: [{{$cudnCidr}}]
