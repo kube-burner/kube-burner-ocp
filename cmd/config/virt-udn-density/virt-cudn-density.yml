@@ -4,14 +4,13 @@ global:
   gcMetrics: {{.GC_METRICS}}
   deletionStrategy: {{.DELETION_STRATEGY}}
   measurements:
-    - name: podLatency
-{{ if ne .POD_READY_THRESHOLD 0 }}
+    - name: vmiLatency
+{{ if ne .VMI_RUNNING_THRESHOLD 0 }}
       thresholds:
-        - conditionType: Ready
+        - conditionType: VMIRunning
           metric: P99
-          threshold: {{.POD_READY_THRESHOLD}}
+          threshold: {{.VMI_RUNNING_THRESHOLD}}
 {{ end }}
-
 {{ if .PPROF }}
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}
@@ -52,15 +51,22 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
+{{ $jobName := ternary "create-cudn-l3" "create-cudn-l2" .ENABLE_LAYER_3 }}
 jobs:
-  {{ if and (eq .CHURN_DURATION 0) (eq .CHURN_CYCLES 0) }}
-  - name: create-udn-pods
-    namespace: udn-density-pods
+  - name: {{ $jobName }}
+    namespace: virt-cudn-density
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
     waitWhenFinished: true
+    jobPause: 2m
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -69,20 +75,15 @@ jobs:
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
       {{ if .ENABLE_LAYER_3 }}
-      - objectTemplate: udn_l3.yml
+      - objectTemplate: cudn_l3.yml
         replicas: 1
       {{ else }}
-      - objectTemplate: udn_l2.yml
+      - objectTemplate: cudn_l2.yml
         replicas: 1
       {{ end }}
-        waitOptions:
-          customStatusPaths:
-            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
-              value: "True"
       - objectTemplate: ds.yml
         replicas: 1
         runOnce: true
-  {{ end }}
 
   - name: remove-ds
     jobType: delete
@@ -93,60 +94,27 @@ jobs:
     objects:
       - kind: DaemonSet
         apiVersion: apps/v1
-        labelSelector: {kube-burner.io/job: create-udn-pods }
+        labelSelector: {kube-burner.io/job: {{ $jobName }} }
 
-  - name: udn-density-pods
-    namespace: udn-density-pods
+  - name: virt-density-cudn
+    namespace: virt-cudn-density
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
-    waitWhenFinished: true
     preLoadImages: true
-    churnConfig:
-      cycles: {{.CHURN_CYCLES}}
-      duration: {{.CHURN_DURATION}}
-      percent: {{.CHURN_PERCENT}}
-      delay: {{.CHURN_DELAY}}
-      mode: {{.CHURN_MODE}}
-    jobPause: 2m
-    metricsClosing: afterJobPause
     cleanup: false
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
+    waitWhenFinished: true
+    jobPause: 2m
     objects:
-      {{ if or (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
-      {{ if .ENABLE_LAYER_3 }}
-      - objectTemplate: udn_l3.yml
-        replicas: 1
-      {{ else }}
-      - objectTemplate: udn_l2.yml
-        replicas: 1
-      {{ end }}
-      {{ end }}
-
-      {{ if not .SIMPLE}}
-      - objectTemplate: np-deny-all.yml
-        replicas: 1
-
-      - objectTemplate: np-allow-from-clients.yml
-        replicas: 1
-
       - objectTemplate: service.yml
-        replicas: 5
-      {{ end }}
-
-      - objectTemplate: deployment-server.yml
-        replicas: 3
+      - objectTemplate: vm-client.yml
+        replicas: {{.VMS_PER_ITERATION}}
         inputVars:
-          podReplicas: 2
-
-      - objectTemplate: deployment-client.yml
-        replicas: 2
+          bindingMethod: {{.UDN_BINDING_METHOD}}
+          vmImage: {{.VM_IMAGE}}
+      - objectTemplate: vm-server.yml
+        replicas: 1
         inputVars:
-          podReplicas: 2
-          simple: {{.SIMPLE}}
+          bindingMethod: {{.UDN_BINDING_METHOD}}
+          vmImage: {{.VM_IMAGE}}
