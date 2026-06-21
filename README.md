@@ -619,6 +619,11 @@ Similar to udn-density-pods scenario. Creates VMs, one Nginx server and several 
 ```Nb of client per UDN = (Nb of worker * vms-per-node / Nb of UDN) -1 //-1  because the server is always deployed.```
 This scenario is meant to test how many UDNs can be deployed in parallel and how it scales. It requires a version of OCP higher than 4.18, otherwise, UDN feature is not available.
 
+### Virt C-UDN Density
+
+In order to be able to compare *UserDefinedNetwork (UDN)* and *ClusterUserDefinedNetwork (CUDN)* performance, this scenario uses the same logic than the previous one.
+It deploys VMs, one Nginx server and several clients into namespaces, the number of namespaces is the number of iterations. For each namespace, there is one C-UDN associated to it one to be close to the virt UDN density scenario.
+
 ### Virt Capacity Benchmark
 
 Test the capacity of Virtual Machines and Volumes supported by the cluster and a specific storage class.
