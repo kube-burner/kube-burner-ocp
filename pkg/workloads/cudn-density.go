@@ -30,8 +30,6 @@ import (
 	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 )
 
-const churnTargetCudns = "cudns"
-
 var cudnMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurementFactory{
 	"cudnLatency": measurements.NewCudnLatencyMeasurementFactory,
 }
@@ -78,7 +76,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var incrementalExpBase float64
 	var l3, pprof, gatewayCheck bool
 	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay time.Duration
-	var churnMode, churnTarget, incrementalPattern string
+	var churnMode, incrementalPattern string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -86,20 +84,14 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs cudn-density workload with tiered cross-namespace communication",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			if churnTarget != "pods" && churnTarget != churnTargetCudns {
-				log.Fatalf("--churn-target must be 'pods' or 'cudns', got '%s'", churnTarget)
-			}
 			if namespacesPerCudn < 1 {
 				log.Fatal("--namespaces-per-cudn must be >= 1")
 			}
 			if iterations%namespacesPerCudn != 0 {
 				log.Fatalf("iterations (%d) must be divisible by namespaces-per-cudn (%d)", iterations, namespacesPerCudn)
 			}
-			if churnTarget == "pods" && churnMode == string(config.ChurnNamespaces) && (churnDuration > 0 || churnCycles > 0) {
-				log.Fatal("churn-mode=namespaces is not supported with --churn-target=pods: CUDN finalizers block namespace deletion. Use --churn-mode=objects or --churn-target=cudns instead")
-			}
-			if churnTarget == churnTargetCudns && cmd.Flags().Changed("churn-mode") && churnMode == string(config.ChurnObjects) {
-				log.Fatal("--churn-mode=objects is not supported with --churn-target=cudns: CUDN churn requires namespace-mode churn")
+			if churnMode != string(config.ChurnObjects) && churnMode != string(config.ChurnNamespaces) {
+				log.Fatalf("--churn-mode must be 'objects' or 'namespaces', got '%s'", churnMode)
 			}
 			if incrementalStepSize > 0 {
 				if incrementalPattern != "linear" && incrementalPattern != "exponential" {
@@ -115,9 +107,6 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 					log.Fatal("incremental load and churn cannot be used together")
 				}
 			}
-			if churnTarget == churnTargetCudns && churnDuration == 0 && churnCycles == 0 {
-				log.Warn("--churn-target=cudns specified but no --churn-duration or --churn-cycles set; no CUDN churn will occur")
-			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
@@ -127,15 +116,11 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Info("Layer 2 topology enabled")
 			}
 			if churnDuration > 0 || churnCycles > 0 {
-				log.Infof("Churn is enabled (target: %s)", churnTarget)
+				log.Infof("Churn is enabled (mode: %s)", churnMode)
 			}
 			if incrementalStepSize > 0 {
 				log.Infof("Incremental load enabled: pattern %s, step size %d namespaces (%d CUDNs), delay %v",
 					incrementalPattern, incrementalStepSize, incrementalStepSize/namespacesPerCudn, incrementalStepDelay)
-			}
-
-			if churnTarget == churnTargetCudns && !cmd.Flags().Changed("churn-mode") {
-				churnMode = string(config.ChurnNamespaces)
 			}
 
 			AdditionalVars["PPROF"] = pprof
@@ -174,8 +159,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
-	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Churn mode: objects or namespaces (namespaces requires --churn-target=cudns)")
-	cmd.Flags().StringVar(&churnTarget, "churn-target", "pods", "What to churn: 'pods' churns deployments via object-mode, 'cudns' churns entire CUDN groups (CUDN + namespaces + pods) via namespace-mode")
+	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Churn mode: 'objects' churns deployments, 'namespaces' churns entire CUDN groups (CUDN + namespaces + pods)")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Total number of namespaces to create")
 	cmd.Flags().IntVar(&namespacesPerCudn, "namespaces-per-cudn", 5, "Number of namespaces sharing the same CUDN")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")

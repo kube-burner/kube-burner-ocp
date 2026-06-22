@@ -189,7 +189,7 @@ teardown_file() {
 @test "cudn-density-l2: cudn-churn" {
   oc delete clusteruserdefinednetworks --all --ignore-not-found
   run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
-  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --churn-target=cudns --churn-percent=50 --churn-cycles=1 --churn-duration=1m --gc=true --job-pause=0s --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --churn-mode=namespaces --churn-percent=50 --churn-cycles=1 --churn-duration=1m --gc=true --job-pause=0s --uuid=${UUID}
   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
 }
 

@@ -22,7 +22,7 @@
   - [Basic Run](#basic-run)
   - [Layer 3 with Local Indexing](#layer-3-with-local-indexing)
   - [With Churn](#with-churn)
-  - [With CUDN Churn](#with-cudn-churn)
+  - [With Namespace Churn](#with-namespace-churn)
   - [With Incremental Load](#with-incremental-load)
   - [With Gateway Check](#with-gateway-check)
   - [With pprof and OpenSearch Indexing](#with-pprof-and-opensearch-indexing)
@@ -260,9 +260,7 @@ kube-burner-ocp cudn-density \
 
 ### With Churn
 
-Pod churn (default) churns deployments using object-mode churn. CUDNs, services, and network policies remain stable.
-
-> **Important:** Only `--churn-mode=objects` is supported for pod churn. Namespace churn is not supported with `--churn-target=pods` because [CUDN finalizers block namespace deletion](#why-the-cudn-cleanup-step).
+Object churn (default, `--churn-mode=objects`) churns deployments. CUDNs, services, and network policies remain stable.
 
 ```bash
 kube-burner-ocp cudn-density \
@@ -272,14 +270,14 @@ kube-burner-ocp cudn-density \
   --churn-delay=1m
 ```
 
-### With CUDN Churn
+### With Namespace Churn
 
-CUDN churn churns entire CUDN groups (CUDN + namespaces + pods) atomically using namespace-mode churn. Use `--churn-target=cudns` to enable this mode.
+Namespace churn (`--churn-mode=namespaces`) churns entire CUDN groups (CUDN + namespaces + pods) atomically.
 
 ```bash
 kube-burner-ocp cudn-density \
   --iterations=50 \
-  --churn-target=cudns \
+  --churn-mode=namespaces \
   --churn-duration=30m \
   --churn-percent=20 \
   --churn-delay=1m
@@ -346,8 +344,7 @@ kube-burner-ocp cudn-density \
 | `--churn-duration` | `0` | Total churn duration |
 | `--churn-delay` | `2m` | Delay between churn rounds |
 | `--churn-percent` | `10` | Percentage of iterations churned per round |
-| `--churn-mode` | `objects` | Churn mode: `objects` or `namespaces` (`namespaces` requires `--churn-target=cudns`) |
-| `--churn-target` | `pods` | What to churn: `pods` churns deployments, `cudns` churns entire CUDN groups |
+| `--churn-mode` | `objects` | Churn mode: `objects` churns deployments, `namespaces` churns entire CUDN groups (CUDN + namespaces + pods) |
 | `--incremental-step-size` | `0` | Namespaces per incremental step (0=disabled). Must be divisible by `namespaces-per-cudn` |
 | `--incremental-step-delay` | `5m` | Delay between incremental load steps |
 | `--incremental-pattern` | `linear` | Incremental load pattern: `linear` or `exponential` |
