@@ -508,7 +508,6 @@
               "_index": true,
               "_source": true,
               "_type": true,
-              "achievedQps": true,
               "clusterName": true,
               "clusterType": true,
               "controlPlaneArch": true,
