@@ -180,7 +180,7 @@ Job 1 (cudn-density)                               Job 2         Job 3
 
 | Group | What It Creates |
 |-------|----------------|
-| **1** | CUDNs (1 per `namespaces-per-cudn` iterations), waits for `NetworkAllocationSucceeded=True`, [measures CUDN latency](#cudn-latency-job-2). `churn: false` |
+| **1** | CUDNs (1 per `namespaces-per-cudn` iterations), waits for `NetworkAllocationSucceeded=True`, [measures CUDN latency](#cudn-latency). `churn: false` |
 | **2** | Services, NetworkPolicies, EgressFirewall, ResourceQuota, LimitRange, deployments (server, app, client). Infra objects have `churn: false`, deployments are churnable |
 
 | # | Job Name | Type | What It Does |
@@ -209,30 +209,17 @@ Job 2 deletes namespaces without waiting (`waitForDeletion: false`), then Job 3 
 
 ### Pod Latency
 
-Standard kube-burner pod latency measurement tracking `PodScheduled`, `Initialized`, `ContainersReady`, and `Ready` conditions. Only indexed for Jobs 2 and 3:
+Standard kube-burner pod latency measurement tracking `PodScheduled`, `Initialized`, `ContainersReady`, and `Ready` conditions. Indexed for the `cudn-density` job — includes OVN network plumbing time + cross-namespace readiness probe validation.
 
-- **Job 2**: Empty (CUDNs are cluster-scoped, no pods)
-- **Job 3**: The meaningful measurement — includes OVN network plumbing time + cross-namespace readiness probe validation
-
-> **Note:** The `Ready` latency in Job 3 is higher than typical workloads because the readiness probe validates **cross-namespace** connectivity over the CUDN, not just local container readiness. This is by design — it directly measures CUDN network plumbing time.
+> **Note:** The `Ready` latency is higher than typical workloads because the readiness probe validates **cross-namespace** connectivity over the CUDN, not just local container readiness. This is by design — it directly measures CUDN network plumbing time.
 
 ### CUDN Latency
 
-Custom measurement (`cudnLatency`) that tracks how long each CUDN takes from creation to `NetworkAllocationSucceeded=True`. Uses the condition's `lastTransitionTime` for accurate measurement rather than wall-clock time. Results are indexed as `cudnLatencyMeasurement` documents with `NetworkAllocationSucceededLatency` in milliseconds.
+Custom measurement (`cudnLatency`) that tracks how long each CUDN takes from creation to `NetworkAllocationSucceeded=True`. Uses the condition's `lastTransitionTime` for accurate measurement rather than wall-clock time. Results are indexed as `cudnLatencyMeasurement` documents with `networkAllocLatency` in milliseconds.
 
 ### Metrics Profiles
 
-Two metrics profiles are collected by default:
-
-- **`metrics.yml`**: Standard OpenShift/kube metrics
-- **`metrics-cudn.yml`**: OVN-K specific metrics including:
-  - ovnkube-controller CPU/memory per pod per node
-  - ovnkube-cluster-manager CPU/memory
-  - ovs-vswitchd CPU/memory
-  - CRI-O network setup/teardown latency P99
-  - NetworkPolicy count
-  - OVN Northbound DB tx/rx bytes
-  - OpenFlow rule count per bridge
+The default metrics profile (`metrics.yml`) collects standard OpenShift/kube metrics.
 
 ### pprof Collection
 
@@ -350,7 +337,7 @@ kube-burner-ocp cudn-density \
 | `--incremental-pattern` | `linear` | Incremental load pattern: `linear` or `exponential` |
 | `--incremental-exp-base` | `2.0` | Base for exponential incremental pattern (must be > 1.0) |
 | `--gateway-check` | `false` | Enable [default gateway reachability check](#with-gateway-check) from each namespace (validates north-south connectivity under CUDN scale) |
-| `--metrics-profile` | `metrics.yml,metrics-cudn.yml` | Comma-separated list of [metrics profiles](#metrics-profiles) to use |
+| `--metrics-profile` | `metrics.yml` | Comma-separated list of [metrics profiles](#metrics-profiles) to use |
 | `--gc` | `true` | Garbage collect created resources on completion. See [Cleanup](#cleanup) |
 
 ---

@@ -94,6 +94,9 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatalf("--churn-mode must be 'objects' or 'namespaces', got '%s'", churnMode)
 			}
 			if incrementalStepSize > 0 {
+				if incrementalStepSize > iterations {
+					log.Fatalf("incremental-step-size (%d) must be <= iterations (%d)", incrementalStepSize, iterations)
+				}
 				if incrementalPattern != "linear" && incrementalPattern != "exponential" {
 					log.Fatalf("incremental-pattern must be 'linear' or 'exponential', got '%s'", incrementalPattern)
 				}

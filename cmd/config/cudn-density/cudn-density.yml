@@ -99,6 +99,7 @@ jobs:
         churn: false
         group:
           id: 1
+          pauseBeforeGC: {{.JOB_PAUSE}}
         repeatEveryNIterations: {{.NAMESPACES_PER_CUDN}}
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
@@ -113,6 +114,7 @@ jobs:
         churn: false
         group:
           id: 1
+          pauseBeforeGC: {{.JOB_PAUSE}}
         repeatEveryNIterations: {{.NAMESPACES_PER_CUDN}}
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
