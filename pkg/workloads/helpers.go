@@ -177,8 +177,8 @@ func defaultUndefinedTemplateVars(configFile string) {
 	}
 	if len(undefined) > 0 {
 		log.Warningf("Template variables [%s] are not defined and will default to empty values. "+
-			"Set them as environment variables to configure (e.g., %s=<value> kube-burner-ocp ...)",
-			strings.Join(undefined, ", "), undefined[0])
+			"Set them as environment variables (e.g., %s=<value> kube-burner-ocp ...) or via --set (e.g., --set %s=<value>)",
+			strings.Join(undefined, ", "), undefined[0], undefined[0])
 	}
 }
 
