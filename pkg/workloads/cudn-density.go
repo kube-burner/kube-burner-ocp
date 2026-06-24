@@ -93,6 +93,9 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			if churnMode != string(config.ChurnObjects) && churnMode != string(config.ChurnNamespaces) {
 				log.Fatalf("--churn-mode must be 'objects' or 'namespaces', got '%s'", churnMode)
 			}
+			if incrementalStepSize < 0 {
+				log.Fatal("--incremental-step-size must be >= 0")
+			}
 			if incrementalStepSize > 0 {
 				if incrementalStepSize > iterations {
 					log.Fatalf("incremental-step-size (%d) must be <= iterations (%d)", incrementalStepSize, iterations)

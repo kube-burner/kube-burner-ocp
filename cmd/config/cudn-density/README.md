@@ -185,13 +185,13 @@ Job 1 (cudn-density)                               Job 2         Job 3
 
 | # | Job Name | Type | What It Does |
 |---|----------|------|-------------|
-| 1 | `cudn-density` | create | Creates namespaces, CUDNs (group 1), and all workload objects (group 2) in a single job. Supports churn and incremental load. Pauses for [`--job-pause`](#cudn-settling-pause) after completion for metrics collection |
+| 1 | `cudn-density` | create | Creates namespaces, CUDNs (group 1), and all workload objects (group 2) in a single job. Supports churn and incremental load. [`--job-pause`](#cudn-settling-pause) pauses after CUDN creation (group 1) before workload deployment (group 2) |
 | 2 | `cudn-density-cleanup-namespaces` | delete | [Deletes namespaces](#why-the-cudn-cleanup-step) without waiting (only when `--gc=true`). Pods are killed, NADs start terminating |
 | 3 | `cudn-density-cleanup-cudns` | delete | [Deletes CUDNs](#why-the-cudn-cleanup-step), releasing NAD finalizers so namespaces finish terminating (only when `--gc=true`) |
 
 ### CUDN Settling Pause
 
-After job completion, a configurable pause (`--job-pause`, default 1m) allows OVN-K to finish compiling the CUDN logical topology in the NB/SB databases and programming OVS flows on all nodes. This is particularly important for Layer 2 topologies with Interconnect enabled, where the OVN NB DB client becomes a bottleneck when processing CUDN topology changes and pod port bindings simultaneously.
+After CUDN creation (group 1), a configurable pause (`--job-pause`, default 1m) allows OVN-K to finish compiling the CUDN logical topology in the NB/SB databases and programming OVS flows on all nodes before workload deployment (group 2) begins. This is particularly important for Layer 2 topologies with Interconnect enabled, where the OVN NB DB client becomes a bottleneck when processing CUDN topology changes and pod port bindings simultaneously.
 
 ### Why the CUDN Cleanup Step?
 
