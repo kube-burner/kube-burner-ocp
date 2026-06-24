@@ -74,6 +74,10 @@ jobs:
       - objectTemplate: cudn_l2.yml
         replicas: 1
       {{ end }}
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
+              value: "True"
 
   - name: cudn-density-pods
     namespace: cudn-density-pods

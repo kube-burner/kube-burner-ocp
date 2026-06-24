@@ -142,17 +142,17 @@ teardown_file() {
 
 # bats test_tags=workload:virt-udn-density
 @test "virt-udn-l2-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2
+  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2 --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:virt-udn-density
 @test "virt-udn-l3-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --vms-per-node=2
+  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --vms-per-node=2 --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:virt-udn-density
 @test "virt-cudn-l2-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-cudn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2
+  run_cmd ${KUBE_BURNER_OCP} virt-cudn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2 --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:udn-density-pods

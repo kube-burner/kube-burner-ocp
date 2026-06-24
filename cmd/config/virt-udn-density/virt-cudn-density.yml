@@ -60,7 +60,6 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: true
     waitWhenFinished: true
-    jobPause: 2m
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -81,6 +80,10 @@ jobs:
       - objectTemplate: cudn_l2.yml
         replicas: 1
       {{ end }}
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
+              value: "True"
 
   - name: virt-density-cudn
     namespace: virt-cudn-density
