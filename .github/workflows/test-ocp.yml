@@ -12,6 +12,9 @@ on:
 jobs:
   ocp-e2e-ci:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     concurrency:
       group: ocp-e2e-ci
       cancel-in-progress: false
