@@ -1,0 +1,101 @@
+# Mapping between workload code paths and the Bats test tags (subsystems) that
+# exercise them. It is consumed by hack/get_changed_labels.py to compute the
+# set of --filter-tags arguments passed to the Bats test suite, so that a change
+# to a single workload only runs the tests for that workload.
+#
+# Behaviour: if a changed file does not match any of the paths below, no filter
+# is returned and the whole test suite is executed (safe default). This is the
+# case for shared code (e.g. pkg/workloads/helpers.go, cmd/ocp.go) and for
+# workloads that are not covered by the Bats suite.
+- label: workload:olm
+  paths:
+  - pkg/workloads/olmv1.go
+  - cmd/config/olm/*
+- label: workload:custom-workload
+  paths:
+  - pkg/workloads/custom-workload.go
+- label: workload:node-density
+  paths:
+  - pkg/workloads/node-density.go
+  - cmd/config/node-density/*
+  - cmd/config/node-density-heavy/*
+  - cmd/config/node-density-cni/*
+- label: workload:cluster-density
+  paths:
+  - pkg/workloads/cluster-density.go
+  - cmd/config/cluster-density-v2/*
+  - cmd/config/cluster-density-ms/*
+- label: workload:index
+  paths:
+  - pkg/workloads/index.go
+- label: workload:network-policy
+  paths:
+  - pkg/workloads/network-policy.go
+  - cmd/config/network-policy/*
+- label: workload:whereabouts
+  paths:
+  - pkg/workloads/whereabouts.go
+  - cmd/config/whereabouts/*
+- label: workload:crd-scale
+  paths:
+  - pkg/workloads/crd-scale.go
+  - cmd/config/crd-scale/*
+- label: workload:virt-density
+  paths:
+  - pkg/workloads/virt-density.go
+  - cmd/config/virt-density/*
+- label: workload:virt-udn-density
+  paths:
+  - pkg/workloads/virt-udn-density.go
+  - cmd/config/virt-udn-density/*
+- label: workload:udn-density-pods
+  paths:
+  - pkg/workloads/udn-density-pods.go
+  - cmd/config/udn-density-pods/*
+- label: workload:cudn-density
+  paths:
+  - pkg/workloads/cudn-density.go
+  - cmd/config/cudn-density/*
+- label: workload:cluster-health
+  paths:
+  - pkg/clusterhealth/*
+- label: workload:kueue-operator
+  paths:
+  - pkg/workloads/kueue-operator.go
+  - cmd/config/kueue-operator-jobs/*
+  - cmd/config/kueue-operator-jobs-shared/*
+  - cmd/config/kueue-operator-pods/*
+  - hack/deploy-kueue.sh
+  - hack/kueue/*
+- label: workload:virt-capacity-benchmark
+  paths:
+  - pkg/workloads/virt-capacity-benchmark.go
+  - cmd/config/virt-capacity-benchmark/*
+- label: workload:virt-parallel
+  paths:
+  - pkg/workloads/virt-parallel.go
+  - cmd/config/virt-parallel/*
+- label: workload:virt-clone
+  paths:
+  - pkg/workloads/virt-clone.go
+  - cmd/config/virt-clone/*
+- label: workload:virt-clone-multi
+  paths:
+  - pkg/workloads/virt-clone-multi.go
+  - cmd/config/virt-clone-multi/*
+- label: workload:pvc-density
+  paths:
+  - pkg/workloads/pvc-density.go
+  - cmd/config/pvc-density/*
+- label: workload:virt-ephemeral-restart
+  paths:
+  - pkg/workloads/virt-ephemeral-restart.go
+  - cmd/config/virt-ephemeral-restart/*
+- label: workload:dv-clone
+  paths:
+  - pkg/workloads/dv-clone.go
+  - cmd/config/dv-clone/*
+- label: workload:build-farm
+  paths:
+  - pkg/workloads/build-farm.go
+  - cmd/config/build-farm/*
