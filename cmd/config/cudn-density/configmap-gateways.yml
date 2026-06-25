@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-map
+data:
+  gateways: |
+{{- range $entry := splitList ";" .gatewayMapData }}
+{{- if $entry }}
+    {{ $entry }}
+{{- end }}
+{{- end }}

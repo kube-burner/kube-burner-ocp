@@ -4,7 +4,7 @@
 #
 # Rules (evaluated in order):
 #   1-3. Allow egress to RFC1918 private ranges (cluster-internal traffic)
-#   4.   (Optional) Allow egress to cluster default gateway (--gateway-check)
+#   4.   (Optional) Allow egress to cluster default gateways (--gateway-check)
 #   5.   Allow DNS to cluster.local
 #   6-7. Allow egress to container registries (quay.io, registry.redhat.io)
 #   8.   Allow egress to Prometheus monitoring endpoint
@@ -27,11 +27,13 @@ spec:
   - type: Allow
     to:
       cidrSelector: 192.168.0.0/16
-{{ if .gatewayIP }}
-  # Cluster default gateway (for --gateway-check)
+{{ if .gatewayIPs }}
+  # Cluster default gateways (for --gateway-check, one per AZ)
+  {{- range $gw := splitList "," .gatewayIPs }}
   - type: Allow
     to:
-      cidrSelector: {{.gatewayIP}}/32
+      cidrSelector: {{ $gw }}/32
+  {{- end }}
 {{ end }}
   # Cluster DNS
   - type: Allow
