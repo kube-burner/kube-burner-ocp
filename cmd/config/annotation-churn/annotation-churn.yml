@@ -3,8 +3,6 @@ global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
   deletionStrategy: {{.DELETION_STRATEGY}}
-  measurements:
-    - name: podLatency
 
 metricsEndpoints:
 {{ if .ES_SERVER }}
@@ -54,5 +52,5 @@ jobs:
         apiVersion: v1
         labelSelector:
           test-scenario: annotation-churn
-        patchType: merge
+        patchType: "application/merge-patch+json"
         objectTemplate: patch-annotation.yml

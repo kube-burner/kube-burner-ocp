@@ -68,7 +68,7 @@ func newEventStorm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 100, "Victim workload iterations")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", "default", "Deletion strategy")
-	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml", "metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().IntVar(&eventIterations, "event-iterations", 2000, "Event creation iterations for the background storm")
 	cmd.Flags().IntVar(&eventReplicas, "event-replicas", 100, "Event replicas per iteration")
 	cmd.Flags().IntVar(&stormWorkers, "storm-workers", 20, "Parallel workers for event creation")
@@ -106,7 +106,7 @@ func newCrashloopFlood(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 20, "Number of namespaces to create crashlooping pods in")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", "default", "Deletion strategy")
-	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml", "metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().IntVar(&crashloopReplicas, "crashloop-replicas", 100, "Crashlooping pods per iteration")
 	cmd.Flags().DurationVar(&soakDuration, "soak-duration", 30*time.Minute, "Soak duration for event accumulation after pod creation")
 	return cmd
@@ -135,11 +135,11 @@ func newDBQuotaPressure(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().IntVar(&iterations, "iterations", 6551, "Number of object iterations for the db-quota-pressure job")
-	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 936, "Number of iterations per namespace")
-	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().IntVar(&iterations, "iterations", 100, "Number of object iterations for the db-quota-pressure job")
+	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1, "Number of iterations per namespace")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml", "metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().IntVar(&kbChunks, "kb-chunks", 8, "Number of CRDs to create and object replicas per iteration")
-	cmd.Flags().IntVar(&kbSize, "kb-size", 100, "Size of each object in KB (10 or 100)")
+	cmd.Flags().IntVar(&kbSize, "kb-size", 10, "Size of each object in KB (10 or 100)")
 	return cmd
 }
 
@@ -168,7 +168,7 @@ func newAnnotationChurn(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 10, "Target creation iterations (one namespace each)")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", "default", "Deletion strategy")
-	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml", "metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().IntVar(&churnReplicas, "churn-replicas", 50, "Target ConfigMaps per iteration")
 	cmd.Flags().IntVar(&churnRounds, "churn-rounds", 10, "Number of patch rounds across all targets")
 	return cmd

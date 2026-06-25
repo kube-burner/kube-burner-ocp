@@ -1,63 +1,236 @@
-# Etcd density metrics profile — etcd sharding A/B comparison KPIs
-# Etcd DB size (time series — track growth during test)
+# Etcd density metrics profile — standard OCP
+# Comprehensive etcd-focused metrics aligned with the etcd-on-cluster Grafana dashboard.
+# Covers DB size, disk I/O, network, raft, operations, and container resources.
 
-- query: avg(etcd_mvcc_db_total_size_in_bytes)
+# ---------------------------------------------------------------------------
+# Etcd DB size (time series)
+# ---------------------------------------------------------------------------
+
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_bytes)
   metricName: etcdDBTotalSize
 
-- query: avg(etcd_mvcc_db_total_size_in_use_in_bytes)
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes)
   metricName: etcdDBSizeInUse
 
-- query: avg(etcd_mvcc_db_total_size_in_bytes) - avg(etcd_mvcc_db_total_size_in_use_in_bytes)
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_bytes) - avg by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes)
   metricName: etcdDBFragmentationBytes
 
-- query: etcd_mvcc_db_total_size_in_bytes
-  metricName: etcdDBTotalSizePerInstance
+- query: etcd_server_quota_backend_bytes
+  metricName: etcdQuotaBackendBytes
 
-- query: etcd_mvcc_db_total_size_in_use_in_bytes
-  metricName: etcdDBSizeInUsePerInstance
+- query: (etcd_mvcc_db_total_size_in_bytes / etcd_server_quota_backend_bytes) * 100
+  metricName: etcdDBSpaceUsed
 
-# Etcd disk I/O latency (time series)
+- query: etcd_server_quota_backend_bytes - etcd_mvcc_db_total_size_in_bytes
+  metricName: etcdDBLeftCapacity
 
-- query: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[2m]))
+# ---------------------------------------------------------------------------
+# Etcd disk I/O latency — p99 (time series)
+# ---------------------------------------------------------------------------
+
+- query: histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket[2m])) by (pod, le))
   metricName: 99thEtcdDiskWalFsyncDurationSeconds
 
-- query: histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket[2m]))
+- query: histogram_quantile(0.99, sum(rate(etcd_disk_backend_commit_duration_seconds_bucket[2m])) by (pod, le))
   metricName: 99thEtcdDiskBackendCommitDurationSeconds
 
-- query: histogram_quantile(0.99, rate(etcd_network_peer_round_trip_time_seconds_bucket[5m]))
-  metricName: 99thEtcdRoundTripTimeSeconds
+# ---------------------------------------------------------------------------
+# Etcd disk I/O rates (time series)
+# ---------------------------------------------------------------------------
+
+- query: irate(etcd_disk_wal_fsync_duration_seconds_sum[2m])
+  metricName: etcdDiskWalFsyncSum
+
+- query: etcd_disk_wal_fsync_duration_seconds_sum
+  metricName: etcdDiskWalFsyncDurationTotal
+
+- query: irate(etcd_disk_wal_fsync_duration_seconds_count[2m])
+  metricName: etcdDiskWalFsyncCount
+
+- query: etcd_disk_wal_fsync_duration_seconds_count
+  metricName: etcdDiskWalFsyncCountTotal
+
+- query: irate(etcd_disk_backend_commit_duration_seconds_sum[2m])
+  metricName: etcdDiskBackendCommitSum
+
+- query: etcd_disk_backend_commit_duration_seconds_sum
+  metricName: etcdDiskBackendCommitDurationTotal
+
+- query: irate(etcd_disk_backend_commit_duration_seconds_count[2m])
+  metricName: etcdDiskBackendCommitCount
+
+- query: etcd_disk_backend_commit_duration_seconds_count
+  metricName: etcdDiskBackendCommitCountTotal
+
+- query: rate(container_fs_writes_bytes_total{namespace="openshift-etcd", device!~".+dm.+"}[2m])
+  metricName: etcdContainerDiskWrites
+
+# ---------------------------------------------------------------------------
+# Compaction and defrag (time series)
+# ---------------------------------------------------------------------------
 
 - query: delta(etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum[1m:30s])/2 > 0
   metricName: 99thEtcdCompaction
 
+- query: etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum
+  metricName: etcdCompactionDurationTotal
+
 - query: delta(etcd_disk_backend_defrag_duration_seconds_sum[1m:30s])/2 > 0
   metricName: 99thEtcdDefrag
 
-# Etcd raft write pressure (time series)
+- query: etcd_disk_backend_defrag_duration_seconds_sum
+  metricName: etcdDefragDurationTotal
 
-- query: rate(etcd_server_proposals_committed_total[2m])
+- query: rate(node_vmstat_pgmajfault[2m]) * on (instance) group_left label_replace(kube_node_role{role="control-plane"}, "instance", "$1", "node", "(.*)")
+  metricName: etcdNodeMajorPageFaults
+
+- query: node_vmstat_pgmajfault * on (instance) group_left label_replace(kube_node_role{role="control-plane"}, "instance", "$1", "node", "(.*)")
+  metricName: etcdNodeMajorPageFaultsTotal
+
+- query: sum(rate(etcd_debugging_snap_save_total_duration_seconds_sum[2m]))
+  metricName: etcdSnapshotDuration
+
+# ---------------------------------------------------------------------------
+# Etcd peer network latency — p99 (time series)
+# ---------------------------------------------------------------------------
+
+- query: histogram_quantile(0.99, sum(rate(etcd_network_peer_round_trip_time_seconds_bucket[2m])) by (pod, le))
+  metricName: 99thEtcdRoundTripTimeSeconds
+
+# ---------------------------------------------------------------------------
+# Etcd network traffic (time series)
+# ---------------------------------------------------------------------------
+
+- query: rate(etcd_network_peer_received_bytes_total[2m])
+  metricName: etcdPeerTrafficReceived
+
+- query: rate(etcd_network_peer_sent_bytes_total[2m])
+  metricName: etcdPeerTrafficSent
+
+- query: rate(etcd_network_client_grpc_received_bytes_total[2m])
+  metricName: etcdGRPCTrafficReceived
+
+- query: rate(etcd_network_client_grpc_sent_bytes_total[2m])
+  metricName: etcdGRPCTrafficSent
+
+- query: sum(rate(container_network_receive_bytes_total{namespace=~"openshift-etcd.*"}[2m])) by (namespace, pod)
+  metricName: etcdContainerNetworkReceived
+
+- query: sum(rate(container_network_transmit_bytes_total{namespace=~"openshift-etcd.*"}[2m])) by (namespace, pod)
+  metricName: etcdContainerNetworkTransmitted
+
+# ---------------------------------------------------------------------------
+# GRPC latency — p99 (time series)
+# ---------------------------------------------------------------------------
+
+- query: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{grpc_service=~"etcdserverpb.*"}[2m])) by (pod, le))
+  metricName: 99thEtcdGRPCRoundTripTimeSeconds
+
+# ---------------------------------------------------------------------------
+# Active gRPC streams (time series)
+# ---------------------------------------------------------------------------
+
+- query: sum by (pod) (grpc_server_started_total{grpc_service="etcdserverpb.Watch", grpc_type="bidi_stream"}) - sum by (pod) (grpc_server_handled_total{grpc_service="etcdserverpb.Watch", grpc_type="bidi_stream"})
+  metricName: etcdActiveWatchStreams
+
+- query: sum by (pod) (grpc_server_started_total{grpc_service="etcdserverpb.Lease", grpc_type="bidi_stream"}) - sum by (pod) (grpc_server_handled_total{grpc_service="etcdserverpb.Lease", grpc_type="bidi_stream"})
+  metricName: etcdActiveLeaseStreams
+
+# ---------------------------------------------------------------------------
+# Raft proposals (time series)
+# ---------------------------------------------------------------------------
+
+- query: sum by (pod) (rate(etcd_server_proposals_committed_total[2m]))
   metricName: etcdProposalsCommittedRate
 
-- query: rate(etcd_server_proposals_failed_total[2m])
+- query: sum by (pod) (rate(etcd_server_proposals_failed_total[2m]))
   metricName: etcdProposalsFailedRate
 
-# Etcd event rates (time series)
+- query: sum by (pod) (rate(etcd_server_proposals_applied_total[2m]))
+  metricName: etcdProposalsAppliedRate
 
-- query: sum(rate(etcd_requests_total{resource="events", operation=~"create|update|delete"}[2m]))
-  metricName: etcdEventWriteRate
+- query: sum by (pod) (etcd_server_proposals_pending)
+  metricName: etcdProposalsPending
 
-- query: sum(rate(etcd_requests_total{resource="events", operation=~"get|list|listWithCount"}[2m]))
-  metricName: etcdEventReadRate
+# ---------------------------------------------------------------------------
+# Leader health (time series)
+# ---------------------------------------------------------------------------
 
-- query: cluster:usage:resources:sum{resource="events"}
-  metricName: clusterEventCount
+- query: sum by (pod) (rate(etcd_server_leader_changes_seen_total[2m]))
+  metricName: etcdLeaderChangesRate
 
-# Etcd storage object distribution (time series)
+- query: max by (pod) (etcd_server_has_leader)
+  metricName: etcdHasLeader
+
+- query: changes(etcd_server_leader_changes_seen_total[1d])
+  metricName: etcdLeaderElectionsPerDay
+
+# ---------------------------------------------------------------------------
+# Slow operations (time series)
+# ---------------------------------------------------------------------------
+
+- query: delta(etcd_server_slow_apply_total[2m])
+  metricName: etcdSlowApply
+
+- query: delta(etcd_server_slow_read_indexes_total[2m])
+  metricName: etcdSlowReadIndexes
+
+# ---------------------------------------------------------------------------
+# Key operations (time series)
+# ---------------------------------------------------------------------------
+
+- query: rate(etcd_mvcc_put_total[2m])
+  metricName: etcdPutRate
+
+- query: rate(etcd_mvcc_delete_total[2m])
+  metricName: etcdDeleteRate
+
+- query: etcd_debugging_mvcc_keys_total
+  metricName: etcdKeys
+
+- query: etcd_debugging_mvcc_db_compaction_keys_total
+  metricName: etcdCompactedKeys
+
+# ---------------------------------------------------------------------------
+# Heartbeat and health failures (time series)
+# ---------------------------------------------------------------------------
+
+- query: etcd_server_heartbeat_send_failures_total
+  metricName: etcdHeartbeatFailures
+
+- query: etcd_server_health_failures
+  metricName: etcdHealthFailures
+
+# ---------------------------------------------------------------------------
+# Etcd storage objects (time series)
+# ---------------------------------------------------------------------------
 
 - query: topk(20, max by (resource) (apiserver_storage_objects))
   metricName: etcdStorageObjects
 
-# API server (time series)
+# ---------------------------------------------------------------------------
+# Container resources — etcd (time series)
+# ---------------------------------------------------------------------------
+
+- query: (sum(irate(container_cpu_usage_seconds_total{name!="", container!~"POD|", namespace="openshift-etcd", container="etcd"}[2m]) * 100) by (pod)) > 0
+  metricName: containerCPU
+
+- query: sum(container_memory_working_set_bytes{name!="", container!~"POD|", namespace="openshift-etcd", container="etcd"}) by (pod)
+  metricName: containerMemory
+
+# ---------------------------------------------------------------------------
+# Etcd event rates (time series)
+# ---------------------------------------------------------------------------
+
+- query: sum(rate(apiserver_request_total{apiserver="kube-apiserver", resource="events", verb=~"POST|PUT|DELETE|PATCH"}[2m]))
+  metricName: etcdEventWriteRate
+
+- query: sum(rate(apiserver_request_total{apiserver="kube-apiserver", resource="events", verb=~"LIST|GET"}[2m]))
+  metricName: etcdEventReadRate
+
+# ---------------------------------------------------------------------------
+# API server performance overview (time series)
+# ---------------------------------------------------------------------------
 
 - query: histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", verb=~"LIST|GET", subresource!~"log|exec|portforward|attach|proxy"}[2m])) by (le, resource, verb, scope)) > 0
   metricName: readOnlyAPICallsLatency
@@ -65,47 +238,60 @@
 - query: histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", verb=~"POST|PUT|DELETE|PATCH", subresource!~"log|exec|portforward|attach|proxy"}[2m])) by (le, resource, verb, scope)) > 0
   metricName: mutatingAPICallsLatency
 
-- query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb!="WATCH"}[2m])) by (verb,resource,code) > 0
+- query: sum(irate(apiserver_request_total{apiserver="kube-apiserver", verb!="WATCH"}[2m])) by (verb, resource, code) > 0
   metricName: APIRequestRate
 
-- query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb!="WATCH",code=~"5.."}[2m])) by (verb,resource,code) > 0
-  metricName: APIServerErrors
+- query: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", subresource!="log", verb!~"WATCH|WATCHLIST|PROXY"}[2m])) by (verb, le))
+  metricName: requestDuration99thByVerb
 
-# Control plane containers: etcd + kube-apiserver (time series)
+- query: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", subresource!="log", verb!~"WATCH|WATCHLIST|PROXY"}[2m])) by (resource, le))
+  metricName: requestDuration99thByResource
 
-- query: (sum(irate(container_cpu_usage_seconds_total{name!="",container!~"POD|",namespace=~"openshift-etcd|openshift-kube-apiserver"}[2m]) * 100) by (container, pod, namespace, node)) > 0
-  metricName: containerCPU
+- query: sum(rate(apiserver_request_total{apiserver="kube-apiserver"}[2m])) by (instance)
+  metricName: requestRateByInstance
 
-- query: sum(container_memory_rss{name!="",container!~"POD|",namespace=~"openshift-etcd|openshift-kube-apiserver"}) by (container, pod, namespace, node)
-  metricName: containerMemory
+- query: sum(rate(apiserver_request_total{apiserver="kube-apiserver"}[2m])) by (resource)
+  metricName: requestRateByResource
 
-# Scheduler (time series)
+- query: sum(rate(apiserver_request_total{apiserver="kube-apiserver"}[2m])) by (code)
+  metricName: requestRateByStatusCode
 
-- query: sum(irate(scheduler_schedule_attempts_total{result="scheduled"}[2m]))
-  metricName: schedulerThroughput
+- query: sum(rate(apiserver_request_terminations_total[2m])) by (verb)
+  metricName: requestRateDropped
 
-- query: histogram_quantile(0.99, sum(rate(scheduler_e2e_scheduling_duration_seconds_bucket[2m])) by (le))
-  metricName: 99thSchedulerE2ELatency
+- query: sum(rate(apiserver_request_terminations_total[2m])) by (component)
+  metricName: requestRateTerminated
 
-# Cluster object counts (time series)
+- query: sum(apiserver_longrunning_requests) by (instance)
+  metricName: requestsLongRunning
 
-- query: sum(kube_namespace_status_phase) by (phase) > 0
-  metricName: namespaceCount
+- query: sum(apiserver_current_inflight_requests) by (instance, request_kind)
+  metricName: requestInFlight
 
-- query: sum(kube_pod_status_phase{}) by (phase)
-  metricName: podStatusCount
+- query: histogram_quantile(0.99, sum(rate(apiserver_response_sizes_bucket[2m])) by (instance, le))
+  metricName: responseSize99th
 
-# Node CPU & memory — masters host etcd (time series)
+- query: histogram_quantile(0.99, sum(rate(apiserver_flowcontrol_request_queue_length_after_enqueue_bucket[2m])) by (flow_schema, priority_level, le))
+  metricName: requestQueueLengthPandF
 
-- query: (sum(irate(node_cpu_seconds_total[2m])) by (mode,instance) and on (instance) label_replace(kube_node_role{role="master"}, "instance", "$1", "node", "(.+)")) > 0
-  metricName: nodeCPU-Masters
+- query: histogram_quantile(0.99, sum(rate(apiserver_flowcontrol_request_wait_duration_seconds_bucket[2m])) by (flow_schema, priority_level, le))
+  metricName: requestWaitDuration99thPandF
 
-- query: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) and on (instance) label_replace(kube_node_role{role="master"}, "instance", "$1", "node", "(.+)")
-  metricName: nodeMemoryUtilization-Masters
+- query: sum(rate(apiserver_flowcontrol_dispatched_requests_total[2m])) by (flow_schema, priority_level)
+  metricName: requestDispatchRatePandF
 
-# ---
+- query: histogram_quantile(0.99, sum(rate(apiserver_flowcontrol_request_execution_seconds_bucket[2m])) by (flow_schema, priority_level, le))
+  metricName: requestExecutionDuration99thPandF
+
+- query: sum(apiserver_flowcontrol_current_inqueue_requests) by (flow_schema, priority_level)
+  metricName: pendingInQueuePandF
+
+- query: sum(apiserver_flowcontrol_request_concurrency_in_use) by (instance, flow_schema)
+  metricName: concurrencyLimitPandF
+
+# ---------------------------------------------------------------------------
 # Instant queries: single-value snapshots captured at start and end of test
-# ---
+# ---------------------------------------------------------------------------
 
 - query: etcd_mvcc_db_total_size_in_bytes
   metricName: etcdDBTotalSizeSnapshot
@@ -145,45 +331,3 @@
 - query: sum by (cluster_version)(etcd_cluster_version)
   metricName: etcdVersion
   instant: true
-
-- query: count(kube_configmap_info{})
-  metricName: configmapCount
-  instant: true
-
-- query: count(kube_service_info{})
-  metricName: serviceCount
-  instant: true
-
-- query: kube_node_role
-  metricName: nodeRoles
-  instant: true
-
-- query: sum(node_cpu_seconds_total and on (instance) label_replace(kube_node_role{role="master"}, "instance", "$1", "node", "(.+)")) by (mode)
-  metricName: nodeCPUSeconds-Masters
-  instant: true
-  captureStart: true
-
-- query: sum(node_cpu_seconds_total and on (instance) label_replace(kube_node_role{role="worker",role!="infra"}, "instance", "$1", "node", "(.+)")) by (mode)
-  metricName: nodeCPUSeconds-Workers
-  instant: true
-  captureStart: true
-
-- query: sum(container_cpu_usage_seconds_total{id=~"/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice"} and on (node) kube_node_role{role="master"}) by (id)
-  metricName: cgroupCPUSeconds-Masters
-  instant: true
-  captureStart: true
-
-- query: sum(container_memory_rss{id=~"/system.slice|/system.slice/kubelet.service|.*/ovs-vswitchd.service|/system.slice/crio.service|/kubepods.slice"} and on (node) kube_node_role{role="master"}) by (id)
-  metricName: cgroupMemoryRSS-Masters
-  instant: true
-  captureStart: true
-
-- query: sum(container_cpu_usage_seconds_total{container!~"POD|",namespace=~"openshift-.*"}) by (namespace)
-  metricName: cgroupCPUSeconds-namespaces
-  instant: true
-  captureStart: true
-
-- query: sum(container_memory_rss{container!~"POD|",namespace=~"openshift-.*"}) by (namespace)
-  metricName: cgroupMemoryRSS-namespaces
-  instant: true
-  captureStart: true
