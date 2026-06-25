@@ -71,6 +71,8 @@ Flags:
       --log-level string          Allowed values: debug, info, warn, error, fatal (default "info")
       --metrics-endpoint string   YAML file with a list of metric endpoints, overrides the es-server and es-index flags
       --profile-type string       Metrics profile to use, supported options are: regular, reporting or both (default "both")
+      --prometheus-token string   Prometheus bearer token to use with --prometheus-url
+      --prometheus-url string     Prometheus endpoint URL, overrides OpenShift Prometheus discovery
       --qps int                   QPS (default 20)
       --set strings               Set arbitrary key=value pairs to override values in the config file
       --timeout duration          Benchmark timeout (default 4h0m0s)
@@ -102,7 +104,7 @@ Some of the benefits the OCP wrapper provides are:
 - Simplified execution of the supported workloads. (Only some flags are required)
 - Adds OpenShift metadata to generated jobSummary and a small subset of metadata fields to the remaining metrics.
 - Prevents modifying configuration files to tweak some of the parameters of the workloads.
-- Discovers the Prometheus URL and authentication token, so the user does not have to perform those operations before using them.
+- Discovers the OpenShift Prometheus URL and authentication token, or accepts an explicit Prometheus endpoint for environments where discovery is not available.
 - Workloads configuration is directly embedded in the binary.
 
 Running node-density with 100 pods per node
@@ -223,6 +225,92 @@ Lightest version of this workload family, each iteration the following objects i
 - 1 edge route pointing to the to first service.
 - 20 secrets containing a 2048-character random string.
 - 10 config maps containing a 2048-character random string.
+
+## Etcd density workload
+
+This workload stresses the etcd database by creating large custom resource objects to increase the database size. It is designed to measure control-plane performance degradation as etcd grows, tracking API server latency, etcd commit/fsync duration, compaction, defragmentation, and database size metrics.
+
+The workload operates in two phases:
+
+1. **CRD creation** (`crd-scale` job): Creates KubeBurner CustomResourceDefinitions and waits for them to become established.
+2. **Object creation** (`etcd-density` job): Creates custom resource instances across multiple namespaces. Objects are intentionally not cleaned up (`cleanup: false`) to preserve the database size for analysis.
+
+### Database size calculation
+
+The total etcd database size increase is: `ITERATIONS x KB_CHUNKS x KB_SIZE`.
+
+Suggested configurations:
+
+| `iterations` | `KB_CHUNKS` | `KB_SIZE` | Per-KB total | Total DB size | `iterations-per-namespace` |
+| ------------ | ----------- | --------- | ------------ | ------------- | -------------------------- |
+| 6,551        | 8           | 100       | 0.9GB        | 7GB           | 936                        |
+| 14,925       | 18          | 100       | 2GB          | 36GB          | 415                        |
+| 11,194       | 16          | 100       | 1.5GB        | 24GB          | 468                        |
+| 36,841       | 16          | 10        | 1.5GB        | 8GB           | 4,605                      |
+
+### Configuration flags
+
+| Flag                         | Description                                                     | Default               |
+| ---------------------------- | --------------------------------------------------------------- | --------------------- |
+| `--iterations`               | Number of object iterations for the etcd-density job (required) | -                     |
+| `--iterations-per-namespace` | Number of iterations per namespace (required)                   | -                     |
+| `--set KB_CHUNKS=<n>`        | Number of CRDs to create and object replicas per iteration (required) | -               |
+| `--set KB_SIZE=<n>`          | Size of each object in kb: `10` or `100`                        | `100`                 |
+| `--metrics-profile`          | Comma separated list of metrics profiles                        | `metrics.yml,build-farm-metrics.yml` |
+
+### Metrics
+
+In addition to the standard metrics (`metrics.yml`) and reporting metrics (`metrics-report.yml`), the workload collects etcd-specific metrics via `build-farm-metrics.yml`:
+
+- `etcdDBTotalSize` - Total etcd database size in bytes
+- `etcdDBSizeInUse` - Actual used space in the database
+- `etcdDBFragmentationBytes` - Fragmented/unused space
+- `etcd-mvcc-db-total-size` - Per-member database size (instant)
+- `clusterEventCount` - Total cluster events
+- `etcdEventWriteRate` - Event write rate (create/update/delete)
+- `etcdEventReadRate` - Event read rate (get/list)
+
+### Usage examples
+
+```console
+kube-burner-ocp init -c etcd-density.yml --log-level=info \
+  --gc=false --gc-metrics=false \
+  --iterations=10 --iterations-per-namespace=10 \
+  --set KB_CHUNKS=8 --set KB_SIZE=100 \
+  --qps=20 --burst=20 \
+  --local-indexing
+```
+
+!!! Note
+    This workload requires OpenShift clusters with sufficiently large control plane nodes (m6a.4xlarge or r6a.4xlarge minimum) if trying to load the DB.
+
+### MicroShift
+
+`kube-burner-ocp` detects MicroShift through cluster metadata and can run `cluster-density-ms` against clusters that expose the required Kubernetes APIs. On MicroShift, the wrapper skips OpenShift ClusterOperator health checks and uses the vanilla Kubernetes health checks.
+
+Use an external Prometheus that scrapes MicroShift directly. OpenShift Prometheus discovery is not available on MicroShift, so metrics collection with the normal wrapper indexing flags requires `--prometheus-url`. Use `--prometheus-token` when that endpoint requires a bearer token.
+
+The `microshift-metrics.yml` profile expects kubelet metrics with `job="kubelet-microshift"`, cAdvisor metrics with `job="kubelet-microshift-cadvisor"`, node exporter with `job="node"`, CRI-O with `job="crio"`, and named-process-exporter with `job="process"`.
+
+Run a small workload with OpenSearch indexing:
+
+```console
+kube-burner-ocp cluster-density-ms \
+  --iterations=1 \
+  --metrics-profile=microshift-metrics.yml \
+  --prometheus-url=http://prometheus.example:9090 \
+  --es-server=https://opensearch.example:9200 \
+  --es-index=kube-burner \
+  --alerting=false
+```
+
+The `--metrics-endpoint` flag remains available for advanced cases where the full Prometheus endpoint and indexer configuration are supplied in a separate file.
+
+The `index` subcommand also honors `--prometheus-url` and `--prometheus-token` when scraping an existing MicroShift run.
+
+Summary metadata keeps the existing top-level OpenShift wrapper shape. Metrics documents keep metadata under their nested `metadata` field and include `distribution`, `microshift`, `microshiftVersion`, `microshiftMajorVersion`, `k8sVersion`, and `totalNodes` when those values are discovered.
+
+`cluster-density-ms` renders optional OpenShift objects only when the APIs are served: `imagestream.yml` requires `image.openshift.io`, and `route.yml` requires `route.openshift.io`. `cluster-density-v2` remains an OpenShift workload and still requires the full OpenShift image registry path.
 
 ## Node density workloads
 

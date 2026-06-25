@@ -2,6 +2,11 @@
 # vi: ft=bash
 # shellcheck disable=SC2086,SC2164
 
+# Every test is tagged with a `# bats test_tags=workload:<name>` comment so the
+# CI can run only the tests affected by a change. The mapping between workload
+# code paths and these tags lives in hack/bats_test_mappings.yml. When adding a
+# new test, tag it accordingly and keep the mappings file up to date.
+
 load helpers.bash
 
 setup_file() {
@@ -38,12 +43,14 @@ teardown_file() {
   fi
 }
 
+# bats test_tags=workload:olm
 @test "olmv1 benchmark" {
   run_cmd ${KUBE_BURNER_OCP} olm --log-level debug --uuid=${UUID} --iterations 2 --catalogImage registry.redhat.io/redhat/redhat-operator-index:v4.18
   # no need, the created test clustercatalog resource has been removed
   # run_cmd oc delete clustercatalog --all
 }
 
+# bats test_tags=workload:custom-workload
 @test "custom-workload" {
   run_cmd ${KUBE_BURNER_OCP} init --config=custom-workload.yml --metrics-endpoint metrics-endpoints.yaml --uuid=${UUID} --set=global.gc=false
   verify_object_count namespace 1 "" kube-burner.io/job=custom-workload
@@ -51,6 +58,7 @@ teardown_file() {
   check_metric_value jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
+# bats test_tags=workload:node-density
 @test "node-density: es-indexing=true" {
   PODS_PER_NODE=$(calculate_pods_per_node)
   echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
@@ -58,6 +66,7 @@ teardown_file() {
   check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
+# bats test_tags=workload:node-density
 @test "node-density-heavy: gc-metrics=true; local-indexing=true" {
   unset UUID
   PODS_PER_NODE=$(calculate_pods_per_node)
@@ -66,21 +75,25 @@ teardown_file() {
   check_file_list collected-metrics-abcd/etcdVersion.json collected-metrics-abcd/jobSummary.json collected-metrics-abcd/podLatencyMeasurement-node-density-heavy.json collected-metrics-abcd/podLatencyQuantilesMeasurement-node-density-heavy.json
 }
 
+# bats test_tags=workload:cluster-density
 @test "cluster-density-ms: metrics-endpoint=true" {
   run_cmd ${KUBE_BURNER_OCP} cluster-density-ms --iterations=1 --uuid=${UUID}
 }
 
+# bats test_tags=workload:cluster-density
 @test "cluster-density-v2: profile-type=both; user-metadata=true; es-indexing=true; churning=true; svcLatency=true" {
   run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=12 --churn-cycles=1 --churn-percent=25 --churn-delay=5s --profile-type=both ${INDEXING_FLAGS} --user-metadata=user-metadata.yml --service-latency --uuid=${UUID} --pprof --pprof-interval=0
   check_metric_value cpu-kubelet jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement svcLatencyMeasurement svcLatencyQuantilesMeasurement etcdVersion
   ls pprof-data/ovnkube-controller-heap-ovnkube-node-*-start.pprof pprof-data/ovnk-control-plane-heap-ovnkube-control-plane-*-end.pprof
 }
 
+# bats test_tags=workload:cluster-density
 @test "cluster-density-v2: custom-metrics=true" {
   run_cmd ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=3 --metrics-profile=custom-metrics.yml ${INDEXING_FLAGS} --uuid=${UUID}
   check_metric_value prometheusRSS jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
 }
 
+# bats test_tags=workload:node-density
 @test "node-density-cni: gc=false; alerting=false" {
   # Disable gc and avoid metric indexing
   PODS_PER_NODE=$(calculate_pods_per_node)
@@ -90,48 +103,59 @@ teardown_file() {
   trap - ERR
 }
 
+# bats test_tags=workload:cluster-density
 @test "cluster-density-v2 timeout check" {
   run timeout 10s ${KUBE_BURNER_OCP} cluster-density-v2 --iterations=1 --churn-duration=5m --timeout=1s
   [ "$status" -eq 2 ]
 }
 
+# bats test_tags=workload:index
 @test "index: local-indexing=true" {
   run_cmd ${KUBE_BURNER_OCP} index --uuid=${UUID} --metrics-profile "custom-metrics.yml"
 }
 
+# bats test_tags=workload:index
 @test "index: metrics-endpoints=true; es-indexing=true" {
   run_cmd ${KUBE_BURNER_OCP} index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --user-metadata user-metadata.yml
 }
 
+# bats test_tags=workload:network-policy
 @test "networkpolicy" {
   run_cmd ${KUBE_BURNER_OCP} network-policy --iterations 2
 }
 
+# bats test_tags=workload:whereabouts
 @test "whereabouts" {
   run_cmd ${KUBE_BURNER_OCP} whereabouts --iterations 2 --pod-ready-threshold=1m
 }
 
+# bats test_tags=workload:crd-scale
 @test "crd-scale; alerting=false" {
   run_cmd ${KUBE_BURNER_OCP} crd-scale --iterations=2 --alerting=false
 }
 
+# bats test_tags=workload:virt-density
 @test "virt-density" {
   run_cmd ${KUBE_BURNER_OCP} virt-density --vms-per-node=5 --vmi-ready-threshold=1m ${INDEXING_FLAGS}
   check_metric_value jobSummary vmiLatencyMeasurement vmiLatencyQuantilesMeasurement
 }
 
+# bats test_tags=workload:virt-udn-density
 @test "virt-udn-l2-density" {
   run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2
 }
 
+# bats test_tags=workload:virt-udn-density
 @test "virt-udn-l3-density" {
   run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --vms-per-node=2
 }
 
+# bats test_tags=workload:virt-udn-density
 @test "virt-cudn-l2-density" {
   run_cmd ${KUBE_BURNER_OCP} virt-cudn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2
 }
 
+# bats test_tags=workload:udn-density-pods
 @test "udn-density-l3-pods: churning=false" {
   run_cmd ${KUBE_BURNER_OCP} udn-density-pods --extract
   # Disable garbage-collection through using the config file
@@ -139,38 +163,70 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true
 }
 
+# bats test_tags=workload:udn-density-pods
 @test "cudn-density-l3-pods: churning=false" {
   oc delete ns -l kube-burner.io/job=create-cudn-pods
   oc delete clusteruserdefinednetworks --all --ignore-not-found
   run_cmd ${KUBE_BURNER_OCP} cudn-density-pods --iterations=2 --layer3=true --uuid=${UUID} --simple=false --set=jobs.2.jobPause=5s
 }
 
-@test "cudn-density-l2: gc=true" {
-  oc delete ns -l kube-burner.io/job=cudn-density-create-cudn-l2
-  oc delete clusteruserdefinednetworks --all --ignore-not-found
-  # Extract cudn-density templates to override any stale files from previous tests
-  run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
-  run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --gc=true --job-pause=0s --uuid=${UUID}
-  verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density-create-cudn-l2
-}
+# TODO: Enable these tests when CI cluster is upgraded to latest OCP.
+# The cudn-density grouped execution config waits for NetworkAllocationSucceeded=True
+# on CUDNs, which requires latest OCP. The current CI cluster only sets NetworkCreated.
 
+# @test "cudn-density-l2: gc=true" {
+#   oc delete clusteruserdefinednetworks --all --ignore-not-found
+#   run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
+#   run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --gc=true --job-pause=0s --uuid=${UUID}
+#   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
+# }
+
+# @test "cudn-density-l2: pod-churn" {
+#   oc delete clusteruserdefinednetworks --all --ignore-not-found
+#   run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
+#   run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --churn-percent=50 --churn-cycles=1 --churn-duration=1m --gc=true --job-pause=0s --uuid=${UUID}
+#   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
+# }
+
+# @test "cudn-density-l2: cudn-churn" {
+#   oc delete clusteruserdefinednetworks --all --ignore-not-found
+#   run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
+#   run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=10 --namespaces-per-cudn=5 --churn-mode=namespaces --churn-percent=50 --churn-cycles=1 --churn-duration=1m --gc=true --job-pause=0s --uuid=${UUID}
+#   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
+# }
+
+# @test "cudn-density-l2: incremental-load" {
+#   oc delete clusteruserdefinednetworks --all --ignore-not-found
+#   run_cmd ${KUBE_BURNER_OCP} cudn-density --extract
+#   run_cmd ${KUBE_BURNER_OCP} cudn-density --iterations=20 --namespaces-per-cudn=5 --gc=true --job-pause=0s \
+#     --incremental-step-size=10 --incremental-step-delay=5s \
+#     --uuid=${UUID}
+#   # Incremental framework GCs between steps -- verify nothing remains
+#   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
+# }
+
+# bats test_tags=workload:cluster-health
 @test "cluster-health" {
   run_cmd ${KUBE_BURNER_OCP} cluster-health
 }
 
+# bats test_tags=workload:kueue-operator
 @test "kueue-operator: jobs" {
   run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs --job-replicas=10 --parallelism=10 --workload-runtime=2s ${INDEXING_FLAGS}
   check_metric_value jobSummary jobLatencyMeasurement jobLatencyQuantilesMeasurement P99KueueAdmissionWaitTime
 }
 
+# bats test_tags=workload:kueue-operator
 @test "kueue-operator: pods" {
   run_cmd ${KUBE_BURNER_OCP} kueue-operator-pods --pod-replicas=50 --workload-runtime=2s
 }
 
+# bats test_tags=workload:kueue-operator
 @test "kueue-operator: jobs-shared" {
   run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --iterations=2 --parallelism=5 --workload-runtime=2s
 }
 
+# bats test_tags=workload:virt-capacity-benchmark
 @test "virt-capacity-benchmark" {
   local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
@@ -190,6 +246,7 @@ teardown_file() {
   check_destroyed_ns virt-capacity-benchmark
 }
 
+# bats test_tags=workload:virt-parallel
 @test "virt-parallel" {
   local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
@@ -209,6 +266,7 @@ teardown_file() {
   check_destroyed_ns virt-parallel
 }
 
+# bats test_tags=workload:virt-clone
 @test "virt-clone" {
   local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
@@ -225,6 +283,7 @@ teardown_file() {
   run_cmd oc delete ns -l kube-burner.io/test-name=virt-clone
 }
 
+# bats test_tags=workload:virt-clone-multi
 @test "virt-clone-multi" {
   local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
@@ -241,10 +300,12 @@ teardown_file() {
   check_destroyed_ns virt-clone-multi
 }
 
+# bats test_tags=workload:pvc-density
 @test "pvc-density" {
   run_cmd ${KUBE_BURNER_OCP} pvc-density --iterations=2
 }
 
+# bats test_tags=workload:virt-ephemeral-restart
 @test "virt-ephemeral-restart" {
   local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
@@ -260,6 +321,7 @@ teardown_file() {
   check_quantile_recorded ./virt-ephemeral-restart-results start-vms vmiLatency VMReady
 }
 
+# bats test_tags=workload:dv-clone
 @test "dv-clone" {
   local STORAGE_PARAMETER
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
@@ -275,6 +337,7 @@ teardown_file() {
   done
 }
 
+# bats test_tags=workload:crd-scale
 @test "extract and customize crd-scale" {
   run_cmd ${KUBE_BURNER_OCP} crd-scale --extract
   # Disable garbage-collection through using the config file
@@ -285,6 +348,7 @@ teardown_file() {
   git clean -fd
 }
 
+# bats test_tags=workload:build-farm
 @test "build-farm: basic execution with churn" {
   run_cmd ${KUBE_BURNER_OCP} build-farm \
     --job-iterations=1 \
