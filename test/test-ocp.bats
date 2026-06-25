@@ -157,9 +157,7 @@ teardown_file() {
 
 # bats test_tags=workload:udn-density-pods
 @test "udn-density-l3-pods: churning=false" {
-  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --extract
-  sed -i 's/jobPause: 5m/jobPause: 5s/g' udn-density-pods.yml
-  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true
+  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:udn-density-pods
