@@ -52,14 +52,18 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
     objects:
 
+{{ if .HAS_IMAGESTREAM_API }}
       - objectTemplate: imagestream.yml
         replicas: 1
+{{ end }}
 
       - objectTemplate: service.yml
         replicas: 2
-        
+
+{{ if .HAS_ROUTE_API }}
       - objectTemplate: route.yml
         replicas: 1
+{{ end }}
 
       - objectTemplate: secret.yml
         replicas: 20
