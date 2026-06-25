@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.25.9
 
 require (
-	github.com/cloud-bulldozer/go-commons/v2 v2.3.2
+	github.com/cloud-bulldozer/go-commons/v2 v2.3.4
 	github.com/google/uuid v1.6.0
 	github.com/kube-burner/kube-burner/v2 v2.7.3
 	github.com/openshift/api v0.0.0-20260408160412-464776f95207

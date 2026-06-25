@@ -71,6 +71,8 @@ Flags:
       --log-level string          Allowed values: debug, info, warn, error, fatal (default "info")
       --metrics-endpoint string   YAML file with a list of metric endpoints, overrides the es-server and es-index flags
       --profile-type string       Metrics profile to use, supported options are: regular, reporting or both (default "both")
+      --prometheus-token string   Prometheus bearer token to use with --prometheus-url
+      --prometheus-url string     Prometheus endpoint URL, overrides OpenShift Prometheus discovery
       --qps int                   QPS (default 20)
       --set strings               Set arbitrary key=value pairs to override values in the config file
       --timeout duration          Benchmark timeout (default 4h0m0s)
@@ -102,7 +104,7 @@ Some of the benefits the OCP wrapper provides are:
 - Simplified execution of the supported workloads. (Only some flags are required)
 - Adds OpenShift metadata to generated jobSummary and a small subset of metadata fields to the remaining metrics.
 - Prevents modifying configuration files to tweak some of the parameters of the workloads.
-- Discovers the Prometheus URL and authentication token, so the user does not have to perform those operations before using them.
+- Discovers the OpenShift Prometheus URL and authentication token, or accepts an explicit Prometheus endpoint for environments where discovery is not available.
 - Workloads configuration is directly embedded in the binary.
 
 Running node-density with 100 pods per node
@@ -223,6 +225,34 @@ Lightest version of this workload family, each iteration the following objects i
 - 1 edge route pointing to the to first service.
 - 20 secrets containing a 2048-character random string.
 - 10 config maps containing a 2048-character random string.
+
+### MicroShift
+
+`kube-burner-ocp` detects MicroShift through cluster metadata and can run `cluster-density-ms` against clusters that expose the required Kubernetes APIs. On MicroShift, the wrapper skips OpenShift ClusterOperator health checks and uses the vanilla Kubernetes health checks.
+
+Use an external Prometheus that scrapes MicroShift directly. OpenShift Prometheus discovery is not available on MicroShift, so metrics collection with the normal wrapper indexing flags requires `--prometheus-url`. Use `--prometheus-token` when that endpoint requires a bearer token.
+
+The `microshift-metrics.yml` profile expects kubelet metrics with `job="kubelet-microshift"`, cAdvisor metrics with `job="kubelet-microshift-cadvisor"`, node exporter with `job="node"`, CRI-O with `job="crio"`, and named-process-exporter with `job="process"`.
+
+Run a small workload with OpenSearch indexing:
+
+```console
+kube-burner-ocp cluster-density-ms \
+  --iterations=1 \
+  --metrics-profile=microshift-metrics.yml \
+  --prometheus-url=http://prometheus.example:9090 \
+  --es-server=https://opensearch.example:9200 \
+  --es-index=kube-burner \
+  --alerting=false
+```
+
+The `--metrics-endpoint` flag remains available for advanced cases where the full Prometheus endpoint and indexer configuration are supplied in a separate file.
+
+The `index` subcommand also honors `--prometheus-url` and `--prometheus-token` when scraping an existing MicroShift run.
+
+Summary metadata keeps the existing top-level OpenShift wrapper shape. Metrics documents keep metadata under their nested `metadata` field and include `distribution`, `microshift`, `microshiftVersion`, `microshiftMajorVersion`, `k8sVersion`, and `totalNodes` when those values are discovered.
+
+`cluster-density-ms` renders optional OpenShift objects only when the APIs are served: `imagestream.yml` requires `image.openshift.io`, and `route.yml` requires `route.openshift.io`. `cluster-density-v2` remains an OpenShift workload and still requires the full OpenShift image registry path.
 
 ## Node density workloads
 

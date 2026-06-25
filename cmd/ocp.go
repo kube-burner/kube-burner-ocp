@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"time"
 
+	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
 	uid "github.com/google/uuid"
 	"github.com/kube-burner/kube-burner-ocp/pkg/clusterhealth"
 	ocpWorkloads "github.com/kube-burner/kube-burner-ocp/pkg/workloads"
@@ -44,7 +45,7 @@ func openShiftCmd() *cobra.Command {
 	var workloadConfig workloads.Config
 	var wh workloads.WorkloadHelper
 	var metricsProfileType string
-	var esServer, esIndex string
+	var esServer, esIndex, prometheusURL, prometheusToken string
 	var QPS, burst int
 	var gc, gcMetrics, alerting, ignoreHealthCheck, localIndexing, extract, enableFileLogging bool
 	var setValues []string
@@ -55,6 +56,8 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().StringSliceVar(&setValues, "set", []string{}, "Set arbitrary key=value pairs to override values in the config file")
 	ocpCmd.PersistentFlags().StringVar(&esServer, "es-server", "", "Elastic Search endpoint")
 	ocpCmd.PersistentFlags().StringVar(&esIndex, "es-index", "", "Elastic Search index")
+	ocpCmd.PersistentFlags().StringVar(&prometheusURL, "prometheus-url", "", "Prometheus endpoint URL, overrides OpenShift Prometheus discovery")
+	ocpCmd.PersistentFlags().StringVar(&prometheusToken, "prometheus-token", "", "Prometheus bearer token to use with --prometheus-url")
 	ocpCmd.PersistentFlags().BoolVar(&localIndexing, "local-indexing", false, "Enable local indexing")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints, overrides the es-server and es-index flags")
 	ocpCmd.PersistentFlags().BoolVar(&alerting, "alerting", true, "Enable alerting")
@@ -86,8 +89,8 @@ func openShiftCmd() *cobra.Command {
 		if enableFileLogging {
 			util.SetupFileLogging("ocp-" + workloadConfig.UUID)
 		}
-		if cmd.Name() != "cluster-health" && cmd.Name() != "index" {
-			clusterhealth.ClusterHealthCheck(ignoreHealthCheck)
+		if cmd.Name() == "cluster-health" {
+			return
 		}
 		kubeClientProvider := config.NewKubeClientProvider("", "")
 		configDir := cmd.Name()
@@ -106,6 +109,8 @@ func openShiftCmd() *cobra.Command {
 			"GC":             gc,
 			"GC_METRICS":     gcMetrics,
 			"LOCAL_INDEXING": localIndexing,
+			"ES_SERVER":      "",
+			"ES_INDEX":       "",
 		}
 		if alerting {
 			ocpWorkloads.AdditionalVars["ALERTS"] = "alerts.yml"
@@ -115,14 +120,27 @@ func openShiftCmd() *cobra.Command {
 		if err := ocpWorkloads.GatherMetadata(&wh); err != nil {
 			log.Fatal(err.Error())
 		}
+		ocpWorkloads.AdditionalVars["HAS_IMAGESTREAM_API"] = ocpWorkloads.HasAPIGroup("image.openshift.io")
+		ocpWorkloads.AdditionalVars["HAS_ROUTE_API"] = ocpWorkloads.HasAPIGroup(ocpmetadata.APIGroupOpenShiftRoute)
+		if cmd.Name() != "cluster-health" && cmd.Name() != "index" {
+			clusterhealth.ClusterHealthCheck(ignoreHealthCheck, ocpWorkloads.IsMicroShift())
+		}
 		// When metrics-endpoint is specified, the user is supposed to provide the indexer and prometheus configuration
 		if workloadConfig.MetricsEndpoint == "" {
 			ocpWorkloads.AdditionalVars["ES_SERVER"] = esServer
 			ocpWorkloads.AdditionalVars["ES_INDEX"] = esIndex
-			if alerting || esServer != "" || localIndexing {
-				wh.PrometheusURL, wh.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
-				if err != nil {
-					log.Fatalf("Error obtaining Prometheus token: %v", err)
+			if alerting || esServer != "" || localIndexing || cmd.Name() == "index" {
+				if prometheusURL != "" {
+					wh.PrometheusURL = prometheusURL
+					wh.PrometheusToken = prometheusToken
+				} else {
+					if ocpWorkloads.IsMicroShift() {
+						log.Fatal("MicroShift requires --prometheus-url or --metrics-endpoint when metrics collection is enabled")
+					}
+					wh.PrometheusURL, wh.PrometheusToken, err = wh.MetadataAgent.GetPrometheus()
+					if err != nil {
+						log.Fatalf("Error obtaining Prometheus token: %v", err)
+					}
 				}
 				log.Debugf("Obtained prometheus endpoint: %s", wh.PrometheusURL)
 			}
