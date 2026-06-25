@@ -13,4 +13,6 @@ spec:
             cudn-{{.Iteration}}: ""
   advertisements:
   - "PodNetwork"
+{{- if not $.layer2 }}
   - "EgressIP"
+{{- end }}

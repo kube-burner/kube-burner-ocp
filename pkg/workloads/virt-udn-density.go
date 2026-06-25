@@ -26,7 +26,7 @@ import (
 )
 
 // Returns virt-density workload
-func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
+func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, vmsPerNode int
 	var vmiRunningThreshold, pprofInterval time.Duration
 	var metricsProfiles []string
@@ -36,8 +36,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var deletionStrategy, vmImage, bindingMethod, churnMode string
 	var rc int
 	cmd := &cobra.Command{
-		Use:          "virt-udn-density",
-		Short:        "Runs virt-udn-density workload",
+		Use:          variant,
+		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			if bindingMethod != "passt" && bindingMethod != "l2bridge" {
@@ -75,7 +75,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Info("Layer 2 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer2", bindingMethod)
 			}
-			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
+			rc = RunWorkload(cmd, wh, variant+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -96,5 +96,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	if variant == "virt-cudn-density" {
+		cmd.Annotations = map[string]string{"configDir": "virt-udn-density"}
+	}
 	return cmd
 }

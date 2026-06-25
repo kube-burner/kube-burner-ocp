@@ -11,7 +11,6 @@ global:
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
 {{ end }}
-
 {{ if .PPROF }}
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}
@@ -53,14 +52,14 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
-  {{ if and (eq .CHURN_DURATION 0) (eq .CHURN_CYCLES 0) }}
-  - name: create-udn-pods
-    namespace: udn-density-pods
+  - name: create-cudn-pods
+    namespace: cudn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
     waitWhenFinished: true
+    skipIndexing: true
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
@@ -69,66 +68,34 @@ jobs:
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
       {{ if .ENABLE_LAYER_3 }}
-      - objectTemplate: udn_l3.yml
+      - objectTemplate: cudn_l3.yml
         replicas: 1
       {{ else }}
-      - objectTemplate: udn_l2.yml
+      - objectTemplate: cudn_l2.yml
         replicas: 1
       {{ end }}
-        waitOptions:
-          customStatusPaths:
-            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
-              value: "True"
-      - objectTemplate: ds.yml
-        replicas: 1
-        runOnce: true
-  {{ end }}
 
-  - name: remove-ds
-    jobType: delete
-    waitForDeletion: true
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    skipIndexing: true
-    objects:
-      - kind: DaemonSet
-        apiVersion: apps/v1
-        labelSelector: {kube-burner.io/job: create-udn-pods }
-
-  - name: udn-density-pods
-    namespace: udn-density-pods
+  - name: cudn-density-pods
+    namespace: cudn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
     waitWhenFinished: true
     preLoadImages: true
-    churnConfig:
-      cycles: {{.CHURN_CYCLES}}
-      duration: {{.CHURN_DURATION}}
-      percent: {{.CHURN_PERCENT}}
-      delay: {{.CHURN_DELAY}}
-      mode: {{.CHURN_MODE}}
     jobPause: 2m
     metricsClosing: afterJobPause
     cleanup: false
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
     objects:
       {{ if or (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
       {{ if .ENABLE_LAYER_3 }}
-      - objectTemplate: udn_l3.yml
+      - objectTemplate: cudn_l3.yml
         replicas: 1
       {{ else }}
-      - objectTemplate: udn_l2.yml
+      - objectTemplate: cudn_l2.yml
         replicas: 1
       {{ end }}
       {{ end }}
-
       {{ if not .SIMPLE}}
       - objectTemplate: np-deny-all.yml
         replicas: 1
