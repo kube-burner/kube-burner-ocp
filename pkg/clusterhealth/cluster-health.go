@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 
+	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/util"
 	v1 "github.com/openshift/api/config/v1"
@@ -36,16 +37,43 @@ func ClusterHealth() *cobra.Command {
 		Use:   "cluster-health",
 		Short: "Checks for ocp cluster health",
 		Run: func(cmd *cobra.Command, args []string) {
-			ClusterHealthCheck(false)
+			ClusterHealthCheck(false, detectMicroShift())
 		},
 	}
 	return cmd
 }
 
-func ClusterHealthCheck(ignoreHealthCheck bool) {
+func detectMicroShift() bool {
+	kubeClientProvider := config.NewKubeClientProvider("", "")
+	_, restConfig := kubeClientProvider.ClientSet(0, 0)
+	metadataAgent, err := ocpmetadata.NewMetadata(restConfig)
+	if err != nil {
+		log.Warnf("error creating metadata agent for health-check detection: %v", err)
+		return false
+	}
+	clusterInfo, err := metadataAgent.GetClusterInfo()
+	if err != nil {
+		log.Warnf("error detecting cluster type for health-check behavior: %v", err)
+		return false
+	}
+	return clusterInfo.Metadata.MicroShift
+}
+
+func ClusterHealthCheck(ignoreHealthCheck bool, microShift bool) {
 	log.Infof("❤️ Checking for Cluster Health")
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, restConfig := kubeClientProvider.ClientSet(0, 0)
+	if microShift {
+		log.Infof("MicroShift detected; skipping ClusterOperator health checks")
+		if util.ClusterHealthyVanillaK8s(clientSet) {
+			log.Infof("Cluster is Healthy")
+		} else if ignoreHealthCheck {
+			log.Warn("Cluster is Unhealthy, continuing execution")
+		} else {
+			log.Fatal("Cluster is Unhealthy")
+		}
+		return
+	}
 	openshiftClientset, err := versioned.NewForConfig(restConfig)
 	if err != nil {
 		log.Fatalf("error creating OpenShift clientset: %v", err)

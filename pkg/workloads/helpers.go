@@ -45,6 +45,7 @@ const (
 
 var (
 	clusterMetadata      ocpmetadata.ClusterMetadata
+	clusterCapabilities  ocpmetadata.ClusterCapabilities
 	AdditionalVars       map[string]any
 	SetVars              map[string]any
 	accessModeTranslator = map[string]string{
@@ -56,6 +57,10 @@ var (
 
 func setMetrics(cmd *cobra.Command, metricsProfiles []string) {
 	profileType, _ := cmd.Root().PersistentFlags().GetString("profile-type")
+	profileTypeFlag := cmd.Root().PersistentFlags().Lookup("profile-type")
+	if IsMicroShift() && ProfileType(profileType) == Both && profileTypeFlag != nil && !profileTypeFlag.Changed {
+		profileType = string(Regular)
+	}
 	switch ProfileType(profileType) {
 	case Reporting:
 		metricsProfiles = []string{"metrics-report.yml"}
@@ -74,20 +79,60 @@ func GatherMetadata(wh *workloads.WorkloadHelper) error {
 	if err != nil {
 		return err
 	}
-	clusterMetadata, err = wh.MetadataAgent.GetClusterMetadata()
+	clusterInfo, err := wh.MetadataAgent.GetClusterInfo()
 	if err != nil {
 		return err
 	}
+	return applyClusterInfo(wh, clusterInfo)
+}
+
+func applyClusterInfo(wh *workloads.WorkloadHelper, clusterInfo ocpmetadata.ClusterInfo) error {
+	clusterMetadata = clusterInfo.Metadata
+	clusterCapabilities = clusterInfo.Capabilities
 	jsonData, err := json.Marshal(clusterMetadata)
 	if err != nil {
 		return err
 	}
-	json.Unmarshal(jsonData, &wh.SummaryMetadata)
-	wh.MetricsMetadata = map[string]any{
-		"ocpMajorVersion": clusterMetadata.OCPMajorVersion,
-		"ocpVersion":      clusterMetadata.OCPVersion,
+	if err := json.Unmarshal(jsonData, &wh.SummaryMetadata); err != nil {
+		return err
 	}
+	wh.MetricsMetadata = metricsMetadataFromClusterMetadata(clusterMetadata)
 	return nil
+}
+
+func HasAPIGroup(group string) bool {
+	return clusterCapabilities.HasAPIGroup(group)
+}
+
+func IsMicroShift() bool {
+	return clusterMetadata.MicroShift
+}
+
+func metricsMetadataFromClusterMetadata(metadata ocpmetadata.ClusterMetadata) map[string]any {
+	metricsMetadata := make(map[string]any)
+	if metadata.OCPMajorVersion != "" {
+		metricsMetadata["ocpMajorVersion"] = metadata.OCPMajorVersion
+	}
+	if metadata.OCPVersion != "" {
+		metricsMetadata["ocpVersion"] = metadata.OCPVersion
+	}
+	if metadata.Distribution != "" {
+		metricsMetadata["distribution"] = metadata.Distribution
+	}
+	metricsMetadata["microshift"] = metadata.MicroShift
+	if metadata.MicroShiftVersion != "" {
+		metricsMetadata["microshiftVersion"] = metadata.MicroShiftVersion
+	}
+	if metadata.MicroShiftMajorVersion != "" {
+		metricsMetadata["microshiftMajorVersion"] = metadata.MicroShiftMajorVersion
+	}
+	if metadata.K8SVersion != "" {
+		metricsMetadata["k8sVersion"] = metadata.K8SVersion
+	}
+	if metadata.TotalNodes != 0 {
+		metricsMetadata["totalNodes"] = metadata.TotalNodes
+	}
+	return metricsMetadata
 }
 
 func getK8SConnector() k8sconnector.K8SConnector {

@@ -48,9 +48,13 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				}
 			}
 			setMetrics(cmd, metricsProfiles)
-			ingressDomain, err := wh.MetadataAgent.GetDefaultIngressDomain()
-			if err != nil {
-				log.Fatal("Error obtaining default ingress domain: ", err.Error())
+			ingressDomain := ""
+			if clusterDensityNeedsIngressDomain(cmd.Name()) {
+				var err error
+				ingressDomain, err = wh.MetadataAgent.GetDefaultIngressDomain()
+				if err != nil {
+					log.Fatal("Error obtaining default ingress domain: ", err.Error())
+				}
 			}
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["PPROF"] = pprof
@@ -85,4 +89,8 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
+}
+
+func clusterDensityNeedsIngressDomain(variant string) bool {
+	return variant != "cluster-density-ms"
 }
