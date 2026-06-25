@@ -1,0 +1,98 @@
+# MicroShift metrics profile.
+#
+# Prerequisites:
+# - External Prometheus scraping MicroShift directly.
+# - Kubelet metrics scraped with job="kubelet-microshift".
+# - cAdvisor metrics scraped with job="kubelet-microshift-cadvisor".
+# - Node exporter scraped with job="node".
+# - named-process-exporter scraped with job="process" for system component metrics.
+#
+# MicroShift does not expose kube-state-metrics, cluster_version, OpenShift
+# cluster:* recording rules, or a standalone openshift-etcd scrape. Resource
+# counts use apiserver_storage_objects, and embedded etcd client metrics come
+# from the API server scrape.
+
+# API server
+- query: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{job="kubelet-microshift",component="apiserver",verb!~"WATCH",subresource!="log"}[2m])) by (verb,resource,subresource,instance,le)) > 0
+  metricName: API99thLatency
+
+- query: sum(irate(apiserver_request_total{job="kubelet-microshift",component="apiserver",verb!="WATCH",subresource!="log"}[2m])) by (verb,instance,resource,code) > 0
+  metricName: APIRequestRate
+
+- query: sum(apiserver_current_inflight_requests{job="kubelet-microshift"}) by (request_kind,instance) > 0
+  metricName: APIInflightRequests
+
+- query: sum(apiserver_storage_objects{job="kubelet-microshift"}) by (resource,instance) > 0
+  metricName: APIStorageObjectCount
+  instant: true
+
+# Embedded etcd client metrics exposed by the API server
+- query: histogram_quantile(0.99, sum(rate(etcd_request_duration_seconds_bucket{job="kubelet-microshift"}[2m])) by (operation,instance,le)) > 0
+  metricName: 99thEtcdRequestDurationSeconds
+
+- query: sum(irate(etcd_requests_total{job="kubelet-microshift"}[2m])) by (operation,instance) > 0
+  metricName: etcdRequestRate
+
+# Kubelet and CRI-O
+- query: histogram_quantile(0.99, sum(rate(kubelet_runtime_operations_duration_seconds_bucket{job="kubelet-microshift"}[2m])) by (operation_type,instance,le)) > 0
+  metricName: 99thKubeletRuntimeOperationsDurationSeconds
+
+- query: sum(irate(process_cpu_seconds_total{job="kubelet-microshift"}[2m]) * 100) by (instance) > 0
+  metricName: kubeletCPU
+
+- query: sum(process_resident_memory_bytes{job="kubelet-microshift"}) by (instance) > 0
+  metricName: kubeletMemory
+
+- query: sum(irate(process_cpu_seconds_total{job="crio"}[2m]) * 100) by (instance) > 0
+  metricName: crioCPU
+
+- query: sum(process_resident_memory_bytes{job="crio"}) by (instance) > 0
+  metricName: crioMemory
+
+- query: container_runtime_crio_operations_latency_seconds_total{job="crio",quantile="0.99"}
+  metricName: crioOperations99thLatency
+
+# Container and pod metrics from cAdvisor. On MicroShift, instance is the node name.
+- query: sum(irate(container_cpu_usage_seconds_total{job="kubelet-microshift-cadvisor",container=~".+",container!="POD",pod=~".+"}[2m]) * 100) by (pod,namespace,container,instance) > 0
+  metricName: podCPU
+
+- query: sum(container_memory_rss{job="kubelet-microshift-cadvisor",container=~".+",container!="POD",pod=~".+"}) by (pod,namespace,container,instance) > 0
+  metricName: podMemoryRSS
+
+- query: sum(container_memory_working_set_bytes{job="kubelet-microshift-cadvisor",container=~".+",container!="POD",pod=~".+"}) by (pod,namespace,container,instance) > 0
+  metricName: podMemoryWorkingSet
+
+# Node exporter
+- query: sum(irate(node_cpu_seconds_total{job="node"}[2m])) by (mode,instance) > 0
+  metricName: nodeCPU
+
+- query: avg(node_memory_MemAvailable_bytes{job="node"}) by (instance)
+  metricName: nodeMemoryAvailable
+
+- query: avg(node_memory_Active_bytes{job="node"}) by (instance)
+  metricName: nodeMemoryActive
+
+- query: avg(node_memory_Cached_bytes{job="node"}) by (instance) + avg(node_memory_Buffers_bytes{job="node"}) by (instance)
+  metricName: nodeMemoryCached+nodeMemoryBuffers
+
+- query: irate(node_network_receive_bytes_total{job="node",device!="lo"}[2m])
+  metricName: rxNetworkBytes
+
+- query: irate(node_network_transmit_bytes_total{job="node",device!="lo"}[2m])
+  metricName: txNetworkBytes
+
+- query: rate(node_disk_written_bytes_total{job="node",device!~"^(dm|rbd|loop).*"}[2m])
+  metricName: nodeDiskWrittenBytes
+
+- query: rate(node_disk_read_bytes_total{job="node",device!~"^(dm|rbd|loop).*"}[2m])
+  metricName: nodeDiskReadBytes
+
+# MicroShift system components from named-process-exporter.
+- query: sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route"}[2m]) * 100) by (groupname,instance) > 0
+  metricName: namedprocessCPU
+
+- query: sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route"}) by (groupname,instance) > 0
+  metricName: namedprocessMemoryRSS
+
+- query: sum(namedprocess_namegroup_num_threads{job="process",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route"}) by (groupname,instance) > 0
+  metricName: namedprocessThreads
