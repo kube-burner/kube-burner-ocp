@@ -20,6 +20,7 @@ oc label namespace "${NAMESPACE}" --overwrite \
   security.openshift.io/scc.podSecurityLabelSync=false \
   pod-security.kubernetes.io/enforce=privileged \
   pod-security.kubernetes.io/audit=privileged \
+  kube-burner.io/job=victim-workload \
   pod-security.kubernetes.io/warn=privileged 2>/dev/null || true
 
 EVENT_MESSAGE="synthetic event storm padded to approximately one kilobyte to match realistic event sizes from FailedScheduling and BackOff messages which carry full pod spec context including container images resource requests limits environment variables volume mounts service account tokens and scheduling constraints that inflate the event payload significantly beyond what a simple test message would produce in practice so we need to ensure our test events are representative of real world event sizes that flow through the Kubernetes event pipeline and into etcd storage where they contribute to database growth WAL pressure and compaction overhead during normal cluster operations under load"

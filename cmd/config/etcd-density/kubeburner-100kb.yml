@@ -1,7 +1,0 @@
-kind: KubeBurner{{ add .Replica -1 }}
-apiVersion: cloudbulldozer.example.com/v1
-metadata:
-  name: kubeburner-{{.Iteration}}-100kb-{{ add .Replica -1 }}
-spec:
-  iterations: {{.Iteration}}
-  workload: "{{randAlphaNum 102400}}"

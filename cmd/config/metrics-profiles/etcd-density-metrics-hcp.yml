@@ -21,6 +21,9 @@
 - query: etcd_mvcc_db_total_size_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
   metricName: etcdDBTotalSizePerInstance
 
+- query: etcd_server_quota_backend_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: etcdQuotaBackendBytes
+
 - query: etcd_mvcc_db_total_size_in_use_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
   metricName: etcdDBSizeInUsePerInstance
 
@@ -33,6 +36,9 @@
 
 - query: histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m]))
   metricName: 99thEtcdDiskBackendCommitDurationSeconds
+
+- query: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", grpc_service="etcdserverpb.KV"}[2m])) by (pod, le))
+  metricName: 99thEtcdGRPCRoundTripTimeSeconds
 
 - query: delta(etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[1m:30s])/2 > 0
   metricName: 99thEtcdCompaction
@@ -112,6 +118,12 @@
 - query: sum(container_memory_rss{name!="", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (node)
   metricName: nodeMemory-ControlPlaneHosts
 
+- query: (sum(irate(container_cpu_usage_seconds_total{name!="", container!~"POD|", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m]) * 100) by (container, node, pod)) > 0
+  metricName: cpuPercent-ControlPlane
+
+- query: sum(container_memory_rss{name!="", container!~"POD|", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (container, node, pod)
+  metricName: memoryRSS-ControlPlane
+
 # ---------------------------------------------------------------------------
 # Instant queries: single-value snapshots captured at start and end of test
 # ---------------------------------------------------------------------------
@@ -155,12 +167,12 @@
   metricName: etcdVersion
   instant: true
 
-- query: sum(container_cpu_usage_seconds_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (container, pod)
+- query: sum(container_cpu_usage_seconds_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (container, node, pod)
   metricName: cpuSeconds-ControlPlane
   instant: true
   captureStart: true
 
-- query: sum(container_memory_rss{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (container, pod)
+- query: sum(container_memory_rss{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (container, node, pod)
   metricName: memoryRSS-ControlPlane
   instant: true
   captureStart: true

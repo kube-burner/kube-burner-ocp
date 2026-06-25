@@ -135,11 +135,11 @@ func newDBQuotaPressure(wh *workloads.WorkloadHelper) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().IntVar(&iterations, "iterations", 6551, "Number of object iterations for the db-quota-pressure job")
-	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 936, "Number of iterations per namespace")
+	cmd.Flags().IntVar(&iterations, "iterations", 100, "Number of object iterations for the db-quota-pressure job")
+	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1, "Number of iterations per namespace")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().IntVar(&kbChunks, "kb-chunks", 8, "Number of CRDs to create and object replicas per iteration")
-	cmd.Flags().IntVar(&kbSize, "kb-size", 100, "Size of each object in KB (10 or 100)")
+	cmd.Flags().IntVar(&kbSize, "kb-size", 10, "Size of each object in KB (10 or 100)")
 	return cmd
 }
 
