@@ -14,6 +14,7 @@
 - label: workload:custom-workload
   paths:
   - pkg/workloads/custom-workload.go
+  - cmd/config/etcd-density/*
 - label: workload:node-density
   paths:
   - pkg/workloads/node-density.go
