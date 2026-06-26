@@ -226,6 +226,64 @@ Lightest version of this workload family, each iteration the following objects i
 - 20 secrets containing a 2048-character random string.
 - 10 config maps containing a 2048-character random string.
 
+## Etcd density workload
+
+This workload stresses the etcd database by creating large custom resource objects to increase the database size. It is designed to measure control-plane performance degradation as etcd grows, tracking API server latency, etcd commit/fsync duration, compaction, defragmentation, and database size metrics.
+
+The workload operates in two phases:
+
+1. **CRD creation** (`crd-scale` job): Creates KubeBurner CustomResourceDefinitions and waits for them to become established.
+2. **Object creation** (`etcd-density` job): Creates custom resource instances across multiple namespaces. Objects are intentionally not cleaned up (`cleanup: false`) to preserve the database size for analysis.
+
+### Database size calculation
+
+The total etcd database size increase is: `ITERATIONS x KB_CHUNKS x KB_SIZE`.
+
+Suggested configurations:
+
+| `iterations` | `KB_CHUNKS` | `KB_SIZE` | Per-KB total | Total DB size | `iterations-per-namespace` |
+| ------------ | ----------- | --------- | ------------ | ------------- | -------------------------- |
+| 6,551        | 8           | 100       | 0.9GB        | 7GB           | 936                        |
+| 14,925       | 18          | 100       | 2GB          | 36GB          | 415                        |
+| 11,194       | 16          | 100       | 1.5GB        | 24GB          | 468                        |
+| 36,841       | 16          | 10        | 1.5GB        | 8GB           | 4,605                      |
+
+### Configuration flags
+
+| Flag                         | Description                                                     | Default               |
+| ---------------------------- | --------------------------------------------------------------- | --------------------- |
+| `--iterations`               | Number of object iterations for the etcd-density job (required) | -                     |
+| `--iterations-per-namespace` | Number of iterations per namespace (required)                   | -                     |
+| `--set KB_CHUNKS=<n>`        | Number of CRDs to create and object replicas per iteration (required) | -               |
+| `--set KB_SIZE=<n>`          | Size of each object in kb: `10` or `100`                        | `100`                 |
+| `--metrics-profile`          | Comma separated list of metrics profiles                        | `metrics.yml,build-farm-metrics.yml` |
+
+### Metrics
+
+In addition to the standard metrics (`metrics.yml`) and reporting metrics (`metrics-report.yml`), the workload collects etcd-specific metrics via `build-farm-metrics.yml`:
+
+- `etcdDBTotalSize` - Total etcd database size in bytes
+- `etcdDBSizeInUse` - Actual used space in the database
+- `etcdDBFragmentationBytes` - Fragmented/unused space
+- `etcd-mvcc-db-total-size` - Per-member database size (instant)
+- `clusterEventCount` - Total cluster events
+- `etcdEventWriteRate` - Event write rate (create/update/delete)
+- `etcdEventReadRate` - Event read rate (get/list)
+
+### Usage examples
+
+```console
+kube-burner-ocp init -c etcd-density.yml --log-level=info \
+  --gc=false --gc-metrics=false \
+  --iterations=10 --iterations-per-namespace=10 \
+  --set KB_CHUNKS=8 --set KB_SIZE=100 \
+  --qps=20 --burst=20 \
+  --local-indexing
+```
+
+!!! Note
+    This workload requires OpenShift clusters with sufficiently large control plane nodes (m6a.4xlarge or r6a.4xlarge minimum) if trying to load the DB.
+
 ### MicroShift
 
 `kube-burner-ocp` detects MicroShift through cluster metadata and can run `cluster-density-ms` against clusters that expose the required Kubernetes APIs. On MicroShift, the wrapper skips OpenShift ClusterOperator health checks and uses the vanilla Kubernetes health checks.
