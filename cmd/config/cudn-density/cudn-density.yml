@@ -130,6 +130,7 @@ jobs:
         churn: false
         group:
           id: 2
+          pauseBeforeGC: {{.JOB_PAUSE}}
 
       - objectTemplate: service.yml
         replicas: 1
@@ -210,21 +211,21 @@ jobs:
       - objectTemplate: deployment-server.yml
         replicas: 1
         group:
-          id: 2
+          id: 3
         inputVars:
           podReplicas: 2
 
       - objectTemplate: deployment-app.yml
         replicas: 1
         group:
-          id: 2
+          id: 3
         inputVars:
           podReplicas: 1
 
       - objectTemplate: deployment-client.yml
         replicas: 1
         group:
-          id: 2
+          id: 3
         inputVars:
           podReplicas: 1
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
