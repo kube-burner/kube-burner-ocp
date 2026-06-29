@@ -12,9 +12,21 @@ on:
 jobs:
   ocp-e2e-ci:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     concurrency:
       group: ocp-e2e-ci
+      cancel-in-progress: false
     steps:
+
+    - name: Cancel previous runs from same PR
+      if: github.event.pull_request.number
+      uses: styfle/cancel-workflow-action@0.12.1
+      with:
+        workflow_id: ci-tests.yml
+        access_token: ${{ github.token }}
+        all_but_latest: true
 
     - name: Check out code
       uses: actions/checkout@v4
