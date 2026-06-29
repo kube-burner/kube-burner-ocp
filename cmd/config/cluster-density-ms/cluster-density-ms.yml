@@ -75,3 +75,4 @@ jobs:
         replicas: 4
         inputVars:
           podReplicas: 2
+          nodeSelector: {{.NODE_SELECTOR}}
