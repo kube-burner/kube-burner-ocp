@@ -18,6 +18,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloud-bulldozer/go-commons/v2/ssh"
+	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
@@ -25,19 +27,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	virtDensitySSHKeyFileName = "ssh"
+	virtDensityTmpDirPattern  = "kube-burner-virt-density-*"
+)
+
 // Returns virt-density workload
 func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var vmImage, deletionStrategy, churnMode string
 	var vmsPerNode, iterationsPerNamespace, churnPercent, churnCycles int
 	var vmiRunningThreshold time.Duration
-	var namespacedIterations, mounts bool
+	var namespacedIterations, mounts, sshCheck bool
 	var churnDelay, churnDuration time.Duration
 	var metricsProfiles []string
+	var sshKeyPairPath string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "virt-density",
 		Short:        "Runs virt-density workload",
 		SilenceUsage: true,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			if sshCheck && !virtctl.IsInstalled() {
+				log.Fatalf("Failed to run virtctl. Check that it is installed, in PATH and working")
+			}
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			totalVMs := clusterMetadata.WorkerNodesCount * vmsPerNode
 			vmCount, err := wh.MetadataAgent.GetCurrentVMICount()
@@ -45,6 +58,17 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal(err.Error())
 			}
+
+			var privateKeyPath, publicKeyPath string
+			if sshCheck {
+				privateKeyPath, publicKeyPath, err = ssh.GenerateSSHKeyPair(sshKeyPairPath, virtDensityTmpDirPattern, virtDensitySSHKeyFileName)
+				if err != nil {
+					log.Fatalf("Failed to generate SSH keys for the test - %v", err)
+				}
+				AdditionalVars["privateKey"] = privateKeyPath
+				AdditionalVars["publicKey"] = publicKeyPath
+			}
+
 			AdditionalVars["JOB_ITERATIONS"] = totalVMs - vmCount
 			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["VM_IMAGE"] = vmImage
@@ -57,6 +81,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["MOUNTS"] = mounts
+			AdditionalVars["SSH_CHECK"] = sshCheck
 			setMetrics(cmd, metricsProfiles)
 			AddVirtMetadata(wh, vmImage, "", "")
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -71,6 +96,8 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 10, "Iterations per namespace")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
 	cmd.Flags().BoolVar(&mounts, "mounts", true, "Include cloud-init and emptyDir disks (true) or only the containerDisk (false)")
+	cmd.Flags().BoolVar(&sshCheck, "ssh-check", false, "Enable SSH connectivity check after all VMs are running")
+	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generated SSH keys (only used with --ssh-check)")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.GVRDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
