@@ -88,11 +88,11 @@
   metricName: nodeDiskReadBytes
 
 # MicroShift system components from named-process-exporter.
-- query: sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route"}[2m]) * 100) by (groupname,instance) > 0
+- query: sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route|service-ca-oper|snapshot-contro|ovn-controller|conmon|kube-rbac-proxy|ovn-northd|ovn-k8s-cni-ove"}[2m]) * 100) by (groupname,instance) > 0
   metricName: namedprocessCPU
 
-- query: sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route"}) by (groupname,instance) > 0
+- query: sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route|service-ca-oper|snapshot-contro|ovn-controller|conmon|kube-rbac-proxy|ovn-northd|ovn-k8s-cni-ove"}) by (groupname,instance) > 0
   metricName: namedprocessMemoryRSS
 
-- query: sum(namedprocess_namegroup_num_threads{job="process",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route"}) by (groupname,instance) > 0
+- query: sum(namedprocess_namegroup_num_threads{job="process",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route|service-ca-oper|snapshot-contro|ovn-controller|conmon|kube-rbac-proxy|ovn-northd|ovn-k8s-cni-ove"}) by (groupname,instance) > 0
   metricName: namedprocessThreads
