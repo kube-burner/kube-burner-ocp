@@ -60,6 +60,7 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: true
     waitWhenFinished: true
+    jobPause: 2m
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
