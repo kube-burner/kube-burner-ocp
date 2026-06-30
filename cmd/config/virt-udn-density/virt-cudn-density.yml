@@ -1,4 +1,10 @@
 ---
+# NetworkAllocationSucceeded condition in CUDNs is available in OCP 5.0 and later
+{{ $cudnCondition := "NetworkCreated"}}
+{{ if semverCompare "^5.0.0-0" .OCP_MAJOR_VERSION }}
+{{ $cudnCondition = "NetworkAllocationSucceeded"}}
+{{ end }}
+
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
@@ -51,9 +57,8 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
-{{ $jobName := ternary "create-cudn-l3" "create-cudn-l2" .ENABLE_LAYER_3 }}
 jobs:
-  - name: {{ $jobName }}
+  - name: create-cudn-virt
     namespace: virt-cudn-density
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
@@ -82,7 +87,7 @@ jobs:
       {{ end }}
         waitOptions:
           customStatusPaths:
-            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
+            - key: .conditions[] | select(.type=="{{ $cudnCondition }}") | .status
               value: "True"
 
   - name: virt-density-cudn

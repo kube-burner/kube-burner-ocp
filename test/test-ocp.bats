@@ -156,12 +156,12 @@ teardown_file() {
 }
 
 # bats test_tags=workload:udn-density-pods
-@test "udn-density-l3-pods: churning=false" {
+@test "udn-density-pods: layer3=true" {
   run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:udn-density-pods
-@test "cudn-density-l3-pods: churning=false" {
+@test "cudn-density-pods: layer3=true" {
   oc delete ns -l kube-burner.io/job=create-cudn-pods
   oc delete clusteruserdefinednetworks --all --ignore-not-found
   run_cmd ${KUBE_BURNER_OCP} cudn-density-pods --iterations=2 --layer3=true --uuid=${UUID} --simple=false --set=jobs.2.jobPause=5s

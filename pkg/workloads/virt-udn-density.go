@@ -68,6 +68,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["ENABLE_LAYER_3"] = l3
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
+			AdditionalVars["OCP_MAJOR_VERSION"] = clusterMetadata.OCPMajorVersion
 			if l3 {
 				log.Info("Layer 3 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer3", bindingMethod)

@@ -1,4 +1,10 @@
 ---
+# NetworkAllocationSucceeded condition in CUDNs is available in OCP 5.0 and later
+{{ $cudnCondition := "NetworkCreated"}}
+{{ if semverCompare "^5.0.0-0" .OCP_MAJOR_VERSION }}
+{{ $cudnCondition = "NetworkAllocationSucceeded"}}
+{{ end }}
+
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
@@ -50,7 +56,6 @@ metricsEndpoints:
       type: local
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
-
 jobs:
   - name: create-cudn-pods
     namespace: cudn-density-pods
@@ -76,7 +81,7 @@ jobs:
       {{ end }}
         waitOptions:
           customStatusPaths:
-            - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
+            - key: .conditions[] | select(.type=="{{ $cudnCondition }}") | .status
               value: "True"
 
   - name: cudn-density-pods
