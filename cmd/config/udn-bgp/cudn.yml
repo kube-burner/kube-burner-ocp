@@ -18,21 +18,28 @@ spec:
     - key: kubernetes.io/metadata.name
       operator: In
       values: {{$nsNames}}
-  {{- $firstOctet := add (div $.Iteration 255) 40 }}
-  {{- $secondOctet := mod $.Iteration 255 }}
-  {{- $cudnCidr := print $firstOctet "." $secondOctet ".0.0/16" }}
   network:
 {{- if $.layer2 }}
     topology: Layer2
     layer2:
       role: Primary
       subnets:
-        - {{$cudnCidr}}
+      {{- range $i, $v := until $.cidrs_per_cudn }}
+        {{- $cidrIndex := add (mul $.Iteration $.cidrs_per_cudn) $i }}
+        {{- $firstOctet := add (div $cidrIndex 255) 40 }}
+        {{- $secondOctet := mod $cidrIndex 255 }}
+        - {{ print $firstOctet "." $secondOctet ".0.0/16" }}
+      {{- end }}
 {{- else }}
     topology: Layer3
     layer3:
       role: Primary
       subnets:
-        - cidr: {{$cudnCidr}}
+      {{- range $i, $v := until $.cidrs_per_cudn }}
+        {{- $cidrIndex := add (mul $.Iteration $.cidrs_per_cudn) $i }}
+        {{- $firstOctet := add (div $cidrIndex 255) 40 }}
+        {{- $secondOctet := mod $cidrIndex 255 }}
+        - cidr: {{ print $firstOctet "." $secondOctet ".0.0/16" }}
           hostSubnet: 24
+      {{- end }}
 {{- end }}
