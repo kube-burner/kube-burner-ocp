@@ -1,0 +1,15 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: microservice-svc-{{.Replica}}
+spec:
+  selector:
+    app: microservice-server-{{.Replica}}
+    pattern: frontend-microservices
+  ports:
+  - name: uperf
+    port: 20000
+    targetPort: 20000
+    protocol: TCP
+  type: ClusterIP

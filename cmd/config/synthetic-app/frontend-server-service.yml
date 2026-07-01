@@ -1,0 +1,15 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: frontend-svc
+spec:
+  selector:
+    app: frontend-server
+    pattern: users-frontend
+  ports:
+  - name: uperf
+    port: 20000
+    targetPort: 20000
+    protocol: TCP
+  type: ClusterIP
