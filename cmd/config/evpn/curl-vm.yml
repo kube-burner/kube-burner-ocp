@@ -1,0 +1,81 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: curl-{{.Replica}}-{{.Iteration}}
+  labels:
+    app: curl
+    kubevirt.io/os: fedora
+spec:
+  runStrategy: Always
+  template:
+    metadata:
+      labels:
+        name: curl-{{.Replica}}-{{.Iteration}}
+        app: curl
+        kubevirt.io/os: fedora
+    spec:
+      terminationGracePeriodSeconds: 0
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: curl
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app: webserver
+              topologyKey: kubernetes.io/hostname
+      domain:
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 100m
+        devices:
+          disks:
+          - name: containerdisk
+            disk:
+              bus: virtio
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: default
+            binding:
+              name: l2bridge
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - name: containerdisk
+        containerDisk:
+          image: {{.vmImage}}
+          imagePullPolicy: IfNotPresent
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            password: perfscale
+            chpasswd: { expire: False }
+            runcmd:
+              - dnf install -y --nodocs curl
+              - |
+                while true; do
+                  curl --fail -sS {{ if .webserver_hostname }}{{ .webserver_hostname }}{{ else }}webserver-{{.Replica}}-{{.Iteration}}{{ end }}:{{ if .webserver_port }}{{ .webserver_port }}{{ else }}8080{{ end }} -o /dev/null && echo "OK" || echo "FAIL";
+                  sleep 1
+                done
