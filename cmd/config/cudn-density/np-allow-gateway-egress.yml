@@ -1,10 +1,10 @@
-# allow-gateway-egress: Opens egress from client pods to the cluster
-# default gateway IP. This enables ICMP (ping) traffic to validate north-south
-# reachability under CUDN scale.
+# allow-gateway-egress: Opens egress from client pods to all cluster
+# default gateway IPs (one per availability zone). This enables ICMP (ping)
+# traffic to validate north-south reachability under CUDN scale.
 #
 # Selects: pods with app=client
 # Allows egress to:
-#   - The cluster default gateway IP on all protocols (ICMP for ping)
+#   - All unique cluster gateway IPs on all protocols (ICMP for ping)
 #   - Any destination on port 53 UDP/TCP (DNS resolution)
 kind: NetworkPolicy
 apiVersion: networking.k8s.io/v1
@@ -16,8 +16,10 @@ spec:
       app: client
   egress:
   - to:
+    {{- range $gw := splitList "," .gatewayIPs }}
     - ipBlock:
-        cidr: {{.gatewayIP}}/32
+        cidr: {{ $gw }}/32
+    {{- end }}
   - to: []
     ports:
     - protocol: UDP

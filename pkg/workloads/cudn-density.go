@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
@@ -25,6 +26,7 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
@@ -34,9 +36,11 @@ var cudnMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurement
 	"cudnLatency": measurements.NewCudnLatencyMeasurementFactory,
 }
 
-// getDefaultGatewayIP reads the cluster's default gateway IP from the
-// k8s.ovn.org/l3-gateway-config annotation on a worker node.
-func getDefaultGatewayIP() string {
+// getNodeGatewayMap builds a mapping of nodeInternalIP -> gatewayIP by reading
+// the k8s.ovn.org/l3-gateway-config annotation from all worker nodes. It returns
+// (1) a ';'-delimited mapping string ("nodeIP=gatewayIP;...") and
+// (2) a comma-separated string of unique gateway IPs (for NetworkPolicy/EgressFirewall rules).
+func getNodeGatewayMap() (string, string) {
 	kubeClientProvider := config.NewKubeClientProvider("", "")
 	clientSet, _ := kubeClientProvider.ClientSet(0, 0)
 	nodes, err := clientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{
@@ -45,6 +49,10 @@ func getDefaultGatewayIP() string {
 	if err != nil {
 		log.Fatalf("Error listing worker nodes: %v", err)
 	}
+
+	var mapData strings.Builder
+	uniqueGateways := make(map[string]struct{})
+
 	for _, node := range nodes.Items {
 		gwConfig, exists := node.Annotations["k8s.ovn.org/l3-gateway-config"]
 		if !exists {
@@ -63,11 +71,34 @@ func getDefaultGatewayIP() string {
 		if !ok || nextHop == "" {
 			continue
 		}
-		log.Infof("Detected cluster default gateway IP: %s (from node %s)", nextHop, node.Name)
-		return nextHop
+
+		var nodeIP string
+		for _, addr := range node.Status.Addresses {
+			if addr.Type == corev1.NodeInternalIP {
+				nodeIP = addr.Address
+				break
+			}
+		}
+		if nodeIP == "" {
+			log.Warnf("Node %s has no InternalIP address, skipping", node.Name)
+			continue
+		}
+
+		log.Infof("Node %s (IP: %s) -> gateway: %s", node.Name, nodeIP, nextHop)
+		mapData.WriteString(nodeIP + "=" + nextHop + ";")
+		uniqueGateways[nextHop] = struct{}{}
 	}
-	log.Fatal("Unable to detect default gateway IP: no worker node has the k8s.ovn.org/l3-gateway-config annotation with a valid next-hop")
-	return ""
+
+	if mapData.Len() == 0 {
+		log.Fatal("Unable to detect gateway IPs: no worker node has the k8s.ovn.org/l3-gateway-config annotation with a valid next-hop")
+	}
+
+	gateways := make([]string, 0, len(uniqueGateways))
+	for gw := range uniqueGateways {
+		gateways = append(gateways, gw)
+	}
+
+	return mapData.String(), strings.Join(gateways, ",")
 }
 
 // NewCudnDensity holds cudn-density workload
@@ -147,8 +178,9 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["INCREMENTAL_EXP_BASE"] = incrementalExpBase
 			AdditionalVars["GATEWAY_CHECK"] = gatewayCheck
 			if gatewayCheck {
-				gatewayIP := getDefaultGatewayIP()
-				AdditionalVars["GATEWAY_IP"] = gatewayIP
+				gatewayMapData, uniqueGateways := getNodeGatewayMap()
+				AdditionalVars["GATEWAY_MAP_DATA"] = gatewayMapData
+				AdditionalVars["GATEWAY_IPS"] = uniqueGateways
 			}
 			wh.SetMeasurements(cudnMeasurementFactoryMap)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
