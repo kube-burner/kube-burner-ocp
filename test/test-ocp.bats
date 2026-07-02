@@ -142,29 +142,26 @@ teardown_file() {
 
 # bats test_tags=workload:virt-udn-density
 @test "virt-udn-l2-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2
+  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2 --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:virt-udn-density
 @test "virt-udn-l3-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --vms-per-node=2
+  run_cmd ${KUBE_BURNER_OCP} virt-udn-density --iterations 1 --vms-per-node=2 --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:virt-udn-density
 @test "virt-cudn-l2-density" {
-  run_cmd ${KUBE_BURNER_OCP} virt-cudn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2
+  run_cmd ${KUBE_BURNER_OCP} virt-cudn-density --iterations 1 --layer3=false --binding-method=l2bridge --vms-per-node=2 --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:udn-density-pods
-@test "udn-density-l3-pods: churning=false" {
-  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --extract
-  # Disable garbage-collection through using the config file
-  sed -i 's/jobPause: 5m/jobPause: 5s/g' udn-density-pods.yml
-  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true
+@test "udn-density-pods: layer3=true" {
+  run_cmd ${KUBE_BURNER_OCP} udn-density-pods --iterations=2 --layer3=true --set=jobs.1.jobPause=5s
 }
 
 # bats test_tags=workload:udn-density-pods
-@test "cudn-density-l3-pods: churning=false" {
+@test "cudn-density-pods: layer3=true" {
   oc delete ns -l kube-burner.io/job=create-cudn-pods
   oc delete clusteruserdefinednetworks --all --ignore-not-found
   run_cmd ${KUBE_BURNER_OCP} cudn-density-pods --iterations=2 --layer3=true --uuid=${UUID} --simple=false --set=jobs.2.jobPause=5s

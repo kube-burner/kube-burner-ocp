@@ -60,6 +60,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
+			AdditionalVars["OCP_MAJOR_VERSION"] = clusterMetadata.OCPMajorVersion
 			rc = RunWorkload(cmd, wh, variant+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {

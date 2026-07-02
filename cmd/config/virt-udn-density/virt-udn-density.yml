@@ -85,20 +85,6 @@ jobs:
           customStatusPaths:
             - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
               value: "True"
-      - objectTemplate: ds.yml
-        replicas: 1
-        runOnce: true
-
-  - name: remove-ds
-    jobType: delete
-    waitForDeletion: true
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    skipIndexing: true
-    objects:
-      - kind: DaemonSet
-        apiVersion: apps/v1
-        labelSelector: {kube-burner.io/job: {{ $jobName }} }
 
   - name: virt-density-udn
     namespace: virt-density-udn

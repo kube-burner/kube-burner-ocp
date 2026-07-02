@@ -1,4 +1,10 @@
 ---
+# NetworkAllocationSucceeded condition in CUDNs is available in OCP 5.0 and later
+{{ $cudnCondition := "NetworkCreated"}}
+{{ if semverCompare "^5.0.0-0" .OCP_MAJOR_VERSION }}
+{{ $cudnCondition = "NetworkAllocationSucceeded"}}
+{{ end }}
+
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
@@ -51,16 +57,14 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
-{{ $jobName := ternary "create-cudn-l3" "create-cudn-l2" .ENABLE_LAYER_3 }}
 jobs:
-  - name: {{ $jobName }}
+  - name: create-cudn-virt
     namespace: virt-cudn-density
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
     waitWhenFinished: true
-    jobPause: 2m
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -81,20 +85,10 @@ jobs:
       - objectTemplate: cudn_l2.yml
         replicas: 1
       {{ end }}
-      - objectTemplate: ds.yml
-        replicas: 1
-        runOnce: true
-
-  - name: remove-ds
-    jobType: delete
-    waitForDeletion: true
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    skipIndexing: true
-    objects:
-      - kind: DaemonSet
-        apiVersion: apps/v1
-        labelSelector: {kube-burner.io/job: {{ $jobName }} }
+        waitOptions:
+          customStatusPaths:
+            - key: .conditions[] | select(.type=="{{ $cudnCondition }}") | .status
+              value: "True"
 
   - name: virt-density-cudn
     namespace: virt-cudn-density
