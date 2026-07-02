@@ -1,3 +1,14 @@
+# CUDN CIDR allocation uses RFC1918 range 10.132.0.0 - 10.255.255.255, avoiding:
+#   - AWS VPC (10.0.0.0/16), OCP pod network (10.128.0.0/14)
+#   - OVN-K internals (100.64.0.0/16 join, 100.88.0.0/16 transit)
+#
+# Adjust CIDR prefix and perBlock to match your cluster size and CUDN count:
+#
+#   CIDR prefix | perBlock | Max nodes | Max CUDNs
+#   /16         | 1        | 1024      | 124
+#   /17         | 2        | 512       | 248
+#   /18         | 4        | 256       | 496
+#   /19         | 8        | 128       | 992
 apiVersion: k8s.ovn.org/v1
 kind: ClusterUserDefinedNetwork
 metadata:
@@ -18,8 +29,12 @@ spec:
     - key: kubernetes.io/metadata.name
       operator: In
       values: {{$nsNames}}
+  {{- $perBlock := 8 }}
+  {{- $secondOctet := add 132 (div $.Iteration $perBlock) }}
+  {{- $thirdOctet := mul (mod $.Iteration $perBlock) 32 }}
+  {{- $cudnCidr := printf "10.%d.%d.0/19" $secondOctet $thirdOctet }}
   network:
     topology: Layer2
     layer2:
       role: Primary
-      subnets: ["10.132.0.0/16"]
+      subnets: [{{$cudnCidr}}]
