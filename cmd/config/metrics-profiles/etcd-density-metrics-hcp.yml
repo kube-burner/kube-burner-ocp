@@ -1,0 +1,178 @@
+# Etcd density metrics profile — HCP (Hosted Control Plane) variant
+# Targets etcd and kube-apiserver pods running in the HCP namespace on the management cluster.
+# Separates main etcd vs sharded etcd (e.g. etcd-events) by pod label.
+#
+# Required: set HOSTED_CLUSTER_NAMESPACE to the HCP namespace (e.g. "clusters-my-cluster")
+# via --set HOSTED_CLUSTER_NAMESPACE=clusters-my-cluster
+
+# ---------------------------------------------------------------------------
+# Etcd DB size — per-shard breakdown (time series)
+# ---------------------------------------------------------------------------
+
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"})
+  metricName: etcdDBTotalSize
+
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"})
+  metricName: etcdDBSizeInUse
+
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) - avg by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"})
+  metricName: etcdDBFragmentationBytes
+
+- query: etcd_mvcc_db_total_size_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: etcdDBTotalSizePerInstance
+
+- query: etcd_server_quota_backend_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: etcdQuotaBackendBytes
+
+- query: etcd_mvcc_db_total_size_in_use_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: etcdDBSizeInUsePerInstance
+
+# ---------------------------------------------------------------------------
+# Etcd disk I/O latency — per-shard (time series)
+# ---------------------------------------------------------------------------
+
+- query: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m]))
+  metricName: 99thEtcdDiskWalFsyncDurationSeconds
+
+- query: histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m]))
+  metricName: 99thEtcdDiskBackendCommitDurationSeconds
+
+- query: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", grpc_service="etcdserverpb.KV"}[2m])) by (pod, le))
+  metricName: 99thEtcdGRPCRoundTripTimeSeconds
+
+- query: delta(etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[1m:30s])/2 > 0
+  metricName: 99thEtcdCompaction
+
+- query: delta(etcd_disk_backend_defrag_duration_seconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[1m:30s])/2 > 0
+  metricName: 99thEtcdDefrag
+
+# ---------------------------------------------------------------------------
+# Etcd raft write pressure — per-shard (time series)
+# ---------------------------------------------------------------------------
+
+- query: rate(etcd_server_proposals_committed_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m])
+  metricName: etcdProposalsCommittedRate
+
+- query: rate(etcd_server_proposals_failed_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m])
+  metricName: etcdProposalsFailedRate
+
+# ---------------------------------------------------------------------------
+# Etcd event rates (time series)
+# ---------------------------------------------------------------------------
+
+- query: sum(rate(apiserver_request_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", job="kube-apiserver", resource="events", verb=~"POST|PUT|DELETE|PATCH"}[2m]))
+  metricName: etcdEventWriteRate
+
+- query: sum(rate(apiserver_request_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", job="kube-apiserver", resource="events", verb=~"LIST|GET"}[2m]))
+  metricName: etcdEventReadRate
+
+- query: cluster:usage:resources:sum{resource="events"}
+  metricName: clusterEventCount
+
+# ---------------------------------------------------------------------------
+# Etcd storage object distribution (time series)
+# ---------------------------------------------------------------------------
+
+- query: topk(20, max by (resource) (apiserver_storage_objects{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}))
+  metricName: etcdStorageObjects
+
+# ---------------------------------------------------------------------------
+# API server (time series) — kube-apiserver pods in HCP namespace
+# ---------------------------------------------------------------------------
+
+- query: sum(irate(apiserver_request_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", job="kube-apiserver", verb!="WATCH"}[2m])) by (verb, resource, code) > 0
+  metricName: APIRequestRate
+
+- query: sum(irate(apiserver_request_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", job="kube-apiserver", verb!="WATCH", code=~"5.."}[2m])) by (verb, resource, code) > 0
+  metricName: APIServerErrors
+
+# ---------------------------------------------------------------------------
+# Control plane container resources — etcd + kube-apiserver in HCP namespace (time series)
+# ---------------------------------------------------------------------------
+
+- query: (sum(irate(container_cpu_usage_seconds_total{name!="", container!~"POD|", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", container=~"etcd|etcd-events|kube-apiserver"}[2m]) * 100) by (container, pod, namespace)) > 0
+  metricName: containerCPU
+
+- query: sum(container_memory_rss{name!="", container!~"POD|", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", container=~"etcd|etcd-events|kube-apiserver"}) by (container, pod, namespace)
+  metricName: containerMemory
+
+# ---------------------------------------------------------------------------
+# Scheduler (time series)
+# ---------------------------------------------------------------------------
+
+- query: sum(irate(scheduler_schedule_attempts_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}", result="scheduled"}[2m]))
+  metricName: schedulerThroughput
+
+- query: histogram_quantile(0.99, sum(rate(scheduler_pod_scheduling_sli_duration_seconds_bucket{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m])) by (le))
+  metricName: 99thSchedulerE2ELatency
+
+
+# ---------------------------------------------------------------------------
+# HCP control plane pod node resource usage (time series)
+# Targets the management cluster nodes hosting the control plane pods
+# ---------------------------------------------------------------------------
+
+- query: (sum(irate(container_cpu_usage_seconds_total{name!="", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m]) * 100) by (node)) > 0
+  metricName: nodeCPU-ControlPlaneHosts
+
+- query: sum(container_memory_rss{name!="", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (node)
+  metricName: nodeMemory-ControlPlaneHosts
+
+- query: (sum(irate(container_cpu_usage_seconds_total{name!="", container!~"POD|", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[2m]) * 100) by (container, node, pod)) > 0
+  metricName: cpuPercent-ControlPlane
+
+- query: sum(container_memory_rss{name!="", container!~"POD|", namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (container, node, pod)
+  metricName: memoryRSS-ControlPlane
+
+# ---------------------------------------------------------------------------
+# Instant queries: single-value snapshots captured at start and end of test
+# ---------------------------------------------------------------------------
+
+- query: etcd_mvcc_db_total_size_in_bytes{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: etcdDBTotalSizeSnapshot
+  instant: true
+  captureStart: true
+
+- query: etcd_server_proposals_committed_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: etcdProposalsCommitted
+  instant: true
+  captureStart: true
+
+- query: etcd_server_slow_apply_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: etcdSlowApplyTotal
+  instant: true
+  captureStart: true
+
+- query: etcd_server_leader_changes_seen_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: etcdLeaderChanges
+  instant: true
+  captureStart: true
+
+- query: etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: 99thEtcdCompaction-raw
+  instant: true
+  captureStart: true
+
+- query: etcd_disk_backend_defrag_duration_seconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
+  metricName: 99thEtcdDefrag-raw
+  instant: true
+  captureStart: true
+
+- query: topk(20, max by (resource) (apiserver_storage_objects{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}))
+  metricName: etcdStorageObjectsSnapshot
+  instant: true
+  captureStart: true
+
+- query: sum by (cluster_version)(etcd_cluster_version{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"})
+  metricName: etcdVersion
+  instant: true
+
+- query: sum(container_cpu_usage_seconds_total{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (container, node, pod)
+  metricName: cpuSeconds-ControlPlane
+  instant: true
+  captureStart: true
+
+- query: sum(container_memory_rss{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}) by (container, node, pod)
+  metricName: memoryRSS-ControlPlane
+  instant: true
+  captureStart: true

@@ -205,6 +205,30 @@ teardown_file() {
 #   verify_object_count clusteruserdefinednetworks 0 "" kube-burner.io/job=cudn-density
 # }
 
+# bats test_tags=workload:etcd-density
+@test "etcd-density: annotation-churn" {
+  run_cmd ${KUBE_BURNER_OCP} etcd-density annotation-churn --iterations=2 --churn-replicas=3 --churn-rounds=2 --uuid=${UUID}
+}
+
+# bats test_tags=workload:etcd-density
+@test "etcd-density: db-quota-pressure" {
+  run_cmd ${KUBE_BURNER_OCP} etcd-density db-quota-pressure --iterations=2 --iterations-per-namespace=1 --kb-chunks=2 --kb-size=10 --uuid=${UUID}
+  # CRDs are cluster-scoped and created with cleanup: false, GC won't remove them
+  oc delete crd -l kube-burner.io/job=crd-scale --ignore-not-found
+}
+
+# bats test_tags=workload:etcd-density
+@test "etcd-density: event-storm" {
+  run_cmd ${KUBE_BURNER_OCP} etcd-density event-storm --iterations=2 --event-iterations=5 --event-replicas=3 --storm-workers=2 --storm-delay=5 --pod-replicas=1 --uuid=${UUID}
+  # The etcd-event-storm namespace is created by a background hook, not by kube-burner jobs
+  oc delete ns etcd-event-storm --ignore-not-found
+}
+
+# bats test_tags=workload:etcd-density
+@test "etcd-density: crashloop-flood" {
+  run_cmd ${KUBE_BURNER_OCP} etcd-density crashloop-flood --iterations=1 --crashloop-replicas=3 --soak-duration=10s --uuid=${UUID}
+}
+
 # bats test_tags=workload:cluster-health
 @test "cluster-health" {
   run_cmd ${KUBE_BURNER_OCP} cluster-health

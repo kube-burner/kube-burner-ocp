@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: crashloop-{{.Iteration}}-{{.Replica}}
+  labels:
+    test-scenario: crashloop-flood
+spec:
+  restartPolicy: Always
+  automountServiceAccountToken: false
+  terminationGracePeriodSeconds: 0
+  containers:
+    - name: crasher
+      image: {{.containerImage}}
+      command: ["sh", "-c", "exit 1"]
+      resources:
+        requests:
+          cpu: 1m
+          memory: 4Mi
+        limits:
+          cpu: 10m
+          memory: 8Mi
