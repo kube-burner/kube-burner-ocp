@@ -6,12 +6,22 @@ global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
   measurements:
+{{ if .ENABLE_VM }}
+    - name: vmiLatency
+{{ if ne .VMI_RUNNING_THRESHOLD 0 }}
+      thresholds:
+        - conditionType: VMIRunning
+          metric: P99
+          threshold: {{.VMI_RUNNING_THRESHOLD}}
+{{ end }}
+{{ else }}
     - name: podLatency
 {{ if ne .POD_READY_THRESHOLD 0 }}
       thresholds:
         - conditionType: Ready
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
 {{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}
@@ -123,6 +133,22 @@ jobs:
 {{ end }}
     objects:
 {{ if eq .SCENARIO "east-west" }}
+{{ if .ENABLE_VM }}
+      - objectTemplate: webserver-vm.yml
+        replicas: 1
+        inputVars:
+          vmImage: {{.VM_IMAGE}}
+
+      - objectTemplate: webserver-service.yml
+        replicas: 1
+
+      - objectTemplate: curl-vm.yml
+        replicas: 1
+        inputVars:
+          vmImage: {{.VM_IMAGE}}
+          webserver_hostname: ""
+          webserver_port: ""
+{{ else }}
       - objectTemplate: webserver-deployment.yml
         replicas: 1
 
@@ -134,10 +160,20 @@ jobs:
         inputVars:
           webserver_hostname: ""
           webserver_port: ""
+{{ end }}
+{{ else }}
+{{ if .ENABLE_VM }}
+      - objectTemplate: curl-vm.yml
+        replicas: 1
+        inputVars:
+          vmImage: {{.VM_IMAGE}}
+          webserver_hostname: "{{.EXTERNAL_WEBSERVER_IP}}"
+          webserver_port: "{{.EXTERNAL_WEBSERVER_PORT}}"
 {{ else }}
       - objectTemplate: curl-deployment.yml
         replicas: 1
         inputVars:
           webserver_hostname: "{{.EXTERNAL_WEBSERVER_IP}}"
           webserver_port: "{{.EXTERNAL_WEBSERVER_PORT}}"
+{{ end }}
 {{ end }}
