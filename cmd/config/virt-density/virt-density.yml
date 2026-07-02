@@ -50,8 +50,39 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
+{{ if .SSH_CHECK }}
+    hooks:
+{{ if .NAMESPACED_ITERATIONS }}
+    - cmd: ["check.sh", "check_vm_running", "kube-burner.io/job", "virt-density", "", "{{ .privateKey }}", "fedora", "", "", "kube-burner.io/job=virt-density"]
+      when: beforeCleanup
+{{ else }}
+    - cmd: ["check.sh", "check_vm_running", "kube-burner.io/job", "virt-density", "virt-density", "{{ .privateKey }}", "fedora", "", ""]
+      when: beforeCleanup
+{{ end }}
+{{ end }}
     objects:
 
+{{ if .SSH_CHECK }}
+      - objectTemplate: templates/secret_ssh_public.yml
+        replicas: 1
+        inputVars:
+          name: virt-density-ssh
+          publicKeyPath: {{ .publicKey }}
+
+{{ if .MOUNTS }}
+      - objectTemplate: templates/vm-ssh.yml
+        replicas: 1
+        inputVars:
+          vmImage: {{.VM_IMAGE}}
+          sshPublicKeySecret: virt-density-ssh
+{{ else }}
+      - objectTemplate: templates/vm-nomnt-ssh.yml
+        replicas: 1
+        inputVars:
+          vmImage: {{.VM_IMAGE}}
+          sshPublicKeySecret: virt-density-ssh
+{{ end }}
+{{ else }}
 {{ if .MOUNTS }}
       - objectTemplate: vm.yml
         replicas: 1
@@ -62,4 +93,5 @@ jobs:
         replicas: 1
         inputVars:
           vmImage: {{.VM_IMAGE}}
+{{ end }}
 {{ end }}

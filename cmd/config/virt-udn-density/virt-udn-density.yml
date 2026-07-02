@@ -68,6 +68,7 @@ jobs:
       delay: {{.CHURN_DELAY}}
       mode: {{.CHURN_MODE}}
     namespaceLabels:
+      kube-burner.io/test-name: virt-udn-density
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
