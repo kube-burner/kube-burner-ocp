@@ -127,6 +127,9 @@ jobs:
       {{ if .BGP }}
       - objectTemplate: ra.yml
         replicas: 1
+        group:
+          id: 0
+        repeatEveryNIterations: {{.NAMESPACES_PER_CUDN}}
       {{ end }}
 
       - objectTemplate: configmap.yml
