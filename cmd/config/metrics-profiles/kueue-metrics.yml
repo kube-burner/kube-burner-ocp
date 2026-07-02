@@ -3,7 +3,7 @@
 - query: count(kube_job_info{namespace=~"kueue-scale-.+"})
   metricName: totalJobs
 
-- query: sum(kube_pod_status_phase{namespace=~"kueue-scale-.+"}) by (phase)
+- query: sum(kube_pod_status_phase{namespace=~"kueue-scale-.+"}) by (phase) > 0
   metricName: podStatusCount
 
 # Pod CPU & memory
