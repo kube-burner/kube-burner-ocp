@@ -207,7 +207,7 @@ teardown_file() {
 
 # bats test_tags=workload:etcd-density
 @test "etcd-density: annotation-churn" {
-  run_cmd ${KUBE_BURNER_OCP} etcd-density annotation-churn --iterations=2 --churn-replicas=3 --churn-rounds=2 --uuid=${UUID}
+  run_cmd ${KUBE_BURNER_OCP} etcd-density annotation-churn --iterations=2 --patch-replicas=3 --patch-rounds=2 --uuid=${UUID}
 }
 
 # bats test_tags=workload:etcd-density

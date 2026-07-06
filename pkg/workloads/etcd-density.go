@@ -148,7 +148,7 @@ func newAnnotationChurn(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var rc int
 	var deletionStrategy string
-	var churnReplicas, churnRounds int
+	var patchReplicas, patchRounds int
 
 	cmd := &cobra.Command{
 		Use:          "annotation-churn",
@@ -158,8 +158,8 @@ func newAnnotationChurn(wh *workloads.WorkloadHelper) *cobra.Command {
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
-			AdditionalVars["CHURN_REPLICAS"] = churnReplicas
-			AdditionalVars["CHURN_ROUNDS"] = churnRounds
+			AdditionalVars["PATCH_REPLICAS"] = patchReplicas
+			AdditionalVars["PATCH_ROUNDS"] = patchRounds
 			rc = RunWorkload(cmd, wh, "annotation-churn.yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -169,7 +169,7 @@ func newAnnotationChurn(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 10, "Target creation iterations (one namespace each)")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", "default", "Deletion strategy")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"etcd-density-metrics.yml", "metrics.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.Flags().IntVar(&churnReplicas, "churn-replicas", 50, "Target ConfigMaps per iteration")
-	cmd.Flags().IntVar(&churnRounds, "churn-rounds", 10, "Number of patch rounds across all targets")
+	cmd.Flags().IntVar(&patchReplicas, "patch-replicas", 50, "Target ConfigMaps per iteration")
+	cmd.Flags().IntVar(&patchRounds, "patch-rounds", 10, "Number of patch rounds across all targets")
 	return cmd
 }

@@ -314,12 +314,12 @@ Creates ConfigMaps and then rapidly patches their annotations in multiple rounds
 | `--iterations`          | Target creation iterations (one namespace each)           | `10`                           |
 | `--deletion-strategy`   | Deletion strategy                                         | `default`                      |
 | `--metrics-profile`     | Comma separated list of metrics profiles                  | `etcd-density-metrics.yml`     |
-| `--churn-replicas`      | Target ConfigMaps per iteration                           | `50`                           |
-| `--churn-rounds`        | Number of patch rounds across all targets                 | `10`                           |
+| `--patch-replicas`      | Target ConfigMaps per iteration                           | `50`                           |
+| `--patch-rounds`        | Number of patch rounds across all targets                 | `10`                           |
 
 ```console
 kube-burner-ocp etcd-density annotation-churn --iterations=10 \
-  --churn-replicas=50 --churn-rounds=10 \
+  --patch-replicas=50 --patch-rounds=10 \
   --local-indexing
 ```
 

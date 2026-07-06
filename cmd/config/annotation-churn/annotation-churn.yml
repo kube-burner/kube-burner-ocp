@@ -38,11 +38,11 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
     objects:
       - objectTemplate: configmap-churn.yml
-        replicas: {{.CHURN_REPLICAS}}
+        replicas: {{.PATCH_REPLICAS}}
 
   - name: churn-patch
     jobType: patch
-    jobIterations: {{.CHURN_ROUNDS}}
+    jobIterations: {{.PATCH_ROUNDS}}
     namespacedIterations: true
     namespace: etcd-churn
     jobPause: 1s
