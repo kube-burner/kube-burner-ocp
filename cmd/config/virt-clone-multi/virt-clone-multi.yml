@@ -58,7 +58,9 @@ jobs:
   jobPause: 10s
   cleanup: false
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $testName }}-{{ $createBaseVMJobName }} {{ $baseNamespace }} {{ .privateKey }} fedora"
+  hooks:
+  - cmd: ["./check.sh", "check_vm_running", "kube-burner.io/job", "{{ $testName }}-{{ $createBaseVMJobName }}", "{{ $baseNamespace }}", "{{ .privateKey }}", "fedora"]
+    when: beforeCleanup
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml
@@ -173,7 +175,9 @@ jobs:
   jobPause: 10s
   cleanup: false
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $testName }}-create-vms {{ $namespaceBaseName }} {{ .privateKey }} fedora"
+  hooks:
+  - cmd: ["./check.sh", "check_vm_running", "kube-burner.io/job", "{{ $testName }}-create-vms", "{{ $namespaceBaseName }}", "{{ .privateKey }}", "fedora"]
+    when: beforeCleanup
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml

@@ -68,9 +68,13 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 			workloads.ConfigSpec.GlobalConfig.UUID = uuid
 			// When metricsEndpoint is specified, don't fetch any prometheus token
 			if wh.MetricsEndpoint == "" {
-				prometheusURL, prometheusToken, err = wh.MetadataAgent.GetPrometheus()
-				if err != nil {
-					log.Fatal("Error obtaining prometheus information from cluster: ", err.Error())
+				prometheusURL = wh.PrometheusURL
+				prometheusToken = wh.PrometheusToken
+				if prometheusURL == "" {
+					prometheusURL, prometheusToken, err = wh.MetadataAgent.GetPrometheus()
+					if err != nil {
+						log.Fatal("Error obtaining prometheus information from cluster: ", err.Error())
+					}
 				}
 			}
 			indexer = config.MetricsEndpoint{

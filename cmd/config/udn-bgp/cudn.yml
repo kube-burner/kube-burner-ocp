@@ -22,9 +22,17 @@ spec:
   {{- $secondOctet := mod $.Iteration 255 }}
   {{- $cudnCidr := print $firstOctet "." $secondOctet ".0.0/16" }}
   network:
+{{- if $.layer2 }}
+    topology: Layer2
+    layer2:
+      role: Primary
+      subnets:
+        - {{$cudnCidr}}
+{{- else }}
     topology: Layer3
     layer3:
       role: Primary
       subnets:
         - cidr: {{$cudnCidr}}
           hostSubnet: 24
+{{- end }}

@@ -68,7 +68,9 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  hooks:
+  - cmd: ["./check.sh", "check_vm_running", "{{ $jobCounterLabelKey }}", "{{ $jobCounterLabelValue }}", "{{ $nsName }}", "{{ .privateKey }}", "fedora"]
+    when: beforeCleanup
   measurements:
   - name: vmiLatency
   - name: pvcLatency
@@ -121,7 +123,9 @@ jobs:
   qps: 20
   burst: 20
   waitWhenFinished: true
-  beforeCleanup: "./check.sh check_resize {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora {{ $resizedRootVolumeSize | toString }}G {{ $resizedDataVolumeSize | toString }}G"
+  hooks:
+  - cmd: ["./check.sh", "check_resize", "{{ $jobCounterLabelKey }}", "{{ $jobCounterLabelValue }}", "{{ $nsName }}", "{{ .privateKey }}", "fedora", "{{ $resizedRootVolumeSize | toString }}G", "{{ $resizedDataVolumeSize | toString }}G"]
+    when: beforeCleanup
   objects:
   - apiVersion: v1
     kind: PersistentVolumeClaim
@@ -167,7 +171,9 @@ jobs:
   maxWaitTimeout: 1h
   objectDelay: 1m
   objectWait: true
-  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  hooks:
+  - cmd: ["./check.sh", "check_vm_running", "{{ $jobCounterLabelKey }}", "{{ $jobCounterLabelValue }}", "{{ $nsName }}", "{{ .privateKey }}", "fedora"]
+    when: beforeCleanup
   objects:
   - kubeVirtOp: restart
     labelSelector:
@@ -223,7 +229,9 @@ jobs:
   maxWaitTimeout: 1h
   objectDelay: 1m
   waitWhenFinished: true
-  beforeCleanup: "./check.sh check_vm_running {{ $jobCounterLabelKey }} {{ $jobCounterLabelValue }} {{ $nsName }} {{ .privateKey }} fedora"
+  hooks:
+  - cmd: ["./check.sh", "check_vm_running", "{{ $jobCounterLabelKey }}", "{{ $jobCounterLabelValue }}", "{{ $nsName }}", "{{ .privateKey }}", "fedora"]
+    when: beforeCleanup
   objects:
   - kubeVirtOp: migrate
     labelSelector:

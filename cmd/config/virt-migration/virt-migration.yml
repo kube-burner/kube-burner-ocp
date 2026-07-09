@@ -57,7 +57,9 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  hooks:
+  - cmd: ["./check.sh", "check_vm_running", "kube-burner.io/job", "{{ $createMigratingVMsJobName }}", "{{ .testNamespace }}", "{{ .privateKey }}", "fedora"]
+    when: beforeCleanup
   objects:
 
   - objectTemplate: templates/secret_ssh_public.yml
@@ -103,7 +105,9 @@ jobs:
   cleanup: false
   # Set missing key as empty to allow using default values
   defaultMissingKeysWithZero: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createLoadVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  hooks:
+  - cmd: ["./check.sh", "check_vm_running", "kube-burner.io/job", "{{ $createLoadVMsJobName }}", "{{ .testNamespace }}", "{{ .privateKey }}", "fedora"]
+    when: beforeCleanup
   objects:
 
   - objectTemplate: templates/vm.yml
@@ -143,7 +147,9 @@ jobs:
   jobIterations: 1
   maxWaitTimeout: 1h
   waitWhenFinished: true
-  beforeCleanup: "./check.sh check_vm_running kube-burner.io/job {{ $createMigratingVMsJobName }} {{ .testNamespace }} {{ .privateKey }} fedora"
+  hooks:
+  - cmd: ["./check.sh", "check_vm_running", "kube-burner.io/job", "{{ $createMigratingVMsJobName }}", "{{ .testNamespace }}", "{{ .privateKey }}", "fedora"]
+    when: beforeCleanup
   objects:
   - kubeVirtOp: migrate
     labelSelector:

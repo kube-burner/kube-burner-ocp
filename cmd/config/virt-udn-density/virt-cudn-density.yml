@@ -1,0 +1,120 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: vmiLatency
+{{ if ne .VMI_RUNNING_THRESHOLD 0 }}
+      thresholds:
+        - conditionType: VMIRunning
+          metric: P99
+          threshold: {{.VMI_RUNNING_THRESHOLD}}
+{{ end }}
+{{ if .PPROF }}
+    - name: pprof
+      pprofInterval: {{.PPROF_INTERVAL}}
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovnkube-controller-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=60
+      - name: ovnk-control-plane-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/heap
+      - name: ovnk-control-plane-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=60
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+{{ $jobName := ternary "create-cudn-l3" "create-cudn-l2" .ENABLE_LAYER_3 }}
+jobs:
+  - name: {{ $jobName }}
+    namespace: virt-cudn-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    jobPause: 2m
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      percent: {{.CHURN_PERCENT}}
+      delay: {{.CHURN_DELAY}}
+      mode: {{.CHURN_MODE}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      {{ if .ENABLE_LAYER_3 }}
+      - objectTemplate: cudn_l3.yml
+        replicas: 1
+      {{ else }}
+      - objectTemplate: cudn_l2.yml
+        replicas: 1
+      {{ end }}
+      - objectTemplate: ds.yml
+        replicas: 1
+        runOnce: true
+
+  - name: remove-ds
+    jobType: delete
+    waitForDeletion: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    skipIndexing: true
+    objects:
+      - kind: DaemonSet
+        apiVersion: apps/v1
+        labelSelector: {kube-burner.io/job: {{ $jobName }} }
+
+  - name: virt-density-cudn
+    namespace: virt-cudn-density
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    preLoadImages: true
+    cleanup: false
+    waitWhenFinished: true
+    jobPause: 2m
+    objects:
+      - objectTemplate: service.yml
+      - objectTemplate: vm-client.yml
+        replicas: {{.VMS_PER_ITERATION}}
+        inputVars:
+          bindingMethod: {{.UDN_BINDING_METHOD}}
+          vmImage: {{.VM_IMAGE}}
+      - objectTemplate: vm-server.yml
+        replicas: 1
+        inputVars:
+          bindingMethod: {{.UDN_BINDING_METHOD}}
+          vmImage: {{.VM_IMAGE}}

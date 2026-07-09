@@ -41,7 +41,7 @@ spec:
             cpu: "10m"
         env:
         - name: SERVICE_ENDPOINT
-          value: "http://udn-density-{{randInt 1 6}}/256.html"
+          value: "http://{{.JobName}}-{{randInt 1 6}}/256.html"
         imagePullPolicy: IfNotPresent
         {{ if not .simple }}
         readinessProbe:

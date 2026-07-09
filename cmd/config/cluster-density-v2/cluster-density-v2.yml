@@ -109,9 +109,11 @@ jobs:
         replicas: 3
         inputVars:
           podReplicas: 2
+          nodeSelector: {{.NODE_SELECTOR}}
 
       - objectTemplate: deployment-client.yml
         replicas: 2
         inputVars:
           podReplicas: 2
           ingressDomain: {{.INGRESS_DOMAIN}}
+          nodeSelector: {{.NODE_SELECTOR}}

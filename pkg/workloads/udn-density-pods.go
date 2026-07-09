@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -24,8 +25,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewUDNDensityPods holds udn-density-pods workload
-func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
+// NewUDNDensityPods holds udn-density-pods and cudn-density-pods workloads
+func NewUDNDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
 	var l3, simple, pprof bool
 	var churnDelay, churnDuration, podReadyThreshold, pprofInterval time.Duration
@@ -33,12 +34,11 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
-		Use:          "udn-density-pods",
-		Short:        "Runs udn-density-pods workload",
+		Use:          variant,
+		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			// Disable l3 when the user chooses l2
 			if l3 {
 				log.Info("Layer 3 is enabled")
 			} else {
@@ -60,13 +60,13 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
-			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
+			rc = RunWorkload(cmd, wh, variant+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
 		},
 	}
-	cmd.Flags().BoolVar(&l3, "layer3", true, "Layer3 UDN test")
+	cmd.Flags().BoolVar(&l3, "layer3", true, "Use UDN layer3 topology")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
@@ -76,9 +76,12 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnNamespaces), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
-	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations, (One UDN will be created per iteration)")
+	cmd.Flags().IntVar(&iterations, "iterations", 0, "Job iterations, (One UDN/CUDN will be created per iteration)")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
+	if variant == "cudn-density-pods" {
+		cmd.Annotations = map[string]string{"configDir": "udn-density-pods"}
+	}
 	return cmd
 }

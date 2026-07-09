@@ -16,7 +16,7 @@ spec:
       domain:
         resources:
           requests:
-            memory: 256Mi
+            memory: 1Gi
         devices:
           disks:
           - name: containerdisk
@@ -49,6 +49,13 @@ spec:
             ethernets:
               eth0:
                 dhcp4: true
+                nameservers:
+                    addresses:
+                      - 172.30.0.10
+                    search:
+                      - virt-density-udn-{{.Replica}}.svc.cluster.local
+                      - svc.cluster.local
+                      - cluster.local
           userData: |-
             #cloud-config
             password: perfscale
@@ -60,4 +67,4 @@ spec:
               - systemctl enable nginx
       - name: emptydisk
         emptyDisk:
-          capacity: "50Mi"
+          capacity: "150Mi"

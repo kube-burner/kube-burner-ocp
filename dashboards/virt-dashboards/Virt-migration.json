@@ -516,7 +516,6 @@
               "highlight": true,
               "id": true,
               "ipsecMode": true,
-              "jobConfig.beforeCleanup": true,
               "jobConfig.burst": true,
               "jobConfig.churnConfig": true,
               "jobConfig.defaultMissingKeysWithZero": true,

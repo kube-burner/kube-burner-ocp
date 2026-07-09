@@ -7,3 +7,6 @@ spec:
   layer2:
     role: Primary
     subnets: ["10.132.0.0/24"]
+    ipam:
+      mode: Enabled
+      lifecycle: Persistent

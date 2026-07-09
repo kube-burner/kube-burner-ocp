@@ -1,0 +1,119 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
+{{ if .PPROF }}
+    - name: pprof
+      pprofInterval: {{.PPROF_INTERVAL}}
+      pprofDirectory: pprof-data
+      pprofTargets:
+      - name: ovnkube-controller-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/heap
+      - name: ovnkube-controller-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-node}
+        url: http://localhost:29103/debug/pprof/profile?seconds=60
+      - name: ovnk-control-plane-heap
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/heap
+      - name: ovnk-control-plane-cpu
+        namespace: "openshift-ovn-kubernetes"
+        labelSelector: {app: ovnkube-control-plane}
+        url: http://localhost:29108/debug/pprof/profile?seconds=60
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  - name: create-cudn-pods
+    namespace: cudn-density-pods
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    skipIndexing: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
+    objects:
+      {{ if .ENABLE_LAYER_3 }}
+      - objectTemplate: cudn_l3.yml
+        replicas: 1
+      {{ else }}
+      - objectTemplate: cudn_l2.yml
+        replicas: 1
+      {{ end }}
+
+  - name: cudn-density-pods
+    namespace: cudn-density-pods
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    waitWhenFinished: true
+    preLoadImages: true
+    jobPause: 2m
+    metricsClosing: afterJobPause
+    cleanup: false
+    objects:
+      {{ if or (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
+      {{ if .ENABLE_LAYER_3 }}
+      - objectTemplate: cudn_l3.yml
+        replicas: 1
+      {{ else }}
+      - objectTemplate: cudn_l2.yml
+        replicas: 1
+      {{ end }}
+      {{ end }}
+      {{ if not .SIMPLE}}
+      - objectTemplate: np-deny-all.yml
+        replicas: 1
+
+      - objectTemplate: np-allow-from-clients.yml
+        replicas: 1
+
+      - objectTemplate: service.yml
+        replicas: 5
+      {{ end }}
+
+      - objectTemplate: deployment-server.yml
+        replicas: 3
+        inputVars:
+          podReplicas: 2
+
+      - objectTemplate: deployment-client.yml
+        replicas: 2
+        inputVars:
+          podReplicas: 2
+          simple: {{.SIMPLE}}

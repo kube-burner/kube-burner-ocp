@@ -11,6 +11,10 @@ TEST_BINARY ?= $(CURDIR)/$(BIN_PATH)
 
 GIT_COMMIT = $(shell git rev-parse HEAD)
 VERSION ?= $(shell hack/tag_name.sh)
+
+# Bats test filter tags computed from the changed workload code paths. Set to an
+# empty value (e.g. FILTER_TAGS=) to force running the whole suite.
+FILTER_TAGS ?= $(shell hack/get_changed_labels.py hack/bats_test_mappings.yml)
 SOURCES := $(shell find . -type f -name "*.go")
 SOURCES += $(shell find cmd/config/)
 BUILD_DATE = $(shell date '+%Y-%m-%d-%H:%M:%S')
@@ -49,4 +53,4 @@ install:
 test: test-ocp
 
 test-ocp:
-	cd test && KUBE_BURNER_OCP=$(TEST_BINARY) bats $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) -F pretty -T --print-output-on-failure test-ocp.bats
+	cd test && KUBE_BURNER_OCP=$(TEST_BINARY) bats $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) -F pretty -T --print-output-on-failure test-ocp.bats $(FILTER_TAGS)

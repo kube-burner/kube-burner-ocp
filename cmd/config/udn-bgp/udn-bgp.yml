@@ -66,6 +66,7 @@ jobs:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
           total_namespaces: {{.JOB_ITERATIONS}}
           enable_vm: {{.ENABLE_VM}}
+          layer2: {{.LAYER2}}
 
   - name: udn-bgp-create-pods
     namespace: udn-bgp
@@ -117,3 +118,4 @@ jobs:
           numAddressOnDummyIface: 20
           exportScenarioMaxTimeout: 10m
           importScenarioMaxTimeout: 10m
+          layer2: {{.LAYER2}}

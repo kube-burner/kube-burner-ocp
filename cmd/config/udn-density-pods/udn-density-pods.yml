@@ -11,6 +11,7 @@ global:
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
 {{ end }}
+
 {{ if .PPROF }}
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}
@@ -51,10 +52,9 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
-{{ $jobName := ternary "create-udn-l3" "create-udn-l2" .ENABLE_LAYER_3 }}
 jobs:
   {{ if and (eq .CHURN_DURATION 0) (eq .CHURN_CYCLES 0) }}
-  - name: {{ $jobName }}
+  - name: create-udn-pods
     namespace: udn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
@@ -93,13 +93,9 @@ jobs:
     objects:
       - kind: DaemonSet
         apiVersion: apps/v1
-        labelSelector: {kube-burner.io/job: {{ $jobName }} }
+        labelSelector: {kube-burner.io/job: create-udn-pods }
 
-  {{ if .ENABLE_LAYER_3 }}
-  - name: udn-density-l3-pods
-  {{ else }}
-  - name: udn-density-l2-pods
-  {{ end }}
+  - name: udn-density-pods
     namespace: udn-density-pods
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
@@ -116,8 +112,14 @@ jobs:
     jobPause: 2m
     metricsClosing: afterJobPause
     cleanup: false
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+      k8s.ovn.org/primary-user-defined-network: ""
     objects:
-      {{ if and (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
+      {{ if or (gt .CHURN_DURATION 0) (gt .CHURN_CYCLES 0) }}
       {{ if .ENABLE_LAYER_3 }}
       - objectTemplate: udn_l3.yml
         replicas: 1
