@@ -100,3 +100,6 @@
   paths:
   - pkg/workloads/build-farm.go
   - cmd/config/build-farm/*
+- label: workload:batch-churn
+  paths:
+  - cmd/config/batch-churn/*

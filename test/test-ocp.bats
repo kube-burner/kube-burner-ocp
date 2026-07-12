@@ -364,3 +364,36 @@ teardown_file() {
     --uuid=${UUID}
 }
 
+# bats test_tags=workload:batch-churn
+@test "batch-churn: basic execution with churn" {
+  run_cmd ${KUBE_BURNER_OCP} init \
+    -c ../../cmd/config/batch-churn/config.yml \
+    --iterations=2 \
+    --churn-cycles=1 \
+    --churn-delay=5s \
+    --set DEPLOYMENT_COUNT=2 \
+    --set POD_REPLICAS=2 \
+    --set SECRETS_PER_POD=2 \
+    --set CONFIGMAPS_PER_POD=2 \
+    --set RESOURCE_SIZE=512 \
+    --uuid=${UUID}
+}
+
+# bats test_tags=workload:batch-churn
+@test "batch-churn: watcher-spam mode" {
+  run_cmd ${KUBE_BURNER_OCP} init \
+    -c ../../cmd/config/batch-churn/config.yml \
+    --iterations=1 \
+    --set WATCHER_MODE=true \
+    --set SECRET_WATCHERS=10 \
+    --set CONFIGMAP_WATCHERS=10 \
+    --set NODE_WATCHERS=5 \
+    --set ENDPOINT_WATCHERS=5 \
+    --set SA_WATCHERS=5 \
+    --set EVENT_WATCHERS=5 \
+    --set POD_WATCHERS=5 \
+    --set RESOURCE_SIZE=512 \
+    --set JOB_PAUSE=30s \
+    --uuid=${UUID}
+}
+

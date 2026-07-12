@@ -1,0 +1,54 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{.JobName}}-{{.Replica}}
+spec:
+  replicas: {{.podReplicas}}
+  selector:
+    matchLabels:
+      app: {{.JobName}}-{{.Replica}}
+  template:
+    metadata:
+      labels:
+        app: {{.JobName}}-{{.Replica}}
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: {{.JobName}}-{{.Replica}}
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      automountServiceAccountToken: false
+      containers:
+      - name: pause
+        image: registry.k8s.io/pause:3.9
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+        volumeMounts:
+{{- range .secretIndices }}
+        - name: secret-{{ . }}
+          mountPath: /secrets/{{ . }}
+          readOnly: true
+{{- end }}
+{{- range .configmapIndices }}
+        - name: configmap-{{ . }}
+          mountPath: /configmaps/{{ . }}
+          readOnly: true
+{{- end }}
+      volumes:
+{{- range .secretIndices }}
+      - name: secret-{{ . }}
+        secret:
+          secretName: {{ $.JobName }}-{{ . }}
+{{- end }}
+{{- range .configmapIndices }}
+      - name: configmap-{{ . }}
+        configMap:
+          name: {{ $.JobName }}-{{ . }}
+{{- end }}
