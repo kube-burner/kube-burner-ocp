@@ -1,0 +1,24 @@
+# Synthetic App uperf metrics
+
+- query: synthetic_app_ops_per_sec
+  metricName: syntheticAppOpsPerSec
+
+- query: synthetic_app_throughput_mbps
+  metricName: syntheticAppThroughputMbps
+
+- query: synthetic_app_sample_count
+  metricName: syntheticAppSampleCount
+
+# Aggregate by pattern
+- query: avg(synthetic_app_ops_per_sec) by (pattern)
+  metricName: syntheticAppOpsPerSecByPattern
+
+- query: avg(synthetic_app_throughput_mbps) by (pattern)
+  metricName: syntheticAppThroughputByPattern
+
+# Aggregate by namespace
+- query: avg(synthetic_app_ops_per_sec) by (namespace)
+  metricName: syntheticAppOpsPerSecByNamespace
+
+- query: avg(synthetic_app_throughput_mbps) by (namespace)
+  metricName: syntheticAppThroughputByNamespace

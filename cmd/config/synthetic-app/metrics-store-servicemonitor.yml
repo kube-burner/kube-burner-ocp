@@ -1,0 +1,19 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: synthetic-app-metrics-store
+  labels:
+    app: synthetic-app-metrics-store
+spec:
+  endpoints:
+  - interval: 15s
+    path: /prometheus
+    port: metrics
+    scheme: http
+  namespaceSelector:
+    matchNames:
+    - synthetic-app-infra
+  selector:
+    matchLabels:
+      app: synthetic-app-metrics-store

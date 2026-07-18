@@ -1,0 +1,14 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: synthetic-app-metrics-store
+spec:
+  selector:
+    app: synthetic-app-metrics-store
+  ports:
+  - name: metrics
+    port: 9999
+    targetPort: 9999
+    protocol: TCP
+  type: ClusterIP

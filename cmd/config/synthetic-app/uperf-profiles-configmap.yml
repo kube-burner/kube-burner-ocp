@@ -1,0 +1,63 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: uperf-profiles
+data:
+  users-frontend.xml: |
+    <?xml version="1.0"?>
+    <profile name="users-frontend">
+      <group nthreads="{{.users}}">
+        <transaction iterations="1">
+          <flowop type="connect" options="remotehost=$SERVER_HOST port=$SERVER_PORT protocol=tcp tcp_nodelay"/>
+        </transaction>
+        <transaction duration="{{.trafficDuration}}">
+          <flowop type="write" options="size=512"/>
+          <flowop type="read" options="size=2048"/>
+          <flowop type="think" options="duration=50ms"/>
+        </transaction>
+        <transaction iterations="1">
+          <flowop type="disconnect"/>
+        </transaction>
+      </group>
+    </profile>
+
+  frontend-microservices.xml: |
+    <?xml version="1.0"?>
+    <profile name="frontend-microservices">
+      <group nthreads="{{.threads}}">
+        <transaction iterations="1">
+          <flowop type="connect" options="remotehost=$MS1_HOST port=$SERVER_PORT protocol=tcp"/>
+          <flowop type="connect" options="conn=1 remotehost=$MS2_HOST port=$SERVER_PORT protocol=tcp"/>
+        </transaction>
+        <transaction duration="{{.trafficDuration}}">
+          <flowop type="write" options="size=256"/>
+          <flowop type="write" options="conn=1 size=256"/>
+          <flowop type="read" options="size=1024"/>
+          <flowop type="read" options="conn=1 size=1024"/>
+        </transaction>
+        <transaction iterations="1">
+          <flowop type="disconnect"/>
+          <flowop type="disconnect" options="conn=1"/>
+        </transaction>
+      </group>
+    </profile>
+
+  app-database.xml: |
+    <?xml version="1.0"?>
+    <profile name="app-database">
+      <group nthreads="{{.dbConnections}}">
+        <transaction iterations="1">
+          <flowop type="connect" options="remotehost=$SERVER_HOST port=$SERVER_PORT protocol=tcp tcp_nodelay"/>
+        </transaction>
+        <transaction duration="{{.trafficDuration}}">
+          <flowop type="write" options="size=128"/>
+          <flowop type="read" options="size=1024"/>
+          <flowop type="write" options="size=512"/>
+          <flowop type="read" options="size=64"/>
+        </transaction>
+        <transaction iterations="1">
+          <flowop type="disconnect"/>
+        </transaction>
+      </group>
+    </profile>
