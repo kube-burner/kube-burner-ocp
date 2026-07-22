@@ -17,6 +17,3 @@ jobs:
 
   build-matrix:
     uses: ./.github/workflows/build-matrix.yml
-
-  build:
-    uses: ./.github/workflows/builders.yml
