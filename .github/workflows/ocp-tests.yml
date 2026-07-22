@@ -1,0 +1,17 @@
+name: OCP e2e tests
+on:
+  pull_request_target:
+    types: [labeled]
+    branches:
+      - master
+      - main
+
+jobs:
+  build:
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'ok-to-test') }}
+    uses: ./.github/workflows/builders.yml
+
+  tests:
+    needs: build
+    uses: ./.github/workflows/test-ocp.yml
+    secrets: inherit
