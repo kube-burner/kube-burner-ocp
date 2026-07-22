@@ -1,7 +1,7 @@
 name: OCP e2e tests
 on:
   pull_request_target:
-    types: [labeled]
+    types: [opened, synchronize, reopened, labeled]
     branches:
       - master
       - main
