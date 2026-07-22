@@ -337,6 +337,7 @@ kube-burner-ocp cudn-density \
 | `--incremental-pattern` | `linear` | Incremental load pattern: `linear` or `exponential` |
 | `--incremental-exp-base` | `2.0` | Base for exponential incremental pattern (must be > 1.0) |
 | `--gateway-check` | `false` | Enable [default gateway reachability check](#with-gateway-check) from each namespace (validates north-south connectivity under CUDN scale) |
+| `--bgp` | `false` | Enable for each CUDN. CUDN will be exported outside the cluster when BGP is enabled. When --gateway-check=true, cluster default gateway sees the POD IP Address instead of NODE IP Address in the traffic. User has to setup external FRR on the default gateway node before running the kube-burner |
 | `--metrics-profile` | `metrics.yml` | Comma-separated list of [metrics profiles](#metrics-profiles) to use |
 | `--gc` | `true` | Garbage collect created resources on completion. See [Cleanup](#cleanup) |
 

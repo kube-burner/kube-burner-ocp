@@ -18,8 +18,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -28,6 +30,7 @@ import (
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	kubeburnerutil "github.com/kube-burner/kube-burner/v2/pkg/util"
+	"github.com/kube-burner/kube-burner/v2/pkg/util/fileutils"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -169,9 +172,87 @@ func addWorkloadFlagsToMetadata(cmd *cobra.Command, wh *workloads.WorkloadHelper
 
 // RunWorkload executes the common workload pattern: adds flags to metadata, sets variables, and runs the workload
 func RunWorkload(cmd *cobra.Command, wh *workloads.WorkloadHelper, configFile string) int {
+	defaultUndefinedTemplateVars(configFile)
 	addWorkloadFlagsToMetadata(cmd, wh)
 	wh.SetVariables(AdditionalVars, SetVars)
 	return wh.Run(configFile)
+}
+
+var (
+	templateBlockRegex = regexp.MustCompile(`\{\{.*?\}\}`)
+	templateVarRegex   = regexp.MustCompile(`\.([a-zA-Z_][a-zA-Z0-9_]*)`)
+	numericCmpRegex    = regexp.MustCompile(`(?:ne|eq|gt|lt|ge|le)\s+\.([a-zA-Z_][a-zA-Z0-9_]*)\s+\d`)
+)
+
+// defaultUndefinedTemplateVars reads the config file and sets empty defaults for any
+// template variables that are not already defined in AdditionalVars, SetVars, or
+// the environment. This prevents template rendering failures when running configs
+// (extracted or custom) that reference variables not explicitly set by the current
+// workload command.
+func defaultUndefinedTemplateVars(configFile string) {
+	if AdditionalVars == nil {
+		AdditionalVars = make(map[string]any)
+	}
+	reader, err := fileutils.GetWorkloadReader(configFile, nil)
+	if err != nil {
+		log.Debugf("Failed to open config %s for template variable discovery: %v", configFile, err)
+		return
+	}
+	defer reader.Close()
+	configContent, err := io.ReadAll(reader)
+	if err != nil {
+		log.Debugf("Failed to read config %s for template variable discovery: %v", configFile, err)
+		return
+	}
+
+	content := string(configContent)
+
+	numericVars := make(map[string]bool)
+	for _, match := range numericCmpRegex.FindAllStringSubmatch(content, -1) {
+		numericVars[match[1]] = true
+	}
+
+	seen := make(map[string]bool)
+	var undefined []string
+	for _, block := range templateBlockRegex.FindAllString(content, -1) {
+		for _, match := range templateVarRegex.FindAllStringSubmatch(block, -1) {
+			varName := match[1]
+			if seen[varName] {
+				continue
+			}
+			seen[varName] = true
+			if _, exists := AdditionalVars[varName]; exists {
+				continue
+			}
+			if v, exists := SetVars[varName]; exists {
+				AdditionalVars[varName] = v
+				delete(SetVars, varName)
+				continue
+			}
+			if _, envSet := os.LookupEnv(varName); envSet {
+				continue
+			}
+			if numericVars[varName] {
+				AdditionalVars[varName] = 0
+			} else {
+				AdditionalVars[varName] = ""
+			}
+			undefined = append(undefined, varName)
+		}
+	}
+	if len(undefined) > 0 {
+		log.Warningf("Template variables [%s] are not defined and will default to empty/zero values. "+
+			"Set them as environment variables (e.g., %s=<value> kube-burner-ocp ...) or use --set %s=<value>",
+			strings.Join(undefined, ", "), undefined[0], undefined[0])
+	}
+}
+
+func setIfFlagChanged(cmd *cobra.Command, flagValues map[string]any) {
+	for flag, value := range flagValues {
+		if cmd.Flags().Changed(flag) {
+			AdditionalVars[strings.ToUpper(strings.ReplaceAll(flag, "-", "_"))] = value
+		}
+	}
 }
 
 // kebabToCamelCase converts a flag name from kebab-case to camelCase
