@@ -17,6 +17,7 @@ package workloads
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"os"
 	"time"
 
@@ -98,12 +99,12 @@ func getNodeGatewayMap() string {
 
 // NewCudnDensity holds cudn-density workload
 func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
-	var churnPercent, churnCycles, iterations, namespacesPerCudn, cudnsPerRA, incrementalStepSize int
+	var churnPercent, churnCycles, iterations, namespacesPerCudn, cudnsPerRA, incrementalStepSize, httpLoadTestRate int
 	var incrementalExpBase float64
 	var deletionStrategy string
 	var l3, pprof, gatewayCheck, bgp, ocpbugs85627Workaround bool
 	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay time.Duration
-	var churnMode, incrementalPattern string
+	var churnMode, incrementalPattern, httpServerAddress string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -146,6 +147,11 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 					log.Fatal("incremental load and churn cannot be used together")
 				}
 			}
+			if httpServerAddress != "" {
+				if _, _, err := net.SplitHostPort(httpServerAddress); err != nil {
+					log.Fatalf("--http-server-address must be in ip:port format, got '%s': %v", httpServerAddress, err)
+				}
+			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
@@ -183,6 +189,16 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["BGP"] = bgp
 			AdditionalVars["OCPBUGS_85627_WORKAROUND"] = ocpbugs85627Workaround
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
+			AdditionalVars["HTTP_SERVER_ADDRESS"] = httpServerAddress
+			AdditionalVars["HTTP_LOAD_TEST_RATE"] = httpLoadTestRate
+			if httpServerAddress != "" {
+				httpServerIP, httpServerPort, _ := net.SplitHostPort(httpServerAddress)
+				AdditionalVars["HTTP_SERVER_IP"] = httpServerIP
+				AdditionalVars["HTTP_SERVER_PORT"] = httpServerPort
+			} else {
+				AdditionalVars["HTTP_SERVER_IP"] = ""
+				AdditionalVars["HTTP_SERVER_PORT"] = ""
+			}
 			if gatewayCheck {
 				AdditionalVars["NODE_GW_MAP"] = getNodeGatewayMap()
 			}
@@ -214,6 +230,8 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&gatewayCheck, "gateway-check", false, "Enable default gateway reachability check from each namespace")
 	cmd.Flags().BoolVar(&ocpbugs85627Workaround, "static-mac-binding-workaround", false, "Deploy OCPBUGS-85627 static MAC binding workaround DaemonSet before creating CUDNs")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
+	cmd.Flags().StringVar(&httpServerAddress, "http-server-address", "", "Deploy nginx on bastion at this ip:port and run hloader HTTP load tests against it")
+	cmd.Flags().IntVar(&httpLoadTestRate, "http-load-test-rate", 10, "Requests per second per hloader pod (0 = unlimited)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
