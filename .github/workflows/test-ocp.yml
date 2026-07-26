@@ -9,25 +9,37 @@ on:
         required: true
       OPENSHIFT_PASSWORD:
         required: true
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
+    branches:
+      - master
+      - main
 jobs:
   ocp-e2e-ci:
+    if: ${{ github.event_name != 'pull_request_target' || contains(github.event.pull_request.labels.*.name, 'ok-to-test') }}
     runs-on: ubuntu-latest
     concurrency:
       group: ocp-e2e-ci
     steps:
 
     - name: Check out code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
         ref: ${{ github.event.pull_request.head.sha }}
         persist-credentials: false
+        allow-unsafe-pr-checkout: true
 
-    - name: Download kube-burner-ocp binary
-      uses: actions/download-artifact@v4
+    - name: Set up Go 1.25
+      uses: actions/setup-go@v5
       with:
-        name: kube-burner-ocp
-        path: /tmp/
+        go-version: 1.25
+
+    - name: Build and install kube-burner-ocp
+      run: |
+        make build
+        sudo make install
+        cp /usr/bin/kube-burner-ocp /tmp/kube-burner-ocp
 
     - name: Install bats
       uses: bats-core/bats-action@1.5.4
