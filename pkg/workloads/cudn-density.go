@@ -99,7 +99,7 @@ func getNodeGatewayMap() string {
 
 // NewCudnDensity holds cudn-density workload
 func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
-	var churnPercent, churnCycles, iterations, namespacesPerCudn, cudnsPerRA, incrementalStepSize, httpLoadTestRate int
+	var churnPercent, churnCycles, iterations, namespacesPerCudn, cudnsPerRA, incrementalStepSize int
 	var incrementalExpBase float64
 	var deletionStrategy string
 	var l3, pprof, gatewayCheck, bgp, ocpbugs85627Workaround bool
@@ -190,7 +190,6 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["OCPBUGS_85627_WORKAROUND"] = ocpbugs85627Workaround
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["HTTP_SERVER_ADDRESS"] = httpServerAddress
-			AdditionalVars["HTTP_LOAD_TEST_RATE"] = httpLoadTestRate
 			if httpServerAddress != "" {
 				httpServerIP, httpServerPort, _ := net.SplitHostPort(httpServerAddress)
 				AdditionalVars["HTTP_SERVER_IP"] = httpServerIP
@@ -230,8 +229,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&gatewayCheck, "gateway-check", false, "Enable default gateway reachability check from each namespace")
 	cmd.Flags().BoolVar(&ocpbugs85627Workaround, "static-mac-binding-workaround", false, "Deploy OCPBUGS-85627 static MAC binding workaround DaemonSet before creating CUDNs")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
-	cmd.Flags().StringVar(&httpServerAddress, "http-server-address", "", "Deploy nginx on bastion at this ip:port and run hloader HTTP load tests against it")
-	cmd.Flags().IntVar(&httpLoadTestRate, "http-load-test-rate", 10, "Requests per second per hloader pod (0 = unlimited)")
+	cmd.Flags().StringVar(&httpServerAddress, "http-server-address", "", "Deploy nginx on bastion at this ip:port and use it in workload's readiness probes")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd

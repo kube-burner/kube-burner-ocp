@@ -39,6 +39,12 @@ spec:
     {{- end }}
   {{- end }}
 {{ end }}
+{{ if .httpServerIP }}
+  # HTTP server
+  - type: Allow
+    to:
+      cidrSelector: {{.httpServerIP}}/32
+{{ end }}
   # Cluster DNS
   - type: Allow
     to:

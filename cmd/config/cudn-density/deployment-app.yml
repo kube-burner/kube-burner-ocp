@@ -33,19 +33,14 @@ spec:
               - key: node-role.kubernetes.io/workload
                 operator: DoesNotExist
       containers:
-      - name: hloader
-        {{ if .httpServerAddress }}
-        image: quay.io/cloud-bulldozer/hloader:latest
-        command:
-          - "/bin/sh"
-          - "-c"
-          - |
-            while true; do
-              hloader --url http://{{.httpServerAddress}} --rate {{.httpLoadTestRate}} --duration 1m
-            done
-        {{ else }}
-        image: quay.io/cloud-bulldozer/sampleapp:latest
+      - name: sampleapp
+        image: quay.io/cloud-bulldozer/curl:latest
         command: ["sleep", "infinity"]
+        {{ if .httpServerAddress }}
+        readinessProbe:
+          exec:
+            command: ["/bin/sh", "-c", "curl -f -sS http://{{.httpServerAddress}}/1024.html"]
+          periodSeconds: 1
         {{ end }}
         resources:
           requests:
