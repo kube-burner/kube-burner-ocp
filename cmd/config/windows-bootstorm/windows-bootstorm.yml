@@ -1,0 +1,104 @@
+{{- $testNamespacesLabelKey := "kube-burner.io/test-name" -}}
+{{- $testNamespacesLabelValue := "windows-bootstorm" -}}
+{{- $namespace := "windows-bootstorm" -}}
+{{- $sourceDVName := "windows-bootstorm-source-dv" -}}
+
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: vmiLatency
+{{ if ne .VMI_RUNNING_THRESHOLD 0 }}
+      thresholds:
+        - conditionType: VMIRunning
+          metric: P99
+          threshold: {{.VMI_RUNNING_THRESHOLD}}
+{{ end }}
+    - name: dataVolumeLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: ./windows-bootstorm-results
+{{ if .ES_SERVER }}
+- metrics: [{{.METRICS}}]
+  alerts: [{{.ALERTS}}]
+  indexer:
+    esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: true
+    defaultIndex: {{.ES_INDEX}}
+    type: opensearch
+{{ end }}
+
+jobs:
+- name: create-source-dv
+  jobType: create
+  jobIterations: 1
+  qps: {{.QPS}}
+  burst: {{.BURST}}
+  namespacedIterations: false
+  namespace: {{ $namespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+    security.openshift.io/scc.podSecurityLabelSync: false
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: false
+  podWait: true
+  maxWaitTimeout: 1h
+  jobPause: 10s
+  cleanup: false
+  objects:
+    - objectTemplate: templates/dv.yml
+      replicas: 1
+      inputVars:
+        dvName: {{ $sourceDVName }}
+        windowsImageURL: {{.windowsImageURL}}
+        storageClassName: {{.storageClassName}}
+        accessMode: {{.accessMode}}
+        storageSize: {{.storageSize}}
+        cdiSourceType: {{.cdiSourceType}}
+        cdiSourceS3Cred: {{.cdiSourceS3Cred}}
+      waitOptions:
+        customStatusPaths:
+        - key: '(.conditions.[] | select(.type == "Ready")).status'
+          value: "True"
+
+- name: create-windows-vms
+  jobType: create
+  jobIterations: {{.JOB_ITERATIONS}}
+  qps: {{.QPS}}
+  burst: {{.BURST}}
+  namespacedIterations: false
+  namespace: {{ $namespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+    security.openshift.io/scc.podSecurityLabelSync: false
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+  verifyObjects: false
+  errorOnVerify: false
+  waitWhenFinished: false
+  podWait: false
+  maxWaitTimeout: 30m
+  jobPause: 10s
+  cleanup: false
+  objects:
+    - objectTemplate: templates/vm.yml
+      replicas: 1
+      inputVars:
+        sourceNamespace: {{ $namespace }}
+        sourceDVName: {{ $sourceDVName }}
+        storageClassName: {{.storageClassName}}
+        accessMode: {{.accessMode}}
+        storageSize: {{.storageSize}}
+        vmMemory: {{.vmMemory}}
+        vmMemoryLimit: {{.vmMemoryLimit}}
+        vmCPU: {{.vmCPU}}
+        vmCPULimit: {{.vmCPULimit}}
+        workerNodes: {{.workerNodes}}
+        workerCount: {{.workerCount}}
