@@ -25,10 +25,11 @@ import (
 )
 
 func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
-	var namespacedIterations, svcLatency bool
-	var churnDelay, churnDuration, podReadyThreshold time.Duration
+	var namespacedIterations, svcLatency, pprof bool
+	var churnDelay, churnDuration, podReadyThreshold, pprofInterval time.Duration
 	var configFile, deletionStrategy, churnMode, selector string
 	var iterations, churnPercent, churnCycles, iterationsPerNamespace, podsPerNode int
+	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
 		Use:   "init",
@@ -56,20 +57,29 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				jobIterations = (totalPods - podCount) / 2
 			}
 
-			AdditionalVars["CHURN_CYCLES"] = churnCycles
-			AdditionalVars["CHURN_DURATION"] = churnDuration
-			AdditionalVars["CHURN_DELAY"] = churnDelay
-			AdditionalVars["CHURN_PERCENT"] = churnPercent
-			AdditionalVars["CHURN_MODE"] = churnMode
-			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
-			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
-			AdditionalVars["JOB_ITERATIONS"] = jobIterations
-			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
-			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
-			AdditionalVars["SELECTOR"] = selector
-			AdditionalVars["SVC_LATENCY"] = svcLatency
+			if cmd.Flags().Changed("iterations") || cmd.Flags().Changed("pods-per-node") {
+				AdditionalVars["JOB_ITERATIONS"] = jobIterations
+			}
+			setIfFlagChanged(cmd, map[string]any{
+				"churn-cycles":             churnCycles,
+				"churn-duration":           churnDuration,
+				"churn-delay":              churnDelay,
+				"churn-percent":            churnPercent,
+				"churn-mode":               churnMode,
+				"deletion-strategy":        deletionStrategy,
+				"iterations-per-namespace": iterationsPerNamespace,
+				"namespaced-iterations":    namespacedIterations,
+				"pod-ready-threshold":      podReadyThreshold,
+				"selector":                 selector,
+				"pprof":                    pprof,
+				"pprof-interval":           pprofInterval.String(),
+			})
+			if cmd.Flags().Changed("service-latency") {
+				AdditionalVars["SVC_LATENCY"] = svcLatency
+			}
 
+			setMetrics(cmd, metricsProfiles)
 			rc = RunWorkload(cmd, wh, configFile)
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -88,7 +98,11 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	// Adding a super set of flags from other commands so users can decide if they want to use them
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", true, "Namespaced iterations")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 0, "Pods per node. Mutually exclusive with '--iterations'")
+	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
+	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
+	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	// pods-per-node calculates iterations, thus the two are mutually exclusive.
 	cmd.MarkFlagsMutuallyExclusive("iterations", "pods-per-node")
 	cmd.Flags().StringVar(&selector, "selector", "", "Node selector")

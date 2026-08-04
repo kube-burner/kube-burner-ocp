@@ -124,6 +124,14 @@ jobs:
             - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
               value: "True"
       {{ end }}
+      {{ if .BGP }}
+      - objectTemplate: ra.yml
+        replicas: 1
+        churn: false
+        group:
+          id: 0
+        repeatEveryNIterations: {{.NAMESPACES_PER_CUDN}}
+      {{ end }}
 
       - objectTemplate: configmap.yml
         replicas: 1
@@ -259,6 +267,11 @@ jobs:
     burst: {{.BURST}}
     skipIndexing: true
     objects:
+      {{ if .BGP }}
+      - kind: RouteAdvertisements
+        apiVersion: k8s.ovn.org/v1
+        labelSelector: {kube-burner.io/job: cudn-density}
+      {{ end }}
       - kind: ClusterUserDefinedNetwork
         apiVersion: k8s.ovn.org/v1
         labelSelector: {kube-burner.io/job: cudn-density}
