@@ -191,6 +191,7 @@ func openShiftCmd() *cobra.Command {
 		ocpWorkloads.NewANPDensityPods(&wh, "anp-density-pods"),
 		ocpWorkloads.NewBuildFarm(&wh),
 		ocpWorkloads.NewEtcdDensity(&wh),
+		ocpWorkloads.NewBerserkerLoad(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
