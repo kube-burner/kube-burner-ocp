@@ -51,7 +51,12 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 
-{{ $jobName := ternary "create-cudn-l3" "create-cudn-l2" .ENABLE_LAYER_3 }}
+{{ $jobName := "create-cudn-l2" }}
+{{ if .ENABLE_LOCALNET }}
+  {{ $jobName = "create-cudn-localnet" }}
+{{ else if .ENABLE_LAYER_3 }}
+  {{ $jobName = "create-cudn-l3" }}
+{{ end }}
 jobs:
   - name: {{ $jobName }}
     namespace: virt-cudn-density
@@ -72,9 +77,22 @@ jobs:
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
+{{ if not .ENABLE_LOCALNET }}
       k8s.ovn.org/primary-user-defined-network: ""
+{{ end }}
     objects:
-      {{ if .ENABLE_LAYER_3 }}
+      - objectTemplate: ssh-secret.yml
+        replicas: 1
+        inputVars:
+          ssh_public_key: {{.SSH_PUBLIC_KEY}}
+      {{ if .ENABLE_LOCALNET }}
+      - objectTemplate: cudn_localnet.yml
+        replicas: 1
+        inputVars:
+          physical_network_name: {{.PHYSICAL_NETWORK_NAME}}
+          vlan_start: {{.VLAN_START}}
+          enable_ipam: {{.ENABLE_IPAM}}
+      {{ else if .ENABLE_LAYER_3 }}
       - objectTemplate: cudn_l3.yml
         replicas: 1
       {{ else }}
@@ -113,8 +131,10 @@ jobs:
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
           vmImage: {{.VM_IMAGE}}
+          localnet: {{.ENABLE_LOCALNET}}
       - objectTemplate: vm-server.yml
         replicas: 1
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
           vmImage: {{.VM_IMAGE}}
+          localnet: {{.ENABLE_LOCALNET}}

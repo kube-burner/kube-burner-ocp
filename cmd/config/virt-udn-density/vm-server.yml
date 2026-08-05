@@ -12,6 +12,15 @@ spec:
         kubevirt.io/os: fedora
         app: nginx
     spec:
+{{ if .localnet }}
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: ssh-pub-key
+{{ end }}
       terminationGracePeriodSeconds: 0
       domain:
         resources:
@@ -29,14 +38,31 @@ spec:
             disk:
               bus: virtio
           interfaces:
+{{ if .localnet }}
+          - name: default
+            masquerade: {}
+            ports:
+            - port: 80
+          - name: localnet
+            bridge: {}
+{{ else }}
           - name: primary-udn-net
             binding:
               name: {{.bindingMethod}}
             ports:
             - port: 80
+{{ end }}
       networks:
+{{ if .localnet }}
+      - name: default
+        pod: {}
+      - name: localnet
+        multus:
+          networkName: cudn-localnet-{{.Iteration}}
+{{ else }}
       - name: primary-udn-net
         pod: {}
+{{ end }}
       volumes:
       - name: containerdisk
         containerDisk:
@@ -44,25 +70,46 @@ spec:
           imagePullPolicy: IfNotPresent
       - name: cloudinitdisk
         cloudInitNoCloud:
+{{ if .localnet }}
+          networkData: |
+            version: 2
+            ethernets:
+              eth0:
+                dhcp4: true
+                dhcp4-overrides:
+                  use-dns: true
+                  use-routes: true
+              eth1:
+                dhcp4: true
+                dhcp4-overrides:
+                  use-dns: false
+                  use-routes: false
+{{ else }}
           networkData: |
             version: 2
             ethernets:
               eth0:
                 dhcp4: true
                 nameservers:
-                    addresses:
-                      - 172.30.0.10
-                    search:
-                      - virt-density-udn-{{.Replica}}.svc.cluster.local
-                      - svc.cluster.local
-                      - cluster.local
+                  addresses:
+                    - 172.30.0.10
+                  search:
+                    - virt-density-udn-{{.Replica}}.svc.cluster.local
+                    - svc.cluster.local
+                    - cluster.local
+{{ end }}
           userData: |-
             #cloud-config
+            user: fedora
             password: perfscale
             chpasswd: { expire: False }
+            ssh_pwauth: True
+            disable_root: false
             packages:
               - nginx
             runcmd:
+              - systemctl enable sshd
+              - systemctl start sshd
               - systemctl start nginx
               - systemctl enable nginx
       - name: emptydisk

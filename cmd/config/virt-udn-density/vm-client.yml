@@ -12,6 +12,15 @@ spec:
         kubevirt.io/os: fedora
         app: client
     spec:
+{{ if .localnet }}
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: ssh-pub-key
+{{ end }}
       terminationGracePeriodSeconds: 0
       domain:
         resources:
@@ -29,12 +38,27 @@ spec:
             disk:
               bus: virtio
           interfaces:
+{{ if .localnet }}
+          - name: default
+            masquerade: {}
+          - name: localnet
+            bridge: {}
+{{ else }}
           - name: primary-udn-net
             binding:
               name: {{.bindingMethod}}
+{{ end }}
       networks:
+{{ if .localnet }}
+      - name: default
+        pod: {}
+      - name: localnet
+        multus:
+          networkName: cudn-localnet-{{.Iteration}}
+{{ else }}
       - name: primary-udn-net
         pod: {}
+{{ end }}
       volumes:
       - name: containerdisk
         containerDisk:
@@ -43,18 +67,47 @@ spec:
 
       - name: cloudinitdisk
         cloudInitNoCloud:
+{{ if .localnet }}
           networkData: |
             version: 2
             ethernets:
               eth0:
                 dhcp4: true
+                dhcp4-overrides:
+                  use-dns: true
+                  use-routes: true
+              eth1:
+                dhcp4: true
+                dhcp4-overrides:
+                  use-dns: false
+                  use-routes: false
+{{ else }}
+          networkData: |
+            version: 2
+            ethernets:
+              eth0:
+                dhcp4: true
+                nameservers:
+                  addresses:
+                    - 172.30.0.10
+                  search:
+                    - svc.cluster.local
+                    - cluster.local
+{{ end }}
           userData: |-
             #cloud-config
+            user: fedora
             password: perfscale
             chpasswd: { expire: False }
+            ssh_pwauth: True
+            disable_root: false
             runcmd:
+              - systemctl enable sshd
+              - systemctl start sshd
+{{ if not .localnet }}
               - dnf install -y --nodocs curl
               - curl -sS --fail http://udn-density-{{.Replica}}.svc.cluster.local --retry 30 --retry-delay 10
+{{ end }}
       - name: emptydisk
         emptyDisk:
           capacity: "50Mi"

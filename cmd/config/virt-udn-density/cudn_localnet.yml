@@ -1,0 +1,32 @@
+apiVersion: k8s.ovn.org/v1
+kind: ClusterUserDefinedNetwork
+metadata:
+  name: cudn-localnet-{{.Iteration}}
+spec:
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: In
+      values: ["virt-cudn-density-{{.Iteration}}"]
+  network:
+    topology: Localnet
+    localnet:
+      role: Secondary
+{{ if .physical_network_name }}
+      physicalNetworkName: {{.physical_network_name}}
+{{ end }}
+{{ if ne .vlan_start 0 }}
+      {{- $vlanID := add .vlan_start .Iteration }}
+      vlan:
+        mode: Access
+        access:
+          id: {{$vlanID}}
+{{ end }}
+      {{- $secondOctet := add 168 (div .Iteration 256) }}
+      {{- $thirdOctet := mod .Iteration 256 }}
+      subnets: ["192.{{$secondOctet}}.{{$thirdOctet}}.0/24"]
+{{ if .enable_ipam }}
+      ipam:
+        mode: Enabled
+        lifecycle: Persistent
+{{ end }}
