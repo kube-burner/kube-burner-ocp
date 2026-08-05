@@ -72,7 +72,7 @@ func getDefaultGatewayIP() string {
 
 // NewCudnDensity holds cudn-density workload
 func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
-	var churnPercent, churnCycles, iterations, namespacesPerCudn, incrementalStepSize int
+	var churnPercent, churnCycles, iterations, namespacesPerCudn, cudnsPerRA, incrementalStepSize int
 	var incrementalExpBase float64
 	var l3, pprof, gatewayCheck, bgp bool
 	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay time.Duration
@@ -86,6 +86,12 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		PreRun: func(cmd *cobra.Command, args []string) {
 			if namespacesPerCudn < 1 {
 				log.Fatal("--namespaces-per-cudn must be >= 1")
+			}
+			if cudnsPerRA < 1 {
+				log.Fatal("--cudns-per-ra must be >= 1")
+			}
+			if cudnsPerRA > 1 && namespacesPerCudn > 1 {
+				log.Fatal("kube-burner doesn't support different values for repeatEveryNIterations. So set --namespaces-per-cudn=1 if --cudns-per-ra >= 1")
 			}
 			if iterations%namespacesPerCudn != 0 {
 				log.Fatalf("iterations (%d) must be divisible by namespaces-per-cudn (%d)", iterations, namespacesPerCudn)
@@ -139,6 +145,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacesPerCudn
+			AdditionalVars["CUDNS_PER_RA"] = cudnsPerRA
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["ENABLE_LAYER_3"] = l3
 			AdditionalVars["INCREMENTAL_STEP_SIZE"] = incrementalStepSize
@@ -170,6 +177,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Churn mode: 'objects' churns deployments, 'namespaces' churns entire CUDN groups (CUDN + namespaces + pods)")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Total number of namespaces to create")
 	cmd.Flags().IntVar(&namespacesPerCudn, "namespaces-per-cudn", 5, "Number of namespaces sharing the same CUDN")
+	cmd.Flags().IntVar(&cudnsPerRA, "cudns-per-ra", 1, "How many CUDNs an RA exports")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&incrementalStepSize, "incremental-step-size", 0, "Namespaces to add per incremental step (0=disabled). Must be divisible by namespaces-per-cudn")
 	cmd.Flags().DurationVar(&incrementalStepDelay, "incremental-step-delay", 5*time.Minute, "Delay between incremental load steps")
