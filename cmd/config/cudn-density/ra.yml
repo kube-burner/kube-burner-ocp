@@ -10,6 +10,6 @@ spec:
       clusterUserDefinedNetworkSelector:
         networkSelector:
           matchLabels:
-            cudn-{{.Iteration}}: ""
+            ra-{{.Iteration}}: ""
   advertisements:
   - "PodNetwork"

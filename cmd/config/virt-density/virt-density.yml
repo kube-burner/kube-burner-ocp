@@ -57,9 +57,13 @@ jobs:
         replicas: 1
         inputVars:
           vmImage: {{.VM_IMAGE}}
+          vmCPU: {{.VM_CPU}}
+          vmMemory: {{.VM_MEMORY}}
 {{ else }}
       - objectTemplate: vm-nomnt.yml
         replicas: 1
         inputVars:
           vmImage: {{.VM_IMAGE}}
+          vmCPU: {{.VM_CPU}}
+          vmMemory: {{.VM_MEMORY}}
 {{ end }}
