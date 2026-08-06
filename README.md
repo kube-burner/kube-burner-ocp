@@ -16,6 +16,7 @@ Usage:
 
 Available Commands:
   anp-density-pods           Runs anp-density-pods workload
+  berserker-load             Runs berserker-load workload
   build-farm                 Runs build-farm workload
   cluster-density-ms         Runs cluster-density-ms workload
   cluster-density-v2         Runs cluster-density-v2 workload
@@ -1571,6 +1572,40 @@ This workload creates jobs in multiple namespaces that are handled by 10 shared 
 
 This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
 
+
+## Berserker-load workload
+
+The berserker-load workload deploys DaemonSets whose pods are evenly distributed across cluster nodes. Each pod runs multiple containers that produce four types of load: process spawning, file activity, listening network endpoints, and network connections. This makes it useful for stress-testing monitoring and security tooling that observe pod and cluster behavior.
+
+### Architecture
+
+The workload creates namespaced iterations, each containing:
+
+1. **ConfigMaps**: Configuration files that define the berserker workload parameters (endpoint distribution, network connection rates, process/file activity rates). The ConfigMap template is customizable via the `BERSERKER_CONFIGMAP_TEMPLATE` environment variable.
+
+2. **DaemonSets**: Deployed across cluster nodes, each running containers that generate:
+   - **Process and file activity**: Spawns processes and performs file operations at configurable rates
+   - **Endpoint load**: Creates listening network endpoints with a configurable port distribution
+   - **Connection load**: Generates network connections with configurable arrival/departure rates and connection counts
+
+   The container definitions are customizable via the `BERSERKER_CONTAINERS_FILE` environment variable.
+
+3. **Services**: ClusterIP services exposing HTTP (80) and HTTPS (443) ports, backed by the DaemonSet pods. The Service template is customizable via the `BERSERKER_SERVICE_TEMPLATE` environment variable.
+
+### Configuration Flags
+
+- `--job-iterations`: Number of job iterations to create (default: 5)
+- `--job-pause`: Duration to pause after creating resources (default: 0)
+- `--max-wait-timeout`: Maximum time to wait for created objects to be ready (default: 12m)
+- `--pod-ready-threshold`: Pod ready timeout threshold (default: 5m)
+- `--deletion-strategy`: GC deletion mode (default: gvr)
+- `--daemonset-replicas`: Number of berserker DaemonSets to create per namespace (default: 6)
+- `--service-replicas`: Number of services per namespace (default: 6)
+- `--churn-cycles`: Number of churn cycles, 0 = infinite when churn-duration > 0 (default: 0)
+- `--churn-duration`: Churn duration, 0 disables churn (default: 0)
+- `--churn-delay`: Time to wait between each churn (default: 10m)
+- `--churn-percent`: Percentage of job iterations to churn each round (default: 80)
+- `--churn-mode`: Churn mode: namespaces or objects (default: namespaces)
 
 ## Build-Farm workload
 
