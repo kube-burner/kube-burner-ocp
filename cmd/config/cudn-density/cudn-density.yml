@@ -203,7 +203,7 @@ jobs:
         group:
           id: 2
         inputVars:
-          gatewayIP: "{{ if .GATEWAY_CHECK }}{{.GATEWAY_IP}}{{ end }}"
+          nodeGwMap: '{{ if .GATEWAY_CHECK }}{{.NODE_GW_MAP}}{{ end }}'
 
       - objectTemplate: resourcequota.yml
         replicas: 1
@@ -216,6 +216,16 @@ jobs:
         churn: false
         group:
           id: 2
+
+{{ if .GATEWAY_CHECK }}
+      - objectTemplate: np-allow-gateway-egress.yml
+        replicas: 1
+        churn: false
+        group:
+          id: 2
+        inputVars:
+          nodeGwMap: '{{.NODE_GW_MAP}}'
+{{ end }}
 
       - objectTemplate: deployment-server.yml
         replicas: 1
@@ -238,17 +248,8 @@ jobs:
         inputVars:
           podReplicas: 1
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
-          gatewayIP: "{{ if .GATEWAY_CHECK }}{{.GATEWAY_IP}}{{ end }}"
-
-{{ if .GATEWAY_CHECK }}
-      - objectTemplate: np-allow-gateway-egress.yml
-        replicas: 1
-        churn: false
-        group:
-          id: 2
-        inputVars:
-          gatewayIP: {{.GATEWAY_IP}}
-{{ end }}
+          gatewayCheck: {{.GATEWAY_CHECK}}
+          nodeGwMap: '{{ if .GATEWAY_CHECK }}{{.NODE_GW_MAP}}{{ end }}'
 
 {{ if .GC }}
   - name: cudn-density-cleanup-namespaces

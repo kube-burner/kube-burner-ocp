@@ -42,6 +42,13 @@ spec:
         {{- $position := mod .Iteration .namespaces_per_cudn }}
         {{- $cudnBase := mul (div .Iteration .namespaces_per_cudn) .namespaces_per_cudn }}
         {{- $lastPosition := sub .namespaces_per_cudn 1 }}
+        {{- if .gatewayCheck }}
+        env:
+          - name: NODE_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        {{- end }}
         {{ if lt $position $lastPosition }}
         command:
           - "/bin/sh"
@@ -56,8 +63,9 @@ spec:
               curl --fail -sS http://cudn-svc.cudn-density-{{ $peerIter }}.svc.cluster.local:8080 -o /dev/null 2>/dev/null && echo "OK->ns-{{ $peerIter }}" || echo "FAIL->ns-{{ $peerIter }}";
                 {{- end }}
               {{- end }}
-              {{- if $.gatewayIP }}
-              ping -c 1 -W 3 {{$.gatewayIP}} >/dev/null 2>&1 && echo "OK->gateway" || echo "FAIL->gateway";
+              {{- if $.gatewayCheck }}
+              GW_JSON='{{ $.nodeGwMap }}'; GATEWAY="${GW_JSON#*\"${NODE_IP}\":\"}"; GATEWAY="${GATEWAY%%\"*}";
+              ping -c 1 -W 3 $GATEWAY >/dev/null 2>&1 && echo "OK->gateway($GATEWAY)" || echo "FAIL->gateway($GATEWAY)";
               {{- end }}
               sleep 10
             done
@@ -68,6 +76,10 @@ spec:
           - |
             while true; do
               curl --fail -sS http://cudn-svc.cudn-density-{{ $.Iteration }}.svc.cluster.local:8080 -o /dev/null 2>/dev/null && echo "OK->ns-{{ $.Iteration }}(local)" || echo "FAIL->ns-{{ $.Iteration }}(local)";
+              {{- if $.gatewayCheck }}
+              GW_JSON='{{ $.nodeGwMap }}'; GATEWAY="${GW_JSON#*\"${NODE_IP}\":\"}"; GATEWAY="${GATEWAY%%\"*}";
+              ping -c 1 -W 3 $GATEWAY >/dev/null 2>&1 && echo "OK->gateway($GATEWAY)" || echo "FAIL->gateway($GATEWAY)";
+              {{- end }}
               sleep 10
             done
         {{ end }}
@@ -85,7 +97,8 @@ spec:
             command:
             - "/bin/sh"
             - "-c"
-            - "curl --fail -sS http://cudn-svc.cudn-density-{{ $peerNs }}.svc.cluster.local:8080/ -o /dev/null{{ if .gatewayIP }} && ping -c 1 -W 3 {{.gatewayIP}}{{ end }}"
+            - |-
+              curl --fail -sS http://cudn-svc.cudn-density-{{ $peerNs }}.svc.cluster.local:8080/ -o /dev/null{{ if .gatewayCheck }} && GW_JSON='{{ .nodeGwMap }}' && GATEWAY="${GW_JSON#*\"${NODE_IP}\":\"}" && GATEWAY="${GATEWAY%%\"*}" && ping -c 1 -W 3 $GATEWAY{{ end }}
           periodSeconds: 1
           timeoutSeconds: 5
           failureThreshold: 60
