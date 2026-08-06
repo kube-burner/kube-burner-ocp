@@ -1,4 +1,5 @@
 ---
+{{- $sshPublicKeySecretName := "cudn-density-ssh-pubkey" }}
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
@@ -100,6 +101,20 @@ jobs:
             metric: P99
             threshold: {{.POD_READY_THRESHOLD}}
 {{ end }}
+{{ if .BGP }}
+      - name: sshCheck
+{{ end }}
+{{ if .BGP }}
+    hooks:
+      # Runs once all resources are up but before job cleanup, from the
+      # bastion host with the BGP-advertised route to the CUDN pod subnets.
+      # Writes /tmp/kube-burner-ssh-results-{{.UUID}}.ndjson, which the
+      # sshCheck measurement's Stop() reads and indexes (HookBeforeCleanup
+      # runs before measurementsInstance.Stop() in kube-burner's job loop).
+      - cmd: ["./cudn-ssh-test.sh", "{{.UUID}}", "{{.privateKey}}"]
+        when: beforeCleanup
+        background: false
+{{ end }}
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -167,6 +182,23 @@ jobs:
         repeatEveryNIterations: {{mul .NAMESPACES_PER_CUDN .CUDNS_PER_RA}}
       {{ end }}
 
+      {{ if .BGP }}
+      - objectTemplate: templates/secret_ssh_public.yml
+        replicas: 1
+        churn: false
+        group:
+          id: 2
+        inputVars:
+          name: {{ $sshPublicKeySecretName }}
+          publicKeyPath: {{ .publicKey }}
+
+      - objectTemplate: scc-rolebinding.yml
+        replicas: 1
+        churn: false
+        group:
+          id: 2
+      {{ end }}
+
       - objectTemplate: configmap.yml
         replicas: 1
         churn: false
@@ -204,6 +236,8 @@ jobs:
           id: 2
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          bgp: {{.BGP}}
+          bastionCidr: "{{ if .BGP }}{{.BASTION_CIDR}}{{ end }}"
 
       - objectTemplate: np-allow-cudn-egress.yml
         replicas: 1
@@ -265,6 +299,8 @@ jobs:
           id: 2
         inputVars:
           podReplicas: 2
+          bgp: {{.BGP}}
+          sshPublicKeySecretName: "{{ if .BGP }}{{ $sshPublicKeySecretName }}{{ end }}"
 
       - objectTemplate: deployment-app.yml
         replicas: 1
