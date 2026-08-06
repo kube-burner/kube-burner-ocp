@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: victim-svc-{{.Iteration}}-{{.Replica}}
+spec:
+  selector:
+    kube-burner.io/job-iteration: "{{.Iteration}}"
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP

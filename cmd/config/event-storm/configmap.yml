@@ -1,0 +1,10 @@
+# To create load on db during the event storm
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{.JobName}}-{{.Iteration}}-{{.Replica}}
+data:
+  config.yaml: |
+    iteration: {{.Iteration}}
+    replica: {{.Replica}}
+    payload: "{{randAlphaNum 128}}"
