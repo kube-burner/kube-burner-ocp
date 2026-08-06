@@ -39,6 +39,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
 	var volumeSnapshotClassName string
 	var sshKeyPairPath string
+	var vmImage, vmCPU, vmMemory string
 	var useSnapshot bool
 	var iterations int
 	var clonesPerIteration int
@@ -86,6 +87,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["jobIterationDelay"] = jobIterationDelay
 			AdditionalVars["verifyMaxWaitTime"] = verifyMaxWaitTime
 			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
+			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 
 			setMetrics(cmd, metricsProfiles)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -100,6 +104,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "Number of iterations to create VirtualMachines. The total number of VirtualMachines is iterations*iteration-clones")
 	cmd.Flags().IntVar(&clonesPerIteration, "iteration-clones", 10, "How many VirtualMachines to create per iteration. The total number of VirtualMachines is iterations*iteration-clones")
 	cmd.Flags().StringVarP(&testNamespaceBaseName, "namespace", "n", virtCloneTestName, "Base name for the namespace to run the test in")
+	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/containerdisks/fedora:41", "VM image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().BoolVar(&verifyEachIteration, "verify-each-iteration", true, "Wait for each iteration to complete and verify before starting the next one")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")

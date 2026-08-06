@@ -54,7 +54,7 @@ func validateFrrExternalIP(frrExternalIP string) error {
 
 // NewUdnBgp holds udn-bgp workload
 func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
-	var iterations, namespacePerCudn int
+	var iterations, namespacePerCudn, cidrsPerCudn int
 	var enableVm, layer2 bool
 	var frrExternalIP string
 	var metricsProfiles []string
@@ -63,6 +63,17 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if cidrsPerCudn < 1 {
+				return fmt.Errorf("--cidrs-per-cudn must be >= 1, got %d", cidrsPerCudn)
+			}
+			if iterations%namespacePerCudn != 0 {
+				return fmt.Errorf("--iterations (%d) must be divisible by --namespaces-per-cudn (%d)", iterations, namespacePerCudn)
+			}
+			// cudn.yml computes firstOctet = (cidrIndex/255)+40; max valid cidrIndex is 55079 (firstOctet=255).
+			// Total CIDRs = (iterations/namespacesPerCudn)*cidrsPerCudn must not exceed 55080.
+			if totalCIDRs := (iterations / namespacePerCudn) * cidrsPerCudn; totalCIDRs > 55080 {
+				return fmt.Errorf("--iterations/--namespaces-per-cudn * --cidrs-per-cudn yields %d total CIDRs, exceeding the maximum of 55080 (would produce an invalid first IP octet > 255)", totalCIDRs)
+			}
 			if err := validateFrrExternalIP(frrExternalIP); err != nil {
 				return err
 			}
@@ -72,6 +83,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacePerCudn
+			AdditionalVars["CIDRS_PER_CUDN"] = cidrsPerCudn
 			AdditionalVars["ENABLE_VM"] = enableVm
 			AdditionalVars["LAYER2"] = layer2
 			wh.SetMeasurements(additionalMeasurementFactoryMap)
@@ -85,6 +97,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().BoolVar(&enableVm, "vm", false, "Deploy a VM for the test instead of a pod")
 	cmd.Flags().BoolVar(&layer2, "layer2", false, "Use Layer2 topology for CUDNs instead of Layer3")
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
+	cmd.Flags().IntVar(&cidrsPerCudn, "cidrs-per-cudn", 1, "Number of CIDRs per CUDN")
 	cmd.Flags().StringVar(&frrExternalIP, "frr-external-ip", "", "IP address of the external FRR router (required)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")

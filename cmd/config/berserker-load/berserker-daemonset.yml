@@ -1,0 +1,36 @@
+{{- $ip1 := randInt 1 223 -}}
+{{- $ip2 := randInt 1 254 -}}
+{{- $ip3 := randInt 1 254 -}}
+{{- $ip4 := randInt 1 254 -}}
+{{- $ip := printf "%d.%d.%d.%d/16" $ip1 $ip2 $ip3 $ip4 -}}
+{{- $berserkerAddress := printf "%d.%d.%d.%d" $ip1 $ip2 $ip3 $ip4 }}
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: berserker-{{.Replica}}
+spec:
+  selector:
+    matchLabels:
+      app: berserker-{{.Replica}}
+  template:
+    metadata:
+      labels:
+        app: berserker-{{.Replica}}
+    spec:
+      serviceAccountName: berserker
+      terminationGracePeriodSeconds: 0
+      containers:
+{{ ReadFile ((env "BERSERKER_CONTAINERS_FILE") | default "berserker-default-containers.yml") | replace "__IP_BASE__" $ip | replace "__BERSERKER_ADDRESS__" $berserkerAddress | indent 6 }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{.JobName}}-berserker-config
+      tolerations:
+      - key: "node.kubernetes.io/not-ready"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 900
+      - key: "node.kubernetes.io/unreachable"
+        operator: "Exists"
+        effect: "NoExecute"
+        tolerationSeconds: 900

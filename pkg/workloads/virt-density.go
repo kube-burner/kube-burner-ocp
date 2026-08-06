@@ -27,7 +27,7 @@ import (
 
 // Returns virt-density workload
 func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
-	var vmImage, deletionStrategy, churnMode string
+	var vmImage, deletionStrategy, churnMode, vmCPU, vmMemory string
 	var vmsPerNode, iterationsPerNamespace, churnPercent, churnCycles int
 	var vmiRunningThreshold time.Duration
 	var namespacedIterations, mounts bool
@@ -48,6 +48,8 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = totalVMs - vmCount
 			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
@@ -70,6 +72,8 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", false, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 10, "Iterations per namespace")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "1Gi", "Amount of memory for the VM")
 	cmd.Flags().BoolVar(&mounts, "mounts", true, "Include cloud-init and emptyDir disks (true) or only the containerDisk (false)")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.GVRDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")

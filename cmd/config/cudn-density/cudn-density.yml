@@ -104,6 +104,7 @@ jobs:
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
           total_namespaces: {{.JOB_ITERATIONS}}
+          cudns_per_ra: {{.CUDNS_PER_RA}}
         waitOptions:
           customStatusPaths:
             - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
@@ -119,6 +120,7 @@ jobs:
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
           total_namespaces: {{.JOB_ITERATIONS}}
+          cudns_per_ra: {{.CUDNS_PER_RA}}
         waitOptions:
           customStatusPaths:
             - key: .conditions[] | select(.type=="NetworkAllocationSucceeded") | .status
@@ -130,7 +132,7 @@ jobs:
         churn: false
         group:
           id: 0
-        repeatEveryNIterations: {{.NAMESPACES_PER_CUDN}}
+        repeatEveryNIterations: {{mul .NAMESPACES_PER_CUDN .CUDNS_PER_RA}}
       {{ end }}
 
       - objectTemplate: configmap.yml

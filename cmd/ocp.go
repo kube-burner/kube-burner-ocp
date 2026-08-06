@@ -190,6 +190,8 @@ func openShiftCmd() *cobra.Command {
 		ocpWorkloads.NewKueueOperator(&wh, "kueue-operator-jobs-shared"),
 		ocpWorkloads.NewANPDensityPods(&wh, "anp-density-pods"),
 		ocpWorkloads.NewBuildFarm(&wh),
+		ocpWorkloads.NewEtcdDensity(&wh),
+		ocpWorkloads.NewBerserkerLoad(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
