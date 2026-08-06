@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloud-bulldozer/go-commons/v2/ssh"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	kubeburnermeasurements "github.com/kube-burner/kube-burner/v2/pkg/measurements"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
@@ -31,8 +32,11 @@ import (
 	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 )
 
+const cudnDensitySSHKeyTmpDirPattern = "kube-burner-cudn-density-ssh"
+
 var cudnMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurementFactory{
 	"cudnLatency": measurements.NewCudnLatencyMeasurementFactory,
+	"sshCheck":    measurements.NewSSHCheckMeasurementFactory,
 }
 
 // getNodeGatewayMap builds a JSON mapping of nodeInternalIP -> gatewayIP by reading
@@ -103,7 +107,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var deletionStrategy string
 	var l3, pprof, gatewayCheck, bgp, ocpbugs85627Workaround bool
 	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay time.Duration
-	var churnMode, incrementalPattern string
+	var churnMode, incrementalPattern, sshKeyPairPath, bastionCIDR string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -146,6 +150,9 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 					log.Fatal("incremental load and churn cannot be used together")
 				}
 			}
+			if bgp && bastionCIDR == "" {
+				log.Fatal("--bastion-cidr is required when --bgp is enabled (needed to allow the external SSH connectivity check through the CUDN NetworkPolicy)")
+			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
@@ -186,6 +193,19 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			if gatewayCheck {
 				AdditionalVars["NODE_GW_MAP"] = getNodeGatewayMap()
 			}
+			if bgp {
+				// Generate a fresh keypair for this run so no SSH credential is ever
+				// committed to the image or the repo. The public half is injected into
+				// the CUDN server pods via a Secret; the private half's local path is
+				// passed to the beforeCleanup hook that validates external SSH ingress.
+				privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, cudnDensitySSHKeyTmpDirPattern, "ssh")
+				if err != nil {
+					log.Fatalf("Failed to generate SSH keys for the CUDN ssh check - %v", err)
+				}
+				AdditionalVars["privateKey"] = privateKeyPath
+				AdditionalVars["publicKey"] = publicKeyPath
+				AdditionalVars["BASTION_CIDR"] = bastionCIDR
+			}
 			wh.SetMeasurements(cudnMeasurementFactoryMap)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
@@ -214,6 +234,8 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&gatewayCheck, "gateway-check", false, "Enable default gateway reachability check from each namespace")
 	cmd.Flags().BoolVar(&ocpbugs85627Workaround, "static-mac-binding-workaround", false, "Deploy OCPBUGS-85627 static MAC binding workaround DaemonSet before creating CUDNs")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
+	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generated SSH keys used for the BGP external SSH check - defaults to a temporary location")
+	cmd.Flags().StringVar(&bastionCIDR, "bastion-cidr", "", "Source CIDR of the bastion host running the external SSH check, allowed through the CUDN NetworkPolicy on the ssh port. Required when --bgp is set")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
