@@ -55,7 +55,6 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	var skipRestartJob bool
 	var skipSnapshotJob bool
 	var metricsProfiles []string
-	var cleanupOnly bool
 	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
@@ -63,7 +62,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs virt-parallel workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			if cleanupOnly {
+			if cleanup {
 				return
 			}
 
@@ -93,7 +92,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if cleanupOnly {
+			if cleanup {
 				log.Infof("Cleaning up all the resources from the previous run")
 				cleanupTestNamespaces(cmd.Context(), virtParallelNamespaceLabelSelector)
 				return
@@ -177,10 +176,6 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 					break
 				}
 			}
-			if cleanup {
-				log.Infof("Cleaning up all the resources from the current run")
-				cleanupTestNamespaces(cmd.Context(), virtParallelNamespaceLabelSelector)
-			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -203,7 +198,6 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&skipRestartJob, "skip-restart-job", false, "Skip the VM restart job")
 	cmd.Flags().BoolVar(&skipSnapshotJob, "skip-snapshot-job", false, "Skip the VM snapshot job")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.Flags().BoolVar(&cleanupOnly, "cleanup-only", false, "Only cleanup the resource created by the previous run. Do not run the test.")
-	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup the resource created by the test.")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }

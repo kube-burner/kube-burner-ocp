@@ -25,6 +25,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	virtUDNDensityNamespaceLabelSelector  = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, "virt-udn-density")
+	virtCUDNDensityNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, "virt-cudn-density")
+)
+
 // Returns virt-density workload
 func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, vmsPerNode int
@@ -34,12 +39,22 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	var l3, pprof bool
 	var churnDelay, churnDuration time.Duration
 	var deletionStrategy, vmImage, bindingMethod, churnMode, vmCPU, vmMemory string
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				if variant == "virt-cudn-density" {
+					cleanupTestNamespaces(cmd.Context(), virtCUDNDensityNamespaceLabelSelector)
+				} else {
+					cleanupTestNamespaces(cmd.Context(), virtUDNDensityNamespaceLabelSelector)
+				}
+				return
+			}
 			if bindingMethod != "passt" && bindingMethod != "l2bridge" {
 				fmt.Println("Invalid value for --binding-method. Allowed values are 'passt' or 'l2bridge'.")
 				os.Exit(1)
@@ -100,6 +115,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	if variant == "virt-cudn-density" {
 		cmd.Annotations = map[string]string{"configDir": "virt-udn-density"}
 	}

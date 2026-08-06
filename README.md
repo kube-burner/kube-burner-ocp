@@ -814,8 +814,8 @@ Some storage classes have limitations requiring the test to skip some parts:
 #### Cleanup
 
 Since the test is expected to run until failure, it is designed to keep all allocated resources to allow investigating the failure.
-To cleanup all allocated resources once the test is done set `--cleanup`.
-Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs
+To cleanup all allocated resources once the test is done set `--gc`.
+Alternatively, run the test with only the `--cleanup` flag set to cleanup resources from past test runs
 
 ### Virt Parallel
 
@@ -882,8 +882,8 @@ Some storage classes have limitations requiring the test to skip some parts. All
 #### Cleanup
 
 Since the test is expected to run until failure, it is designed to keep all allocated resources to allow investigating the failure.
-To cleanup all allocated resources once the test is done set `--cleanup`.
-Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs
+To cleanup all allocated resources once the test is done set `--gc`.
+Alternatively, run the test with only the `--cleanup` flag set to cleanup resources from past test runs
 
 ### Virt Clone
 
@@ -1004,8 +1004,8 @@ The access mode can be changed by setting `--access-mode`. The supported values 
 
 #### Cleanup
 
-To cleanup all allocated resources once the test is done set `--cleanup`.
-Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs.
+To cleanup all allocated resources once the test is done set `--gc`.
+Alternatively, run the test with only the `--cleanup` flag set to cleanup resources from past test runs.
 
 ### Virt Ephemeral Restart
 

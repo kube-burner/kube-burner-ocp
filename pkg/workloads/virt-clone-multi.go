@@ -51,7 +51,6 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 	var jobIterationDelay time.Duration
 	var testNamespaceBaseName string
 	var metricsProfiles []string
-	var cleanupOnly bool
 	var cleanup bool
 	var rc int
 
@@ -60,7 +59,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs virt-clone-multi workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			if cleanupOnly {
+			if cleanup {
 				return
 			}
 
@@ -75,7 +74,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 			storageClassName, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if cleanupOnly {
+			if cleanup {
 				log.Infof("Cleaning up all the resources from the previous run")
 				cleanupTestNamespaces(cmd.Context(), virtCloneMultiNamespaceLabelSelector)
 				return
@@ -120,11 +119,6 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 
 			// Run workload once - kube-burner will handle namespace iterations
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
-
-			if cleanup {
-				log.Infof("Cleaning up all the resources from the current run")
-				cleanupTestNamespaces(cmd.Context(), virtCloneMultiNamespaceLabelSelector)
-			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -145,8 +139,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 1*time.Minute, "Delay between namespace iterations")
 	cmd.Flags().StringVarP(&testNamespaceBaseName, "namespace", "n", virtCloneMultiTestName, "Base namespace name for the test")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.Flags().BoolVar(&cleanupOnly, "cleanup-only", false, "Only cleanup the resources created by the previous run. Do not run the test.")
-	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup the resources created by the test.")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 
 	return cmd
 }

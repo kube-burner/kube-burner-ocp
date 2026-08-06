@@ -17,6 +17,10 @@
 {{- $testNamespacesLabelValue := $testName -}}
 {{- $metricsBaseDirectory := $testName -}}
 ---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+
 metricsEndpoints:
 - indexer:
     type: local
