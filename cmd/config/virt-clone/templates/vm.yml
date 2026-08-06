@@ -46,6 +46,8 @@ spec:
               secretName: {{ .sshPublicKeySecret }}
       architecture: amd64
       domain:
+        cpu:
+          cores: {{ default "1" .vmCPU }}
         resources:
           requests:
             memory: {{ default "512Mi" .vmMemory }}
