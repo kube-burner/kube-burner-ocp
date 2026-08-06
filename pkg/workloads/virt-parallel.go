@@ -41,6 +41,7 @@ var (
 func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClasses []string
 	var sshKeyPairPath string
+	var vmImage, vmCPU, vmMemory string
 	var maxIterations int
 	var initialVms int
 	var vmsIncrement int
@@ -141,6 +142,9 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["skipResizeJob"] = skipResizeJob
 			AdditionalVars["skipRestartJob"] = skipRestartJob
 			AdditionalVars["skipSnapshotJob"] = skipSnapshotJob
+			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 
 			setMetrics(cmd, metricsProfiles)
 
@@ -189,6 +193,9 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&vmsIncrement, "increment", 5, "Number of additional VMs to add in each subsequent iteration")
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", 9, "Number of data volumes per VM")
 	cmd.Flags().StringVarP(&testNamespace, "namespace", "n", virtParallelTestName, "Namespace to run the test in")
+	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/containerdisks/fedora:41", "VM image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().BoolVar(&skipMigrationJob, "skip-migration-job", false, "Skip the migration job - use when the StorageClass does not support RWX")
 	cmd.Flags().IntVar(&minimalVolumeSize, "min-vol-size", 0, "Minimal volume size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().IntVar(&minimalVolumeIncreaseSize, "min-vol-inc-size", 0, "Minimal volume increment size - use when enforced or overridden by the StorageClass")

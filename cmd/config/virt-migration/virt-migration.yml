@@ -73,7 +73,9 @@ jobs:
     replicas: {{ .vmCreatePerIteration }}
     inputVars:
       name: {{ $vmName }}
-      rootDiskImage: quay.io/containerdisks/fedora:41
+      rootDiskImage: {{.VM_IMAGE}}
+      vmCPU: {{.VM_CPU}}
+      vmMemory: {{.VM_MEMORY}}
       storageClassName: {{ .storageClassName }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       dataVolumeCounters:
@@ -114,7 +116,9 @@ jobs:
     replicas: {{ .loadVMsPerIteration }}
     inputVars:
       name: {{ $vmName }}-load
-      rootDiskImage: quay.io/containerdisks/fedora:41
+      rootDiskImage: {{.VM_IMAGE}}
+      vmCPU: {{.VM_CPU}}
+      vmMemory: {{.VM_MEMORY}}
       storageClassName: {{ .storageClassName }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       dataVolumeCounters:
