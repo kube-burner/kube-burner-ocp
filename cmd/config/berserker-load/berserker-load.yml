@@ -56,11 +56,9 @@ jobs:
 
       - objectTemplate: berserker-sa.yml
         replicas: 1
-        runOnce: true
 
       - objectTemplate: berserker-scc-rolebinding.yml
         replicas: 1
-        runOnce: true
 
       - objectTemplate: {{ (env "BERSERKER_CONFIGMAP_TEMPLATE") | default "berserker-configmap.yml" }}
         replicas: 1

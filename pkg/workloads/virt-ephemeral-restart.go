@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
@@ -31,6 +32,10 @@ const (
 	virtEphemeralRestartTestName       = "virt-ephemeral-restart"
 )
 
+var (
+	virtEphemeralRestartNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, virtEphemeralRestartTestName)
+)
+
 // Returns virt-density workload
 func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
@@ -43,12 +48,16 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	var testNamespace string
 	var metricsProfiles []string
 	var volumeAccessMode string
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtEphemeralRestartTestName,
 		Short:        "Runs virt-ephemeral-restart workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				return
+			}
 			if _, ok := accessModeTranslator[volumeAccessMode]; !ok {
 				log.Fatalf("Unsupported access mode - %s", volumeAccessMode)
 			}
@@ -60,6 +69,11 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 			storageClassName, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), virtEphemeralRestartNamespaceLabelSelector)
+				return
+			}
 			privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, virtEphemeralRestartTmpDirPattern, virtEphemeralRestartSSHKeyFileName)
 			if err != nil {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
@@ -98,5 +112,6 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }
