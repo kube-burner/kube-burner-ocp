@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: redhat-ocpbugs-85627
+spec:
+  selector:
+    matchLabels:
+      app: redhat-ocpbugs-85627
+  template:
+    metadata:
+      labels:
+        app: redhat-ocpbugs-85627
+    spec:
+      serviceAccountName: redhat-ocpbugs-85627-sa
+      containers:
+      - name: script-runner
+        image: registry.access.redhat.com/ubi9/ubi:latest
+        args:
+        - /bin/bash
+        - -c
+        - |
+          while true ; do
+            bash /tmp/redhat-ocpbugs-85627-script.sh || exit 1
+            sleep 5
+          done
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /host
+          name: host
+        - mountPath: /tmp/redhat-ocpbugs-85627-script.sh
+          name: script
+          subPath: redhat-ocpbugs-85627-script.sh
+        resources:
+          requests:
+            cpu: 10m
+            memory: 300Mi
+      volumes:
+      - name: host
+        hostPath:
+          path: /
+          type: ''
+      - name: script
+        secret:
+          defaultMode: 365
+          secretName: redhat-ocpbugs-85627-script
