@@ -31,8 +31,8 @@ spec:
               tickPolicy: catchup
           utc: {}
         cpu:
-          cores: 1
-          sockets: {{.vmCPU}}
+          cores: {{.vmCPU}}
+          sockets: 1
           threads: 1
         ioThreads:
           supplementalPoolThreadCount: 8

@@ -7,13 +7,6 @@ global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
   measurements:
-    - name: vmiLatency
-{{ if ne .VMI_RUNNING_THRESHOLD 0 }}
-      thresholds:
-        - conditionType: VMIRunning
-          metric: P99
-          threshold: {{.VMI_RUNNING_THRESHOLD}}
-{{ end }}
     - name: dataVolumeLatency
 
 metricsEndpoints:

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -56,7 +57,6 @@ type bootstormResult struct {
 func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 	var windowsImageURL, storageClassName, volumeAccessMode, vmMemory, vmMemoryLimit, storageSize, cdiSourceType, cdiSourceS3Cred string
 	var vmsPerNode, vmCPU, vmCPULimit int
-	var vmiRunningThreshold time.Duration
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -74,6 +74,9 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal("Failed to run virtctl. Check that it is installed, in PATH and working")
 			}
 			storageClassName, _ = getStorageAndSnapshotClasses(storageClassName, false, true)
+			// Clean up any leftover namespace from a crashed previous run
+			cleanupTestNamespaces(context.Background(), "kube-burner.io/test-name=windows-bootstorm")
+			clearWorkerNodeCaches()
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			k8s := getK8SConnector()
@@ -89,7 +92,6 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 
 			AdditionalVars["JOB_ITERATIONS"] = totalVMs
-			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["windowsImageURL"] = windowsImageURL
 			AdditionalVars["storageClassName"] = storageClassName
 			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
@@ -114,12 +116,25 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 					log.Error("Bootstorm measurement produced no results")
 					rc = 1
 				} else {
-					writeBootstormResults(results, wh)
+					failed := 0
+					for _, r := range results {
+						if r.AccessVM == 0 {
+							failed++
+						}
+					}
+					if failed > 0 {
+						log.Warnf("%d/%d VMs failed SSH accessibility check", failed, len(results))
+					}
+					if failed == len(results) {
+						log.Error("All VMs failed SSH accessibility check")
+						rc = 1
+					} else {
+						writeBootstormResults(results, wh, windowsImageURL, totalVMs)
+					}
 				}
 			}
-			cleanupCtx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-			defer cancel()
-			cleanupBootstormNamespace(cleanupCtx)
+			stopBootstormVMs(context.Background())
+			cleanupTestNamespaces(context.Background(), "kube-burner.io/test-name=windows-bootstorm")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -136,7 +151,6 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&storageSize, "storage-size", "76Gi", "Root disk storage size")
 	cmd.Flags().StringVar(&cdiSourceType, "cdi-source-type", "http", "CDI source type: http or s3")
 	cmd.Flags().StringVar(&cdiSourceS3Cred, "cdi-source-s3-cred", "", "Secret name for S3 CDI source authentication")
-	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 0, "VMI ready timeout threshold")
 	cmd.Flags().IntVar(&sshConcurrencyLimit, "ssh-concurrency-limit", defaultSSHConcurrency, "Number of concurrent SSH measurement threads")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
@@ -304,10 +318,10 @@ func waitForSSH(ctx context.Context, vmName string, startTime time.Time) bootsto
 		).CombinedOutput()
 
 		outStr := strings.ToLower(string(output))
-		if err == nil || strings.Contains(outStr, "denied") || strings.Contains(outStr, "verification failed") {
-			elapsed := time.Since(startTime).Milliseconds()
+		if err == nil || strings.Contains(outStr, "permission denied") || strings.Contains(outStr, "verification failed") {
+			elapsed := float64(time.Since(startTime).Microseconds()) / 1000.0
 			node := getVMINode(ctx, vmName)
-			log.Infof("SSH accessible: %s on %s in %dms", vmName, node, elapsed)
+			log.Infof("SSH accessible: %s on %s in %.1fms", vmName, node, elapsed)
 			return bootstormResult{
 				VMName:        vmName,
 				Node:          node,
@@ -333,20 +347,30 @@ func getVMINode(ctx context.Context, vmName string) string {
 	return strings.TrimSpace(string(output))
 }
 
-func writeBootstormResults(results []bootstormResult, wh *workloads.WorkloadHelper) {
+func writeBootstormResults(results []bootstormResult, wh *workloads.WorkloadHelper, imageURL string, scale int) {
 	if len(results) == 0 {
 		log.Warn("No bootstorm SSH results to index")
 		return
 	}
 
+	vmOSVersion := strings.TrimSuffix(path.Base(imageURL), path.Ext(imageURL))
+
 	docs := make([]interface{}, len(results))
 	for i, r := range results {
+		runStatus := "complete"
+		if r.AccessVM == 0 {
+			runStatus = "failed"
+		}
 		docs[i] = map[string]any{
 			"vm_name":        r.VMName,
 			"node":           r.Node,
 			"bootstorm_time": r.BootstormTime,
 			"access_vm":      r.AccessVM,
 			"total_run_time": r.TotalRunTime,
+			"kind":           "vm",
+			"run_status":     runStatus,
+			"vm_os_version":  vmOSVersion,
+			"scale":          scale,
 			"uuid":           AdditionalVars["UUID"],
 			"metricName":     "bootstormSSHMeasurement",
 			"jobName":        bootstormJobLabel,
@@ -375,38 +399,58 @@ func writeBootstormResults(results []bootstormResult, wh *workloads.WorkloadHelp
 	}
 }
 
-func cleanupBootstormNamespace(ctx context.Context) {
+func stopBootstormVMs(ctx context.Context) {
 	k8sConnector := getK8SConnector()
 	vmGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachines"}
-
 	vmiGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachineinstances"}
+
 	vmList, err := k8sConnector.DynamicClient().Resource(vmGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
-	if err == nil && len(vmList.Items) > 0 {
-		log.Infof("Stopping %d VMs", len(vmList.Items))
-		for _, vm := range vmList.Items {
-			_ = exec.CommandContext(ctx, "virtctl", "stop", vm.GetName(), "-n", bootstormNamespace).Run()
-		}
-		deadline := time.After(3 * time.Minute)
-		for {
-			select {
-			case <-deadline:
-				log.Warnf("Timed out waiting for VMs to stop, force deleting namespace")
-				goto deleteNS
-			case <-time.After(10 * time.Second):
-				vmiList, err := k8sConnector.DynamicClient().Resource(vmiGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
-				if err != nil || len(vmiList.Items) == 0 {
-					log.Infof("All VMs stopped")
-					goto deleteNS
-				}
+	if err != nil || len(vmList.Items) == 0 {
+		return
+	}
+
+	log.Infof("Stopping %d VMs", len(vmList.Items))
+	for _, vm := range vmList.Items {
+		_ = exec.CommandContext(ctx, "virtctl", "stop", vm.GetName(), "-n", bootstormNamespace).Run()
+	}
+
+	// 5 min > terminationGracePeriodSeconds (180s) to avoid racing
+	deadline := time.After(5 * time.Minute)
+	for {
+		select {
+		case <-deadline:
+			log.Warnf("Timed out waiting for VMIs to terminate")
+			goto deleteVMs
+		case <-time.After(10 * time.Second):
+			vmiList, err := k8sConnector.DynamicClient().Resource(vmiGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+			if err != nil || len(vmiList.Items) == 0 {
+				log.Infof("All VMs stopped")
+				goto deleteVMs
 			}
 		}
 	}
 
-deleteNS:
-	log.Infof("Deleting namespace %s", bootstormNamespace)
-	if err := k8sConnector.ClientSet().CoreV1().Namespaces().Delete(ctx, bootstormNamespace, metav1.DeleteOptions{}); err != nil {
-		log.Warnf("Failed to delete namespace %s: %v", bootstormNamespace, err)
-	} else {
-		log.Infof("Namespace %s deleted", bootstormNamespace)
+deleteVMs:
+	log.Infof("Deleting %d VMs", len(vmList.Items))
+	for _, vm := range vmList.Items {
+		_ = k8sConnector.DynamicClient().Resource(vmGVR).Namespace(bootstormNamespace).Delete(ctx, vm.GetName(), metav1.DeleteOptions{})
 	}
+}
+
+func clearWorkerNodeCaches() {
+	k8s := getK8SConnector()
+	nodes, err := k8s.ClientSet().CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/worker"})
+	if err != nil {
+		log.Warnf("Failed to list worker nodes for cache clear: %v", err)
+		return
+	}
+	for i := 0; i < 3; i++ {
+		for _, node := range nodes.Items {
+			_ = exec.Command("oc", "debug", "node/"+node.Name, "--", "chroot", "/host", "sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches").Run()
+		}
+		if i < 2 {
+			time.Sleep(3 * time.Second)
+		}
+	}
+	log.Infof("Cleared buffer caches on %d worker nodes", len(nodes.Items))
 }
