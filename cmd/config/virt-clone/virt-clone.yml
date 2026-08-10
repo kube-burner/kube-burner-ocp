@@ -13,6 +13,8 @@
 {{- $cloneVMName := "clone-vm" -}}
 
 global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
   measurements:
   - name: vmiLatency
   - name: dataVolumeLatency
