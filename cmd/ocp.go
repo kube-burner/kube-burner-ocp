@@ -45,7 +45,7 @@ func openShiftCmd() *cobra.Command {
 	var workloadConfig workloads.Config
 	var wh workloads.WorkloadHelper
 	var metricsProfileType string
-	var esServer, esIndex, prometheusURL, prometheusToken string
+	var esServer, esIndex, prometheusURL, prometheusToken, prometheusTokenFile string
 	var QPS, burst int
 	var gc, gcMetrics, alerting, ignoreHealthCheck, localIndexing, extract, enableFileLogging bool
 	var setValues []string
@@ -58,6 +58,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().StringVar(&esIndex, "es-index", "", "Elastic Search index")
 	ocpCmd.PersistentFlags().StringVar(&prometheusURL, "prometheus-url", "", "Prometheus endpoint URL, overrides OpenShift Prometheus discovery")
 	ocpCmd.PersistentFlags().StringVar(&prometheusToken, "prometheus-token", "", "Prometheus bearer token to use with --prometheus-url")
+	ocpCmd.PersistentFlags().StringVar(&prometheusTokenFile, "prometheus-token-file", "", "Path to a file containing the Prometheus bearer token, re-read on every request for automatic refresh")
 	ocpCmd.PersistentFlags().BoolVar(&localIndexing, "local-indexing", false, "Enable local indexing")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints, overrides the es-server and es-index flags")
 	ocpCmd.PersistentFlags().BoolVar(&alerting, "alerting", true, "Enable alerting")
@@ -133,6 +134,7 @@ func openShiftCmd() *cobra.Command {
 				if prometheusURL != "" {
 					wh.PrometheusURL = prometheusURL
 					wh.PrometheusToken = prometheusToken
+					wh.PrometheusTokenFile = prometheusTokenFile
 				} else {
 					if ocpWorkloads.IsMicroShift() {
 						log.Fatal("MicroShift requires --prometheus-url or --metrics-endpoint when metrics collection is enabled")
