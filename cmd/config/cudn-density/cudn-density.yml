@@ -2,6 +2,7 @@
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
 {{ if .PPROF }}
   measurements:
     - name: pprof
@@ -44,6 +45,37 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+{{ if .OCPBUGS_85627_WORKAROUND }}
+  - name: cudn-density-workaround
+    namespace: redhat-ocpbugs-85627-wa
+    jobIterations: 1
+    qps: 20
+    burst: 20
+    namespacedIterations: false
+    preCreateNamespaces: true
+    waitWhenFinished: true
+    skipIndexing: true
+    cleanup: false
+    jobPause: 1m
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: workaround-sa.yml
+        replicas: 1
+
+      - objectTemplate: workaround-rolebinding.yml
+        replicas: 1
+
+      - objectTemplate: workaround-secret.yml
+        replicas: 1
+
+      - objectTemplate: workaround-daemonset.yml
+        replicas: 1
+{{ end }}
+
   - name: cudn-density
     namespace: cudn-density
     jobIterations: {{.JOB_ITERATIONS}}
@@ -278,4 +310,17 @@ jobs:
       - kind: ClusterUserDefinedNetwork
         apiVersion: k8s.ovn.org/v1
         labelSelector: {kube-burner.io/job: cudn-density}
+
+{{ if .OCPBUGS_85627_WORKAROUND }}
+  - name: cudn-density-cleanup-workaround
+    jobType: delete
+    waitForDeletion: true
+    qps: 20
+    burst: 20
+    skipIndexing: true
+    objects:
+      - kind: Namespace
+        apiVersion: v1
+        labelSelector: {kube-burner.io/job: cudn-density-workaround}
+{{ end }}
 {{ end }}
