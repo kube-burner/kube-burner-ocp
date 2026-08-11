@@ -372,10 +372,18 @@ teardown_file() {
     --churn-cycles=1 \
     --churn-delay=5s \
     --set DEPLOYMENT_COUNT=2 \
-    --set POD_REPLICAS=2 \
-    --set SECRETS_PER_POD=2 \
-    --set CONFIGMAPS_PER_POD=2 \
-    --set RESOURCE_SIZE=512 \
+    --set UNIQUE_SECRETS=1 \
+    --set UNIQUE_CMS=1 \
+    --set UNIQUE_KV=2 \
+    --set UNIQUE_KV_LEN=8 \
+    --set COMMON_SECRETS=1 \
+    --set COMMON_SECRET_FILES=1 \
+    --set COMMON_SECRET_FILE_SIZE=512 \
+    --set COMMON_CMS=1 \
+    --set COMMON_CM_SIZE=512 \
+    --set ENV_VARS=0 \
+    --set POD_LABELS=0 \
+    --set POD_ANNOTATIONS=0 \
     --uuid=${UUID}
 }
 

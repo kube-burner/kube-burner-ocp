@@ -4,7 +4,7 @@ apiVersion: apps/v1
 metadata:
   name: {{.JobName}}-{{.Replica}}
 spec:
-  replicas: {{.podReplicas}}
+  replicas: 1
   selector:
     matchLabels:
       app: {{.JobName}}-{{.Replica}}
@@ -12,9 +12,18 @@ spec:
     metadata:
       labels:
         app: {{.JobName}}-{{.Replica}}
+{{- range $i := untilStep 0 (.podLabels | int) 1 }}
+        {{ printf "label-%d: \"%s\"" $i (randAlphaNum 31) }}
+{{- end }}
+{{- if gt (.podAnnotations | int) 0 }}
+      annotations:
+{{- range $i := untilStep 0 (.podAnnotations | int) 1 }}
+        {{ printf "annotation-%d: \"%s\"" $i (randAlphaNum 31) }}
+{{- end }}
+{{- end }}
     spec:
       topologySpreadConstraints:
-      - maxSkew: 1
+      - maxSkew: 10
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: ScheduleAnyway
         labelSelector:
@@ -23,32 +32,84 @@ spec:
       nodeSelector:
         node-role.kubernetes.io/worker: ""
       automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 0
       containers:
       - name: pause
         image: registry.k8s.io/pause:3.9
+        securityContext:
+          allowPrivilegeEscalation: false
         resources:
           requests:
-            cpu: "10m"
-            memory: "64Mi"
+            cpu: "1m"
+            memory: "8Mi"
+          limits:
+            memory: "8Mi"
+{{- if gt (.envVars | int) 0 }}
+        env:
+{{- range $i := untilStep 0 (.envVars | int) 1 }}
+        - name: BIG_ENV_VAR_{{ $i }}
+          value: "{{ randAlphaNum ($.envVarSize | int) }}"
+{{- end }}
+{{- end }}
         volumeMounts:
-{{- range .secretIndices }}
-        - name: secret-{{ . }}
-          mountPath: /secrets/{{ . }}
+{{- range .commonSecretIndices }}
+        - name: common-secret-{{ . }}
+          mountPath: /secrets/common/{{ . }}
           readOnly: true
 {{- end }}
-{{- range .configmapIndices }}
-        - name: configmap-{{ . }}
-          mountPath: /configmaps/{{ . }}
+{{- range .commonCMIndices }}
+        - name: common-cm-{{ . }}
+          mountPath: /configmaps/common/{{ . }}
+          readOnly: true
+{{- end }}
+{{- range $i := untilStep (add (mul (sub $.Replica 1) ($.uniqueSecrets | int)) 1 | int) (add (mul $.Replica ($.uniqueSecrets | int)) 1 | int) 1 }}
+        - name: unique-secret-{{ $i }}
+          mountPath: /secrets/unique/{{ $i }}
+          readOnly: true
+{{- end }}
+{{- range $i := untilStep (add (mul (sub $.Replica 1) ($.uniqueCMs | int)) 1 | int) (add (mul $.Replica ($.uniqueCMs | int)) 1 | int) 1 }}
+        - name: unique-cm-{{ $i }}
+          mountPath: /configmaps/unique/{{ $i }}
+          readOnly: true
+{{- end }}
+{{- range $i := untilStep (add (mul (sub $.Replica 1) ($.uniqueLargeSecrets | int)) 1 | int) (add (mul $.Replica ($.uniqueLargeSecrets | int)) 1 | int) 1 }}
+        - name: unique-large-secret-{{ $i }}
+          mountPath: /secrets/unique-large/{{ $i }}
+          readOnly: true
+{{- end }}
+{{- range $i := untilStep (add (mul (sub $.Replica 1) ($.uniqueLargeCMs | int)) 1 | int) (add (mul $.Replica ($.uniqueLargeCMs | int)) 1 | int) 1 }}
+        - name: unique-large-cm-{{ $i }}
+          mountPath: /configmaps/unique-large/{{ $i }}
           readOnly: true
 {{- end }}
       volumes:
-{{- range .secretIndices }}
-      - name: secret-{{ . }}
+{{- range .commonSecretIndices }}
+      - name: common-secret-{{ . }}
         secret:
-          secretName: {{ $.JobName }}-{{ . }}
+          secretName: {{ $.JobName }}-common-secret-{{ . }}
 {{- end }}
-{{- range .configmapIndices }}
-      - name: configmap-{{ . }}
+{{- range .commonCMIndices }}
+      - name: common-cm-{{ . }}
         configMap:
-          name: {{ $.JobName }}-{{ . }}
+          name: {{ $.JobName }}-common-cm-{{ . }}
+{{- end }}
+{{- range $i := untilStep (add (mul (sub $.Replica 1) ($.uniqueSecrets | int)) 1 | int) (add (mul $.Replica ($.uniqueSecrets | int)) 1 | int) 1 }}
+      - name: unique-secret-{{ $i }}
+        secret:
+          secretName: {{ $.JobName }}-unique-secret-{{ $i }}
+{{- end }}
+{{- range $i := untilStep (add (mul (sub $.Replica 1) ($.uniqueCMs | int)) 1 | int) (add (mul $.Replica ($.uniqueCMs | int)) 1 | int) 1 }}
+      - name: unique-cm-{{ $i }}
+        configMap:
+          name: {{ $.JobName }}-unique-cm-{{ $i }}
+{{- end }}
+{{- range $i := untilStep (add (mul (sub $.Replica 1) ($.uniqueLargeSecrets | int)) 1 | int) (add (mul $.Replica ($.uniqueLargeSecrets | int)) 1 | int) 1 }}
+      - name: unique-large-secret-{{ $i }}
+        secret:
+          secretName: {{ $.JobName }}-unique-large-secret-{{ $i }}
+{{- end }}
+{{- range $i := untilStep (add (mul (sub $.Replica 1) ($.uniqueLargeCMs | int)) 1 | int) (add (mul $.Replica ($.uniqueLargeCMs | int)) 1 | int) 1 }}
+      - name: unique-large-cm-{{ $i }}
+        configMap:
+          name: {{ $.JobName }}-unique-large-cm-{{ $i }}
 {{- end }}
