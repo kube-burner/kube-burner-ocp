@@ -55,8 +55,9 @@ type bootstormResult struct {
 }
 
 func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
-	var windowsImageURL, storageClassName, volumeAccessMode, vmMemory, vmMemoryLimit, storageSize, cdiSourceType, cdiSourceS3Cred string
+	var windowsImageURL, storageClassName, volumeAccessMode, vmMemory, vmMemoryLimit, storageSize, cdiSourceType, cdiSourceS3Cred, nodeDistribution string
 	var vmsPerNode, vmCPU, vmCPULimit int
+	var bulkSleepTime time.Duration
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -72,6 +73,9 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 			if !virtctl.IsInstalled() {
 				log.Fatal("Failed to run virtctl. Check that it is installed, in PATH and working")
+			}
+			if nodeDistribution != "round-robin" && nodeDistribution != "sequential" {
+				log.Fatalf("Unsupported node-distribution: %s (use round-robin or sequential)", nodeDistribution)
 			}
 			storageClassName, _ = getStorageAndSnapshotClasses(storageClassName, false, true)
 			// Clean up any leftover namespace from a crashed previous run
@@ -104,6 +108,8 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["cdiSourceS3Cred"] = cdiSourceS3Cred
 			AdditionalVars["workerNodes"] = strings.Join(workerNames, " ")
 			AdditionalVars["workerCount"] = len(workerNames)
+			AdditionalVars["nodeDistribution"] = nodeDistribution
+			AdditionalVars["vmsPerNode"] = vmsPerNode
 
 			setMetrics(cmd, metricsProfiles)
 			AddVirtMetadata(wh, windowsImageURL, "", "")
@@ -111,7 +117,7 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 
 			if rc == 0 {
-				results := startAndMeasureVMs(cmd.Context())
+				results := startAndMeasureVMs(cmd.Context(), bulkSleepTime)
 				if len(results) == 0 {
 					log.Error("Bootstorm measurement produced no results")
 					rc = 1
@@ -133,7 +139,8 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 					}
 				}
 			}
-			stopBootstormVMs(context.Background())
+			stopAndDeleteBootstormVMs(context.Background())
+			deleteBootstormDVs(context.Background())
 			cleanupTestNamespaces(context.Background(), "kube-burner.io/test-name=windows-bootstorm")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -151,12 +158,14 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&storageSize, "storage-size", "76Gi", "Root disk storage size")
 	cmd.Flags().StringVar(&cdiSourceType, "cdi-source-type", "http", "CDI source type: http or s3")
 	cmd.Flags().StringVar(&cdiSourceS3Cred, "cdi-source-s3-cred", "", "Secret name for S3 CDI source authentication")
+	cmd.Flags().DurationVar(&bulkSleepTime, "bulk-sleep", 30*time.Second, "Rest duration between VM start bulks")
+	cmd.Flags().StringVar(&nodeDistribution, "node-distribution", "round-robin", "VM node assignment strategy: round-robin or sequential")
 	cmd.Flags().IntVar(&sshConcurrencyLimit, "ssh-concurrency-limit", defaultSSHConcurrency, "Number of concurrent SSH measurement threads")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }
 
-func startAndMeasureVMs(ctx context.Context) []bootstormResult {
+func startAndMeasureVMs(ctx context.Context, bulkSleepTime time.Duration) []bootstormResult {
 	k8sConnector := getK8SConnector()
 	vmGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachines"}
 
@@ -263,11 +272,11 @@ func startAndMeasureVMs(ctx context.Context) []bootstormResult {
 		wg.Wait()
 
 		if end < len(readyVMs) {
-			log.Infof("Bulk complete, resting 30s")
+			log.Infof("Bulk complete, resting %s", bulkSleepTime)
 			select {
 			case <-ctx.Done():
 				return allResults
-			case <-time.After(30 * time.Second):
+			case <-time.After(bulkSleepTime):
 			}
 		}
 	}
@@ -399,7 +408,7 @@ func writeBootstormResults(results []bootstormResult, wh *workloads.WorkloadHelp
 	}
 }
 
-func stopBootstormVMs(ctx context.Context) {
+func stopAndDeleteBootstormVMs(ctx context.Context) {
 	k8sConnector := getK8SConnector()
 	vmGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachines"}
 	vmiGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachineinstances"}
@@ -409,12 +418,13 @@ func stopBootstormVMs(ctx context.Context) {
 		return
 	}
 
+	// Phase 1: Stop all VMs
 	log.Infof("Stopping %d VMs", len(vmList.Items))
 	for _, vm := range vmList.Items {
 		_ = exec.CommandContext(ctx, "virtctl", "stop", vm.GetName(), "-n", bootstormNamespace).Run()
 	}
 
-	// 5 min > terminationGracePeriodSeconds (180s) to avoid racing
+	// Phase 2: Wait for all VMIs to terminate (blocking)
 	deadline := time.After(5 * time.Minute)
 	for {
 		select {
@@ -424,16 +434,66 @@ func stopBootstormVMs(ctx context.Context) {
 		case <-time.After(10 * time.Second):
 			vmiList, err := k8sConnector.DynamicClient().Resource(vmiGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
 			if err != nil || len(vmiList.Items) == 0 {
-				log.Infof("All VMs stopped")
+				log.Infof("All VMIs terminated")
 				goto deleteVMs
 			}
+			log.Infof("Waiting for %d VMIs to terminate...", len(vmiList.Items))
 		}
 	}
 
 deleteVMs:
+	// Phase 3: Delete all VMs
 	log.Infof("Deleting %d VMs", len(vmList.Items))
 	for _, vm := range vmList.Items {
 		_ = k8sConnector.DynamicClient().Resource(vmGVR).Namespace(bootstormNamespace).Delete(ctx, vm.GetName(), metav1.DeleteOptions{})
+	}
+
+	// Phase 4: Wait for all VMs to be fully gone (blocking)
+	vmDeadline := time.After(5 * time.Minute)
+	for {
+		select {
+		case <-vmDeadline:
+			log.Warnf("Timed out waiting for VMs to be deleted")
+			return
+		case <-time.After(10 * time.Second):
+			remaining, err := k8sConnector.DynamicClient().Resource(vmGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+			if err != nil || len(remaining.Items) == 0 {
+				log.Infof("All VMs deleted")
+				return
+			}
+			log.Infof("Waiting for %d VMs to be deleted...", len(remaining.Items))
+		}
+	}
+}
+
+func deleteBootstormDVs(ctx context.Context) {
+	k8sConnector := getK8SConnector()
+	dvGVR := schema.GroupVersionResource{Group: "cdi.kubevirt.io", Version: "v1beta1", Resource: "datavolumes"}
+
+	dvList, err := k8sConnector.DynamicClient().Resource(dvGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+	if err != nil || len(dvList.Items) == 0 {
+		return
+	}
+
+	log.Infof("Deleting %d DataVolumes", len(dvList.Items))
+	for _, dv := range dvList.Items {
+		_ = k8sConnector.DynamicClient().Resource(dvGVR).Namespace(bootstormNamespace).Delete(ctx, dv.GetName(), metav1.DeleteOptions{})
+	}
+
+	deadline := time.After(5 * time.Minute)
+	for {
+		select {
+		case <-deadline:
+			log.Warnf("Timed out waiting for DVs to be deleted")
+			return
+		case <-time.After(10 * time.Second):
+			remaining, err := k8sConnector.DynamicClient().Resource(dvGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+			if err != nil || len(remaining.Items) == 0 {
+				log.Infof("All DataVolumes deleted")
+				return
+			}
+			log.Infof("Waiting for %d DVs to be deleted...", len(remaining.Items))
+		}
 	}
 }
 

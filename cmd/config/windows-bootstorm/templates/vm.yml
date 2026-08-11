@@ -12,7 +12,7 @@ spec:
         kubevirt.io/vm: windows-bootstorm-{{.Iteration}}-{{.Replica}}
     spec:
       nodeSelector:
-        kubernetes.io/hostname: {{index (splitList " " .workerNodes) (mod .Iteration .workerCount)}}
+        kubernetes.io/hostname: {{if eq .nodeDistribution "sequential"}}{{index (splitList " " .workerNodes) (div .Iteration .vmsPerNode)}}{{else}}{{index (splitList " " .workerNodes) (mod .Iteration .workerCount)}}{{end}}
       terminationGracePeriodSeconds: 180
       evictionStrategy: LiveMigrate
       domain:
