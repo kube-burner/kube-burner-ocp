@@ -1664,6 +1664,87 @@ This workload is particularly useful for:
 - Measuring the impact of periodic list operations on the API server memory
 - Testing metadata updates impact on etcd db size with frequent changes
 
+## Batch Churn workload
+
+This workload creates kubelet watch pressure via volume-mounted secrets and configmaps. Kubelet's `WatchingSecretManager` / `WatchingConfigMapManager` opens one independent `ListAndWatch` goroutine per unique secret/configmap referenced by pods on a node. Per-pod *unique* objects multiply the watch count linearly with pod count; shared *common* objects add watch payload pressure.
+
+The workload operates in two modes:
+
+### Batch-churn mode (default)
+
+Each iteration creates the following objects in a new namespace:
+
+- 1 common secret (7 files x 10KiB, matching real customer patterns).
+- 2 common configmaps (256KiB each), shared across all pods.
+- 2 unique secrets per pod (10 KV pairs, 24-char values) -- creates per-pod watch pressure.
+- 2 unique configmaps per pod (same structure).
+- 240 single-replica deployments, each mounting all common objects + its own unique objects.
+
+Watch count per node = `pods_on_node x (UNIQUE_SECRETS + UNIQUE_CMS) + COMMON_SECRETS + COMMON_CMS`.
+
+Churning is enabled by default (5 cycles, 100% namespace replacement per cycle), continuously destroying and recreating namespaces to stress the control plane.
+
+An optional chaos hook can be triggered during load via `CHAOS_ACTION`: `rollout` (API server rollout), `kill-apiserver`, `kill-node`, or `kill-etcd` (force leader election).
+
+#### Incremental load
+
+Set `INCREMENTAL_STEP_SIZE` to enable kube-burner's native `incrementalLoad`. Namespaces are created in linear steps (adding `stepSize` namespaces each step) up to `--iterations`, with `INCREMENTAL_STEP_DELAY` between steps. This creates gradually increasing watch pressure so you can observe API server thread counts at each load level. Incremental load and churn are mutually exclusive -- when incremental load is active, churn is skipped.
+
+### Watcher-spam mode
+
+Enabled by setting `--set WATCHER_MODE=true`. Opens thousands of LIST+WATCH streams directly from the kube-burner process against the API server -- no pods, no kubelet, no scheduling. Each watcher is a long-lived TLS connection. A small set of configmaps/secrets is created as watch targets.
+
+Default watcher counts: 5000 secret watchers, 5000 configmap watchers, 2000 each for nodes, endpoints, service accounts, events, and pods (20k total).
+
+### Configuration flags
+
+| Flag / Variable | Description | Default |
+| --- | --- | --- |
+| `--iterations` | Number of batch namespaces | 10 |
+| `--churn-cycles` | Churn cycles to execute | 5 |
+| `--churn-duration` | Per-cycle churn duration | 5m |
+| `--churn-delay` | Delay between churn cycles | 30s |
+| `--churn-percent` | Percent of namespaces churned per cycle | 100 |
+| `--set DEPLOYMENT_COUNT=<n>` | Pods (single-replica deployments) per namespace | 240 |
+| `--set UNIQUE_SECRETS=<n>` | Unique secrets per pod | 2 |
+| `--set UNIQUE_CMS=<n>` | Unique configmaps per pod | 2 |
+| `--set UNIQUE_KV=<n>` | Key-value pairs per unique secret/configmap | 10 |
+| `--set UNIQUE_KV_LEN=<n>` | Char length of each unique value | 24 |
+| `--set COMMON_SECRETS=<n>` | Shared secrets per namespace | 1 |
+| `--set COMMON_SECRET_FILES=<n>` | Files per common secret | 7 |
+| `--set COMMON_SECRET_FILE_SIZE=<n>` | Bytes per file in common secret | 10240 |
+| `--set COMMON_CMS=<n>` | Shared configmaps per namespace | 2 |
+| `--set COMMON_CM_SIZE=<n>` | Bytes per common configmap | 262144 |
+| `--set ENV_VARS=<n>` | Large env vars per pod (inflates pod spec) | 6 |
+| `--set ENV_VAR_SIZE=<n>` | Bytes per env var | 900 |
+| `--set POD_LABELS=<n>` | Random labels per pod | 10 |
+| `--set POD_ANNOTATIONS=<n>` | Random annotations per pod | 10 |
+| `--set INCREMENTAL_STEP_SIZE=<n>` | Namespaces to add per step (0=disabled) | 0 |
+| `--set INCREMENTAL_STEP_DELAY=<duration>` | Delay between incremental steps | 5m |
+| `--set CHAOS_ACTION=<action>` | Chaos action: `rollout`, `kill-apiserver`, `kill-node`, `kill-etcd` | (none) |
+| `--set CHAOS_DELAY=<seconds>` | Seconds to wait before chaos fires | 0 |
+| `--set WATCHER_MODE=true` | Enable watcher-spam mode | false |
+
+### Usage examples
+
+```console
+# Default load -- 10 namespaces x 240 pods with unique + common mounts
+kube-burner-ocp init -c config.yml --iterations 10 --churn-cycles 5
+
+# Incremental load -- add 2 namespaces per step up to 10
+kube-burner-ocp init -c config.yml --iterations 10 \
+  --set INCREMENTAL_STEP_SIZE=2 --set INCREMENTAL_STEP_DELAY=5m
+
+# Kill the etcd leader node 60s after full load
+kube-burner-ocp init -c config.yml --iterations 10 --churn-cycles 5 \
+  --set CHAOS_ACTION=kill-node --set CHAOS_DELAY=60
+
+# Watcher-spam mode -- 20k direct watches + API server rollout
+kube-burner-ocp init -c config.yml --iterations 1 \
+  --set WATCHER_MODE=true \
+  --set CHAOS_ACTION=rollout --set CHAOS_DELAY=60
+```
+
 ## Custom Workload: Bring your own workload
 
 To kickstart kube-burner-ocp with a custom workload, `init` becomes your go-to command. This command is equipped with flags that enable to seamlessly integrate and run your personalized workloads. Here's a breakdown of the flags accepted by the init command:

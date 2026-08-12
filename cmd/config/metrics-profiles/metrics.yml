@@ -9,6 +9,32 @@
 - query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb!="WATCH"}[2m])) by (verb,resource,code) > 0
   metricName: APIRequestRate
 
+# API server watches & threads (FIPS DRBG pressure)
+
+- query: sum(apiserver_longrunning_requests{verb="WATCH"}) by (resource)
+  metricName: watchCountByResource
+
+- query: sum(apiserver_longrunning_requests{verb="WATCH"}) by (instance)
+  metricName: watchCountByInstance
+
+- query: sum(apiserver_longrunning_requests{verb="WATCH"})
+  metricName: watchCountTotal
+
+- query: go_threads{job="apiserver"}
+  metricName: apiserverGoThreads
+
+- query: go_goroutines{job="apiserver"}
+  metricName: apiserverGoGoroutines
+
+- query: process_open_fds{job="apiserver"}
+  metricName: apiserverOpenFDs
+
+- query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb="WATCH"}[2m])) by (resource) > 0
+  metricName: watchRequestRate
+
+- query: histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver",verb="WATCH"}[2m])) by (le, resource)) > 0
+  metricName: 99thWatchRequestLatency
+
 # Containers & pod metrics
 
 - query: (sum(irate(container_cpu_usage_seconds_total{name!="",container!~"POD|",namespace=~"openshift-.*|cilium|stackrox|calico.*|tigera.*"}[2m]) * 100) by (container, pod, namespace, node)) > 0

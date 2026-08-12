@@ -1,0 +1,235 @@
+{{- $chaosAction := .CHAOS_ACTION | default "" -}}
+{{- $chaosDelay := .CHAOS_DELAY | default "0" -}}
+{{- $churnCycles := .CHURN_CYCLES | default 5 | int -}}
+{{- $churnDuration := .CHURN_DURATION | default "5m0s" -}}
+{{- $churnDelay := .CHURN_DELAY | default "30s" -}}
+{{- $churnPercent := .CHURN_PERCENT | default 100 | int -}}
+{{- $churnMode := .CHURN_MODE | default "namespaces" -}}
+{{- $deletionStrategy := .DELETION_STRATEGY | default "default" -}}
+{{- $iterations := .JOB_ITERATIONS | default 10 | int -}}
+{{- $watcherMode := .WATCHER_MODE | default false -}}
+{{- /* Batch-churn mode variables */}}
+{{- $deploymentCount := .DEPLOYMENT_COUNT | default 240 | int -}}
+{{- $uniqueSecrets := .UNIQUE_SECRETS | default 2 | int -}}
+{{- $uniqueCMs := .UNIQUE_CMS | default 2 | int -}}
+{{- $uniqueKV := .UNIQUE_KV | default 10 | int -}}
+{{- $uniqueKVLen := .UNIQUE_KV_LEN | default 24 | int -}}
+{{- $commonSecrets := .COMMON_SECRETS | default 1 | int -}}
+{{- $commonSecretFiles := .COMMON_SECRET_FILES | default 7 | int -}}
+{{- $commonSecretFileSize := .COMMON_SECRET_FILE_SIZE | default 10240 | int -}}
+{{- $commonCMs := .COMMON_CMS | default 2 | int -}}
+{{- $commonCMSize := .COMMON_CM_SIZE | default 262144 | int -}}
+{{- $envVars := .ENV_VARS | default 6 | int -}}
+{{- $envVarSize := .ENV_VAR_SIZE | default 900 | int -}}
+{{- $podLabels := .POD_LABELS | default 10 | int -}}
+{{- $podAnnotations := .POD_ANNOTATIONS | default 10 | int -}}
+{{- $uniqueLargeSecrets := .UNIQUE_LARGE_SECRETS | default 0 | int -}}
+{{- $uniqueLargeSecretSize := .UNIQUE_LARGE_SECRET_SIZE | default 8192 | int -}}
+{{- $uniqueLargeCMs := .UNIQUE_LARGE_CMS | default 0 | int -}}
+{{- $uniqueLargeCMSize := .UNIQUE_LARGE_CM_SIZE | default 8192 | int -}}
+{{- $incrementalStepSize := .INCREMENTAL_STEP_SIZE | default 0 | int -}}
+{{- $incrementalStepDelay := .INCREMENTAL_STEP_DELAY | default "5m" -}}
+{{- $totalUniqueSecrets := mul $deploymentCount $uniqueSecrets | int -}}
+{{- $totalUniqueCMs := mul $deploymentCount $uniqueCMs | int -}}
+{{- $totalUniqueLargeSecrets := mul $deploymentCount $uniqueLargeSecrets | int -}}
+{{- $totalUniqueLargeCMs := mul $deploymentCount $uniqueLargeCMs | int -}}
+{{- $commonSecretEnd := add $commonSecrets 1 | int -}}
+{{- $commonCMEnd := add $commonCMs 1 | int -}}
+{{- /* Watcher-spam mode variables */}}
+{{- $resourceSize := .RESOURCE_SIZE | default 16384 | int -}}
+{{- $secretWatchers := ternary (.SECRET_WATCHERS | int) 5000 (ne .SECRET_WATCHERS nil) -}}
+{{- $configmapWatchers := ternary (.CONFIGMAP_WATCHERS | int) 5000 (ne .CONFIGMAP_WATCHERS nil) -}}
+{{- $nodeWatchers := ternary (.NODE_WATCHERS | int) 2000 (ne .NODE_WATCHERS nil) -}}
+{{- $endpointWatchers := ternary (.ENDPOINT_WATCHERS | int) 2000 (ne .ENDPOINT_WATCHERS nil) -}}
+{{- $saWatchers := ternary (.SA_WATCHERS | int) 2000 (ne .SA_WATCHERS nil) -}}
+{{- $eventWatchers := ternary (.EVENT_WATCHERS | int) 2000 (ne .EVENT_WATCHERS nil) -}}
+{{- $podWatchers := ternary (.POD_WATCHERS | int) 2000 (ne .POD_WATCHERS nil) -}}
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{ $deletionStrategy }}
+  measurements:
+    - name: podLatency
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+{{ if $watcherMode }}
+  - name: watcher-spam-seed
+    namespace: watcher-spam
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    podWait: false
+    waitWhenFinished: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: "false"
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+      - objectTemplate: secret.yml
+        replicas: 10
+        inputVars:
+          resourceSize: {{ $resourceSize }}
+      - objectTemplate: configmap.yml
+        replicas: 10
+        inputVars:
+          resourceSize: {{ $resourceSize }}
+
+  - name: watcher-spam
+    namespace: watcher-spam
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    jobPause: {{.JOB_PAUSE}}
+{{ if $chaosAction }}
+    hooks:
+    - cmd: ["chaos.sh", "{{ $chaosAction }}", "{{ $chaosDelay }}", "3"]
+      when: afterJobExecution
+{{ end }}
+    watchers:
+      - kind: Secret
+        apiVersion: v1
+        labelSelector:
+          kube-burner-job: watcher-spam-seed
+        replicas: {{ $secretWatchers }}
+
+      - kind: ConfigMap
+        apiVersion: v1
+        labelSelector:
+          kube-burner-job: watcher-spam-seed
+        replicas: {{ $configmapWatchers }}
+
+      - kind: Node
+        apiVersion: v1
+        labelSelector: {}
+        replicas: {{ $nodeWatchers }}
+
+      - kind: Endpoints
+        apiVersion: v1
+        labelSelector: {}
+        replicas: {{ $endpointWatchers }}
+
+      - kind: ServiceAccount
+        apiVersion: v1
+        labelSelector: {}
+        replicas: {{ $saWatchers }}
+
+      - kind: Event
+        apiVersion: v1
+        labelSelector: {}
+        replicas: {{ $eventWatchers }}
+
+      - kind: Pod
+        apiVersion: v1
+        labelSelector: {}
+        replicas: {{ $podWatchers }}
+
+{{ else }}
+  - name: batch-churn
+    namespace: batch-churn
+    jobIterations: {{ $iterations }}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: "false"
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+{{ if $incrementalStepSize }}
+    incrementalLoad:
+      startIterations: {{ $incrementalStepSize }}
+      totalIterations: {{ $iterations }}
+      stepDelay: {{ $incrementalStepDelay }}
+      pattern:
+        type: linear
+        linear:
+          stepSize: {{ $incrementalStepSize }}
+{{ else }}
+    churnConfig:
+      cycles: {{ $churnCycles }}
+      duration: {{ $churnDuration }}
+      percent: {{ $churnPercent }}
+      delay: {{ $churnDelay }}
+      mode: {{ $churnMode }}
+{{ end }}
+{{ if $chaosAction }}
+    hooks:
+    - cmd: ["chaos.sh", "{{ $chaosAction }}", "{{ $chaosDelay }}", "3"]
+      when: afterJobExecution
+{{ end }}
+    objects:
+      - objectTemplate: common-secret.yml
+        replicas: {{ $commonSecrets }}
+        inputVars:
+          commonSecretFiles: {{ $commonSecretFiles }}
+          commonSecretFileSize: {{ $commonSecretFileSize }}
+
+      - objectTemplate: common-configmap.yml
+        replicas: {{ $commonCMs }}
+        inputVars:
+          commonCMSize: {{ $commonCMSize }}
+{{ if gt $totalUniqueSecrets 0 }}
+      - objectTemplate: unique-secret.yml
+        replicas: {{ $totalUniqueSecrets }}
+        inputVars:
+          uniqueKV: {{ $uniqueKV }}
+          uniqueKVLen: {{ $uniqueKVLen }}
+{{ end }}
+{{ if gt $totalUniqueCMs 0 }}
+      - objectTemplate: unique-configmap.yml
+        replicas: {{ $totalUniqueCMs }}
+        inputVars:
+          uniqueKV: {{ $uniqueKV }}
+          uniqueKVLen: {{ $uniqueKVLen }}
+{{ end }}
+{{ if gt $totalUniqueLargeSecrets 0 }}
+      - objectTemplate: unique-large-secret.yml
+        replicas: {{ $totalUniqueLargeSecrets }}
+        inputVars:
+          uniqueLargeSecretSize: {{ $uniqueLargeSecretSize }}
+{{ end }}
+{{ if gt $totalUniqueLargeCMs 0 }}
+      - objectTemplate: unique-large-configmap.yml
+        replicas: {{ $totalUniqueLargeCMs }}
+        inputVars:
+          uniqueLargeCMSize: {{ $uniqueLargeCMSize }}
+{{ end }}
+      - objectTemplate: deployment.yml
+        replicas: {{ $deploymentCount }}
+        inputVars:
+          commonSecretIndices: {{ untilStep 1 $commonSecretEnd 1 | toJson }}
+          commonCMIndices: {{ untilStep 1 $commonCMEnd 1 | toJson }}
+          uniqueSecrets: {{ $uniqueSecrets }}
+          uniqueCMs: {{ $uniqueCMs }}
+          uniqueLargeSecrets: {{ $uniqueLargeSecrets }}
+          uniqueLargeCMs: {{ $uniqueLargeCMs }}
+          envVars: {{ $envVars }}
+          envVarSize: {{ $envVarSize }}
+          podLabels: {{ $podLabels }}
+          podAnnotations: {{ $podAnnotations }}
+{{ end }}
