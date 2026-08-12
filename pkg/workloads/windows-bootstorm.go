@@ -21,6 +21,7 @@ import (
 	"os/exec"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -47,11 +48,11 @@ const (
 var sshConcurrencyLimit = defaultSSHConcurrency
 
 type bootstormResult struct {
-	VMName       string
-	Node         string
+	VMName        string
+	Node          string
 	BootstormTime float64
-	TotalRunTime float64
-	AccessVM     int
+	TotalRunTime  float64
+	AccessVM      int
 }
 
 func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
@@ -181,6 +182,18 @@ func startAndMeasureVMs(ctx context.Context, bulkSleepTime time.Duration) []boot
 	for _, vm := range vmList.Items {
 		vmNames = append(vmNames, vm.GetName())
 	}
+	// Sort numerically by iteration number (e.g., windows-bootstorm-0-1, windows-bootstorm-1-1, ...)
+	sort.Slice(vmNames, func(i, j int) bool {
+		getIter := func(name string) int {
+			parts := strings.Split(name, "-")
+			if len(parts) >= 3 {
+				n, _ := strconv.Atoi(parts[len(parts)-2])
+				return n
+			}
+			return 0
+		}
+		return getIter(vmNames[i]) < getIter(vmNames[j])
+	})
 	if len(vmNames) == 0 {
 		log.Errorf("No VMs found in namespace %s", bootstormNamespace)
 		return nil

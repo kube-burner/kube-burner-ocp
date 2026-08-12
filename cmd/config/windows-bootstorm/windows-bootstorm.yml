@@ -95,3 +95,5 @@ jobs:
         vmCPULimit: {{.vmCPULimit}}
         workerNodes: {{.workerNodes}}
         workerCount: {{.workerCount}}
+        nodeDistribution: {{.nodeDistribution}}
+        vmsPerNode: {{.vmsPerNode}}
