@@ -14,7 +14,13 @@
 - label: workload:custom-workload
   paths:
   - pkg/workloads/custom-workload.go
-  - cmd/config/etcd-density/*
+- label: workload:etcd-density
+  paths:
+  - pkg/workloads/etcd-density.go
+  - cmd/config/event-storm/*
+  - cmd/config/crashloop-flood/*
+  - cmd/config/db-quota-pressure/*
+  - cmd/config/annotation-churn/*
 - label: workload:node-density
   paths:
   - pkg/workloads/node-density.go

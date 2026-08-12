@@ -1,0 +1,70 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  deletionStrategy: {{.DELETION_STRATEGY}}
+  measurements:
+    - name: podLatency
+{{ if ne .POD_READY_THRESHOLD 0 }}
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: {{.POD_READY_THRESHOLD}}
+{{ end }}
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+jobs:
+  - name: berserker-load
+    namespace: berserker
+    jobIterations: {{.JOB_ITERATIONS}}
+    jobPause: {{.JOB_PAUSE}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: true
+    podWait: true
+    waitWhenFinished: false
+    preLoadImages: true
+    preLoadPeriod: 30s
+    churnConfig:
+      cycles: {{.CHURN_CYCLES}}
+      duration: {{.CHURN_DURATION}}
+      delay: {{.CHURN_DELAY}}
+      percent: {{.CHURN_PERCENT}}
+      mode: {{.CHURN_MODE}}
+    maxWaitTimeout: {{.MAX_WAIT_TIMEOUT}}
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+
+      - objectTemplate: berserker-sa.yml
+        replicas: 1
+
+      - objectTemplate: berserker-scc-rolebinding.yml
+        replicas: 1
+
+      - objectTemplate: {{ (env "BERSERKER_CONFIGMAP_TEMPLATE") | default "berserker-configmap.yml" }}
+        replicas: 1
+
+      - objectTemplate: berserker-daemonset.yml
+        replicas: {{.DAEMONSET_REPLICAS}}
+
+      - objectTemplate: {{ (env "BERSERKER_SERVICE_TEMPLATE") | default "service.yml" }}
+        replicas: {{.SERVICE_REPLICAS}}

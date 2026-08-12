@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -34,11 +35,16 @@ const (
 	virtCloneDefaultDataVolumeCount = 0
 )
 
+var (
+	virtCloneNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, virtCloneTestName)
+)
+
 // Returns virt-density workload
 func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
 	var volumeSnapshotClassName string
 	var sshKeyPairPath string
+	var vmImage, vmCPU, vmMemory string
 	var useSnapshot bool
 	var iterations int
 	var clonesPerIteration int
@@ -49,12 +55,16 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var jobIterationDelay time.Duration
 	var verifyMaxWaitTime time.Duration
 	var dataVolumeCount int
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtCloneTestName,
 		Short:        "Runs virt-clone workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				return
+			}
 			if _, ok := accessModeTranslator[volumeAccessMode]; !ok {
 				log.Fatalf("Unsupported access mode - %s", volumeAccessMode)
 			}
@@ -66,6 +76,11 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			storageClassName, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), virtCloneNamespaceLabelSelector)
+				return
+			}
 			privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, virtCloneTmpDirPattern, virtCloneSSHKeyFileName)
 			if err != nil {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
@@ -76,6 +91,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
+			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 			AdditionalVars["storageClassName"] = storageClassName
 			AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
 			AdditionalVars["testNamespaceBaseName"] = testNamespaceBaseName
@@ -100,11 +118,15 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "Number of iterations to create VirtualMachines. The total number of VirtualMachines is iterations*iteration-clones")
 	cmd.Flags().IntVar(&clonesPerIteration, "iteration-clones", 10, "How many VirtualMachines to create per iteration. The total number of VirtualMachines is iterations*iteration-clones")
 	cmd.Flags().StringVarP(&testNamespaceBaseName, "namespace", "n", virtCloneTestName, "Base name for the namespace to run the test in")
+	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/containerdisks/fedora:41", "VM image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().BoolVar(&verifyEachIteration, "verify-each-iteration", true, "Wait for each iteration to complete and verify before starting the next one")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
 	cmd.Flags().DurationVar(&verifyMaxWaitTime, "verify-max-wait-time", 1*time.Hour, "Max wait time for clone creation waiting")
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", virtCloneDefaultDataVolumeCount, "Number of data volumes per VM")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }

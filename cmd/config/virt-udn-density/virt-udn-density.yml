@@ -117,8 +117,12 @@ jobs:
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
           vmImage: {{.VM_IMAGE}}
+          vmCPU: {{.VM_CPU}}
+          vmMemory: {{.VM_MEMORY}}
       - objectTemplate: vm-server.yml
         replicas: 1
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
           vmImage: {{.VM_IMAGE}}
+          vmCPU: {{.VM_CPU}}
+          vmMemory: {{.VM_MEMORY}}

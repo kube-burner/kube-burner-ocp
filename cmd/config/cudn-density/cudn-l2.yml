@@ -14,7 +14,7 @@ kind: ClusterUserDefinedNetwork
 metadata:
   name: cudn-{{.Iteration}}
   labels:
-    cudn-{{.Iteration}}: ""
+    ra-{{ div .Iteration (int .cudns_per_ra) }}: ""
 spec:
   {{- $nsList := list }}
   {{- $nsStart := mul $.Iteration $.namespaces_per_cudn }}

@@ -25,6 +25,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	virtUDNDensityNamespaceLabelSelector  = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, "virt-udn-density")
+	virtCUDNDensityNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, "virt-cudn-density")
+)
+
 // Returns virt-density workload
 func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, vmsPerNode int
@@ -33,13 +38,23 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	var churnPercent, churnCycles int
 	var l3, pprof bool
 	var churnDelay, churnDuration time.Duration
-	var deletionStrategy, vmImage, bindingMethod, churnMode string
+	var deletionStrategy, vmImage, bindingMethod, churnMode, vmCPU, vmMemory string
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				if variant == "virt-cudn-density" {
+					cleanupTestNamespaces(cmd.Context(), virtCUDNDensityNamespaceLabelSelector)
+				} else {
+					cleanupTestNamespaces(cmd.Context(), virtUDNDensityNamespaceLabelSelector)
+				}
+				return
+			}
 			if bindingMethod != "passt" && bindingMethod != "l2bridge" {
 				fmt.Println("Invalid value for --binding-method. Allowed values are 'passt' or 'l2bridge'.")
 				os.Exit(1)
@@ -64,6 +79,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["VMS_PER_ITERATION"] = vmsPerUdn
 			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 			AdditionalVars["UDN_BINDING_METHOD"] = bindingMethod
 			AdditionalVars["ENABLE_LAYER_3"] = l3
 			AdditionalVars["PPROF"] = pprof
@@ -84,6 +101,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().BoolVar(&l3, "layer3", false, "Enable Layer3 UDN instead of Layer2, default: false - layer2 enabled")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "1Gi", "Amount of memory for the VM")
 	cmd.Flags().StringVar(&bindingMethod, "binding-method", "l2bridge", "Binding method for the VM UDN network interface - acceptable values: 'l2bridge' | 'passt'")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
@@ -96,6 +115,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	if variant == "virt-cudn-density" {
 		cmd.Annotations = map[string]string{"configDir": "virt-udn-density"}
 	}
