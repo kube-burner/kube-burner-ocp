@@ -1845,6 +1845,84 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#batch-churn-workload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Churn workload
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Batch Churn workload">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#batch-churn-mode-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch-churn mode (default)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Batch-churn mode (default)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#incremental-load" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Incremental load
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#watcher-spam-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Watcher-spam mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-flags_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-examples_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#custom-workload-bring-your-own-workload" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3553,6 +3631,175 @@ optimization of the OLMv1 stack.</p>
 - Simulating realistic build farm behavior with Jobs churn
 - Measuring the impact of periodic list operations on the API server memory
 - Testing metadata updates impact on etcd db size with frequent changes</p>
+<h2 id="batch-churn-workload">Batch Churn workload<a class="headerlink" href="#batch-churn-workload" title="Permanent link">&para;</a></h2>
+<p>This workload creates kubelet watch pressure via volume-mounted secrets and configmaps. Kubelet's <code>WatchingSecretManager</code> / <code>WatchingConfigMapManager</code> opens one independent <code>ListAndWatch</code> goroutine per unique secret/configmap referenced by pods on a node. Per-pod <em>unique</em> objects multiply the watch count linearly with pod count; shared <em>common</em> objects add watch payload pressure.</p>
+<p>The workload operates in two modes:</p>
+<h3 id="batch-churn-mode-default">Batch-churn mode (default)<a class="headerlink" href="#batch-churn-mode-default" title="Permanent link">&para;</a></h3>
+<p>Each iteration creates the following objects in a new namespace:</p>
+<ul>
+<li>1 common secret (7 files x 10KiB, matching real customer patterns).</li>
+<li>2 common configmaps (256KiB each), shared across all pods.</li>
+<li>2 unique secrets per pod (10 KV pairs, 24-char values) -- creates per-pod watch pressure.</li>
+<li>2 unique configmaps per pod (same structure).</li>
+<li>240 single-replica deployments, each mounting all common objects + its own unique objects.</li>
+</ul>
+<p>Watch count per node = <code>pods_on_node x (UNIQUE_SECRETS + UNIQUE_CMS) + COMMON_SECRETS + COMMON_CMS</code>.</p>
+<p>Churning is enabled by default (5 cycles, 100% namespace replacement per cycle), continuously destroying and recreating namespaces to stress the control plane.</p>
+<p>An optional chaos hook can be triggered during load via <code>CHAOS_ACTION</code>: <code>rollout</code> (API server rollout), <code>kill-apiserver</code>, <code>kill-node</code>, or <code>kill-etcd</code> (force leader election).</p>
+<h4 id="incremental-load">Incremental load<a class="headerlink" href="#incremental-load" title="Permanent link">&para;</a></h4>
+<p>Set <code>INCREMENTAL_STEP_SIZE</code> to enable kube-burner's native <code>incrementalLoad</code>. Namespaces are created in linear steps (adding <code>stepSize</code> namespaces each step) up to <code>--iterations</code>, with <code>INCREMENTAL_STEP_DELAY</code> between steps. This creates gradually increasing watch pressure so you can observe API server thread counts at each load level. Incremental load and churn are mutually exclusive -- when incremental load is active, churn is skipped.</p>
+<h3 id="watcher-spam-mode">Watcher-spam mode<a class="headerlink" href="#watcher-spam-mode" title="Permanent link">&para;</a></h3>
+<p>Enabled by setting <code>--set WATCHER_MODE=true</code>. Opens thousands of LIST+WATCH streams directly from the kube-burner process against the API server -- no pods, no kubelet, no scheduling. Each watcher is a long-lived TLS connection. A small set of configmaps/secrets is created as watch targets.</p>
+<p>Default watcher counts: 5000 secret watchers, 5000 configmap watchers, 2000 each for nodes, endpoints, service accounts, events, and pods (20k total).</p>
+<h3 id="configuration-flags_3">Configuration flags<a class="headerlink" href="#configuration-flags_3" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag / Variable</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--iterations</code></td>
+<td>Number of batch namespaces</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>--churn-cycles</code></td>
+<td>Churn cycles to execute</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>--churn-duration</code></td>
+<td>Per-cycle churn duration</td>
+<td>5m</td>
+</tr>
+<tr>
+<td><code>--churn-delay</code></td>
+<td>Delay between churn cycles</td>
+<td>30s</td>
+</tr>
+<tr>
+<td><code>--churn-percent</code></td>
+<td>Percent of namespaces churned per cycle</td>
+<td>100</td>
+</tr>
+<tr>
+<td><code>--set DEPLOYMENT_COUNT=&lt;n&gt;</code></td>
+<td>Pods (single-replica deployments) per namespace</td>
+<td>240</td>
+</tr>
+<tr>
+<td><code>--set UNIQUE_SECRETS=&lt;n&gt;</code></td>
+<td>Unique secrets per pod</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>--set UNIQUE_CMS=&lt;n&gt;</code></td>
+<td>Unique configmaps per pod</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>--set UNIQUE_KV=&lt;n&gt;</code></td>
+<td>Key-value pairs per unique secret/configmap</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>--set UNIQUE_KV_LEN=&lt;n&gt;</code></td>
+<td>Char length of each unique value</td>
+<td>24</td>
+</tr>
+<tr>
+<td><code>--set COMMON_SECRETS=&lt;n&gt;</code></td>
+<td>Shared secrets per namespace</td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>--set COMMON_SECRET_FILES=&lt;n&gt;</code></td>
+<td>Files per common secret</td>
+<td>7</td>
+</tr>
+<tr>
+<td><code>--set COMMON_SECRET_FILE_SIZE=&lt;n&gt;</code></td>
+<td>Bytes per file in common secret</td>
+<td>10240</td>
+</tr>
+<tr>
+<td><code>--set COMMON_CMS=&lt;n&gt;</code></td>
+<td>Shared configmaps per namespace</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>--set COMMON_CM_SIZE=&lt;n&gt;</code></td>
+<td>Bytes per common configmap</td>
+<td>262144</td>
+</tr>
+<tr>
+<td><code>--set ENV_VARS=&lt;n&gt;</code></td>
+<td>Large env vars per pod (inflates pod spec)</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>--set ENV_VAR_SIZE=&lt;n&gt;</code></td>
+<td>Bytes per env var</td>
+<td>900</td>
+</tr>
+<tr>
+<td><code>--set POD_LABELS=&lt;n&gt;</code></td>
+<td>Random labels per pod</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>--set POD_ANNOTATIONS=&lt;n&gt;</code></td>
+<td>Random annotations per pod</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>--set INCREMENTAL_STEP_SIZE=&lt;n&gt;</code></td>
+<td>Namespaces to add per step (0=disabled)</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>--set INCREMENTAL_STEP_DELAY=&lt;duration&gt;</code></td>
+<td>Delay between incremental steps</td>
+<td>5m</td>
+</tr>
+<tr>
+<td><code>--set CHAOS_ACTION=&lt;action&gt;</code></td>
+<td>Chaos action: <code>rollout</code>, <code>kill-apiserver</code>, <code>kill-node</code>, <code>kill-etcd</code></td>
+<td>(none)</td>
+</tr>
+<tr>
+<td><code>--set CHAOS_DELAY=&lt;seconds&gt;</code></td>
+<td>Seconds to wait before chaos fires</td>
+<td>0</td>
+</tr>
+<tr>
+<td><code>--set WATCHER_MODE=true</code></td>
+<td>Enable watcher-spam mode</td>
+<td>false</td>
+</tr>
+</tbody>
+</table>
+<h3 id="usage-examples_1">Usage examples<a class="headerlink" href="#usage-examples_1" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="gp"># </span>Default<span class="w"> </span>load<span class="w"> </span>--<span class="w"> </span><span class="m">10</span><span class="w"> </span>namespaces<span class="w"> </span>x<span class="w"> </span><span class="m">240</span><span class="w"> </span>pods<span class="w"> </span>with<span class="w"> </span>unique<span class="w"> </span>+<span class="w"> </span>common<span class="w"> </span>mounts
+<span class="go">kube-burner-ocp init -c config.yml --iterations 10 --churn-cycles 5</span>
+
+<span class="gp"># </span>Incremental<span class="w"> </span>load<span class="w"> </span>--<span class="w"> </span>add<span class="w"> </span><span class="m">2</span><span class="w"> </span>namespaces<span class="w"> </span>per<span class="w"> </span>step<span class="w"> </span>up<span class="w"> </span>to<span class="w"> </span><span class="m">10</span>
+<span class="go">kube-burner-ocp init -c config.yml --iterations 10 \</span>
+<span class="go">  --set INCREMENTAL_STEP_SIZE=2 --set INCREMENTAL_STEP_DELAY=5m</span>
+
+<span class="gp"># </span>Kill<span class="w"> </span>the<span class="w"> </span>etcd<span class="w"> </span>leader<span class="w"> </span>node<span class="w"> </span>60s<span class="w"> </span>after<span class="w"> </span>full<span class="w"> </span>load
+<span class="go">kube-burner-ocp init -c config.yml --iterations 10 --churn-cycles 5 \</span>
+<span class="go">  --set CHAOS_ACTION=kill-node --set CHAOS_DELAY=60</span>
+
+<span class="gp"># </span>Watcher-spam<span class="w"> </span>mode<span class="w"> </span>--<span class="w"> </span>20k<span class="w"> </span>direct<span class="w"> </span>watches<span class="w"> </span>+<span class="w"> </span>API<span class="w"> </span>server<span class="w"> </span>rollout
+<span class="go">kube-burner-ocp init -c config.yml --iterations 1 \</span>
+<span class="go">  --set WATCHER_MODE=true \</span>
+<span class="go">  --set CHAOS_ACTION=rollout --set CHAOS_DELAY=60</span>
+</code></pre></div>
 <h2 id="custom-workload-bring-your-own-workload">Custom Workload: Bring your own workload<a class="headerlink" href="#custom-workload-bring-your-own-workload" title="Permanent link">&para;</a></h2>
 <p>To kickstart kube-burner-ocp with a custom workload, <code>init</code> becomes your go-to command. This command is equipped with flags that enable to seamlessly integrate and run your personalized workloads. Here's a breakdown of the flags accepted by the init command:</p>
 <div class="highlight"><pre><span></span><code><span class="gp">$ </span>kube-burner-ocp<span class="w"> </span>init<span class="w"> </span>--help
