@@ -11,9 +11,11 @@ spec:
     spec:
       terminationGracePeriodSeconds: 0
       domain:
+        cpu:
+          cores: {{.vmCPU}}
         resources:
           requests:
-            memory: 1Gi
+            memory: {{.vmMemory}}
         devices:
           disks:
           - name: containerdisk

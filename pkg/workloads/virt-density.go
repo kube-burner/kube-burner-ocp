@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -25,20 +26,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	virtDensityNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, "virt-density")
+)
+
 // Returns virt-density workload
 func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
-	var vmImage, deletionStrategy, churnMode string
+	var vmImage, deletionStrategy, churnMode, vmCPU, vmMemory string
 	var vmsPerNode, iterationsPerNamespace, churnPercent, churnCycles int
 	var vmiRunningThreshold time.Duration
 	var namespacedIterations, mounts bool
 	var churnDelay, churnDuration time.Duration
 	var metricsProfiles []string
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "virt-density",
 		Short:        "Runs virt-density workload",
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), virtDensityNamespaceLabelSelector)
+				return
+			}
 			totalVMs := clusterMetadata.WorkerNodesCount * vmsPerNode
 			vmCount, err := wh.MetadataAgent.GetCurrentVMICount()
 
@@ -48,6 +59,8 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = totalVMs - vmCount
 			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
@@ -70,6 +83,8 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&namespacedIterations, "namespaced-iterations", false, "Namespaced iterations")
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 10, "Iterations per namespace")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "Vm Image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "1Gi", "Amount of memory for the VM")
 	cmd.Flags().BoolVar(&mounts, "mounts", true, "Include cloud-init and emptyDir disks (true) or only the containerDisk (false)")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.GVRDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
@@ -78,5 +93,6 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }

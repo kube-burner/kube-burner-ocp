@@ -16,6 +16,7 @@ Usage:
 
 Available Commands:
   anp-density-pods           Runs anp-density-pods workload
+  berserker-load             Runs berserker-load workload
   build-farm                 Runs build-farm workload
   cluster-density-ms         Runs cluster-density-ms workload
   cluster-density-v2         Runs cluster-density-v2 workload
@@ -226,63 +227,105 @@ Lightest version of this workload family, each iteration the following objects i
 - 20 secrets containing a 2048-character random string.
 - 10 config maps containing a 2048-character random string.
 
-## Etcd density workload
+## Etcd density workloads
 
-This workload stresses the etcd database by creating large custom resource objects to increase the database size. It is designed to measure control-plane performance degradation as etcd grows, tracking API server latency, etcd commit/fsync duration, compaction, defragmentation, and database size metrics.
+The `etcd-density` command groups four workload variants that stress the etcd database under different pressure patterns. Each variant targets a specific failure mode relevant to etcd sharding validation: event volume, crash-driven churn, storage quota exhaustion, and revision bloat.
 
-The workload operates in two phases:
+All variants default to the `etcd-density-metrics.yml` metrics profile, which collects etcd DB size, WAL fsync latency, backend commit duration, raft proposal rates, event throughput, API server latency, and control-plane resource consumption.
 
-1. **CRD creation** (`crd-scale` job): Creates KubeBurner CustomResourceDefinitions and waits for them to become established.
-2. **Object creation** (`etcd-density` job): Creates custom resource instances across multiple namespaces. Objects are intentionally not cleaned up (`cleanup: false`) to preserve the database size for analysis.
+### event-storm
 
-### Database size calculation
+Fires a synthetic event storm in the background while deploying a victim workload. Measures how sustained event write pressure degrades pod scheduling and readiness latency.
 
-The total etcd database size increase is: `ITERATIONS x KB_CHUNKS x KB_SIZE`.
+The storm runs in namespace `etcd-event-storm` using a hook script that creates events concurrently before the victim workload starts. After the victim workload completes, the storm namespace is cleaned up.
 
-Suggested configurations:
-
-| `iterations` | `KB_CHUNKS` | `KB_SIZE` | Per-KB total | Total DB size | `iterations-per-namespace` |
-| ------------ | ----------- | --------- | ------------ | ------------- | -------------------------- |
-| 6,551        | 8           | 100       | 0.9GB        | 7GB           | 936                        |
-| 14,925       | 18          | 100       | 2GB          | 36GB          | 415                        |
-| 11,194       | 16          | 100       | 1.5GB        | 24GB          | 468                        |
-| 36,841       | 16          | 10        | 1.5GB        | 8GB           | 4,605                      |
-
-### Configuration flags
-
-| Flag                         | Description                                                     | Default               |
-| ---------------------------- | --------------------------------------------------------------- | --------------------- |
-| `--iterations`               | Number of object iterations for the etcd-density job (required) | -                     |
-| `--iterations-per-namespace` | Number of iterations per namespace (required)                   | -                     |
-| `--set KB_CHUNKS=<n>`        | Number of CRDs to create and object replicas per iteration (required) | -               |
-| `--set KB_SIZE=<n>`          | Size of each object in kb: `10` or `100`                        | `100`                 |
-| `--metrics-profile`          | Comma separated list of metrics profiles                        | `metrics.yml,build-farm-metrics.yml` |
-
-### Metrics
-
-In addition to the standard metrics (`metrics.yml`) and reporting metrics (`metrics-report.yml`), the workload collects etcd-specific metrics via `build-farm-metrics.yml`:
-
-- `etcdDBTotalSize` - Total etcd database size in bytes
-- `etcdDBSizeInUse` - Actual used space in the database
-- `etcdDBFragmentationBytes` - Fragmented/unused space
-- `etcd-mvcc-db-total-size` - Per-member database size (instant)
-- `clusterEventCount` - Total cluster events
-- `etcdEventWriteRate` - Event write rate (create/update/delete)
-- `etcdEventReadRate` - Event read rate (get/list)
-
-### Usage examples
+| Flag                    | Description                                               | Default                        |
+| ----------------------- | --------------------------------------------------------- | ------------------------------ |
+| `--iterations`          | Victim workload iterations                                | `100`                          |
+| `--pod-ready-threshold` | Pod ready timeout threshold                               | `0` (disabled)                 |
+| `--deletion-strategy`   | Deletion strategy                                         | `default`                      |
+| `--metrics-profile`     | Comma separated list of metrics profiles                  | `etcd-density-metrics.yml`     |
+| `--event-iterations`    | Event creation iterations for the background storm        | `2000`                         |
+| `--event-replicas`      | Event replicas per iteration                              | `100`                          |
+| `--storm-workers`       | Parallel workers for event creation                       | `20`                           |
+| `--storm-delay`         | Seconds to let the storm build pressure before victim     | `15`                           |
+| `--pod-replicas`        | Pod replicas per victim deployment                        | `3`                            |
 
 ```console
-kube-burner-ocp init -c etcd-density.yml --log-level=info \
+kube-burner-ocp etcd-density event-storm --iterations=100 --event-iterations=2000 \
+  --event-replicas=100 --storm-workers=20 --storm-delay=15 --pod-replicas=3 \
+  --local-indexing
+```
+
+### crashloop-flood
+
+Creates pods that immediately exit with an error, causing continuous CrashLoopBackOff restarts. The sustained event churn from repeated container crashes pressures etcd event storage and API server watch caches.
+
+After pod creation, the workload soaks for a configurable duration to let event pressure accumulate before collecting metrics.
+
+| Flag                    | Description                                               | Default                        |
+| ----------------------- | --------------------------------------------------------- | ------------------------------ |
+| `--iterations`          | Number of namespaces to create crashlooping pods in       | `20`                           |
+| `--pod-ready-threshold` | Pod ready timeout threshold                               | `0` (disabled)                 |
+| `--deletion-strategy`   | Deletion strategy                                         | `default`                      |
+| `--metrics-profile`     | Comma separated list of metrics profiles                  | `etcd-density-metrics.yml`     |
+| `--crashloop-replicas`  | Crashlooping pods per iteration                           | `100`                          |
+| `--soak-duration`       | Soak duration for event accumulation after pod creation   | `30m`                          |
+
+```console
+kube-burner-ocp etcd-density crashloop-flood --iterations=20 \
+  --crashloop-replicas=100 --soak-duration=30m \
+  --local-indexing
+```
+
+### db-quota-pressure
+
+Fills etcd with large custom resource objects to stress storage quotas. Creates CRDs first, then fills namespaces with custom resource instances. Objects are intentionally not cleaned up (`cleanup: false`) to preserve the database size for analysis.
+
+**Database size calculation:** `iterations x kb-chunks x kb-size`
+
+| `iterations` | `kb-chunks` | `kb-size` | Total DB size | `iterations-per-namespace` |
+| ------------ | ----------- | --------- | ------------- | -------------------------- |
+| 6,551        | 8           | 100       | ~5GB          | 936                        |
+| 14,925       | 18          | 100       | ~27GB         | 415                        |
+| 11,194       | 16          | 100       | ~18GB         | 468                        |
+| 36,841       | 16          | 10        | ~6GB          | 4,605                      |
+
+| Flag                         | Description                                                   | Default                        |
+| ---------------------------- | ------------------------------------------------------------- | ------------------------------ |
+| `--iterations`               | Number of object iterations for the db-quota-pressure job     | `6551`                         |
+| `--iterations-per-namespace` | Number of iterations per namespace                            | `936`                          |
+| `--metrics-profile`          | Comma separated list of metrics profiles                      | `etcd-density-metrics.yml`     |
+| `--kb-chunks`                | Number of CRDs to create and object replicas per iteration    | `8`                            |
+| `--kb-size`                  | Size of each object in KB (10 or 100)                         | `100`                          |
+
+```console
+kube-burner-ocp etcd-density db-quota-pressure --iterations=6551 \
+  --iterations-per-namespace=936 --kb-chunks=8 --kb-size=100 \
   --gc=false --gc-metrics=false \
-  --iterations=10 --iterations-per-namespace=10 \
-  --set KB_CHUNKS=8 --set KB_SIZE=100 \
-  --qps=20 --burst=20 \
+  --local-indexing
+```
+
+### annotation-churn
+
+Creates ConfigMaps and then rapidly patches their annotations in multiple rounds, generating etcd revision bloat from high-frequency small writes. Measures compaction and defragmentation behavior under write-amplification pressure.
+
+| Flag                    | Description                                               | Default                        |
+| ----------------------- | --------------------------------------------------------- | ------------------------------ |
+| `--iterations`          | Target creation iterations (one namespace each)           | `10`                           |
+| `--deletion-strategy`   | Deletion strategy                                         | `default`                      |
+| `--metrics-profile`     | Comma separated list of metrics profiles                  | `etcd-density-metrics.yml`     |
+| `--patch-replicas`      | Target ConfigMaps per iteration                           | `50`                           |
+| `--patch-rounds`        | Number of patch rounds across all targets                 | `10`                           |
+
+```console
+kube-burner-ocp etcd-density annotation-churn --iterations=10 \
+  --patch-replicas=50 --patch-rounds=10 \
   --local-indexing
 ```
 
 !!! Note
-    This workload requires OpenShift clusters with sufficiently large control plane nodes (m6a.4xlarge or r6a.4xlarge minimum) if trying to load the DB.
+    These workloads require OpenShift clusters with sufficiently large control plane nodes (m6a.4xlarge or r6a.4xlarge minimum) for meaningful pressure testing.
 
 ### MicroShift
 
@@ -771,8 +814,8 @@ Some storage classes have limitations requiring the test to skip some parts:
 #### Cleanup
 
 Since the test is expected to run until failure, it is designed to keep all allocated resources to allow investigating the failure.
-To cleanup all allocated resources once the test is done set `--cleanup`.
-Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs
+To cleanup all allocated resources once the test is done set `--gc`.
+Alternatively, run the test with only the `--cleanup` flag set to cleanup resources from past test runs
 
 ### Virt Parallel
 
@@ -839,8 +882,8 @@ Some storage classes have limitations requiring the test to skip some parts. All
 #### Cleanup
 
 Since the test is expected to run until failure, it is designed to keep all allocated resources to allow investigating the failure.
-To cleanup all allocated resources once the test is done set `--cleanup`.
-Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs
+To cleanup all allocated resources once the test is done set `--gc`.
+Alternatively, run the test with only the `--cleanup` flag set to cleanup resources from past test runs
 
 ### Virt Clone
 
@@ -961,8 +1004,8 @@ The access mode can be changed by setting `--access-mode`. The supported values 
 
 #### Cleanup
 
-To cleanup all allocated resources once the test is done set `--cleanup`.
-Alternatively, run the test with only the `--cleanup-only` flag set to cleanup resources from past test runs.
+To cleanup all allocated resources once the test is done set `--gc`.
+Alternatively, run the test with only the `--cleanup` flag set to cleanup resources from past test runs.
 
 ### Virt Ephemeral Restart
 
@@ -1361,7 +1404,7 @@ Unlike a UDN network, a CUDN network will be cluster scoped and can be used by m
 
 This workload defines multiple jobs as per CUDN requirement. Some of the requirements:
 1. Namespace with label "k8s.ovn.org/primary-user-defined-network" before the CUDN creation
-2. OVN should create all the necessary resources for CUDN before a pod (or VM) is created on it. Currently we don't have a mechanism to detect if the OVN has created all CUDN's resources. So we are using separate jobs for CUDN and pods/VMs with jobPause. Workload defines only one pod or VM per CUDN.
+2. OVN should create all the necessary resources for CUDN before a pod (or VM) is created on it. Currently we don't have a mechanism to detect if the OVN has created all CUDN's resources. So we are using separate jobs for CUDN and pods/VMs with jobPause. Workload defines one pod or VM per CUDN or, alternatively, `--cidrs-per-cudn` allows for multiple pods (or VMs) per subnet per CUDN.
 3. RouteAdvertiments CRD selecting the CUDN. We use 1:1 RA:CUDN mapping.
 
 As we want to measure BGP route exchange latency, this workload skips measurements for all the resources except RouteAdvertisements.
@@ -1529,6 +1572,40 @@ This workload creates jobs in multiple namespaces that are handled by 10 shared 
 
 This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
 
+
+## Berserker-load workload
+
+The berserker-load workload deploys DaemonSets whose pods are evenly distributed across cluster nodes. Each pod runs multiple containers that produce four types of load: process spawning, file activity, listening network endpoints, and network connections. This makes it useful for stress-testing monitoring and security tooling that observe pod and cluster behavior.
+
+### Architecture
+
+The workload creates namespaced iterations, each containing:
+
+1. **ConfigMaps**: Configuration files that define the berserker workload parameters (endpoint distribution, network connection rates, process/file activity rates). The ConfigMap template is customizable via the `BERSERKER_CONFIGMAP_TEMPLATE` environment variable.
+
+2. **DaemonSets**: Deployed across cluster nodes, each running containers that generate:
+   - **Process and file activity**: Spawns processes and performs file operations at configurable rates
+   - **Endpoint load**: Creates listening network endpoints with a configurable port distribution
+   - **Connection load**: Generates network connections with configurable arrival/departure rates and connection counts
+
+   The container definitions are customizable via the `BERSERKER_CONTAINERS_FILE` environment variable.
+
+3. **Services**: ClusterIP services exposing HTTP (80) and HTTPS (443) ports, backed by the DaemonSet pods. The Service template is customizable via the `BERSERKER_SERVICE_TEMPLATE` environment variable.
+
+### Configuration Flags
+
+- `--job-iterations`: Number of job iterations to create (default: 5)
+- `--job-pause`: Duration to pause after creating resources (default: 0)
+- `--max-wait-timeout`: Maximum time to wait for created objects to be ready (default: 12m)
+- `--pod-ready-threshold`: Pod ready timeout threshold (default: 5m)
+- `--deletion-strategy`: GC deletion mode (default: gvr)
+- `--daemonset-replicas`: Number of berserker DaemonSets to create per namespace (default: 6)
+- `--service-replicas`: Number of services per namespace (default: 6)
+- `--churn-cycles`: Number of churn cycles, 0 = infinite when churn-duration > 0 (default: 0)
+- `--churn-duration`: Churn duration, 0 disables churn (default: 0)
+- `--churn-delay`: Time to wait between each churn (default: 10m)
+- `--churn-percent`: Percentage of job iterations to churn each round (default: 80)
+- `--churn-mode`: Churn mode: namespaces or objects (default: namespaces)
 
 ## Build-Farm workload
 

@@ -39,10 +39,15 @@ const (
 	virtMigrationDefaultMigrationQPS        = 20
 )
 
+var (
+	virtMigrationNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, virtMigrationTestName)
+)
+
 // Returns virt-density workload
 func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
 	var sshKeyPairPath string
+	var vmImage, vmCPU, vmMemory string
 	var iterations int
 	var vmsPerIteration int
 	var testNamespace string
@@ -52,13 +57,16 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	var loadVMsIterations int
 	var loadVMsPerIteration int
 	var migrationQPS int
-
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtMigrationTestName,
 		Short:        fmt.Sprintf("Runs %s workload", virtMigrationTestName),
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				return
+			}
 			if !virtctl.IsInstalled() {
 				log.Fatalf("Failed to run virtctl. Check that it is installed, in PATH and working")
 			}
@@ -69,6 +77,11 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 			log.Infof("Test will schedule on and migrate from worker node [%v]", workerNodeName)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), virtMigrationNamespaceLabelSelector)
+				return
+			}
 			privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, virtMigrationTmpDirPattern, virtMigrationSSHKeyFileName)
 			if err != nil {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
@@ -88,6 +101,9 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["loadVMsIterations"] = loadVMsIterations
 			AdditionalVars["loadVMsPerIteration"] = loadVMsPerIteration
 			AdditionalVars["migrationQPS"] = migrationQPS
+			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 
 			setMetrics(cmd, metricsProfiles)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -103,9 +119,13 @@ func NewVirtMigration(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", virtMigrationDefaultIteration, "How many iterations of VM creations. The total number of VMs is iterations*iteration-vms")
 	cmd.Flags().IntVar(&vmsPerIteration, "iteration-vms", virtMigrationDefaultVMsPerIteration, "How many VMs to create in each iteration. The total number of VMs is iterations*iteration-vms")
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", virtMigrationDefaultDataVolumeCount, "Number of data volumes per VM")
+	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/containerdisks/fedora:41", "VM image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().IntVar(&loadVMsIterations, "load-iterations", virtMigrationDefaultLoadVMsIteration, "Number of iterations to create load VMs")
 	cmd.Flags().IntVar(&loadVMsPerIteration, "load-per-iteration", virtMigrationDefaultLoadVMsPerIteration, "Number of VMs to create in each load VM iteration")
 	cmd.Flags().IntVar(&migrationQPS, "migration-qps", virtMigrationDefaultMigrationQPS, "Number of concurrent calls to migrate")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }

@@ -17,6 +17,10 @@
 {{- $testNamespacesLabelValue := $testName -}}
 {{- $metricsBaseDirectory := $testName -}}
 ---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+
 metricsEndpoints:
 - indexer:
     type: local
@@ -93,7 +97,9 @@ jobs:
     inputVars:
       name: {{ $vmName }}
       counter: {{ .counter | toString }}
-      rootDiskImage: quay.io/containerdisks/fedora:41
+      rootDiskImage: {{.VM_IMAGE}}
+      vmCPU: {{.VM_CPU}}
+      vmMemory: {{.VM_MEMORY}}
       storageClassName: {{ .storageClassName }}
       vmLabels:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}

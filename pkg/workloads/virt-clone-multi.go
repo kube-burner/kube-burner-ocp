@@ -41,6 +41,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
 	var volumeSnapshotClassName string
 	var sshKeyPairPath string
+	var vmImage, vmCPU, vmMemory string
 	var useSnapshot bool
 	var namespaces int
 	var iterations int
@@ -50,7 +51,6 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 	var jobIterationDelay time.Duration
 	var testNamespaceBaseName string
 	var metricsProfiles []string
-	var cleanupOnly bool
 	var cleanup bool
 	var rc int
 
@@ -59,7 +59,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs virt-clone-multi workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			if cleanupOnly {
+			if cleanup {
 				return
 			}
 
@@ -74,7 +74,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 			storageClassName, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if cleanupOnly {
+			if cleanup {
 				log.Infof("Cleaning up all the resources from the previous run")
 				cleanupTestNamespaces(cmd.Context(), virtCloneMultiNamespaceLabelSelector)
 				return
@@ -111,16 +111,14 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["jobIterationDelay"] = jobIterationDelay
 			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
 			AdditionalVars["testNamespaceBaseName"] = testNamespaceBaseName
+			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 
 			setMetrics(cmd, metricsProfiles)
 
 			// Run workload once - kube-burner will handle namespace iterations
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
-
-			if cleanup {
-				log.Infof("Cleaning up all the resources from the current run")
-				cleanupTestNamespaces(cmd.Context(), virtCloneMultiNamespaceLabelSelector)
-			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -133,13 +131,15 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&namespaces, "namespaces", 2, "Number of namespaces to create")
 	cmd.Flags().IntVar(&iterations, "iterations", 5, "Number of iterations (batches) per namespace")
 	cmd.Flags().IntVar(&vmsPerIteration, "vms-per-iteration", 2, "Number of VMs per iteration")
+	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/containerdisks/fedora:41", "VM image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", 0, "Number of additional data volumes per VM (default: 0)")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 1*time.Minute, "Delay between namespace iterations")
 	cmd.Flags().StringVarP(&testNamespaceBaseName, "namespace", "n", virtCloneMultiTestName, "Base namespace name for the test")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.Flags().BoolVar(&cleanupOnly, "cleanup-only", false, "Only cleanup the resources created by the previous run. Do not run the test.")
-	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup the resources created by the test.")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 
 	return cmd
 }

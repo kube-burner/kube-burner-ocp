@@ -8,6 +8,8 @@
 {{- $sshPublicKeySecretName := "burner-clone-virt-ephemeral-restart" -}}
 
 global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
   measurements:
   - name: vmiLatency
   - name: dataVolumeLatency
@@ -66,7 +68,7 @@ jobs:
     replicas: 1
     inputVars:
       baseDataVolumeName: {{ $baseDataVolumeName }}
-      baseDataVolumeUrl: "docker://quay.io/containerdisks/fedora:41"
+      baseDataVolumeUrl: "docker://{{.VM_IMAGE}}"
       storageClassName: {{ .storageClassName }}
       baseDataVolumeSize: "6Gi"
       accessMode: {{ .accessMode }}
@@ -157,6 +159,8 @@ jobs:
         kind: DataSource
         name: {{ $baseDataSourceName }}
         namespace: {{ .testNamespace }}
+      vmCPU: {{.VM_CPU}}
+      vmMemory: {{.VM_MEMORY}}
       storageClassName: {{ .storageClassName }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}

@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: victim-{{.Iteration}}-{{.Replica}}
+spec:
+  replicas: {{.podReplicas}}
+  selector:
+    matchLabels:
+      app: etcd-victim
+      kube-burner.io/job-iteration: "{{.Iteration}}"
+      kube-burner.io/replica: "{{.Replica}}"
+  template:
+    metadata:
+      labels:
+        app: etcd-victim
+        kube-burner.io/job-iteration: "{{.Iteration}}"
+        kube-burner.io/replica: "{{.Replica}}"
+    spec:
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: etcd-victim
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: pause
+          image: {{.containerImage}}
+          resources:
+            requests:
+              cpu: 1m
+              memory: 4Mi

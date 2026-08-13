@@ -11,6 +11,8 @@
 
 ---
 global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
   measurements:
   - name: vmiLatency
   - name: dataVolumeLatency
@@ -76,7 +78,9 @@ jobs:
       vmName: "base-vm"
       rootdiskVolumeSource:
         registry:
-          url: "docker://quay.io/containerdisks/fedora:41"
+          url: "docker://{{.VM_IMAGE}}"
+      vmCPU: {{.VM_CPU}}
+      vmMemory: {{.VM_MEMORY}}
       storageClassName: {{ .storageClassName }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}

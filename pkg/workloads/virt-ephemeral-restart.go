@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cloud-bulldozer/go-commons/v2/ssh"
@@ -31,23 +32,32 @@ const (
 	virtEphemeralRestartTestName       = "virt-ephemeral-restart"
 )
 
+var (
+	virtEphemeralRestartNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, virtEphemeralRestartTestName)
+)
+
 // Returns virt-density workload
 func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
 	var volumeSnapshotClassName string
 	var sshKeyPairPath string
+	var vmImage, vmCPU, vmMemory string
 	var useSnapshot bool
 	var iterations int
 	var vmsPerIteration int
 	var testNamespace string
 	var metricsProfiles []string
 	var volumeAccessMode string
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtEphemeralRestartTestName,
 		Short:        "Runs virt-ephemeral-restart workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				return
+			}
 			if _, ok := accessModeTranslator[volumeAccessMode]; !ok {
 				log.Fatalf("Unsupported access mode - %s", volumeAccessMode)
 			}
@@ -59,6 +69,11 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 			storageClassName, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), virtEphemeralRestartNamespaceLabelSelector)
+				return
+			}
 			privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair(sshKeyPairPath, virtEphemeralRestartTmpDirPattern, virtEphemeralRestartSSHKeyFileName)
 			if err != nil {
 				log.Fatalf("Failed to generate SSH keys for the test - %v", err)
@@ -75,6 +90,9 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["vmsPerIteration"] = vmsPerIteration
 			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
 			AdditionalVars["vmGroups"] = generateLoopCounterSlice(iterations, 0)
+			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["VM_CPU"] = vmCPU
+			AdditionalVars["VM_MEMORY"] = vmMemory
 
 			setMetrics(cmd, metricsProfiles)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -89,7 +107,11 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&iterations, "iterations", 2, "Number of start iterations. The total number of VMs is iterations*iteration-vms")
 	cmd.Flags().IntVar(&vmsPerIteration, "iteration-vms", 10, "How many VMs to start simultaneously. The total number of VMs is iterations*iteration-vms")
 	cmd.Flags().StringVarP(&testNamespace, "namespace", "n", virtEphemeralRestartTestName, "Base name for the namespace to run the test in")
+	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/containerdisks/fedora:41", "VM image to be deployed")
+	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
+	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }
