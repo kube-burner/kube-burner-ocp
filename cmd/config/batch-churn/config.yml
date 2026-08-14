@@ -1,5 +1,6 @@
 {{- $chaosAction := .CHAOS_ACTION | default "" -}}
 {{- $chaosDelay := .CHAOS_DELAY | default "0" -}}
+{{- $chaosCycles := .CHAOS_CYCLES | default 3 | int -}}
 {{- $churnCycles := .CHURN_CYCLES | default 5 | int -}}
 {{- $churnDuration := .CHURN_DURATION | default "5m0s" -}}
 {{- $churnDelay := .CHURN_DELAY | default "30s" -}}
@@ -104,7 +105,7 @@ jobs:
     jobPause: {{.JOB_PAUSE}}
 {{ if $chaosAction }}
     hooks:
-    - cmd: ["chaos.sh", "{{ $chaosAction }}", "{{ $chaosDelay }}", "3"]
+    - cmd: ["chaos.sh", "{{ $chaosAction }}", "{{ $chaosDelay }}", "{{ $chaosCycles }}"]
       when: afterJobExecution
 {{ end }}
     watchers:
@@ -179,7 +180,7 @@ jobs:
 {{ end }}
 {{ if $chaosAction }}
     hooks:
-    - cmd: ["chaos.sh", "{{ $chaosAction }}", "{{ $chaosDelay }}", "3"]
+    - cmd: ["chaos.sh", "{{ $chaosAction }}", "{{ $chaosDelay }}", "{{ $chaosCycles }}"]
       when: afterJobExecution
 {{ end }}
     objects:

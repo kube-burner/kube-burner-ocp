@@ -1723,6 +1723,7 @@ Default watcher counts: 5000 secret watchers, 5000 configmap watchers, 2000 each
 | `--set INCREMENTAL_STEP_DELAY=<duration>` | Delay between incremental steps | 5m |
 | `--set CHAOS_ACTION=<action>` | Chaos action: `rollout`, `kill-apiserver`, `kill-node`, `kill-etcd` | (none) |
 | `--set CHAOS_DELAY=<seconds>` | Seconds to wait before chaos fires | 0 |
+| `--set CHAOS_CYCLES=<n>` | Number of times the chaos action is repeated | 3 |
 | `--set WATCHER_MODE=true` | Enable watcher-spam mode | false |
 
 ### Usage examples
@@ -1735,9 +1736,9 @@ kube-burner-ocp init -c config.yml --iterations 10 --churn-cycles 5
 kube-burner-ocp init -c config.yml --iterations 10 \
   --set INCREMENTAL_STEP_SIZE=2 --set INCREMENTAL_STEP_DELAY=5m
 
-# Kill the etcd leader node 60s after full load
+# Kill the etcd leader node 60s after full load (5 rounds)
 kube-burner-ocp init -c config.yml --iterations 10 --churn-cycles 5 \
-  --set CHAOS_ACTION=kill-node --set CHAOS_DELAY=60
+  --set CHAOS_ACTION=kill-node --set CHAOS_DELAY=60 --set CHAOS_CYCLES=5
 
 # Watcher-spam mode -- 20k direct watches + API server rollout
 kube-burner-ocp init -c config.yml --iterations 1 \
