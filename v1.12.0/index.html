@@ -3777,6 +3777,11 @@ optimization of the OLMv1 stack.</p>
 <td>0</td>
 </tr>
 <tr>
+<td><code>--set CHAOS_CYCLES=&lt;n&gt;</code></td>
+<td>Number of times the chaos action is repeated</td>
+<td>3</td>
+</tr>
+<tr>
 <td><code>--set WATCHER_MODE=true</code></td>
 <td>Enable watcher-spam mode</td>
 <td>false</td>
@@ -3791,9 +3796,9 @@ optimization of the OLMv1 stack.</p>
 <span class="go">kube-burner-ocp init -c config.yml --iterations 10 \</span>
 <span class="go">  --set INCREMENTAL_STEP_SIZE=2 --set INCREMENTAL_STEP_DELAY=5m</span>
 
-<span class="gp"># </span>Kill<span class="w"> </span>the<span class="w"> </span>etcd<span class="w"> </span>leader<span class="w"> </span>node<span class="w"> </span>60s<span class="w"> </span>after<span class="w"> </span>full<span class="w"> </span>load
+<span class="gp"># </span>Kill<span class="w"> </span>the<span class="w"> </span>etcd<span class="w"> </span>leader<span class="w"> </span>node<span class="w"> </span>60s<span class="w"> </span>after<span class="w"> </span>full<span class="w"> </span>load<span class="w"> </span><span class="o">(</span><span class="m">5</span><span class="w"> </span>rounds<span class="o">)</span>
 <span class="go">kube-burner-ocp init -c config.yml --iterations 10 --churn-cycles 5 \</span>
-<span class="go">  --set CHAOS_ACTION=kill-node --set CHAOS_DELAY=60</span>
+<span class="go">  --set CHAOS_ACTION=kill-node --set CHAOS_DELAY=60 --set CHAOS_CYCLES=5</span>
 
 <span class="gp"># </span>Watcher-spam<span class="w"> </span>mode<span class="w"> </span>--<span class="w"> </span>20k<span class="w"> </span>direct<span class="w"> </span>watches<span class="w"> </span>+<span class="w"> </span>API<span class="w"> </span>server<span class="w"> </span>rollout
 <span class="go">kube-burner-ocp init -c config.yml --iterations 1 \</span>
