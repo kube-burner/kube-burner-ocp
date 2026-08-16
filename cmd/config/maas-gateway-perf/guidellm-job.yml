@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: guidellm-{{.jobName}}-{{.Replica}}
+  namespace: {{.Namespace}}
+spec:
+  completions: {{.completions}}
+  parallelism: {{.parallelism}}
+  completionMode: Indexed
+  backoffLimit: 0
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+      restartPolicy: Never
+      containers:
+      - name: guidellm
+        image: {{.image}}
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          guidellm benchmark run &&
+          guidellm_parser.py \
+            --results=benchmarks.json \
+            --uuid={{.UUID}} \
+            --es-server={{.ES_SERVER}} \
+            --es-index={{.ES_INDEX}} \
+            --job-name={{.jobName}} \
+            --sample=${JOB_COMPLETION_INDEX} &&
+          sleep {{.pause}}
+        env:
+        {{ range $k, $v := .env }}
+        - name: {{ $k }}
+          value: "{{ $v }}"
+        {{ end }}
+        - name: HF_HOME
+          value: /results
+        volumeMounts:
+        - name: results
+          mountPath: /results
+        resources:
+          requests:
+            cpu: "2"
+            memory: 4Gi
+      volumes:
+      - name: results
+        emptyDir: {}

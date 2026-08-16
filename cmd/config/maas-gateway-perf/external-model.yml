@@ -1,0 +1,11 @@
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: ExternalModel
+metadata:
+  name: {{.providerName}}
+  namespace: {{.Namespace}}
+spec:
+  provider: {{.providerType}}
+  endpoint: llm-d-inference-sim.maas-perf-test.svc.cluster.local
+  targetModel: testmodel
+  credentialRef:
+    name: {{.providerName}}-creds
