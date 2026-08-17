@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 ACTION=${1:-""}
 HTTP_SERVER_ADDRESS=${2:-""}
 CONTAINER_NAME="cudn-nginx"
