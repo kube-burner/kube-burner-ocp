@@ -167,6 +167,7 @@ jobs:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
 {{ end }}
 
+{{ if not .skipRestartJob }}
 - name: restart-vms-{{ .counter }}
   measurements:
   - name: vmiLatency
@@ -184,7 +185,9 @@ jobs:
   - kubeVirtOp: restart
     labelSelector:
       {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+{{ end }}
 
+{{ if not .skipSnapshotJob }}
 - name: snapshot-vms-{{ .counter }}
   measurements:
   - name: volumeSnapshotLatency
@@ -223,6 +226,7 @@ jobs:
         value: "True"
       labelSelector:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+{{ end }}
 
 {{ if not .skipMigrationJob }}
 - name: migrate-vms-{{ .counter }}
