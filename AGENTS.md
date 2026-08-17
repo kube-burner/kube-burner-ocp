@@ -63,7 +63,7 @@ Every workload follows this rigid structure:
 - **Error handling:** `log.Fatal`/`log.Fatalf` for unrecoverable errors. No custom error types.
 - **Imports:** stdlib, external, internal (standard Go grouping).
 - **License:** Apache 2.0 header on all Go files.
-- **Testing:** No Go unit tests for most code. Testing is integration-only via BATS against a live cluster.
+- **Testing:** Primarily BATS integration tests against a live cluster; a small number of Go unit tests exist (e.g., `pkg/workloads/helpers_test.go`).
 
 ## CI
 
