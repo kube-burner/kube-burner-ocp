@@ -2,10 +2,13 @@
 apiVersion: cdi.kubevirt.io/v1beta1
 kind: DataVolume
 metadata:
-  name: {{.dvName}}
+  name: {{.dvNamePrefix}}-{{default 0 .Iteration}}
   annotations:
     cdi.kubevirt.io/storage.deleteAfterCompletion: "false"
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+{{- if .perNodeDV }}
+    volume.kubernetes.io/selected-node: {{if .Iteration}}{{index (splitList " " .workerNodes) .Iteration}}{{else}}{{index (splitList " " .workerNodes) 0}}{{end}}
+{{- end }}
 spec:
   source:
 {{- if eq (index . "cdiSourceType") "s3" }}

@@ -32,20 +32,21 @@ import (
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	storagev1 "k8s.io/api/storage/v1"
 
 	"github.com/spf13/cobra"
 )
 
 const (
-	bootstormNamespace    = "windows-bootstorm"
-	bootstormJobLabel     = "create-windows-vms"
+	defaultBootstormNamespace = "windows-bootstorm"
+	bootstormJobLabel         = "create-windows-vms"
 	sshMaxRetries         = 200
 	sshPollInterval       = 3 * time.Second
-	dvMaxRetries          = 600
+	dvMaxRetries          = 2400
 	defaultSSHConcurrency = 20
 )
 
-var sshConcurrencyLimit = defaultSSHConcurrency
+var bootstormNamespace = defaultBootstormNamespace
 
 type bootstormResult struct {
 	VMName        string
@@ -56,8 +57,11 @@ type bootstormResult struct {
 }
 
 func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
-	var windowsImageURL, storageClassName, volumeAccessMode, vmMemory, vmMemoryLimit, storageSize, cdiSourceType, cdiSourceS3Cred, nodeDistribution string
-	var vmsPerNode, vmCPU, vmCPULimit int
+	var windowsImageURL, storageClassName, volumeAccessMode, vmMemory, vmMemoryLimit, storageSize, cdiSourceType, cdiSourceS3Cred, nodeDistribution, sourceDVName, namespace, evictionStrategy string
+	var vmsPerNode, vmCPU, vmCPULimit, vmCPURequest int
+	var perNodeDV, clearNodeCaches bool
+	var createdSCName string
+	var sshConcurrencyLimit int
 	var bulkSleepTime time.Duration
 	var metricsProfiles []string
 	var rc int
@@ -78,14 +82,31 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			if nodeDistribution != "round-robin" && nodeDistribution != "sequential" {
 				log.Fatalf("Unsupported node-distribution: %s (use round-robin or sequential)", nodeDistribution)
 			}
+			if vmCPURequest == 0 {
+				vmCPURequest = vmCPU
+			}
+			bootstormNamespace = namespace
 			storageClassName, _ = getStorageAndSnapshotClasses(storageClassName, false, true)
+			if perNodeDV {
+				scName, err := createSnapshotCloneSC(context.Background(), storageClassName)
+				if err != nil {
+					log.Fatalf("Failed to create snapshot clone StorageClass: %v", err)
+				}
+				createdSCName = scName
+				storageClassName = scName
+			}
 			// Clean up any leftover namespace from a crashed previous run
-			cleanupTestNamespaces(context.Background(), "kube-burner.io/test-name=windows-bootstorm")
-			clearWorkerNodeCaches()
+			cleanupTestNamespaces(context.Background(), "kube-burner.io/test-name="+namespace)
+			if clearNodeCaches {
+				clearWorkerNodeCaches()
+			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			k8s := getK8SConnector()
-			workerList, _ := k8s.ClientSet().CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/worker"})
+			workerList, err := k8s.ClientSet().CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/worker"})
+			if err != nil {
+				log.Fatalf("Failed to list worker nodes: %v", err)
+			}
 			workerNames := make([]string, 0, len(workerList.Items))
 			for _, n := range workerList.Items {
 				workerNames = append(workerNames, n.Name)
@@ -102,11 +123,16 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
 			AdditionalVars["vmMemory"] = vmMemory
 			AdditionalVars["vmCPU"] = vmCPU
+			AdditionalVars["vmCPURequest"] = vmCPURequest
 			AdditionalVars["vmCPULimit"] = vmCPULimit
 			AdditionalVars["vmMemoryLimit"] = vmMemoryLimit
 			AdditionalVars["storageSize"] = storageSize
 			AdditionalVars["cdiSourceType"] = cdiSourceType
 			AdditionalVars["cdiSourceS3Cred"] = cdiSourceS3Cred
+			AdditionalVars["sourceDVName"] = sourceDVName
+			AdditionalVars["perNodeDV"] = perNodeDV
+			AdditionalVars["namespace"] = namespace
+			AdditionalVars["evictionStrategy"] = evictionStrategy
 			AdditionalVars["workerNodes"] = strings.Join(workerNames, " ")
 			AdditionalVars["workerCount"] = len(workerNames)
 			AdditionalVars["nodeDistribution"] = nodeDistribution
@@ -118,7 +144,7 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 
 			if rc == 0 {
-				results := startAndMeasureVMs(cmd.Context(), bulkSleepTime)
+				results := startAndMeasureVMs(cmd.Context(), bulkSleepTime, sshConcurrencyLimit)
 				if len(results) == 0 {
 					log.Error("Bootstorm measurement produced no results")
 					rc = 1
@@ -142,7 +168,10 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 			stopAndDeleteBootstormVMs(context.Background())
 			deleteBootstormDVs(context.Background())
-			cleanupTestNamespaces(context.Background(), "kube-burner.io/test-name=windows-bootstorm")
+			cleanupTestNamespaces(context.Background(), "kube-burner.io/test-name="+namespace)
+			if createdSCName != "" {
+				deleteSnapshotCloneSC(context.Background(), createdSCName)
+			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -154,19 +183,25 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "PVC access mode: RO, RWO, RWX")
 	cmd.Flags().StringVar(&vmMemory, "vm-memory", "2G", "Memory request per VM")
 	cmd.Flags().StringVar(&vmMemoryLimit, "vm-memory-limit", "4G", "Memory limit per VM")
-	cmd.Flags().IntVar(&vmCPU, "vm-cpu", 1, "CPU request sockets per VM")
-	cmd.Flags().IntVar(&vmCPULimit, "vm-cpu-limit", 2, "CPU limit sockets per VM")
+	cmd.Flags().IntVar(&vmCPU, "vm-cpu", 1, "CPU cores per VM")
+	cmd.Flags().IntVar(&vmCPURequest, "vm-cpu-request", 0, "CPU request per VM (defaults to --vm-cpu if unset)")
+	cmd.Flags().IntVar(&vmCPULimit, "vm-cpu-limit", 2, "CPU limit per VM")
 	cmd.Flags().StringVar(&storageSize, "storage-size", "76Gi", "Root disk storage size")
 	cmd.Flags().StringVar(&cdiSourceType, "cdi-source-type", "http", "CDI source type: http or s3")
 	cmd.Flags().StringVar(&cdiSourceS3Cred, "cdi-source-s3-cred", "", "Secret name for S3 CDI source authentication")
+	cmd.Flags().StringVar(&sourceDVName, "source-dv-name", "windows-bootstorm-source-dv", "Name of the source DataVolume for PVC cloning")
+	cmd.Flags().StringVar(&namespace, "namespace", defaultBootstormNamespace, "Namespace for bootstorm VMs and DataVolumes")
+	cmd.Flags().StringVar(&evictionStrategy, "eviction-strategy", "LiveMigrate", "VM eviction strategy: LiveMigrate or None")
+	cmd.Flags().BoolVar(&perNodeDV, "per-node-dv", false, "Create one source DV per worker node (required for node-local storage like LVMS)")
+	cmd.Flags().BoolVar(&clearNodeCaches, "clear-node-caches", true, "Clear worker node buffer caches before the benchmark")
 	cmd.Flags().DurationVar(&bulkSleepTime, "bulk-sleep", 30*time.Second, "Rest duration between VM start bulks")
-	cmd.Flags().StringVar(&nodeDistribution, "node-distribution", "round-robin", "VM node assignment strategy: round-robin or sequential")
+	cmd.Flags().StringVar(&nodeDistribution, "node-distribution", "sequential", "VM node assignment strategy: sequential or round-robin")
 	cmd.Flags().IntVar(&sshConcurrencyLimit, "ssh-concurrency-limit", defaultSSHConcurrency, "Number of concurrent SSH measurement threads")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
 }
 
-func startAndMeasureVMs(ctx context.Context, bulkSleepTime time.Duration) []bootstormResult {
+func startAndMeasureVMs(ctx context.Context, bulkSleepTime time.Duration, sshConcurrencyLimit int) []bootstormResult {
 	k8sConnector := getK8SConnector()
 	vmGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachines"}
 
@@ -327,7 +362,7 @@ func waitForSSH(ctx context.Context, vmName string, startTime time.Time) bootsto
 			break
 		}
 
-		output, err := exec.CommandContext(ctx, "virtctl", "ssh",
+		output, _ := exec.CommandContext(ctx, "virtctl", "ssh",
 			"--local-ssh-opts=-o BatchMode=yes",
 			"--local-ssh-opts=-o PasswordAuthentication=no",
 			"--local-ssh-opts=-o ConnectTimeout=2",
@@ -340,7 +375,7 @@ func waitForSSH(ctx context.Context, vmName string, startTime time.Time) bootsto
 		).CombinedOutput()
 
 		outStr := strings.ToLower(string(output))
-		if err == nil || strings.Contains(outStr, "permission denied") || strings.Contains(outStr, "verification failed") {
+		if strings.Contains(outStr, "permission denied") || strings.Contains(outStr, "verification failed") {
 			elapsed := float64(time.Since(startTime).Microseconds()) / 1000.0
 			node := getVMINode(ctx, vmName)
 			log.Infof("SSH accessible: %s on %s in %.1fms", vmName, node, elapsed)
@@ -519,11 +554,71 @@ func clearWorkerNodeCaches() {
 	}
 	for i := 0; i < 3; i++ {
 		for _, node := range nodes.Items {
-			_ = exec.Command("oc", "debug", "node/"+node.Name, "--", "chroot", "/host", "sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches").Run()
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			_ = exec.CommandContext(ctx, "oc", "debug", "node/"+node.Name, "--", "chroot", "/host", "sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches").Run()
+			cancel()
 		}
 		if i < 2 {
 			time.Sleep(3 * time.Second)
 		}
 	}
 	log.Infof("Cleared buffer caches on %d worker nodes", len(nodes.Items))
+}
+
+func createSnapshotCloneSC(ctx context.Context, baseSCName string) (string, error) {
+	k8s := getK8SConnector()
+	newName := baseSCName + "-bootstorm"
+
+	// Check if it already exists (idempotent)
+	if _, err := k8s.ClientSet().StorageV1().StorageClasses().Get(ctx, newName, metav1.GetOptions{}); err == nil {
+		log.Infof("StorageClass %s already exists, reusing", newName)
+		return newName, nil
+	}
+
+	baseSC, err := k8s.ClientSet().StorageV1().StorageClasses().Get(ctx, baseSCName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get base StorageClass %s: %v", baseSCName, err)
+	}
+
+	newSC := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: newName,
+			Annotations: map[string]string{
+				"cdi.kubevirt.io/clone-strategy": "snapshot",
+			},
+		},
+		Provisioner:          baseSC.Provisioner,
+		Parameters:           baseSC.Parameters,
+		ReclaimPolicy:        baseSC.ReclaimPolicy,
+		VolumeBindingMode:    baseSC.VolumeBindingMode,
+		AllowVolumeExpansion: baseSC.AllowVolumeExpansion,
+		MountOptions:         baseSC.MountOptions,
+	}
+
+	if _, err := k8s.ClientSet().StorageV1().StorageClasses().Create(ctx, newSC, metav1.CreateOptions{}); err != nil {
+		return "", fmt.Errorf("failed to create StorageClass %s: %v", newName, err)
+	}
+	log.Infof("Created StorageClass %s with snapshot clone strategy", newName)
+
+	// Wait for CDI to create the StorageProfile
+	for i := 0; i < 30; i++ {
+		time.Sleep(1 * time.Second)
+		output, err := exec.CommandContext(ctx, "kubectl", "get", "storageprofile", newName,
+			"-o", "jsonpath={.status.cloneStrategy}").Output()
+		if err == nil && strings.TrimSpace(string(output)) != "" {
+			log.Infof("StorageProfile %s ready with cloneStrategy: %s", newName, strings.TrimSpace(string(output)))
+			return newName, nil
+		}
+	}
+	log.Warnf("StorageProfile for %s not ready after 30s, proceeding anyway", newName)
+	return newName, nil
+}
+
+func deleteSnapshotCloneSC(ctx context.Context, scName string) {
+	k8s := getK8SConnector()
+	if err := k8s.ClientSet().StorageV1().StorageClasses().Delete(ctx, scName, metav1.DeleteOptions{}); err != nil {
+		log.Warnf("Failed to delete StorageClass %s: %v", scName, err)
+	} else {
+		log.Infof("Deleted StorageClass %s", scName)
+	}
 }

@@ -12,9 +12,9 @@ spec:
         kubevirt.io/vm: windows-bootstorm-{{.Iteration}}-{{.Replica}}
     spec:
       nodeSelector:
-        kubernetes.io/hostname: {{if eq .nodeDistribution "sequential"}}{{index (splitList " " .workerNodes) (div .Iteration .vmsPerNode)}}{{else}}{{index (splitList " " .workerNodes) (mod .Iteration .workerCount)}}{{end}}
+        kubernetes.io/hostname: {{if eq .nodeDistribution "sequential"}}{{index (splitList " " .workerNodes) (div (default 0 .Iteration) (default 1 .vmsPerNode))}}{{else}}{{index (splitList " " .workerNodes) (mod (default 0 .Iteration) (default 1 .workerCount))}}{{end}}
       terminationGracePeriodSeconds: 180
-      evictionStrategy: LiveMigrate
+      evictionStrategy: {{.evictionStrategy}}
       domain:
         firmware:
           bootloader:
@@ -78,7 +78,7 @@ spec:
           type: q35
         resources:
           requests:
-            cpu: {{.vmCPU}}
+            cpu: {{.vmCPURequest}}
             memory: {{.vmMemory}}
           limits:
             cpu: {{.vmCPULimit}}
@@ -95,11 +95,14 @@ spec:
       name: windows-bootstorm-rootdisk-{{.Iteration}}-{{.Replica}}
       annotations:
         descheduler.alpha.kubernetes.io/evict: "true"
+{{- if .perNodeDV }}
+        volume.kubernetes.io/selected-node: {{if eq .nodeDistribution "sequential"}}{{index (splitList " " .workerNodes) (div (default 0 .Iteration) (default 1 .vmsPerNode))}}{{else}}{{index (splitList " " .workerNodes) (mod (default 0 .Iteration) (default 1 .workerCount))}}{{end}}
+{{- end }}
     spec:
       source:
         pvc:
           namespace: {{.sourceNamespace}}
-          name: {{.sourceDVName}}
+          name: {{.sourceDVName}}-{{if .perNodeDV}}{{if eq .nodeDistribution "sequential"}}{{div (default 0 .Iteration) (default 1 .vmsPerNode)}}{{else}}{{mod (default 0 .Iteration) (default 1 .workerCount)}}{{end}}{{else}}0{{end}}
       storage:
         accessModes:
         - {{.accessMode}}

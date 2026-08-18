@@ -1,7 +1,7 @@
 {{- $testNamespacesLabelKey := "kube-burner.io/test-name" -}}
-{{- $testNamespacesLabelValue := "windows-bootstorm" -}}
-{{- $namespace := "windows-bootstorm" -}}
-{{- $sourceDVName := "windows-bootstorm-source-dv" -}}
+{{- $testNamespacesLabelValue := .namespace -}}
+{{- $namespace := .namespace -}}
+{{- $sourceDVName := .sourceDVName -}}
 
 global:
   gc: {{.GC}}
@@ -26,7 +26,7 @@ metricsEndpoints:
 jobs:
 - name: create-source-dv
   jobType: create
-  jobIterations: 1
+  jobIterations: {{if .perNodeDV}}{{.workerCount}}{{else}}1{{end}}
   qps: {{.QPS}}
   burst: {{.BURST}}
   namespacedIterations: false
@@ -39,8 +39,8 @@ jobs:
     pod-security.kubernetes.io/warn: privileged
   verifyObjects: true
   errorOnVerify: true
-  waitWhenFinished: false
-  podWait: true
+  waitWhenFinished: true
+  podWait: false
   maxWaitTimeout: 1h
   jobPause: 10s
   cleanup: false
@@ -48,13 +48,15 @@ jobs:
     - objectTemplate: templates/dv.yml
       replicas: 1
       inputVars:
-        dvName: {{ $sourceDVName }}
+        dvNamePrefix: {{ $sourceDVName }}
+        perNodeDV: {{.perNodeDV}}
         windowsImageURL: {{.windowsImageURL}}
         storageClassName: {{.storageClassName}}
         accessMode: {{.accessMode}}
         storageSize: {{.storageSize}}
         cdiSourceType: {{.cdiSourceType}}
         cdiSourceS3Cred: {{.cdiSourceS3Cred}}
+        workerNodes: {{.workerNodes}}
       waitOptions:
         customStatusPaths:
         - key: '(.conditions.[] | select(.type == "Ready")).status'
@@ -86,13 +88,16 @@ jobs:
       inputVars:
         sourceNamespace: {{ $namespace }}
         sourceDVName: {{ $sourceDVName }}
+        perNodeDV: {{.perNodeDV}}
         storageClassName: {{.storageClassName}}
         accessMode: {{.accessMode}}
         storageSize: {{.storageSize}}
         vmMemory: {{.vmMemory}}
         vmMemoryLimit: {{.vmMemoryLimit}}
         vmCPU: {{.vmCPU}}
+        vmCPURequest: {{.vmCPURequest}}
         vmCPULimit: {{.vmCPULimit}}
+        evictionStrategy: {{.evictionStrategy}}
         workerNodes: {{.workerNodes}}
         workerCount: {{.workerCount}}
         nodeDistribution: {{.nodeDistribution}}
