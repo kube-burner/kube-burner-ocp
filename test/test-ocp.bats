@@ -257,7 +257,7 @@ teardown_file() {
     STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
   fi
   run_cmd ${KUBE_BURNER_OCP} virt-capacity-benchmark ${STORAGE_PARAMETER} --max-iterations 2  --data-volume-count 2 --vms 2 --skip-migration-job --skip-resize-job
-  run_cmd kube-burner-ocp virt-capacity-benchmark --cleanup-only
+  run_cmd ${KUBE_BURNER_OCP} virt-capacity-benchmark --cleanup-only
   for iteration in 0 1; do
     check_metric_recorded ./virt-capacity-benchmark/iteration-${iteration} create-vms-${iteration} vmiLatency vmReadyLatency
     check_quantile_recorded ./virt-capacity-benchmark/iteration-${iteration} create-vms-${iteration} vmiLatency VMReady
@@ -277,7 +277,7 @@ teardown_file() {
     STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
   fi
   run_cmd ${KUBE_BURNER_OCP} virt-parallel ${STORAGE_PARAMETER} --max-iterations 2 --data-volume-count 2 --initial-vms 2 --increment 2 --skip-migration-job --skip-resize-job
-  run_cmd kube-burner-ocp virt-parallel --cleanup-only
+  run_cmd ${KUBE_BURNER_OCP} virt-parallel --cleanup-only
   for iteration in 0 1; do
     check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} vmiLatency vmReadyLatency
     check_quantile_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} vmiLatency VMReady
@@ -385,6 +385,49 @@ teardown_file() {
     --metadata-iterations=1 \
     --metadata-iterations-delay=1s \
     --num-watchers=1 \
+    --uuid=${UUID}
+}
+
+# bats test_tags=workload:batch-churn
+@test "batch-churn: basic execution with churn" {
+  cd ../../cmd/config/batch-churn
+  run_cmd ${KUBE_BURNER_OCP} init \
+    -c config.yml \
+    --iterations=2 \
+    --churn-cycles=1 \
+    --churn-delay=5s \
+    --set DEPLOYMENT_COUNT=2 \
+    --set UNIQUE_SECRETS=1 \
+    --set UNIQUE_CMS=1 \
+    --set UNIQUE_KV=2 \
+    --set UNIQUE_KV_LEN=8 \
+    --set COMMON_SECRETS=1 \
+    --set COMMON_SECRET_FILES=1 \
+    --set COMMON_SECRET_FILE_SIZE=512 \
+    --set COMMON_CMS=1 \
+    --set COMMON_CM_SIZE=512 \
+    --set ENV_VARS=0 \
+    --set POD_LABELS=0 \
+    --set POD_ANNOTATIONS=0 \
+    --uuid=${UUID}
+}
+
+# bats test_tags=workload:batch-churn
+@test "batch-churn: watcher-spam mode" {
+  cd ../../cmd/config/batch-churn
+  run_cmd ${KUBE_BURNER_OCP} init \
+    -c config.yml \
+    --iterations=1 \
+    --set WATCHER_MODE=true \
+    --set SECRET_WATCHERS=10 \
+    --set CONFIGMAP_WATCHERS=10 \
+    --set NODE_WATCHERS=5 \
+    --set ENDPOINT_WATCHERS=5 \
+    --set SA_WATCHERS=5 \
+    --set EVENT_WATCHERS=5 \
+    --set POD_WATCHERS=5 \
+    --set RESOURCE_SIZE=512 \
+    --set JOB_PAUSE=30s \
     --uuid=${UUID}
 }
 

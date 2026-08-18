@@ -51,7 +51,6 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	var minimalVolumeIncreaseSize int
 	var skipResizeJob bool
 	var metricsProfiles []string
-	var cleanupOnly bool
 	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
@@ -59,7 +58,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 		Short:        "Runs capacity-benchmark workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
-			if cleanupOnly {
+			if cleanup {
 				return
 			}
 
@@ -89,7 +88,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if cleanupOnly {
+			if cleanup {
 				log.Infof("Cleaning up all the resources from the previous run")
 				cleanupTestNamespaces(cmd.Context(), virtCapacityBenchmarkNamespaceLabelSelector)
 				return
@@ -156,10 +155,6 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 					break
 				}
 			}
-			if cleanup {
-				log.Infof("Cleaning up all the resources from the current run")
-				cleanupTestNamespaces(cmd.Context(), virtCapacityBenchmarkNamespaceLabelSelector)
-			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -179,7 +174,6 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&minimalVolumeIncreaseSize, "min-vol-inc-size", 0, "Minimal volume increment size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.Flags().BoolVar(&cleanupOnly, "cleanup-only", false, "Only cleanup the resource created by the previous run. Do not run the test.")
-	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup the resource created by the test.")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }

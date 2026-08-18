@@ -8,6 +8,8 @@
 {{- $sshPublicKeySecretName := "burner-clone-virt-ephemeral-restart" -}}
 
 global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
   measurements:
   - name: vmiLatency
   - name: dataVolumeLatency

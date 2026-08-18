@@ -1,0 +1,7 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{.JobName}}-common-cm-{{.Replica}}
+data:
+  data: "{{ randAlphaNum (.commonCMSize | int) }}"

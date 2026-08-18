@@ -43,7 +43,7 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 	var prometheusStep time.Duration
 	var uuid string
 	var rc int
-	var prometheusURL, prometheusToken string
+	var prometheusURL, prometheusToken, prometheusTokenFile string
 	var tarballName string
 	var indexer config.MetricsEndpoint
 	var clusterMetadataMap map[string]any
@@ -70,6 +70,7 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 			if wh.MetricsEndpoint == "" {
 				prometheusURL = wh.PrometheusURL
 				prometheusToken = wh.PrometheusToken
+				prometheusTokenFile = wh.PrometheusTokenFile
 				if prometheusURL == "" {
 					prometheusURL, prometheusToken, err = wh.MetadataAgent.GetPrometheus()
 					if err != nil {
@@ -80,6 +81,7 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 			indexer = config.MetricsEndpoint{
 				Endpoint:      prometheusURL,
 				Token:         prometheusToken,
+				TokenFile:     prometheusTokenFile,
 				Step:          prometheusStep,
 				Metrics:       metricsProfiles,
 				SkipTLSVerify: true,

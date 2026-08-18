@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
 	"time"
 
@@ -25,6 +26,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	virtDensityNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, "virt-density")
+)
+
 // Returns virt-density workload
 func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var vmImage, deletionStrategy, churnMode, vmCPU, vmMemory string
@@ -33,12 +38,18 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var namespacedIterations, mounts bool
 	var churnDelay, churnDuration time.Duration
 	var metricsProfiles []string
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "virt-density",
 		Short:        "Runs virt-density workload",
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), virtDensityNamespaceLabelSelector)
+				return
+			}
 			totalVMs := clusterMetadata.WorkerNodesCount * vmsPerNode
 			vmCount, err := wh.MetadataAgent.GetCurrentVMICount()
 
@@ -82,5 +93,6 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }
