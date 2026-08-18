@@ -205,23 +205,20 @@ Job 2 deletes namespaces without waiting (`waitForDeletion: false`), then Job 3 
 
 ### External SSH Ingress Check (`--bgp` only)
 
-When `--bgp` is enabled, CUDN routes are advertised outside the cluster, and this workload additionally validates that an **external client can SSH directly into a CUDN pod's IP address** — the ingress traffic pattern customers actually see, which the other checks in this workload don't cover (`--gateway-check` validates namespace→gateway egress, not external→pod ingress).
+When `--bgp` is enabled, CUDN routes are advertised outside the cluster, and this workload additionally validates that an **external client can SSH directly into a CUDN pod's IP address** — simulating the ingress traffic pattern.
 
 **Requirements:**
-- `--bastion-cidr` must be set to the bastion host's source CIDR (e.g. `192.168.1.10/32`) — this is threaded into the `np-allow-cudn-ingress.yml` NetworkPolicy as an `ipBlock` rule on port `ssh`, since the bastion is outside the cluster and can't be matched by `podSelector`/`namespaceSelector`.
-- Both `kube-burner-ocp` **and** the hook script it invokes must run **from the bastion host itself** — this is a raw L3 SSH connection to each pod's CUDN IP (not through a Service/Route), so it only works from a host with a BGP-advertised route to the CUDN pod subnets.
-- `oc`, `jq`, and `ssh` must be on the bastion's `PATH`.
-- The cluster's `FRRConfiguration` (whichever one peers with the bastion) should have `toAdvertise: {allowed: {mode: all}}` on that neighbor so the CUDN pod subnet routes are actually sent to the bastion. Confirm with `podman exec frr vtysh -c "show bgp summary"` on the bastion — `PfxRcd` should be non-zero for every neighbor once `RouteAdvertisements` objects exist.
+- `--external-host` must be set to the external host's IP address (e.g. `192.168.1.10`) — this is appended with `/32` and threaded into the `np-allow-cudn-ingress.yml` NetworkPolicy as an `ipBlock` rule on port `2222`, since the external host is outside the cluster and can't be matched by `podSelector`/`namespaceSelector`.
+- Both `kube-burner-ocp` **and** the hook script it invokes must run **from the external host itself** — this is a raw L3 SSH connection to each pod's CUDN IP (not through a Service/Route), so it only works from a host with a BGP-advertised route to the CUDN pod subnets.
+- `oc`, `jq`, `ssh`, `git`, and `podman` must be on the external host's `PATH`.
+- BGP setup is handled automatically by the `cudn-bgp-setup.sh` pre-job hook which clones [jcaamano/frr-k8s](https://github.com/jcaamano/frr-k8s), runs the FRR demo, applies an FRRConfiguration to the cluster, and configures route redistribution.
 
 **Mechanism:**
 1. `cudn-density.go`'s `Run` generates a fresh, ephemeral SSH keypair per invocation (`github.com/cloud-bulldozer/go-commons/v2/ssh.GenerateSSHKeyPair`, the same helper every `virt-*` workload uses) — no key material is ever committed to a repo or baked into an image.
-2. The public half is injected into the cluster as a per-namespace `Secret` ([`templates/secret_ssh_public.yml`](templates/secret_ssh_public.yml)) and mounted into each `nginx-ssh` server pod at `/etc/ssh-authorized-keys/authorized_keys`, matching `sshd_config`'s `Match User sshtest` block in the [`nginx-ssh`](https://github.com/cloud-bulldozer/images/tree/main/nginx-ssh) image.
-3. Server pods run as root (`runAsUser: 0`) because `sshd` needs to `setuid()` into the target login user (`sshtest`) after authentication. The default capabilities granted to a root container by CRI-O already include everything `sshd` needs (SYS_CHROOT for privsep, SETUID/SETGID for user switching), so no explicit `capabilities.add` is required — only [`scc-rolebinding.yml`](scc-rolebinding.yml) binding to `system:openshift:scc:privileged` so the pod is admitted with `runAsUser: 0`.
-4. Kubernetes always mounts a `Secret` volume's directory as world-writable (`1777`) regardless of `defaultMode` (which only affects file permissions), which `sshd`'s `StrictModes` check rejects with `Authentication refused: bad ownership or modes for directory`. The [`nginx-ssh`](https://github.com/cloud-bulldozer/images/tree/main/nginx-ssh) image's `sshd_config` sets `StrictModes no` globally to work around this (it's not a valid `Match`-block directive).
-5. Once all resources are up, a `beforeCleanup` hook ([`../scripts/cudn-ssh-test.sh`](../scripts/cudn-ssh-test.sh), adapted from a [gist by @jtaleric](https://gist.github.com/venkataanil/50cef5235f1f870982666b7ff81ac830)) queries `oc get pod -l kube-burner.io/job=cudn-density,app=nginx -A -o json`, extracts each pod's CUDN IP from the `k8s.ovn.org/pod-networks` annotation, and SSHes into each one in parallel as the `sshtest` user, writing one NDJSON result line per pod to `/tmp/kube-burner-ssh-results-<uuid>.ndjson`.
-6. The `sshCheck` measurement's `Stop()` runs immediately after this hook completes (kube-burner fires `beforeCleanup` before stopping/indexing measurements), reads that file, and indexes the results — no dedicated indexing plumbing was needed beyond a normal kube-burner measurement.
-
-> Verified end-to-end on baremetal (10 iterations, `--namespaces-per-cudn=5`, 20 server pods): all 20 SSH checks succeeded with P50/P99 latency of 235ms/242ms. The only `sshd_config` change required beyond the stock image was `StrictModes no` (for the Kubernetes Secret volume permission mismatch).
+2. The public half is injected into the cluster as a per-namespace `Secret` ([`templates/secret_ssh_public.yml`](templates/secret_ssh_public.yml)) and mounted into each `nginx-ssh` server pod at `/etc/ssh-authorized-keys/authorized_keys`, matching `sshd_config`'s `AuthorizedKeysFile` directive in the [`nginx-ssh`](https://github.com/cloud-bulldozer/images/tree/main/nginx-ssh) image.
+3. Server pods run as non-root (UID 1001, user `sshtest`). The `nginx-ssh` image runs `sshd` on port 2222 without privilege separation, accepting only pubkey authentication — no `runAsUser: 0`, privileged SCC, or special capabilities are required.
+4. Once all resources are up and RouteAdvertisements reach `Accepted` state, a `beforeCleanup` hook ([`../scripts/cudn-ssh-test.sh`](../scripts/cudn-ssh-test.sh)) queries `oc get pod -l kube-burner.io/job=cudn-density,app=nginx -A -o json`, extracts each pod's CUDN IP from the `k8s.ovn.org/pod-networks` annotation, and SSHes into each one in parallel on port 2222 as the `sshtest` user, writing one NDJSON result line per pod to `/tmp/kube-burner-ssh-results-<uuid>.ndjson`.
+5. The `sshCheck` measurement's `Stop()` runs immediately after this hook completes (kube-burner fires `beforeCleanup` before stopping/indexing measurements), reads that file, and indexes the results.
 
 ---
 
@@ -237,9 +234,9 @@ Standard kube-burner pod latency measurement tracking `PodScheduled`, `Initializ
 
 Custom measurement (`cudnLatency`) that tracks how long each CUDN takes from creation to `NetworkAllocationSucceeded=True`. Uses the condition's `lastTransitionTime` for accurate measurement rather than wall-clock time. Results are indexed as `cudnLatencyMeasurement` documents with `networkAllocLatency` in milliseconds.
 
-### SSH Check (`--bgp` only)
+### SSH Check (`--ssh-latency-check` only)
 
-Custom measurement (`sshCheck`) that tracks external SSH connectivity to each `nginx-ssh` server pod over its CUDN IP address — this validates the **ingress** traffic pattern (external client → CUDN pod), which is common with customers but wasn't otherwise covered by this workload's north-south ([`--gateway-check`](#with-gateway-check)) or intra-CUDN checks.
+Custom measurement (`sshCheck`) that tracks external SSH connectivity to each `nginx-ssh` server pod over its CUDN IP address — this validates the **ingress** traffic pattern (external client → CUDN pod).
 
 The actual SSH attempts happen in a `beforeCleanup` hook ([`cudn-ssh-test.sh`](../scripts/cudn-ssh-test.sh)) run once all resources are up but before job cleanup; the measurement then reads the hook's results and indexes them. See [External SSH Ingress Check](#external-ssh-ingress-check-bgp-only) for the full mechanism. Results are indexed as `sshCheckMeasurement` documents with `success` and `sshLatency` (milliseconds, successful checks only) per pod; the job fails if more than 10% of checks fail.
 
@@ -335,10 +332,11 @@ kube-burner-ocp cudn-density \
 kube-burner-ocp cudn-density \
   --iterations=50 \
   --bgp \
-  --bastion-cidr=192.168.1.10/32
+  --external-host=192.168.1.10 \
+  --ssh-latency-check
 ```
 
-See [External SSH Ingress Check](#external-ssh-ingress-check-bgp-only) below — **must be run from the bastion host** (the host with the BGP-advertised route to the CUDN pod subnets).
+See [External SSH Ingress Check](#external-ssh-ingress-check-bgp-only) below — **must be run from the external host** (the host with the BGP-advertised route to the CUDN pod subnets).
 
 ### With pprof and OpenSearch Indexing
 
@@ -374,9 +372,11 @@ kube-burner-ocp cudn-density \
 | `--incremental-pattern` | `linear` | Incremental load pattern: `linear` or `exponential` |
 | `--incremental-exp-base` | `2.0` | Base for exponential incremental pattern (must be > 1.0) |
 | `--gateway-check` | `false` | Enable [default gateway reachability check](#with-gateway-check) from each namespace (validates north-south connectivity under CUDN scale) |
-| `--bgp` | `false` | Enable for each CUDN. CUDN will be exported outside the cluster when BGP is enabled. When --gateway-check=true, cluster default gateway sees the POD IP Address instead of NODE IP Address in the traffic. User has to setup external FRR on the default gateway node before running the kube-burner. Also enables the [external SSH ingress check](#external-ssh-ingress-check-bgp-only) |
-| `--bastion-cidr` | *(required if `--bgp`)* | Source CIDR of the bastion host, allowed through the CUDN NetworkPolicy on the ssh port. See [External SSH Ingress Check](#external-ssh-ingress-check-bgp-only) |
-| `--ssh-key-path` | *(temp dir)* | Directory to save the ephemeral SSH keypair generated for the `--bgp` SSH check |
+| `--bgp` | `false` | Enable for each CUDN. CUDN will be exported outside the cluster when BGP is enabled. When --gateway-check=true, cluster default gateway sees the POD IP Address instead of NODE IP Address in the traffic. BGP setup on the external host is handled automatically by a pre-job hook. Also enables the [external SSH ingress check](#external-ssh-ingress-check-bgp-only) when combined with `--ssh-latency-check` |
+| `--external-host` | *(required if `--bgp`)* | IP address of the external host running the SSH check, used for BGP setup and the CUDN NetworkPolicy ipBlock rule (appended with `/32`). See [External SSH Ingress Check](#external-ssh-ingress-check-bgp-only) |
+| `--ssh-latency-check` | `false` | Enable external SSH latency check against CUDN server pods (requires `--bgp`). Captures per-pod SSH latency as an indexed metric |
+| `--ssh-load-test` | `false` | Enable SSH load test — parallel connections to all pods for the specified duration (requires `--bgp`). Runs after `--ssh-latency-check` if both are set |
+| `--ssh-load-test-duration` | `5m` | Duration to run the SSH load test |
 | `--metrics-profile` | `metrics.yml` | Comma-separated list of [metrics profiles](#metrics-profiles) to use |
 | `--gc` | `true` | Garbage collect created resources on completion. See [Cleanup](#cleanup) |
 
@@ -466,7 +466,7 @@ oc delete clusteruserdefinednetworks --all
 | [`np-allow-app-egress.yml`](np-allow-app-egress.yml) | Egress from sampleapp to nginx (named ports, CUDN group scoped) |
 | [`np-allow-gateway-egress.yml`](np-allow-gateway-egress.yml) | Egress from gateway-checker to default gateway IP (`--gateway-check` only) |
 
-Note: `np-allow-cudn-ingress.yml` also carries an `ipBlock` rule for `--bastion-cidr` on port `ssh` when `--bgp` is set — see [External SSH Ingress Check](#external-ssh-ingress-check-bgp-only).
+Note: `np-allow-cudn-ingress.yml` also carries an `ipBlock` rule for `--external-host` (with `/32`) on port `2222` when `--bgp` is set — see [External SSH Ingress Check](#external-ssh-ingress-check-bgp-only).
 
 ### Infrastructure Templates
 
@@ -475,5 +475,6 @@ Note: `np-allow-cudn-ingress.yml` also carries an `ipBlock` rule for `--bastion-
 | [`egressfirewall.yml`](egressfirewall.yml) | OVN EgressFirewall (8 rules: RFC1918, DNS, registries, monitoring) |
 | [`resourcequota.yml`](resourcequota.yml) | ResourceQuota per namespace |
 | [`limitrange.yml`](limitrange.yml) | LimitRange per namespace |
-| [`scc-rolebinding.yml`](scc-rolebinding.yml) | Binds the namespace default ServiceAccount to `system:openshift:scc:privileged`, required for `sshd` (`--bgp` only) |
-| [`../scripts/cudn-ssh-test.sh`](../scripts/cudn-ssh-test.sh) | `beforeCleanup` hook script that SSHes into each server pod's CUDN IP (`--bgp` only) |
+| [`../scripts/cudn-bgp-setup.sh`](../scripts/cudn-bgp-setup.sh) | `beforeJobExecution` hook script that sets up BGP on the external host (`--bgp` only) |
+| [`../scripts/cudn-ssh-test.sh`](../scripts/cudn-ssh-test.sh) | `beforeCleanup` hook script that SSHes into each server pod's CUDN IP (`--ssh-latency-check` only) |
+| [`../scripts/cudn-ssh-load-test.sh`](../scripts/cudn-ssh-load-test.sh) | `beforeCleanup` hook script that runs parallel SSH connections for a duration (`--ssh-load-test` only) |
