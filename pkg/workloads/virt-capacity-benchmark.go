@@ -50,6 +50,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	var minimalVolumeSize int
 	var minimalVolumeIncreaseSize int
 	var skipResizeJob bool
+	var nodeSelectorStr string
 	var metricsProfiles []string
 	var cleanup bool
 	var rc int
@@ -117,6 +118,9 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			if skipResizeJob {
 				log.Infof("skipResizeJob is set to true")
 			}
+
+			nodeSelector := parseNodeSelector(nodeSelectorStr)
+
 			wh.SummaryMetadata["OCPVirtualizationVersion"], err = wh.MetadataAgent.GetOCPVirtualizationVersion()
 			if err != nil {
 				log.Warnf("Failed to get OCP Virtualization version: %v", err)
@@ -131,6 +135,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["dataVolumeSize"] = dataVolumeSize
 			AdditionalVars["volumeSizeIncrement"] = volumeSizeIncrement
 			AdditionalVars["skipResizeJob"] = skipResizeJob
+			AdditionalVars["nodeSelector"] = nodeSelector
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["VM_CPU"] = vmCPU
 			AdditionalVars["VM_MEMORY"] = vmMemory
@@ -173,6 +178,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&minimalVolumeSize, "min-vol-size", 0, "Minimal volume size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().IntVar(&minimalVolumeIncreaseSize, "min-vol-inc-size", 0, "Minimal volume increment size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
+	cmd.Flags().StringVar(&nodeSelectorStr, "node-selector", "", "Node selector labels (comma-separated key=value pairs, e.g., topology.kubernetes.io/zone=us-east-1a,disktype=ssd)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd

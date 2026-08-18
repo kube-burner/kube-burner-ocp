@@ -39,6 +39,12 @@ spec:
   runStrategy: RerunOnFailure
   template:
     spec:
+      {{- if .nodeSelector }}
+      nodeSelector:
+      {{- range $key, $value := .nodeSelector }}
+        {{ $key }}: {{ $value }}
+      {{- end }}
+      {{- end }}
       accessCredentials:
       - sshPublicKey:
           propagationMethod:
