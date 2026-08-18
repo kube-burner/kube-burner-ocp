@@ -58,15 +58,12 @@ spec:
     - protocol: TCP
       port: https
   {{ if .bgp }}
-  # External SSH ingress check (cudn-ssh-test.sh, run from the bastion host
-  # over the BGP-advertised CUDN route). ipBlock is required here rather than
-  # podSelector/namespaceSelector since the bastion is outside the cluster.
   - from:
     - ipBlock:
-        cidr: {{.bastionCidr}}
+        cidr: {{.externalHostCidr}}
     ports:
     - protocol: TCP
-      port: ssh
+      port: 2222
   {{ end }}
   policyTypes:
   - Ingress
