@@ -257,7 +257,6 @@ teardown_file() {
     STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
   fi
   run_cmd ${KUBE_BURNER_OCP} virt-capacity-benchmark ${STORAGE_PARAMETER} --max-iterations 2  --data-volume-count 2 --vms 2 --skip-migration-job --skip-resize-job
-  run_cmd ${KUBE_BURNER_OCP} virt-capacity-benchmark --cleanup
   for iteration in 0 1; do
     check_metric_recorded ./virt-capacity-benchmark/iteration-${iteration} create-vms-${iteration} vmiLatency vmReadyLatency
     check_quantile_recorded ./virt-capacity-benchmark/iteration-${iteration} create-vms-${iteration} vmiLatency VMReady
@@ -277,7 +276,6 @@ teardown_file() {
     STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
   fi
   run_cmd ${KUBE_BURNER_OCP} virt-parallel ${STORAGE_PARAMETER} --max-iterations 2 --data-volume-count 2 --initial-vms 2 --increment 2 --skip-migration-job --skip-resize-job
-  run_cmd ${KUBE_BURNER_OCP} virt-parallel --cleanup
   for iteration in 0 1; do
     check_metric_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} vmiLatency vmReadyLatency
     check_quantile_recorded ./virt-parallel/iteration-${iteration} virt-parallel-create-vms-${iteration} vmiLatency VMReady
@@ -313,7 +311,7 @@ teardown_file() {
   if [ -n "$KUBE_BURNER_OCP_STORAGE_CLASS" ]; then
     STORAGE_PARAMETER="--storage-class ${KUBE_BURNER_OCP_STORAGE_CLASS}"
   fi
-  run_cmd ${KUBE_BURNER_OCP} virt-clone-multi ${STORAGE_PARAMETER} --namespaces 2 --iterations 1 --vms-per-iteration 2 --data-volume-count 1 --cleanup
+  run_cmd ${KUBE_BURNER_OCP} virt-clone-multi ${STORAGE_PARAMETER} --namespaces 2 --iterations 1 --vms-per-iteration 2 --data-volume-count 1
   local jobs=("virt-clone-multi-create-base-vm" "virt-clone-multi-create-vms")
   for job in "${jobs[@]}"; do
     check_metric_recorded ./virt-clone-multi-results ${job} dvLatency dvReadyLatency
