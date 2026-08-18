@@ -32,15 +32,8 @@ spec:
                 operator: DoesNotExist
               - key: node-role.kubernetes.io/workload
                 operator: DoesNotExist
-      {{ if .bgp }}
-      securityContext:
-        # sshd requires root to setuid() into the target login user (sshtest)
-        # after pubkey authentication succeeds. The privileged SCC
-        # (scc-rolebinding.yml) is needed to admit pods with runAsUser: 0.
-        runAsUser: 0
-      {{ end }}
       containers:
-      - image: {{ if .bgp }}quay.io/cloud-bulldozer/nginx-ssh:latest{{ else }}quay.io/cloud-bulldozer/nginx:latest{{ end }}
+      - image: {{ if .bgp }}quay.io/nmohd/nginx-ssh:v5{{ else }}quay.io/cloud-bulldozer/nginx:latest{{ end }}
         resources:
           requests:
             memory: "10Mi"
@@ -53,7 +46,7 @@ spec:
           mountPath: /etc/ssh-authorized-keys
           readOnly: true
         {{ end }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8080
@@ -63,7 +56,7 @@ spec:
           protocol: TCP
         {{ if .bgp }}
         - name: ssh
-          containerPort: 22
+          containerPort: 2222
           protocol: TCP
         {{ end }}
         name: nginx
