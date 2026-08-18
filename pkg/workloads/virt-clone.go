@@ -55,6 +55,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var jobIterationDelay time.Duration
 	var verifyMaxWaitTime time.Duration
 	var dataVolumeCount int
+	var nodeSelectorStr string
 	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
@@ -89,6 +90,9 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Warnf("Failed to get OCP Virtualization version: %v", err)
 			}
+
+			nodeSelector := parseNodeSelector(nodeSelectorStr)
+
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["VM_IMAGE"] = vmImage
@@ -104,6 +108,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["jobIterationDelay"] = jobIterationDelay
 			AdditionalVars["verifyMaxWaitTime"] = verifyMaxWaitTime
 			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
+			AdditionalVars["nodeSelector"] = nodeSelector
 
 			setMetrics(cmd, metricsProfiles)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -126,6 +131,7 @@ func NewVirtClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 0, "Delay between job iterations")
 	cmd.Flags().DurationVar(&verifyMaxWaitTime, "verify-max-wait-time", 1*time.Hour, "Max wait time for clone creation waiting")
 	cmd.Flags().IntVar(&dataVolumeCount, "data-volume-count", virtCloneDefaultDataVolumeCount, "Number of data volumes per VM")
+	cmd.Flags().StringVar(&nodeSelectorStr, "node-selector", "", "Node selector labels (comma-separated key=value pairs, e.g., topology.kubernetes.io/zone=us-east-1a,disktype=ssd)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd

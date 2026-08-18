@@ -163,6 +163,26 @@ func generateLoopCounterSlice(length, startValue int) []string {
 	return counter
 }
 
+// parseNodeSelector parses a comma-separated string of key=value pairs into a map
+func parseNodeSelector(nodeSelectorStr string) map[string]string {
+	nodeSelector := make(map[string]string)
+	if nodeSelectorStr == "" {
+		return nodeSelector
+	}
+
+	pairs := strings.Split(nodeSelectorStr, ",")
+	for _, pair := range pairs {
+		kv := strings.SplitN(strings.TrimSpace(pair), "=", 2)
+		if len(kv) == 2 {
+			nodeSelector[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+		} else {
+			log.Fatalf("Invalid node-selector format: %s. Expected key=value", pair)
+		}
+	}
+	log.Infof("Node selector: %v", nodeSelector)
+	return nodeSelector
+}
+
 // addWorkloadFlagsToMetadata adds all flag values from the command to SummaryMetadata
 func addWorkloadFlagsToMetadata(cmd *cobra.Command, wh *workloads.WorkloadHelper) {
 	workloadFlags := make(map[string]string)

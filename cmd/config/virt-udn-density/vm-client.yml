@@ -12,6 +12,12 @@ spec:
         kubevirt.io/os: fedora
         app: client
     spec:
+      {{- if .nodeSelector }}
+      nodeSelector:
+      {{- range $key, $value := .nodeSelector }}
+        {{ $key }}: {{ $value }}
+      {{- end }}
+      {{- end }}
       terminationGracePeriodSeconds: 0
       domain:
         cpu:

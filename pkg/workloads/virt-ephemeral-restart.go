@@ -48,6 +48,7 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	var testNamespace string
 	var metricsProfiles []string
 	var volumeAccessMode string
+	var nodeSelectorStr string
 	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
@@ -82,6 +83,9 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Warnf("Failed to get OCP Virtualization version: %v", err)
 			}
+
+			nodeSelector := parseNodeSelector(nodeSelectorStr)
+
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["storageClassName"] = storageClassName
@@ -90,6 +94,7 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["vmsPerIteration"] = vmsPerIteration
 			AdditionalVars["accessMode"] = accessModeTranslator[volumeAccessMode]
 			AdditionalVars["vmGroups"] = generateLoopCounterSlice(iterations, 0)
+			AdditionalVars["nodeSelector"] = nodeSelector
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["VM_CPU"] = vmCPU
 			AdditionalVars["VM_MEMORY"] = vmMemory
@@ -111,6 +116,7 @@ func NewVirtEphemeralRestart(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
 	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
+	cmd.Flags().StringVar(&nodeSelectorStr, "node-selector", "", "Node selector labels (comma-separated key=value pairs, e.g., topology.kubernetes.io/zone=us-east-1a,disktype=ssd)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd

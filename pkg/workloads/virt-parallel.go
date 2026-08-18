@@ -54,6 +54,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	var skipResizeJob bool
 	var skipRestartJob bool
 	var skipSnapshotJob bool
+	var nodeSelectorStr string
 	var metricsProfiles []string
 	var cleanup bool
 	var rc int
@@ -128,6 +129,8 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Infof("skipSnapshotJob is set to true")
 			}
 
+			nodeSelector := parseNodeSelector(nodeSelectorStr)
+
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["vmCount"] = fmt.Sprint(initialVms)
@@ -141,6 +144,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["skipResizeJob"] = skipResizeJob
 			AdditionalVars["skipRestartJob"] = skipRestartJob
 			AdditionalVars["skipSnapshotJob"] = skipSnapshotJob
+			AdditionalVars["nodeSelector"] = nodeSelector
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["VM_CPU"] = vmCPU
 			AdditionalVars["VM_MEMORY"] = vmMemory
@@ -197,6 +201,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
 	cmd.Flags().BoolVar(&skipRestartJob, "skip-restart-job", false, "Skip the VM restart job")
 	cmd.Flags().BoolVar(&skipSnapshotJob, "skip-snapshot-job", false, "Skip the VM snapshot job")
+	cmd.Flags().StringVar(&nodeSelectorStr, "node-selector", "", "Node selector labels (comma-separated key=value pairs, e.g., topology.kubernetes.io/zone=us-east-1a,disktype=ssd)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
