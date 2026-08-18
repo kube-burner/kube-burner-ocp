@@ -101,19 +101,27 @@ jobs:
             metric: P99
             threshold: {{.POD_READY_THRESHOLD}}
 {{ end }}
-{{ if .BGP }}
+{{ if .SSH_LATENCY_CHECK }}
       - name: sshCheck
+{{ end }}
+{{ if .SSH_LOAD_TEST }}
+      - name: sshLoadTest
 {{ end }}
 {{ if .BGP }}
     hooks:
-      # Runs once all resources are up but before job cleanup, from the
-      # bastion host with the BGP-advertised route to the CUDN pod subnets.
-      # Writes /tmp/kube-burner-ssh-results-{{.UUID}}.ndjson, which the
-      # sshCheck measurement's Stop() reads and indexes (HookBeforeCleanup
-      # runs before measurementsInstance.Stop() in kube-burner's job loop).
+      - cmd: ["./cudn-bgp-setup.sh", "{{.EXTERNAL_HOST}}"]
+        when: beforeJobExecution
+        background: false
+{{ if .SSH_LATENCY_CHECK }}
       - cmd: ["./cudn-ssh-test.sh", "{{.UUID}}", "{{.privateKey}}"]
         when: beforeCleanup
         background: false
+{{ end }}
+{{ if .SSH_LOAD_TEST }}
+      - cmd: ["./cudn-ssh-load-test.sh", "{{.UUID}}", "{{.privateKey}}", "{{.SSH_LOAD_TEST_DURATION_SECS}}"]
+        when: beforeCleanup
+        background: false
+{{ end }}
 {{ end }}
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
@@ -191,12 +199,6 @@ jobs:
         inputVars:
           name: {{ $sshPublicKeySecretName }}
           publicKeyPath: {{ .publicKey }}
-
-      - objectTemplate: scc-rolebinding.yml
-        replicas: 1
-        churn: false
-        group:
-          id: 2
       {{ end }}
 
       - objectTemplate: configmap.yml
@@ -237,7 +239,7 @@ jobs:
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
           bgp: {{.BGP}}
-          bastionCidr: "{{ if .BGP }}{{.BASTION_CIDR}}{{ end }}"
+          externalHostCidr: "{{ if .BGP }}{{.EXTERNAL_HOST_CIDR}}{{ end }}"
 
       - objectTemplate: np-allow-cudn-egress.yml
         replicas: 1
