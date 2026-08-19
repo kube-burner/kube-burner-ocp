@@ -37,12 +37,9 @@ spec:
   runStrategy: RerunOnFailure
   template:
     spec:
-      {{- if .nodeSelector }}
-      nodeSelector:
-      {{- range $key, $value := .nodeSelector }}
-        {{ $key }}: {{ $value }}
-      {{- end }}
-      {{- end }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution: {{.NODE_SELECTOR|toJson}}
       accessCredentials:
       - sshPublicKey:
           propagationMethod:

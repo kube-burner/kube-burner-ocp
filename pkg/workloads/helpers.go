@@ -45,12 +45,15 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
 	kubeBurnerTestNameLabelKey = "kube-burner.io/test-name"
+	// WorkerNodeSelector is the default node selector for workloads targeting worker nodes
+	WorkerNodeSelector = "node-role.kubernetes.io/worker=,node-role.kubernetes.io/infra!=,node-role.kubernetes.io/workload!="
 )
 
 var (
@@ -163,24 +166,44 @@ func generateLoopCounterSlice(length, startValue int) []string {
 	return counter
 }
 
-// parseNodeSelector parses a comma-separated string of key=value pairs into a map
-func parseNodeSelector(nodeSelectorStr string) map[string]string {
-	nodeSelector := make(map[string]string)
-	if nodeSelectorStr == "" {
-		return nodeSelector
+// buildNodeSelectorJSON converts a Kubernetes label selector string to a NodeSelector JSON string
+// that can be used in pod affinity specifications. The selector string uses the standard Kubernetes
+// label selector format (e.g., "node-role.kubernetes.io/worker=,node-role.kubernetes.io/infra!=").
+func buildNodeSelectorJSON(selector string) (string, error) {
+	var nodeSelector v1.NodeSelector
+	var matchExpressions []v1.NodeSelectorRequirement
+
+	labelSelector, err := labels.Parse(selector)
+	if err != nil {
+		return "", err
 	}
 
-	pairs := strings.Split(nodeSelectorStr, ",")
-	for _, pair := range pairs {
-		kv := strings.SplitN(strings.TrimSpace(pair), "=", 2)
-		if len(kv) == 2 {
-			nodeSelector[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
-		} else {
-			log.Fatalf("Invalid node-selector format: %s. Expected key=value", pair)
+	reqList, _ := labelSelector.Requirements()
+	for _, req := range reqList {
+		matchExpression := v1.NodeSelectorRequirement{
+			Key: req.Key(),
 		}
+		// Even with a nil value, the list is not empty, so we need to check its value
+		if req.Values().List()[0] == "" {
+			if req.Operator() == "=" {
+				matchExpression.Operator = v1.NodeSelectorOpExists
+			} else if req.Operator() == "!=" {
+				matchExpression.Operator = v1.NodeSelectorOpDoesNotExist
+			}
+		} else {
+			matchExpression.Operator = v1.NodeSelectorOpIn
+			matchExpression.Values = req.Values().List()
+		}
+		matchExpressions = append(matchExpressions, matchExpression)
 	}
-	log.Infof("Node selector: %v", nodeSelector)
-	return nodeSelector
+
+	nodeSelector.NodeSelectorTerms = []v1.NodeSelectorTerm{{MatchExpressions: matchExpressions}}
+	nodeSelectorJSON, err := json.Marshal(nodeSelector)
+	if err != nil {
+		return "", err
+	}
+
+	return string(nodeSelectorJSON), nil
 }
 
 // addWorkloadFlagsToMetadata adds all flag values from the command to SummaryMetadata
