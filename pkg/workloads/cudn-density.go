@@ -101,8 +101,8 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations, namespacesPerCudn, cudnsPerRA, incrementalStepSize int
 	var incrementalExpBase float64
 	var deletionStrategy string
-	var l3, pprof, gatewayCheck, bgp, ocpbugs85627Workaround bool
-	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay time.Duration
+	var l3, pprof, gatewayCheck, bgp, ocpbugs85627Workaround, etcdDefrag bool
+	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay, etcdDefragMemberGap, etcdDefragHealthTimeout time.Duration
 	var churnMode, incrementalPattern string
 	var metricsProfiles []string
 	var rc int
@@ -145,6 +145,12 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				if churnDuration > 0 || churnCycles > 0 {
 					log.Fatal("incremental load and churn cannot be used together")
 				}
+				if etcdDefrag {
+					log.Info("Etcd defragmentation management enabled for incremental load")
+				}
+			}
+			if etcdDefrag && incrementalStepSize == 0 {
+				log.Warn("--etcd-defrag is only effective when incremental load is enabled (--incremental-step-size > 0)")
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -183,6 +189,9 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["BGP"] = bgp
 			AdditionalVars["OCPBUGS_85627_WORKAROUND"] = ocpbugs85627Workaround
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
+			AdditionalVars["ETCD_DEFRAG"] = etcdDefrag
+			AdditionalVars["ETCD_DEFRAG_MEMBER_GAP"] = etcdDefragMemberGap
+			AdditionalVars["ETCD_DEFRAG_HEALTH_TIMEOUT"] = etcdDefragHealthTimeout
 			if gatewayCheck {
 				AdditionalVars["NODE_GW_MAP"] = getNodeGatewayMap()
 			}
@@ -215,6 +224,9 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&ocpbugs85627Workaround, "static-mac-binding-workaround", false, "Deploy OCPBUGS-85627 static MAC binding workaround DaemonSet before creating CUDNs")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&etcdDefrag, "etcd-defrag", false, "Enable manual etcd defragmentation management during incremental load (disables auto-defrag, runs manual defrag before each step)")
+	cmd.Flags().DurationVar(&etcdDefragMemberGap, "etcd-defrag-member-gap", 30*time.Second, "Delay between defragmenting each etcd member")
+	cmd.Flags().DurationVar(&etcdDefragHealthTimeout, "etcd-defrag-health-timeout", 5*time.Minute, "Timeout for waiting etcd to become healthy after defrag")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
 }
