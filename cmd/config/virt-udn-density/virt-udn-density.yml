@@ -119,10 +119,7 @@ jobs:
           vmImage: {{.VM_IMAGE}}
           vmCPU: {{.VM_CPU}}
           vmMemory: {{.VM_MEMORY}}
-          nodeSelector:
-          {{- range $key, $value := .nodeSelector }}
-            {{ $key }}: {{ $value }}
-          {{- end }}
+          NODE_SELECTOR: {{ .NODE_SELECTOR }}
       - objectTemplate: vm-server.yml
         replicas: 1
         inputVars:
@@ -130,7 +127,4 @@ jobs:
           vmImage: {{.VM_IMAGE}}
           vmCPU: {{.VM_CPU}}
           vmMemory: {{.VM_MEMORY}}
-          nodeSelector:
-          {{- range $key, $value := .nodeSelector }}
-            {{ $key }}: {{ $value }}
-          {{- end }}
+          NODE_SELECTOR: {{ .NODE_SELECTOR }}

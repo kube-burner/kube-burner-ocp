@@ -38,7 +38,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	var churnPercent, churnCycles int
 	var l3, pprof bool
 	var churnDelay, churnDuration time.Duration
-	var deletionStrategy, vmImage, bindingMethod, churnMode, vmCPU, vmMemory, nodeSelectorStr string
+	var deletionStrategy, vmImage, bindingMethod, churnMode, vmCPU, vmMemory, selector string
 	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
@@ -85,7 +85,11 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["ENABLE_LAYER_3"] = l3
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
-			AdditionalVars["nodeSelector"] = parseNodeSelector(nodeSelectorStr)
+			nodeSelectorJSON, err := buildNodeSelectorJSON(selector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+			AdditionalVars["NODE_SELECTOR"] = nodeSelectorJSON
 			if l3 {
 				log.Info("Layer 3 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer3", bindingMethod)
@@ -116,7 +120,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
-	cmd.Flags().StringVar(&nodeSelectorStr, "node-selector", "", "Node selector labels (comma-separated key=value pairs, e.g., topology.kubernetes.io/zone=us-east-1a,disktype=ssd)")
+	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	if variant == "virt-cudn-density" {
 		cmd.Annotations = map[string]string{"configDir": "virt-udn-density"}

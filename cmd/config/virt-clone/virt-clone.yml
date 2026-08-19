@@ -91,10 +91,7 @@ jobs:
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}
       dataVolumeCounters: []
-      nodeSelector:
-      {{- range $key, $value := .nodeSelector }}
-        {{ $key }}: {{ $value }}
-      {{- end }}
+      NODE_SELECTOR: {{ .NODE_SELECTOR }}
 
 - name: stop-vm
   jobType: kubevirt

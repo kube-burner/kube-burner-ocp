@@ -85,10 +85,7 @@ jobs:
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}
       dataVolumeCounters: []
-      nodeSelector:
-      {{- range $key, $value := .nodeSelector }}
-        {{ $key }}: {{ $value }}
-      {{- end }}
+      NODE_SELECTOR: {{ .NODE_SELECTOR }}
 
 # Stop all N base VMs
 - name: {{ $testName }}-stop-vm
