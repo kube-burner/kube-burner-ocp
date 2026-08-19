@@ -52,8 +52,12 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
+{{ if gt .JOB_ITERATIONS 0 }}
   - name: node-density
     namespace: node-density
+    {{ if .FILL_PERCENT }}
+    gc: true
+    {{ end }}
     jobIterations: {{.JOB_ITERATIONS}}
     qps: {{.QPS}}
     burst: {{.BURST}}
@@ -78,5 +82,31 @@ jobs:
       - objectTemplate: pod.yml
         replicas: 1
         inputVars:
-          containerImage: registry.k8s.io/pause:3.1
+          containerImage: "{{.CONTAINER_IMAGE}}"
           nodeSelector: {{.NODE_SELECTOR}}
+{{ end }}
+
+{{ if gt .FILL_PERCENT 0 }}
+  - name: node-density-fill
+    namespace: node-density-fill
+    jobIterations: 1
+    namespacedIterations: false
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    podWait: false
+    waitWhenFinished: true
+    preLoadImages: true
+    namespaceLabels:
+      security.openshift.io/scc.podSecurityLabelSync: false
+      pod-security.kubernetes.io/enforce: privileged
+      pod-security.kubernetes.io/audit: privileged
+      pod-security.kubernetes.io/warn: privileged
+    objects:
+
+      - objectTemplate: deployment.yml
+        replicas: {{.DEPLOYMENT_REPLICAS}}
+        inputVars:
+          containerImage: "{{.CONTAINER_IMAGE}}"
+          nodeSelector: {{.NODE_SELECTOR}}
+          podReplicas: {{.POD_REPLICAS}}
+{{ end }}
