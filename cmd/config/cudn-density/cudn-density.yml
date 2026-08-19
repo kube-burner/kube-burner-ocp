@@ -120,6 +120,12 @@ jobs:
         exponential:
           base: {{.INCREMENTAL_EXP_BASE}}
 {{ end }}
+{{ if .ETCD_DEFRAG }}
+      etcdDefrag:
+        enabled: true
+        memberGapDelay: {{.ETCD_DEFRAG_MEMBER_GAP}}
+        healthCheckTimeout: {{.ETCD_DEFRAG_HEALTH_TIMEOUT}}
+{{ end }}
 {{ end }}
     jobPause: {{.JOB_PAUSE}}
     metricsClosing: afterJobPause
