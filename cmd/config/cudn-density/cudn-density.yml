@@ -1,4 +1,5 @@
 ---
+{{- $sshPublicKeySecretName := "cudn-density-ssh-pubkey" }}
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
@@ -100,6 +101,28 @@ jobs:
             metric: P99
             threshold: {{.POD_READY_THRESHOLD}}
 {{ end }}
+{{ if .SSH_LATENCY_CHECK }}
+      - name: sshCheck
+{{ end }}
+{{ if .SSH_LOAD_TEST }}
+      - name: sshLoadTest
+{{ end }}
+{{ if .BGP }}
+    hooks:
+      - cmd: ["./cudn-bgp-setup.sh", "{{.EXTERNAL_HOST}}"]
+        when: beforeJobExecution
+        background: false
+{{ if .SSH_LATENCY_CHECK }}
+      - cmd: ["./cudn-ssh-test.sh", "{{.UUID}}", "{{.privateKey}}"]
+        when: beforeCleanup
+        background: false
+{{ end }}
+{{ if .SSH_LOAD_TEST }}
+      - cmd: ["./cudn-ssh-load-test.sh", "{{.UUID}}", "{{.privateKey}}", "{{.SSH_LOAD_TEST_DURATION_SECS}}"]
+        when: beforeCleanup
+        background: false
+{{ end }}
+{{ end }}
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
       duration: {{.CHURN_DURATION}}
@@ -167,6 +190,17 @@ jobs:
         repeatEveryNIterations: {{mul .NAMESPACES_PER_CUDN .CUDNS_PER_RA}}
       {{ end }}
 
+      {{ if .BGP }}
+      - objectTemplate: templates/secret_ssh_public.yml
+        replicas: 1
+        churn: false
+        group:
+          id: 2
+        inputVars:
+          name: {{ $sshPublicKeySecretName }}
+          publicKeyPath: {{ .publicKey }}
+      {{ end }}
+
       - objectTemplate: configmap.yml
         replicas: 1
         churn: false
@@ -204,6 +238,8 @@ jobs:
           id: 2
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          bgp: {{.BGP}}
+          externalHostCidr: "{{ if .BGP }}{{.EXTERNAL_HOST_CIDR}}{{ end }}"
 
       - objectTemplate: np-allow-cudn-egress.yml
         replicas: 1
@@ -265,6 +301,8 @@ jobs:
           id: 2
         inputVars:
           podReplicas: 2
+          bgp: {{.BGP}}
+          sshPublicKeySecretName: "{{ if .BGP }}{{ $sshPublicKeySecretName }}{{ end }}"
 
       - objectTemplate: deployment-app.yml
         replicas: 1
