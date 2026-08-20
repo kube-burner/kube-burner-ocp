@@ -47,9 +47,9 @@ jobs:
       - cmd: ["create-event-storm.sh", "etcd-event-storm", "{{.EVENT_ITERATIONS}}", "{{.EVENT_REPLICAS}}", "{{.STORM_WORKERS}}"]
         when: beforeJobExecution
         background: true
-      - cmd: ["/bin/sh", "-c", "sleep {{.STORM_DELAY}}"]
+      - cmd: ["sleep {{.STORM_DELAY}}"]
         when: beforeJobExecution
-      - cmd: ["/bin/sh", "-c", "oc delete namespace etcd-event-storm --ignore-not-found=true --force --grace-period=0"]
+      - cmd: ["oc delete namespace etcd-event-storm --ignore-not-found=true --force --grace-period=0"]
         when: afterJobExecution
         background: true
     objects:
