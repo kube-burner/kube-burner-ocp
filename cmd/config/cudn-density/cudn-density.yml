@@ -121,6 +121,13 @@ jobs:
           base: {{.INCREMENTAL_EXP_BASE}}
 {{ end }}
 {{ end }}
+{{ if .HTTP_SERVER_ADDRESS }}
+    hooks:
+      - cmd: ["./cudn_nginx.sh", "setup", "{{.HTTP_SERVER_ADDRESS}}"]
+        when: beforeJobExecution
+      - cmd: ["./cudn_nginx.sh", "cleanup"]
+        when: afterJobExecution
+{{ end }}
     jobPause: {{.JOB_PAUSE}}
     metricsClosing: afterJobPause
     cleanup: false
@@ -228,6 +235,8 @@ jobs:
           id: 2
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          httpServerIP: "{{.HTTP_SERVER_IP}}"
+          httpServerPort: "{{.HTTP_SERVER_PORT}}"
 
       - objectTemplate: egressfirewall.yml
         replicas: 1
@@ -236,6 +245,7 @@ jobs:
           id: 2
         inputVars:
           nodeGwMap: '{{ if .GATEWAY_CHECK }}{{.NODE_GW_MAP}}{{ end }}'
+          httpServerIP: "{{.HTTP_SERVER_IP}}"
 
       - objectTemplate: resourcequota.yml
         replicas: 1
@@ -272,6 +282,7 @@ jobs:
           id: 2
         inputVars:
           podReplicas: 1
+          httpServerAddress: "{{.HTTP_SERVER_ADDRESS}}"
 
       - objectTemplate: deployment-client.yml
         replicas: 1
