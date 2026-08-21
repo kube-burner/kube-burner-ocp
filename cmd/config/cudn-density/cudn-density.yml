@@ -220,7 +220,6 @@ jobs:
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
 
-
       - objectTemplate: np-allow-app-ingress.yml
         replicas: 1
         churn: false
@@ -236,10 +235,8 @@ jobs:
           id: 2
         inputVars:
           namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
-          {{ if .HTTP_SERVER_ADDRESS }}
           httpServerIP: "{{.HTTP_SERVER_IP}}"
           httpServerPort: "{{.HTTP_SERVER_PORT}}"
-          {{ end }}
 
       - objectTemplate: egressfirewall.yml
         replicas: 1
@@ -248,9 +245,7 @@ jobs:
           id: 2
         inputVars:
           nodeGwMap: '{{ if .GATEWAY_CHECK }}{{.NODE_GW_MAP}}{{ end }}'
-          {{ if .HTTP_SERVER_ADDRESS }}
           httpServerIP: "{{.HTTP_SERVER_IP}}"
-          {{ end }}
 
       - objectTemplate: resourcequota.yml
         replicas: 1
