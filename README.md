@@ -806,9 +806,11 @@ Users may control the workload sizes by passing the following arguments:
 
 #### Skip test parts
 
-Some storage classes have limitations requiring the test to skip some parts:
+Some storage classes have limitations requiring the test to skip some parts. All steps except VM creation can be skipped:
 
 - `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
+- `--skip-restart-job` - Skip the VM restart job. Use when you want to test without VM restarts
+- `--skip-snapshot-job` - Skip the VM snapshot job. Use when snapshots are not supported or not needed
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
 
 #### Cleanup
