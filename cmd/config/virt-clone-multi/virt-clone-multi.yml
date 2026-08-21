@@ -200,6 +200,7 @@ jobs:
       iterationsPerNamespace: {{ .iterations }}
       storageClassName: {{ .storageClassName }}
       accessMode: {{ .accessMode }}
+      NODE_SELECTOR: {{ .NODE_SELECTOR }}
       dataVolumeCounters:
       {{ range .dataVolumeCounters }}
       - {{ . }}

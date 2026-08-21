@@ -177,7 +177,8 @@ func buildNodeSelectorJSON(selector string) (string, error) {
 			Key: req.Key(),
 		}
 		// Even with a nil value, the list is not empty, so we need to check its value
-		if req.Values().List()[0] == "" {
+		values := req.Values().List()
+		if len(values) == 0 || values[0] == "" {
 			if req.Operator() == "=" {
 				matchExpression.Operator = v1.NodeSelectorOpExists
 			} else if req.Operator() == "!=" {
@@ -185,7 +186,7 @@ func buildNodeSelectorJSON(selector string) (string, error) {
 			}
 		} else {
 			matchExpression.Operator = v1.NodeSelectorOpIn
-			matchExpression.Values = req.Values().List()
+			matchExpression.Values = values
 		}
 		matchExpressions = append(matchExpressions, matchExpression)
 	}
