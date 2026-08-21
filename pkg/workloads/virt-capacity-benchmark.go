@@ -50,6 +50,8 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	var minimalVolumeSize int
 	var minimalVolumeIncreaseSize int
 	var skipResizeJob bool
+	var useBaseImage bool
+	var useSnapshot bool
 	var metricsProfiles []string
 	var cleanup bool
 	var rc int
@@ -86,6 +88,7 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 					}
 				}
 			}
+
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if cleanup {
@@ -117,6 +120,9 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			if skipResizeJob {
 				log.Infof("skipResizeJob is set to true")
 			}
+			if useBaseImage {
+				log.Infof("useBaseImage is set to true")
+			}
 			wh.SummaryMetadata["OCPVirtualizationVersion"], err = wh.MetadataAgent.GetOCPVirtualizationVersion()
 			if err != nil {
 				log.Warnf("Failed to get OCP Virtualization version: %v", err)
@@ -131,6 +137,8 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["dataVolumeSize"] = dataVolumeSize
 			AdditionalVars["volumeSizeIncrement"] = volumeSizeIncrement
 			AdditionalVars["skipResizeJob"] = skipResizeJob
+			AdditionalVars["useBaseImage"] = useBaseImage
+			AdditionalVars["useSnapshot"] = useSnapshot
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["VM_CPU"] = vmCPU
 			AdditionalVars["VM_MEMORY"] = vmMemory
@@ -142,6 +150,13 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 				storageClassName := storageClasses[counter%len(storageClasses)]
 				log.Infof("Running loop %d with Storage Class [%s]", counter, storageClassName)
 				AdditionalVars["storageClassName"] = storageClassName
+
+				// Get volumeSnapshotClassName if useBaseImage is enabled
+				var volumeSnapshotClassName string
+				if useBaseImage {
+					_, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
+				}
+				AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
 
 				os.Setenv("counter", fmt.Sprint(counter))
 				rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -173,6 +188,8 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&minimalVolumeSize, "min-vol-size", 0, "Minimal volume size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().IntVar(&minimalVolumeIncreaseSize, "min-vol-inc-size", 0, "Minimal volume increment size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
+	cmd.Flags().BoolVar(&useBaseImage, "use-base-image", false, "Create a base image and clone VMs from it instead of using container disk per VM")
+	cmd.Flags().BoolVar(&useSnapshot, "use-snapshot", true, "Clone from snapshot - only applies when --use-base-image=true")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd

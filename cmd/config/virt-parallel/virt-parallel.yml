@@ -47,6 +47,84 @@ jobs:
   - kind: Namespace
     labelSelector:
       {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+
+{{ if .useBaseImage }}
+# Create base image - only in counter 0
+- name: {{ $testName }}-create-base-image-dv
+  jobType: create
+  jobIterations: 1
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: false
+  podWait: true
+  maxWaitTimeout: 30m
+  jobPause: 10s
+  cleanup: false
+  defaultMissingKeysWithZero: true
+  objects:
+  - objectTemplate: templates/baseImageDataVolume.yml
+    replicas: 1
+    inputVars:
+      baseDataVolumeName: base-image
+      baseDataVolumeUrl: "docker://{{.VM_IMAGE}}"
+      storageClassName: {{ .storageClassName }}
+      baseDataVolumeSize: {{ $rootVolumeSizeStr }}
+      accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
+    waitOptions:
+      customStatusPaths:
+      - key: '(.conditions.[] | select(.type == "Ready")).status'
+        value: "True"
+
+- name: {{ $testName }}-create-base-image-datasource
+  jobType: create
+  jobIterations: 1
+  qps: 20
+  burst: 20
+  namespacedIterations: false
+  namespace: {{ $nsName }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: false
+  podWait: false
+  maxWaitTimeout: 30m
+  jobPause: 10s
+  cleanup: false
+  defaultMissingKeysWithZero: true
+  objects:
+  {{ if .useSnapshot }}
+  - objectTemplate: templates/baseImageDataVolumeSnapshot.yml
+    replicas: 1
+    inputVars:
+      baseVolumeSnapshotName: base-image
+      volumeSnapshotClassName: {{ .volumeSnapshotClassName }}
+      baseVolumeSnapshotPVCName: base-image
+    waitOptions:
+      customStatusPaths:
+      - key: '.readyToUse | tostring'
+        value: "true"
+  {{ end }}
+  - objectTemplate: templates/baseImageDataSource.yml
+    replicas: 1
+    inputVars:
+      baseDataSourceName: base-image
+      baseDataSourcePVCName: base-image
+      baseDataSourcePVCNamespace: {{ $nsName }}
+      baseDataSourceSnapshotName: base-image
+      baseDataSourceSnapshotNamespace: {{ $nsName }}
+      useSnapshot: {{ .useSnapshot }}
+    waitOptions:
+      customStatusPaths:
+      - key: '(.conditions.[] | select(.type == "Ready")).status'
+        value: "True"
+{{ end }}
 {{ end }}
 
 - name: {{ $testName }}-create-vms-{{ .counter }}
@@ -101,6 +179,8 @@ jobs:
       vmCPU: {{.VM_CPU}}
       vmMemory: {{.VM_MEMORY}}
       storageClassName: {{ .storageClassName }}
+      namespace: {{ $nsName }}
+      useBaseImage: {{ .useBaseImage }}
       vmLabels:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
       rootVolumeLabels:

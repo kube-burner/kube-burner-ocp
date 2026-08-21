@@ -23,9 +23,16 @@ spec:
         {{ $key }}: {{ $value }}
       {{end}}
     spec:
+      {{- if .useBaseImage }}
+      sourceRef:
+        kind: DataSource
+        name: base-image
+        namespace: {{ .namespace }}
+      {{- else }}
       source:
         registry:
           url: "docker://{{ .rootDiskImage }}"
+      {{- end }}
       storage:
         accessModes:
         - {{ $accessMode }}
