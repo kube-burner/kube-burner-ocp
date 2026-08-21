@@ -35,7 +35,7 @@ import (
 // NewClusterDensity holds cluster-density workload
 func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, churnPercent, churnCycles int
-	var svcLatency, pprof bool
+	var svcLatency, pprof, pprofKubelet, pprofCrio bool
 	var churnDelay, churnDuration, pprofInterval time.Duration
 	var deletionStrategy, churnMode, selector string
 	var podReadyThreshold time.Duration
@@ -106,6 +106,8 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["NODE_SELECTOR"] = string(nodeSelectorJson)
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
+			AdditionalVars["PPROF_KUBELET"] = pprofKubelet
+			AdditionalVars["PPROF_CRIO"] = pprofCrio
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -126,6 +128,8 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
+	cmd.Flags().BoolVar(&pprofKubelet, "pprof-kubelet", false, "Enable pprof collection for kubelet")
+	cmd.Flags().BoolVar(&pprofCrio, "pprof-crio", false, "Enable pprof collection for CRI-O")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
