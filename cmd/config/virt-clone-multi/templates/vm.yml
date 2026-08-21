@@ -39,6 +39,9 @@ spec:
   runStrategy: RerunOnFailure
   template:
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution: {{.NODE_SELECTOR|toJson}}
       accessCredentials:
       - sshPublicKey:
           propagationMethod:

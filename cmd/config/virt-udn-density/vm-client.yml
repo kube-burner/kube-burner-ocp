@@ -12,6 +12,9 @@ spec:
         kubevirt.io/os: fedora
         app: client
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution: {{.NODE_SELECTOR|toJson}}
       terminationGracePeriodSeconds: 0
       domain:
         cpu:

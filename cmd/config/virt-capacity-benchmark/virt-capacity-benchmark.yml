@@ -117,6 +117,7 @@ jobs:
       - {{ . }}
       {{ end }}
       accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany"}}
+      NODE_SELECTOR: {{ .NODE_SELECTOR }}
 
 {{ if not .skipResizeJob }}
 - name: resize-volumes-{{ .counter }}
