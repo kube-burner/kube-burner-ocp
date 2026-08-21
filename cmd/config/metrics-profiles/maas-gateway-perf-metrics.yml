@@ -1,0 +1,86 @@
+# MaaS Gateway Performance Metrics
+#
+# NOTE: Istio, Authorino, and Limitador metrics require PodMonitors/ServiceMonitors
+# to be scraped into Prometheus. If those are not configured on the cluster,
+# the corresponding queries will return no datapoints. The container-level
+# metrics (CPU, memory, network) are always available via cAdvisor.
+
+# Container CPU for MaaS components in openshift-ingress namespace
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container!="POD", namespace="openshift-ingress", pod=~"maas-default-gateway.*|data-science-gateway.*|payload-processing.*|payload-pre-processing.*|kube-auth-proxy.*|istiod-openshift-gateway.*"}[2m]) * 100) by (container, pod, namespace)
+  metricName: maasContainerCPU
+
+# Container CPU for Kuadrant components (authorino, limitador) in kuadrant-system
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container!="POD", namespace="kuadrant-system", pod=~"authorino.*|limitador.*"}[2m]) * 100) by (container, pod, namespace)
+  metricName: kuadrantContainerCPU
+
+# Container CPU for test infra in maas-perf-test namespace
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container!="POD", namespace="maas-perf-test"}[2m]) * 100) by (container, pod, namespace)
+  metricName: testInfraContainerCPU
+
+# Container CPU for maas-api in odh-ai-gateway-infra namespace
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container!="POD", namespace=~"odh-ai-gateway-infra|redhat-ai-gateway-infra", pod=~"maas-api.*"}[2m]) * 100) by (container, pod, namespace)
+  metricName: maasAPIContainerCPU
+
+# Container memory for MaaS components in openshift-ingress namespace
+
+- query: sum(container_memory_rss{name!="", container!="POD", namespace="openshift-ingress", pod=~"maas-default-gateway.*|data-science-gateway.*|payload-processing.*|payload-pre-processing.*|kube-auth-proxy.*|istiod-openshift-gateway.*"}) by (container, pod, namespace)
+  metricName: maasContainerMemory
+
+# Container memory for Kuadrant components in kuadrant-system
+
+- query: sum(container_memory_rss{name!="", container!="POD", namespace="kuadrant-system", pod=~"authorino.*|limitador.*"}) by (container, pod, namespace)
+  metricName: kuadrantContainerMemory
+
+# Container memory for test infra in maas-perf-test namespace
+
+- query: sum(container_memory_rss{name!="", container!="POD", namespace="maas-perf-test"}) by (container, pod, namespace)
+  metricName: testInfraContainerMemory
+
+# Container memory for maas-api in odh-ai-gateway-infra namespace
+
+- query: sum(container_memory_rss{name!="", container!="POD", namespace=~"odh-ai-gateway-infra|redhat-ai-gateway-infra", pod=~"maas-api.*"}) by (container, pod, namespace)
+  metricName: maasAPIContainerMemory
+
+# Network receive rate for MaaS components in openshift-ingress
+
+- query: sum(irate(container_network_receive_bytes_total{namespace="openshift-ingress", pod=~"maas-default-gateway.*|data-science-gateway.*|payload-processing.*|payload-pre-processing.*|kube-auth-proxy.*"}[2m])) by (pod, namespace)
+  metricName: maasNetworkReceiveRate
+
+# Network transmit rate for MaaS components in openshift-ingress
+
+- query: sum(irate(container_network_transmit_bytes_total{namespace="openshift-ingress", pod=~"maas-default-gateway.*|data-science-gateway.*|payload-processing.*|payload-pre-processing.*|kube-auth-proxy.*"}[2m])) by (pod, namespace)
+  metricName: maasNetworkTransmitRate
+
+# Istio/Envoy gateway request duration histograms (requires PodMonitor for istio-proxy)
+
+- query: histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{reporter="source", source_workload_namespace="openshift-ingress"}[2m])) by (le, source_workload))
+  metricName: gatewayRequestDurationP50
+
+- query: histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{reporter="source", source_workload_namespace="openshift-ingress"}[2m])) by (le, source_workload))
+  metricName: gatewayRequestDurationP95
+
+- query: histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter="source", source_workload_namespace="openshift-ingress"}[2m])) by (le, source_workload))
+  metricName: gatewayRequestDurationP99
+
+# Istio gateway request rate and count (requires PodMonitor for istio-proxy)
+
+- query: sum(rate(istio_requests_total{reporter="source", source_workload_namespace="openshift-ingress"}[2m])) by (source_workload, response_code)
+  metricName: gatewayRequestRate
+
+- query: sum(istio_requests_total{reporter="source", source_workload_namespace="openshift-ingress"}) by (source_workload, response_code)
+  metricName: gatewayRequestCount
+  instant: true
+
+# Limitador authorized calls (gauge, requires ServiceMonitor for limitador)
+
+- query: authorized_calls{job="limitador-limitador"}
+  metricName: limitadorAuthorizedCalls
+
+# Limitador authorized hits (counter, requires ServiceMonitor for limitador)
+
+- query: irate(authorized_hits{job="limitador-limitador"}[2m])
+  metricName: limitadorAuthorizedHitsRate
