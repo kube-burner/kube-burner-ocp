@@ -811,6 +811,15 @@ Some storage classes have limitations requiring the test to skip some parts:
 - `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
 
+#### VM Image Source
+
+By default, VMs are created directly from container disk images pulled from the registry. For testing storage cloning performance or reducing registry load, VMs can be cloned from a base image:
+
+- `--use-base-image` - Create a base `DataVolume` from the container image, then clone all VMs from it (default: false)
+- `--use-snapshot` - When using `--use-base-image`, clone from `VolumeSnapshot` instead of direct `PVC` clone (default: true)
+
+When `--use-base-image` is enabled, the workflow creates a base `DataVolume`, optionally creates a `VolumeSnapshot`, then clones all VMs from the snapshot or `PVC`. This reduces registry pulls and enables storage cloning performance testing.
+
 #### Cleanup
 
 Since the test is expected to run until failure, it is designed to keep all allocated resources to allow investigating the failure.
@@ -878,6 +887,15 @@ Some storage classes have limitations requiring the test to skip some parts. All
 - `--skip-restart-job` - Skip the VM restart job. Use when you want to test without VM restarts
 - `--skip-snapshot-job` - Skip the VM snapshot job. Use when snapshots are not supported or not needed
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
+
+#### VM Image Source
+
+By default, VMs are created directly from container disk images pulled from the registry. For testing storage cloning performance or reducing registry load, VMs can be cloned from a base image:
+
+- `--use-base-image` - Create a base `DataVolume` from the container image, then clone all VMs from it (default: false)
+- `--use-snapshot` - When using `--use-base-image`, clone from `VolumeSnapshot` instead of direct `PVC` clone (default: true)
+
+When `--use-base-image` is enabled, the workflow creates a base `DataVolume`, optionally creates a `VolumeSnapshot`, then clones all VMs from the snapshot or `PVC`. This reduces registry pulls and enables storage cloning performance testing.
 
 #### Cleanup
 
