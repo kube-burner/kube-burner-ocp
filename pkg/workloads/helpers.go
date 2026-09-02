@@ -21,10 +21,16 @@ import (
 	"io"
 	"math/rand"
 	"os"
+	"os/exec"
+	"path"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/cloud-bulldozer/go-commons/v2/indexers"
 	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
 	k8sstorage "github.com/cloud-bulldozer/go-commons/v2/k8s-storage"
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
@@ -36,6 +42,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -498,4 +505,415 @@ func verifyOrGetRandomWorkerNodeName(workerNodeName string) string {
 	}
 
 	return workerNodeNamesArray[rand.Intn(len(workerNodeNamesArray))]
+}
+func startAndMeasureVMs(ctx context.Context, bulkSleepTime time.Duration, sshConcurrencyLimit int) []bootstormResult {
+	k8sConnector := getK8SConnector()
+	vmGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachines"}
+
+	vmList, err := k8sConnector.DynamicClient().Resource(vmGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("kube-burner.io/job=%s", bootstormJobLabel),
+	})
+	if err != nil {
+		log.Errorf("Failed to list VMs: %v", err)
+		return nil
+	}
+
+	vmNames := make([]string, 0, len(vmList.Items))
+	for _, vm := range vmList.Items {
+		vmNames = append(vmNames, vm.GetName())
+	}
+	sort.Slice(vmNames, func(i, j int) bool {
+		getIter := func(name string) int {
+			parts := strings.Split(name, "-")
+			if len(parts) >= 3 {
+				n, _ := strconv.Atoi(parts[len(parts)-2])
+				return n
+			}
+			return 0
+		}
+		return getIter(vmNames[i]) < getIter(vmNames[j])
+	})
+	if len(vmNames) == 0 {
+		log.Errorf("No VMs found in namespace %s", bootstormNamespace)
+		return nil
+	}
+
+	log.Infof("Waiting for %d DVs to reach Succeeded...", len(vmNames))
+	failedDVs := make(map[string]bool)
+	var dvMu sync.Mutex
+	var dvWg sync.WaitGroup
+	for _, name := range vmNames {
+		dvWg.Add(1)
+		go func(vmName string) {
+			defer dvWg.Done()
+			dvName := strings.Replace(vmName, "windows-bootstorm-", "windows-bootstorm-rootdisk-", 1)
+			for attempt := 0; attempt < dvMaxRetries; attempt++ {
+				if ctx.Err() != nil {
+					return
+				}
+				output, err := exec.CommandContext(ctx, "kubectl", "get", "dv", dvName, "-n", bootstormNamespace,
+					"-o", "jsonpath={.status.phase}").Output()
+				if err != nil {
+					time.Sleep(sshPollInterval)
+					continue
+				}
+				phase := strings.TrimSpace(string(output))
+				if phase == "Succeeded" {
+					return
+				}
+				if phase == "Failed" {
+					log.Warnf("DV %s failed", dvName)
+					dvMu.Lock()
+					failedDVs[vmName] = true
+					dvMu.Unlock()
+					return
+				}
+				time.Sleep(sshPollInterval)
+			}
+			log.Warnf("DV %s not ready after max retries", dvName)
+			dvMu.Lock()
+			failedDVs[vmName] = true
+			dvMu.Unlock()
+		}(name)
+	}
+	dvWg.Wait()
+	if len(failedDVs) > 0 {
+		log.Warnf("%d DVs failed or timed out, skipping those VMs", len(failedDVs))
+	}
+	readyVMs := make([]string, 0, len(vmNames))
+	for _, name := range vmNames {
+		if !failedDVs[name] {
+			readyVMs = append(readyVMs, name)
+		}
+	}
+	log.Infof("DV polling finished. Starting %d VMs (concurrency: %d)", len(readyVMs), sshConcurrencyLimit)
+
+	var allResults []bootstormResult
+	var mu sync.Mutex
+	firstStartTime := time.Now()
+
+	for i := 0; i < len(readyVMs); i += sshConcurrencyLimit {
+		end := i + sshConcurrencyLimit
+		if end > len(readyVMs) {
+			end = len(readyVMs)
+		}
+		bulk := readyVMs[i:end]
+		log.Infof("Starting bulk %d-%d (%d VMs)", i, end-1, len(bulk))
+
+		var wg sync.WaitGroup
+		for _, vmName := range bulk {
+			wg.Add(1)
+			go func(name string) {
+				defer wg.Done()
+				startTime := time.Now()
+				if err := exec.CommandContext(ctx, "virtctl", "start", name, "-n", bootstormNamespace).Run(); err != nil {
+					log.Warnf("Failed to start VM %s: %v", name, err)
+					mu.Lock()
+					allResults = append(allResults, bootstormResult{VMName: name, AccessVM: 0})
+					mu.Unlock()
+					return
+				}
+				result := waitForSSH(ctx, name, startTime)
+				result.TotalRunTime = float64(time.Since(firstStartTime).Milliseconds())
+				mu.Lock()
+				allResults = append(allResults, result)
+				mu.Unlock()
+			}(vmName)
+		}
+		wg.Wait()
+
+		if end < len(readyVMs) {
+			log.Infof("Bulk complete, resting %s", bulkSleepTime)
+			select {
+			case <-ctx.Done():
+				return allResults
+			case <-time.After(bulkSleepTime):
+			}
+		}
+	}
+
+	log.Infof("Boot measurement complete: %d/%d VMs", len(allResults), len(readyVMs))
+	return allResults
+}
+
+func waitForSSH(ctx context.Context, vmName string, startTime time.Time) bootstormResult {
+	for attempt := 0; attempt < sshMaxRetries; attempt++ {
+		if ctx.Err() != nil {
+			return bootstormResult{VMName: vmName, AccessVM: 0}
+		}
+		output, err := exec.CommandContext(ctx, "kubectl", "get", "vm", vmName, "-n", bootstormNamespace,
+			"-o", "jsonpath={.status.printableStatus}").Output()
+		if err != nil {
+			log.Warnf("Failed to get VM %s status: %v", vmName, err)
+			time.Sleep(sshPollInterval)
+			continue
+		}
+		if strings.TrimSpace(string(output)) == "Running" {
+			break
+		}
+		if attempt == sshMaxRetries-1 {
+			log.Warnf("VM %s not Running after max retries", vmName)
+			return bootstormResult{VMName: vmName, AccessVM: 0}
+		}
+		time.Sleep(sshPollInterval)
+	}
+
+	for attempt := 1; attempt <= sshMaxRetries; attempt++ {
+		if ctx.Err() != nil {
+			break
+		}
+
+		output, _ := exec.CommandContext(ctx, "virtctl", "ssh",
+			"--local-ssh-opts=-o BatchMode=yes",
+			"--local-ssh-opts=-o PasswordAuthentication=no",
+			"--local-ssh-opts=-o ConnectTimeout=2",
+			"--local-ssh-opts=-o StrictHostKeyChecking=no",
+			"--local-ssh-opts=-o UserKnownHostsFile=/dev/null",
+			"-n", bootstormNamespace,
+			"-c", "exit",
+			"--username", "root",
+			fmt.Sprintf("vm/%s", vmName),
+		).CombinedOutput()
+
+		outStr := strings.ToLower(string(output))
+		if strings.Contains(outStr, "permission denied") || strings.Contains(outStr, "verification failed") {
+			elapsed := float64(time.Since(startTime).Microseconds()) / 1000.0
+			node := getVMINode(ctx, vmName)
+			log.Infof("SSH accessible: %s on %s in %.1fms", vmName, node, elapsed)
+			return bootstormResult{
+				VMName:        vmName,
+				Node:          node,
+				BootstormTime: float64(elapsed),
+				AccessVM:      1,
+			}
+		}
+
+		time.Sleep(sshPollInterval)
+	}
+
+	log.Warnf("SSH not accessible for %s after max retries", vmName)
+	node := getVMINode(ctx, vmName)
+	return bootstormResult{VMName: vmName, Node: node, AccessVM: 0}
+}
+
+func getVMINode(ctx context.Context, vmName string) string {
+	output, err := exec.CommandContext(ctx, "kubectl", "get", "vmi", vmName, "-n", bootstormNamespace,
+		"-o", "jsonpath={.status.nodeName}").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(output))
+}
+
+func writeBootstormResults(results []bootstormResult, wh *workloads.WorkloadHelper, imageURL string, scale int) {
+	if len(results) == 0 {
+		log.Warn("No bootstorm SSH results to index")
+		return
+	}
+
+	vmOSVersion := strings.TrimSuffix(path.Base(imageURL), path.Ext(imageURL))
+
+	docs := make([]interface{}, len(results))
+	for i, r := range results {
+		runStatus := "complete"
+		if r.AccessVM == 0 {
+			runStatus = "failed"
+		}
+		docs[i] = map[string]any{
+			"vm_name":        r.VMName,
+			"node":           r.Node,
+			"bootstorm_time": r.BootstormTime,
+			"access_vm":      r.AccessVM,
+			"total_run_time": r.TotalRunTime,
+			"kind":           "vm",
+			"run_status":     runStatus,
+			"vm_os_version":  vmOSVersion,
+			"scale":          scale,
+			"uuid":           AdditionalVars["UUID"],
+			"metricName":     "bootstormSSHMeasurement",
+			"jobName":        bootstormJobLabel,
+			"timestamp":      time.Now().UTC().Format(time.RFC3339),
+			"metadata":       wh.MetricsMetadata,
+		}
+	}
+
+	for _, endpoint := range workloads.ConfigSpec.MetricsEndpoints {
+		if endpoint.Type == "" {
+			continue
+		}
+		idx, err := indexers.NewIndexer(endpoint.IndexerConfig)
+		if err != nil {
+			log.Errorf("Failed to create indexer: %v", err)
+			continue
+		}
+		resp, err := (*idx).Index(docs, indexers.IndexingOpts{
+			MetricName: "bootstormSSHMeasurement",
+		})
+		if err != nil {
+			log.Errorf("Failed to index bootstorm SSH results: %v", err)
+		} else {
+			log.Infof("Bootstorm SSH results: %s", resp)
+		}
+	}
+}
+
+func stopAndDeleteBootstormVMs(ctx context.Context) {
+	k8sConnector := getK8SConnector()
+	vmGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachines"}
+	vmiGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachineinstances"}
+
+	vmList, err := k8sConnector.DynamicClient().Resource(vmGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+	if err != nil || len(vmList.Items) == 0 {
+		return
+	}
+
+	log.Infof("Stopping %d VMs", len(vmList.Items))
+	for _, vm := range vmList.Items {
+		_ = exec.CommandContext(ctx, "virtctl", "stop", vm.GetName(), "-n", bootstormNamespace).Run()
+	}
+
+	deadline := time.After(5 * time.Minute)
+	for {
+		select {
+		case <-deadline:
+			log.Warnf("Timed out waiting for VMIs to terminate")
+			goto deleteVMs
+		case <-time.After(10 * time.Second):
+			vmiList, err := k8sConnector.DynamicClient().Resource(vmiGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+			if err != nil || len(vmiList.Items) == 0 {
+				log.Infof("All VMIs terminated")
+				goto deleteVMs
+			}
+			log.Infof("Waiting for %d VMIs to terminate...", len(vmiList.Items))
+		}
+	}
+
+deleteVMs:
+	log.Infof("Deleting %d VMs", len(vmList.Items))
+	for _, vm := range vmList.Items {
+		_ = k8sConnector.DynamicClient().Resource(vmGVR).Namespace(bootstormNamespace).Delete(ctx, vm.GetName(), metav1.DeleteOptions{})
+	}
+
+	vmDeadline := time.After(5 * time.Minute)
+	for {
+		select {
+		case <-vmDeadline:
+			log.Warnf("Timed out waiting for VMs to be deleted")
+			return
+		case <-time.After(10 * time.Second):
+			remaining, err := k8sConnector.DynamicClient().Resource(vmGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+			if err != nil || len(remaining.Items) == 0 {
+				log.Infof("All VMs deleted")
+				return
+			}
+			log.Infof("Waiting for %d VMs to be deleted...", len(remaining.Items))
+		}
+	}
+}
+
+func deleteBootstormDVs(ctx context.Context) {
+	k8sConnector := getK8SConnector()
+	dvGVR := schema.GroupVersionResource{Group: "cdi.kubevirt.io", Version: "v1beta1", Resource: "datavolumes"}
+
+	dvList, err := k8sConnector.DynamicClient().Resource(dvGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+	if err != nil || len(dvList.Items) == 0 {
+		return
+	}
+
+	log.Infof("Deleting %d DataVolumes", len(dvList.Items))
+	for _, dv := range dvList.Items {
+		_ = k8sConnector.DynamicClient().Resource(dvGVR).Namespace(bootstormNamespace).Delete(ctx, dv.GetName(), metav1.DeleteOptions{})
+	}
+
+	deadline := time.After(5 * time.Minute)
+	for {
+		select {
+		case <-deadline:
+			log.Warnf("Timed out waiting for DVs to be deleted")
+			return
+		case <-time.After(10 * time.Second):
+			remaining, err := k8sConnector.DynamicClient().Resource(dvGVR).Namespace(bootstormNamespace).List(ctx, metav1.ListOptions{})
+			if err != nil || len(remaining.Items) == 0 {
+				log.Infof("All DataVolumes deleted")
+				return
+			}
+			log.Infof("Waiting for %d DVs to be deleted...", len(remaining.Items))
+		}
+	}
+}
+
+func clearWorkerNodeCaches() {
+	k8s := getK8SConnector()
+	nodes, err := k8s.ClientSet().CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/worker"})
+	if err != nil {
+		log.Warnf("Failed to list worker nodes for cache clear: %v", err)
+		return
+	}
+	for i := 0; i < 3; i++ {
+		for _, node := range nodes.Items {
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			_ = exec.CommandContext(ctx, "oc", "debug", "node/"+node.Name, "--", "chroot", "/host", "sh", "-c", "sync; echo 3 > /proc/sys/vm/drop_caches").Run()
+			cancel()
+		}
+		if i < 2 {
+			time.Sleep(3 * time.Second)
+		}
+	}
+	log.Infof("Cleared buffer caches on %d worker nodes", len(nodes.Items))
+}
+
+func createSnapshotCloneSC(ctx context.Context, baseSCName string) (string, error) {
+	k8s := getK8SConnector()
+	newName := baseSCName + "-bootstorm"
+
+	if _, err := k8s.ClientSet().StorageV1().StorageClasses().Get(ctx, newName, metav1.GetOptions{}); err == nil {
+		log.Infof("StorageClass %s already exists, reusing", newName)
+		return newName, nil
+	}
+
+	baseSC, err := k8s.ClientSet().StorageV1().StorageClasses().Get(ctx, baseSCName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get base StorageClass %s: %v", baseSCName, err)
+	}
+
+	newSC := &storagev1.StorageClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: newName,
+			Annotations: map[string]string{
+				"cdi.kubevirt.io/clone-strategy": "snapshot",
+			},
+		},
+		Provisioner:          baseSC.Provisioner,
+		Parameters:           baseSC.Parameters,
+		ReclaimPolicy:        baseSC.ReclaimPolicy,
+		VolumeBindingMode:    baseSC.VolumeBindingMode,
+		AllowVolumeExpansion: baseSC.AllowVolumeExpansion,
+		MountOptions:         baseSC.MountOptions,
+	}
+
+	if _, err := k8s.ClientSet().StorageV1().StorageClasses().Create(ctx, newSC, metav1.CreateOptions{}); err != nil {
+		return "", fmt.Errorf("failed to create StorageClass %s: %v", newName, err)
+	}
+	log.Infof("Created StorageClass %s with snapshot clone strategy", newName)
+
+	for i := 0; i < 30; i++ {
+		time.Sleep(1 * time.Second)
+		output, err := exec.CommandContext(ctx, "kubectl", "get", "storageprofile", newName,
+			"-o", "jsonpath={.status.cloneStrategy}").Output()
+		if err == nil && strings.TrimSpace(string(output)) != "" {
+			log.Infof("StorageProfile %s ready with cloneStrategy: %s", newName, strings.TrimSpace(string(output)))
+			return newName, nil
+		}
+	}
+	log.Warnf("StorageProfile for %s not ready after 30s, proceeding anyway", newName)
+	return newName, nil
+}
+
+func deleteSnapshotCloneSC(ctx context.Context, scName string) {
+	k8s := getK8SConnector()
+	if err := k8s.ClientSet().StorageV1().StorageClasses().Delete(ctx, scName, metav1.DeleteOptions{}); err != nil {
+		log.Warnf("Failed to delete StorageClass %s: %v", scName, err)
+	} else {
+		log.Infof("Deleted StorageClass %s", scName)
+	}
 }
