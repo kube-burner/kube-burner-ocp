@@ -57,7 +57,7 @@
 - query: sum(process_resident_memory_bytes{service="kubelet",job="crio"}) by (node) and on (node) kube_node_role{role="worker"}
   metricName: crioMemory
 
-- query: irate(container_runtime_crio_operations_latency_microseconds{operation_type="network_setup_pod"}[2m]) > 0
+- query: irate(container_runtime_crio_operations_latency_seconds{operation="network_setup_pod"}[2m]) > 0
   metricName: containerNetworkSetupLatency
 
 # Node metrics: Network
@@ -133,8 +133,8 @@
   metricName: schedulerThroughput
 
 # Scheduler P99 Latency: Time taken for the end-to-end scheduling algorithm..
-- query: histogram_quantile(0.99, sum(rate(scheduler_e2e_scheduling_duration_seconds_bucket[2m])) by (le))
-  metricName: 99thSchedulerE2ELatency
+- query: histogram_quantile(0.99, sum(rate(scheduler_scheduling_attempt_duration_seconds_bucket[2m])) by (le))
+  metricName: 99thSchedulingAttemptLatency
 
 # Cluster metrics
 
