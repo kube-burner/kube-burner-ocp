@@ -161,6 +161,7 @@ require (
 )
 
 replace (
+	github.com/kube-burner/kube-burner/v2 => /root/nabeel/kube-burner
 	k8s.io/api => k8s.io/api v0.34.3
 	k8s.io/apimachinery => k8s.io/apimachinery v0.34.3
 	k8s.io/client-go => k8s.io/client-go v0.34.3
