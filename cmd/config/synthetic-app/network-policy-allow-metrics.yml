@@ -1,0 +1,19 @@
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-egress-to-metrics-store
+spec:
+  podSelector:
+    matchLabels:
+      role: client
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: synthetic-app-infra
+    ports:
+    - protocol: TCP
+      port: 9999

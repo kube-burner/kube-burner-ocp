@@ -1,0 +1,107 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: user-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-client
+      pattern: users-frontend
+  template:
+    metadata:
+      labels:
+        app: user-client
+        pattern: users-frontend
+        role: client
+    spec:
+      dnsConfig:
+        options:
+        - name: ndots
+          value: "2"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/workload
+                operator: DoesNotExist
+      volumes:
+      - name: uperf-profiles
+        configMap:
+          name: uperf-profiles
+      containers:
+      - name: uperf-client
+        image: {{.uperfImage}}
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: uperf-profiles
+          mountPath: /profiles
+          readOnly: true
+        env:
+        - name: METRICS_HOST
+          value: "synthetic-app-metrics-store.synthetic-app-infra.svc"
+        - name: METRICS_PORT
+          value: "9999"
+        - name: PATTERN_NAME
+          value: "users-frontend"
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: SERVER_HOST
+          value: "frontend-svc"
+        - name: SERVER_PORT
+          value: "20000"
+        - name: REPORT_INTERVAL
+          value: "{{.metricsReportInterval}}"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          METRICS_URL="http://${METRICS_HOST}:${METRICS_PORT}/metrics"
+          PROFILE_TEMPLATE="/profiles/users-frontend.xml"
+          PROFILE="/tmp/profile.xml"
+
+          # Substitute environment variables in profile using sed
+          sed -e "s|\$SERVER_HOST|${SERVER_HOST}|g" \
+              -e "s|\$SERVER_PORT|${SERVER_PORT}|g" \
+              ${PROFILE_TEMPLATE} > ${PROFILE}
+
+          echo "Starting uperf client for users-frontend pattern"
+          echo "Server: ${SERVER_HOST}:${SERVER_PORT}"
+          cat ${PROFILE}
+
+          # Run uperf and report metrics periodically
+          while true; do
+            # Run uperf for the report interval
+            OUTPUT=$(timeout ${REPORT_INTERVAL}s uperf -m ${PROFILE} -a 2>&1 || true)
+
+            # Parse metrics from uperf output (from "Total" line)
+            # Example: "Total     22.89MB /   7.31(s) =    26.28Mb/s       51322op/s"
+            OPS_SEC=$(echo "$OUTPUT" | grep "^Total" | grep -oP '\d+(?=op/s)' || echo "0")
+            BYTES_SEC=$(echo "$OUTPUT" | grep "^Total" | grep -oP '[\d.]+(?=Mb/s)' || echo "0")
+
+            # Report to metrics store (single-line JSON for proper parsing)
+            JSON_DATA="{\"timestamp\":\"$(date -Iseconds)\",\"namespace\":\"${POD_NAMESPACE}\",\"pattern\":\"${PATTERN_NAME}\",\"client\":\"${POD_NAME}\",\"metrics\":{\"ops_per_sec\":${OPS_SEC:-0},\"throughput_mbps\":${BYTES_SEC:-0}}}"
+            curl -s -X POST "${METRICS_URL}" -H "Content-Type: application/json" -d "${JSON_DATA}" || echo "Failed to report metrics"
+
+            echo "Reported metrics: ops/sec=${OPS_SEC}, throughput=${BYTES_SEC} Mb/s"
+          done
+        imagePullPolicy: IfNotPresent

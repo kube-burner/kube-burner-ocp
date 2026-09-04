@@ -1,0 +1,55 @@
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: filler-netpol-{{.Replica}}
+spec:
+  podSelector:
+    matchLabels:
+      netpol-target: filler-{{.Replica}}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          netpol-peer: filler-{{.Replica}}
+    - podSelector:
+        matchLabels:
+          netpol-source: filler-{{.Replica}}
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 8080
+  - from:
+    - ipBlock:
+        cidr: 10.{{mod .Replica 256}}.0.0/16
+        except:
+        - 10.{{mod .Replica 256}}.1.0/24
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          netpol-peer: filler-{{.Replica}}
+    - podSelector:
+        matchLabels:
+          netpol-target: filler-{{.Replica}}
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+  - to:
+    - ipBlock:
+        cidr: 10.{{mod .Replica 256}}.0.0/16
+    ports:
+    - protocol: TCP
+      port: 80
+      endPort: 8080

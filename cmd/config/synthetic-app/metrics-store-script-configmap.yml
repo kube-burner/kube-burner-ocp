@@ -1,0 +1,144 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metrics-store-script
+data:
+  server.py: |
+    import json
+    import os
+    import threading
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    from datetime import datetime
+    from collections import defaultdict
+
+    METRICS_FILE = "/tmp/metrics_raw.log"
+    POD_NAME = os.environ.get("POD_NAME", "unknown")
+    PORT = int(os.environ.get("PORT", "9999"))
+
+    def make_default_entry():
+        return dict(count=0, ops_sum=0, throughput_sum=0, last_update="")
+
+    aggregated = defaultdict(make_default_entry)
+    lock = threading.Lock()
+
+    class MetricsHandler(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            print("[" + datetime.now().isoformat() + "] " + str(args[0]))
+
+        def do_GET(self):
+            if self.path == "/health" or self.path == "/healthz":
+                self._send_json(200, dict(status="healthy", pod=POD_NAME))
+            elif self.path == "/prometheus":
+                self._send_prometheus()
+            elif self.path.startswith("/metrics"):
+                self._send_metrics_json()
+            else:
+                self._send_json(200, dict(status="ok"))
+
+        def _send_metrics_json(self):
+            metrics = []
+            try:
+                with open(METRICS_FILE, "r") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            try:
+                                metrics.append(json.loads(line))
+                            except json.JSONDecodeError:
+                                pass
+            except FileNotFoundError:
+                pass
+            self._send_json(200, dict(pod=POD_NAME, metrics=metrics))
+
+        def _send_prometheus(self):
+            lines = []
+            lines.append("# HELP synthetic_app_ops_per_sec Operations per second from uperf")
+            lines.append("# TYPE synthetic_app_ops_per_sec gauge")
+            lines.append("# HELP synthetic_app_throughput_mbps Throughput in Mbps from uperf")
+            lines.append("# TYPE synthetic_app_throughput_mbps gauge")
+            lines.append("# HELP synthetic_app_sample_count Number of samples received")
+            lines.append("# TYPE synthetic_app_sample_count counter")
+
+            with lock:
+                for key, data in aggregated.items():
+                    ns, pattern = key
+                    labels = 'namespace="' + ns + '",pattern="' + pattern + '",pod="' + POD_NAME + '"'
+                    if data["count"] > 0:
+                        avg_ops = data["ops_sum"] / data["count"]
+                        avg_throughput = data["throughput_sum"] / data["count"]
+                        lines.append("synthetic_app_ops_per_sec" + chr(123) + labels + chr(125) + " " + str(round(avg_ops, 2)))
+                        lines.append("synthetic_app_throughput_mbps" + chr(123) + labels + chr(125) + " " + str(round(avg_throughput, 2)))
+                        lines.append("synthetic_app_sample_count" + chr(123) + labels + chr(125) + " " + str(data["count"]))
+
+            response = "\n".join(lines) + "\n"
+            self._send_text(response)
+
+        def do_POST(self):
+            if self.path == "/metrics" or self.path.startswith("/metrics"):
+                content_length = int(self.headers.get("Content-Length", 0))
+                if content_length > 0:
+                    body = self.rfile.read(content_length).decode("utf-8")
+                    with open(METRICS_FILE, "a") as f:
+                        f.write(body + "\n")
+
+                    try:
+                        data = json.loads(body)
+                        ns = data.get("namespace", "unknown")
+                        pattern = data.get("pattern", "unknown")
+                        metrics = data.get("metrics", dict())
+                        ops = float(metrics.get("ops_per_sec", 0))
+                        throughput = float(metrics.get("throughput_mbps", 0))
+
+                        with lock:
+                            key = (ns, pattern)
+                            aggregated[key]["count"] += 1
+                            aggregated[key]["ops_sum"] += ops
+                            aggregated[key]["throughput_sum"] += throughput
+                            aggregated[key]["last_update"] = data.get("timestamp", "")
+                    except (json.JSONDecodeError, ValueError, KeyError):
+                        pass
+
+                    self._send_json(200, dict(status="ok", received=True))
+                else:
+                    self._send_json(400, dict(error="no body"))
+            else:
+                self._send_json(404, dict(error="not found"))
+
+        def do_DELETE(self):
+            if self.path == "/metrics":
+                try:
+                    os.remove(METRICS_FILE)
+                except FileNotFoundError:
+                    pass
+                with lock:
+                    aggregated.clear()
+                self._send_json(200, dict(status="cleared"))
+            else:
+                self._send_json(404, dict(error="not found"))
+
+        def _send_json(self, code, data):
+            response = json.dumps(data).encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", len(response))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(response)
+
+        def _send_text(self, text):
+            response = text.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", len(response))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(response)
+
+    if __name__ == "__main__":
+        print("Starting metrics store on port " + str(PORT) + " (pod: " + POD_NAME + ")")
+        print("  POST /metrics - receive metrics from uperf clients")
+        print("  GET /metrics - return all metrics as JSON")
+        print("  GET /prometheus - return metrics in Prometheus format")
+        server = HTTPServer(("0.0.0.0", PORT), MetricsHandler)
+        server.serve_forever()

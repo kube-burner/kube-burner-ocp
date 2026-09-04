@@ -1,0 +1,19 @@
+---
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-ingress-from-synthetic-app
+spec:
+  podSelector:
+    matchLabels:
+      app: synthetic-app-metrics-store
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kube-burner.io/job: synthetic-app
+    ports:
+    - protocol: TCP
+      port: 9999
