@@ -15,7 +15,6 @@
 package workloads
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,7 +25,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -34,7 +32,7 @@ import (
 func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var rc int
 	var metricsProfiles []string
-	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent, numSriovs int
+	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent, numSriovs, fillPercent, podsPerDeployment int
 	var podReadyThreshold, churnDuration, churnDelay, probesPeriod, pprofInterval time.Duration
 	var containerImage, deletionStrategy, churnMode, selector, perfProfile, sriovNetworkName string
 	var namespacedIterations, pprof, svcLatency bool
@@ -46,16 +44,18 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
 		Run: func(cmd *cobra.Command, args []string) {
-			kubeClientProvider := config.NewKubeClientProvider("", "")
-			clientSet, _ := kubeClientProvider.ClientSet(0, 0)
-			nodes, err := clientSet.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{LabelSelector: selector})
+			if fillPercent != 0 && (fillPercent < 1 || fillPercent > 100) {
+				log.Fatal("fill-percent must be between 1 and 100")
+			}
+			nodeResources, err := wh.MetadataAgent.GetAggregatedNodeResources(selector)
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			if len(nodes.Items) == 0 {
-				log.Fatalf("No nodes found with the selector: %s", selector)
+			if nodeResources.NodeCount == 0 {
+				log.Fatalf("No ready schedulable nodes found with the selector: %s", selector)
 			}
-			totalPods := len(nodes.Items) * podsPerNode
+			log.Infof("Aggregated allocatable resources for selector %q: nodes=%d cpu=%dm memory=%dKi pods=%d",
+				selector, nodeResources.NodeCount, nodeResources.CPUMilliCores, nodeResources.MemoryBytes/1024, nodeResources.PodCapacity)
 			podCount, err := wh.MetadataAgent.GetCurrentPodCount(selector)
 			if err != nil {
 				log.Fatal(err.Error())
@@ -105,10 +105,26 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 				log.Fatal(err.Error())
 			}
 			AdditionalVars["NODE_SELECTOR"] = string(nodeSelectorJson)
+			totalPods := nodeResources.NodeCount * podsPerNode
+			jobIterations := max(totalPods-podCount, 0)
 			if variant == "node-density" {
-				AdditionalVars["JOB_ITERATIONS"] = totalPods - podCount
+				AdditionalVars["JOB_ITERATIONS"] = jobIterations
 			} else {
-				AdditionalVars["JOB_ITERATIONS"] = (totalPods - podCount) / 2
+				AdditionalVars["JOB_ITERATIONS"] = jobIterations / 2
+			}
+			if variant == "node-density" && fillPercent > 0 {
+				if podsPerDeployment < 1 {
+					log.Fatal("pods-per-deployment must be at least 1")
+				}
+				fillReplicas := nodeDensityFillReplicas(nodeResources.PodCapacity, fillPercent, podCount+jobIterations)
+				deployments, podsPerDeployment := nodeDensityFillLayout(fillReplicas, podsPerDeployment)
+				if deployments > 0 {
+					log.Infof("Filling selected nodes to %d%% of pod capacity: creating %d deployments with %d pods each (%d total, target %d)",
+						fillPercent, deployments, podsPerDeployment, deployments*podsPerDeployment, fillReplicas)
+					AdditionalVars["DEPLOYMENT_REPLICAS"] = deployments
+					AdditionalVars["POD_REPLICAS"] = podsPerDeployment
+					AdditionalVars["FILL_PERCENT"] = fillPercent
+				}
 			}
 			setMetrics(cmd, metricsProfiles)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -130,6 +146,8 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	case "node-density":
 		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 		cmd.Flags().StringVar(&containerImage, "container-image", "gcr.io/google_containers/pause:3.1", "Container image")
+		cmd.Flags().IntVar(&fillPercent, "fill-percent", 0, "Percentage of aggregated allocatable pod capacity to fill on nodes matching --selector. Creates Deployments in a single job iteration")
+		cmd.Flags().IntVar(&podsPerDeployment, "max-pods-per-deployment", 1000, "Maximum pods per Deployment when using --fill-percent")
 	case "node-density-heavy":
 		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 		cmd.Flags().DurationVar(&probesPeriod, "probes-period", 10*time.Second, "Perf app readiness/liveness probes period")
@@ -146,4 +164,26 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	cmd.Flags().IntVar(&iterationsPerNamespace, "iterations-per-namespace", 1000, "Iterations per namespace")
 	cmd.Flags().StringVar(&selector, "selector", workerNodeSelector, "Node selector")
 	return cmd
+}
+
+// nodeDensityFillReplicas returns the number of pod replicas needed to reach fillPercent of
+// aggregated allocatable pod capacity, accounting for pods already running on the selected nodes.
+func nodeDensityFillReplicas(podCapacity int64, fillPercent, currentPods int) int {
+	targetPods := int(podCapacity * int64(fillPercent) / 100)
+	replicas := targetPods - currentPods
+	if replicas < 0 {
+		return 0
+	}
+	return replicas
+}
+
+// nodeDensityFillLayout splits fillReplicas across Deployments so that each Deployment stays
+// within maxPodsPerDeployment and the total pod count never exceeds fillReplicas.
+func nodeDensityFillLayout(fillReplicas, maxPodsPerDeployment int) (deployments, podsPerDeployment int) {
+	if fillReplicas <= 0 {
+		return 0, 0
+	}
+	deployments = (fillReplicas + maxPodsPerDeployment - 1) / maxPodsPerDeployment
+	podsPerDeployment = fillReplicas / deployments
+	return deployments, podsPerDeployment
 }

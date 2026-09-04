@@ -363,6 +363,12 @@ The workloads of this family create a single namespace with a set of pods, deplo
 
 This workload is meant to fill with pause pods all the worker nodes from the cluster. It can be customized with the following flags. This workload is usually used to measure the Pod's ready latency KPI.
 
+By default it creates one Pod object per iteration so that kube-burner can drive creation QPS. `--fill-percent` adds a `node-density-fill` job that then tops the nodes matching `--selector` up to that percentage of their aggregated allocatable pod capacity. That job uses a single iteration and splits the pods across multiple Deployments, capped by `--pods-per-deployment` (default 1000).
+
+```console
+kube-burner-ocp node-density --fill-percent=80
+```
+
 ### node-density-cni
 
 It creates two deployments, a client/curl and a server/nxing, and 1 service backed by the previous server pods. The client application has configured an startup probe that makes requests to the previous service every second with a timeout of 600s.
@@ -1855,7 +1861,7 @@ It is possible to customize any of the above workload configurations by extracti
 ```console
 $ kube-burner-ocp node-density --extract
 $ ls
-alerts.yml  metrics.yml  node-density.yml  pod.yml  metrics-report.yml
+alerts.yml  metrics.yml  node-density.yml  pod.yml  deployment.yml  metrics-report.yml
 $ vi node-density.yml                               # Perform modifications accordingly
 $ kube-burner-ocp node-density --pods-per-node=100  # Run workload
 ```
