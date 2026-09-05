@@ -191,13 +191,9 @@ func NewVirtCapacityBenchmark(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&minimalVolumeSize, "min-vol-size", 0, "Minimal volume size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().IntVar(&minimalVolumeIncreaseSize, "min-vol-inc-size", 0, "Minimal volume increment size - use when enforced or overridden by the StorageClass")
 	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
-<<<<<<< HEAD
 	cmd.Flags().BoolVar(&skipRestartJob, "skip-restart-job", false, "Skip the VM restart job")
 	cmd.Flags().BoolVar(&skipSnapshotJob, "skip-snapshot-job", false, "Skip the VM snapshot job")
-	cmd.Flags().StringVar(&nodeSelectorStr, "node-selector", "", "Node selector labels (comma-separated key=value pairs, e.g., topology.kubernetes.io/zone=us-east-1a,disktype=ssd)")
-=======
 	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
->>>>>>> fffefc67 (Signed-off-by: Daniel Dominguez <ddomingu@redhat.com>)
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
