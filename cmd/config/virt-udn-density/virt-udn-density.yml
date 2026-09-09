@@ -119,7 +119,7 @@ jobs:
     jobPause: 2m
     {{ if .SSH_CHECK }}
     hooks:
-    - cmd: ["./check-udn.sh", "kube-burner.io/job", "virt-density-udn", "", "{{ .SSH_PRIVATE_KEY }}", "fedora", "", "", "kube-burner.io/test-name=virt-udn-density"]
+    - cmd: ["./check-udn.sh", "kube-burner.io/job", "virt-density-udn", "", "{{ .SSH_PRIVATE_KEY }}", "fedora", "kube-burner.io/test-name=virt-udn-density"]
       when: beforeCleanup
     {{ end }}
     objects:

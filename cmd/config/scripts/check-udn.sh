@@ -12,9 +12,7 @@ LABEL_VALUE=$2
 NAMESPACE=$3
 IDENTITY_FILE=$4
 REMOTE_USER=$5
-EXPECTED_ROOT_SIZE=$6
-EXPECTED_DATA_SIZE=$7
-NAMESPACE_LABEL="${8:-}"
+NAMESPACE_LABEL="${6:-}"
 
 # Wait up to ~60 minutes
 MAX_RETRIES=30
@@ -129,11 +127,11 @@ set_up_ssh() {
     local host_ip
     local node_port
 
-    kubectl apply -f <(kubectl create svc nodeport ${SSH_SERVICE} --tcp=22 -o yaml --dry-run=client) -n ${namespace} >/dev/null 2>&1
-    node_port=$(kubectl get svc ${SSH_SERVICE} -n ${namespace} -o jsonpath='{.spec.ports[0].nodePort}')
-    kubectl label pod "${virt_runner_pod_name}" -n ${namespace} app=${SSH_SERVICE} --overwrite  >/dev/null 2>&1
-    host_ip=$(kubectl get pod "${virt_runner_pod_name}" -n ${namespace} -o jsonpath='{.status.hostIP}')
-    ssh -A -i ${identity_file} ${remote_user}@${host_ip} -p ${node_port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ls >/dev/null 2>&1
+    kubectl apply -f <(kubectl create svc nodeport ${SSH_SERVICE} --tcp=22 -o yaml --dry-run=client) -n "${namespace}" >/dev/null 2>&1
+    node_port=$(kubectl get svc ${SSH_SERVICE} -n "${namespace}" -o jsonpath='{.spec.ports[0].nodePort}')
+    kubectl label pod "${virt_runner_pod_name}" -n "${namespace}" app=${SSH_SERVICE} --overwrite  >/dev/null 2>&1
+    host_ip=$(kubectl get pod "${virt_runner_pod_name}" -n "${namespace}" -o jsonpath='{.status.hostIP}')
+    ssh -A -i "${identity_file}" "${remote_user}@${host_ip}" -p "${node_port}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ls >/dev/null 2>&1
     echo "${host_ip} ${node_port}"
 }
 
@@ -158,7 +156,7 @@ remote_command() {
     local command=$5
 
     local output
-    output=$(ssh ${remote_user}@${host_ip} -p ${node_port} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -A  -i "${identity_file}" "${command}")
+    output=$(ssh "${remote_user}"@"${host_ip}" -p "${node_port}" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -A  -i "${identity_file}" "${command}")
     local ret=$?
     if [ $ret -ne 0 ]; then
         return 1

@@ -108,16 +108,13 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["ENABLE_LAYER_3"] = l3
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
-<<<<<<< HEAD
 			nodeSelectorJSON, err := buildNodeSelectorJSON(selector)
 			if err != nil {
 				log.Fatal(err.Error())
 			}
 			AdditionalVars["NODE_SELECTOR"] = nodeSelectorJSON
-=======
 			AdditionalVars["SSH_CHECK"] = sshCheck
 
->>>>>>> 1bfad512 (Adding check-udn.sh script to ensure ssh is working with VMs running with UDN)
 			if l3 {
 				log.Info("Layer 3 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer3", bindingMethod)
