@@ -91,20 +91,20 @@
   instant: true
 
 - query: max(max_over_time((delta(etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum[1m:30s])/2)[{{.elapsed}}:30s]))
-  metricName: max-99thEtcdCompaction
+  metricName: max-etcdCompaction
   instant: true
 
 - query: etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum
-  metricName: 99thEtcdCompaction-raw
+  metricName: etcdCompaction-raw
   instant: true
   captureStart: true
 
 - query: max(max_over_time((delta(etcd_disk_backend_defrag_duration_seconds_sum[1m:30s])/2)[{{.elapsed}}:30s]))
-  metricName: max-99thEtcdDefrag
+  metricName: max-etcdDefrag
   instant: true
 
 - query: etcd_disk_backend_defrag_duration_seconds_sum
-  metricName: 99thEtcdDefrag-raw
+  metricName: etcdDefrag-raw
   instant: true
   captureStart: true
 
