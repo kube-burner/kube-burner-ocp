@@ -33,7 +33,7 @@ spec:
               - key: node-role.kubernetes.io/workload
                 operator: DoesNotExist
       containers:
-      - image: quay.io/cloud-bulldozer/nginx:latest
+      - image: {{ if .bgp }}quay.io/cloud-bulldozer/nginx-ssh:latest{{ else }}quay.io/cloud-bulldozer/nginx:latest{{ end }}
         resources:
           requests:
             memory: "10Mi"
@@ -41,7 +41,12 @@ spec:
         volumeMounts:
         - name: podinfo
           mountPath: /etc/podlabels
-        imagePullPolicy: IfNotPresent
+        {{ if .bgp }}
+        - name: ssh-authorized-keys
+          mountPath: /etc/ssh-authorized-keys
+          readOnly: true
+        {{ end }}
+        imagePullPolicy: Always
         ports:
         - name: http
           containerPort: 8080
@@ -49,6 +54,11 @@ spec:
         - name: https
           containerPort: 8443
           protocol: TCP
+        {{ if .bgp }}
+        - name: ssh
+          containerPort: 2222
+          protocol: TCP
+        {{ end }}
         name: nginx
       volumes:
       - name: podinfo
@@ -57,3 +67,11 @@ spec:
             - path: "labels"
               fieldRef:
                 fieldPath: metadata.labels
+      {{ if .bgp }}
+      - name: ssh-authorized-keys
+        secret:
+          secretName: {{ .sshPublicKeySecretName }}
+          items:
+            - key: key
+              path: authorized_keys
+      {{ end }}
