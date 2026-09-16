@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
@@ -29,6 +30,10 @@ const (
 	dvCloneDefaultDataVolumeSize   = "1Gi"
 )
 
+var (
+	dvCloneNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, dvCloneTestName)
+)
+
 // Returns virt-density workload
 func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
@@ -41,12 +46,17 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	var clonesPerIteration int
 	var metricsProfiles []string
 	var volumeAccessMode string
+	var cleanup bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          dvCloneTestName,
 		Short:        "Runs dv-clone workload",
 		SilenceUsage: true,
 		PreRun: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				return
+			}
+
 			if _, ok := accessModeTranslator[volumeAccessMode]; !ok {
 				log.Fatalf("Unsupported access mode - %s", volumeAccessMode)
 			}
@@ -58,6 +68,12 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
+			if cleanup {
+				log.Infof("Cleaning up all the resources from the previous run")
+				cleanupTestNamespaces(cmd.Context(), dvCloneNamespaceLabelSelector)
+				return
+			}
+
 			var err error
 			log.Infof("All resources will be create in the namespace [%s]", testNamespace)
 			log.Infof("Using [%s] as the container disk image for the base DataVolume", containerDiskUrl)
@@ -93,5 +109,6 @@ func NewDVClone(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&containerDiskUrl, "container-disk", dvCloneDefaultContainerDiskUrl, "URL of the container disk to load into the volume")
 	cmd.Flags().StringVar(&dataVolumeSize, "datavolume-size", dvCloneDefaultDataVolumeSize, "Size of the DataVolume to create")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }

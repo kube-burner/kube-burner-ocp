@@ -103,10 +103,28 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: false
     jobPause: {{.JOB_PAUSE}}
+{{ if $incrementalStepSize }}
+    incrementalLoad:
+      startIterations: {{ $incrementalStepSize }}
+      totalIterations: {{ $iterations }}
+      stepDelay: {{ $incrementalStepDelay }}
+      pattern:
+        type: linear
+        linear:
+          stepSize: {{ $incrementalStepSize }}
+{{ else }}
+    churnConfig:
+      cycles: {{ $churnCycles }}
+      duration: {{ $churnDuration }}
+      percent: {{ $churnPercent }}
+      delay: {{ $churnDelay }}
+      mode: {{ $churnMode }}
+{{ end }}
 {{ if $chaosAction }}
     hooks:
     - cmd: ["chaos.sh", "{{ $chaosAction }}", "{{ $chaosDelay }}", "{{ $chaosCycles }}"]
-      when: afterJobExecution
+      when: beforeChurn
+      background: true
 {{ end }}
     watchers:
       - kind: Secret
@@ -181,7 +199,8 @@ jobs:
 {{ if $chaosAction }}
     hooks:
     - cmd: ["chaos.sh", "{{ $chaosAction }}", "{{ $chaosDelay }}", "{{ $chaosCycles }}"]
-      when: afterJobExecution
+      when: beforeChurn
+      background: true
 {{ end }}
     objects:
       - objectTemplate: common-secret.yml

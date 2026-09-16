@@ -9,6 +9,9 @@ spec:
       labels:
         kubevirt.io/os: fedora
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution: {{.NODE_SELECTOR|toJson}}
       terminationGracePeriodSeconds: 0
       domain:
         cpu:

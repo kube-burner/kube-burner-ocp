@@ -43,6 +43,8 @@ jobs:
   - name: churn-patch
     jobType: patch
     jobIterations: {{.PATCH_ROUNDS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
     namespacedIterations: true
     namespace: etcd-churn
     jobPause: 1s

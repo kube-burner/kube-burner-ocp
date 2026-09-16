@@ -33,6 +33,7 @@ Available Commands:
   kueue-operator-jobs        Runs kueue-operator-jobs workload
   kueue-operator-jobs-shared Runs kueue-operator-jobs-shared workload
   kueue-operator-pods        Runs kueue-operator-pods workload
+  maas-gateway-perf          Runs maas-gateway-perf workload
   network-policy             Runs network-policy workload
   node-density               Runs node-density workload
   node-density-cni           Runs node-density-cni workload
@@ -806,10 +807,21 @@ Users may control the workload sizes by passing the following arguments:
 
 #### Skip test parts
 
-Some storage classes have limitations requiring the test to skip some parts:
+Some storage classes have limitations requiring the test to skip some parts. All steps except VM creation can be skipped:
 
 - `--skip-resize-job` - Skip volume resize job. Use when e.g. `allowVolumeExpansion` is `false`
+- `--skip-restart-job` - Skip the VM restart job. Use when you want to test without VM restarts
+- `--skip-snapshot-job` - Skip the VM snapshot job. Use when snapshots are not supported or not needed
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
+
+#### VM Image Source
+
+By default, VMs are created directly from container disk images pulled from the registry. For testing storage cloning performance or reducing registry load, VMs can be cloned from a base image:
+
+- `--use-base-image` - Create a base `DataVolume` from the container image, then clone all VMs from it (default: false)
+- `--use-snapshot` - When using `--use-base-image`, clone from `VolumeSnapshot` instead of direct `PVC` clone (default: true)
+
+When `--use-base-image` is enabled, the workflow creates a base `DataVolume`, optionally creates a `VolumeSnapshot`, then clones all VMs from the snapshot or `PVC`. This reduces registry pulls and enables storage cloning performance testing.
 
 #### Cleanup
 
@@ -878,6 +890,15 @@ Some storage classes have limitations requiring the test to skip some parts. All
 - `--skip-restart-job` - Skip the VM restart job. Use when you want to test without VM restarts
 - `--skip-snapshot-job` - Skip the VM snapshot job. Use when snapshots are not supported or not needed
 - `--skip-migration-job` - Skip the migration job. Use when e.g. `RWX` `accessMode` is not supported
+
+#### VM Image Source
+
+By default, VMs are created directly from container disk images pulled from the registry. For testing storage cloning performance or reducing registry load, VMs can be cloned from a base image:
+
+- `--use-base-image` - Create a base `DataVolume` from the container image, then clone all VMs from it (default: false)
+- `--use-snapshot` - When using `--use-base-image`, clone from `VolumeSnapshot` instead of direct `PVC` clone (default: true)
+
+When `--use-base-image` is enabled, the workflow creates a base `DataVolume`, optionally creates a `VolumeSnapshot`, then clones all VMs from the snapshot or `PVC`. This reduces registry pulls and enables storage cloning performance testing.
 
 #### Cleanup
 
@@ -1572,6 +1593,133 @@ This workload creates jobs in multiple namespaces that are handled by 10 shared 
 
 This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
 
+
+## MaaS Gateway Performance workload
+
+This workload measures the latency and throughput overhead of the MaaS (Models-as-a-Service) AI Gateway on OpenShift. It runs A/B tests comparing direct-to-simulator performance (baseline) against gateway-routed performance across multiple AI providers, payload sizes, and concurrency levels.
+
+The workload deploys a multi-provider LLM simulator (`llm-d-inference-sim`), registers it as 5 ExternalModel CRs with corresponding HTTPRoutes and Secrets, then runs GuideLLM benchmarks as native Kubernetes Jobs. The GuideLLM container image (`ghcr.io/cloud-bulldozer/guidellm-results-parser`) includes both the benchmark tool and a results parser that indexes directly to OpenSearch.
+
+The job config uses Go template loops over providers, payload sizes, and concurrency levels — the full test matrix is generated dynamically from CLI flags with zero code duplication.
+
+### Architecture
+
+```
+kube-burner-ocp maas-gateway-perf
+  Job 1: deploy-test-infra
+    Simulator Deployment + Service
+    5x ExternalModel CRs (openai, azure-openai, bedrock, anthropic, vertexai)
+    5x HTTPRoutes (path-based + header-based routing)
+    5x Secrets (dummy provider credentials)
+  Jobs 2..N: baseline-{size}-{provider}-c{rate}
+    GuideLLM K8s Job → direct to simulator (no gateway)
+  Jobs N+1..2N: gateway-{size}-{provider}-c{rate}
+    GuideLLM K8s Job → through MaaS gateway (BBR)
+  Last job: cleanup
+```
+
+### Flags
+
+| Flag | Description | Default |
+| ---- | ----------- | ------- |
+| `--gateway-host` | Full gateway service URL | **(required)** |
+| `--simulator-host` | Simulator service URL | **(required)** |
+| `--providers` | Comma-separated provider model names | `gpt-4o-openai,claude-sonnet-anthropic` |
+| `--payload-sizes` | Comma-separated sizes: small(32/64), medium(256/512), large(1024/1024), very-large(2048/2048) | `small,medium` |
+| `--concurrency-levels` | Comma-separated concurrency levels | `8,32,64,128,512` |
+| `--benchmark-duration` | Duration of each benchmark run | `90s` |
+| `--warmup` | Warmup period discarded from results | `30s` |
+| `--guidellm-image` | GuideLLM container image with parser | `ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.4` |
+| `--samples` | Benchmark samples per Job (K8s Job completions) | `3` |
+| `--parallelism` | K8s Job parallelism | `1` |
+| `--pause` | Pause after each benchmark job completes | `10s` |
+| `--metrics-profile` | Metrics profiles to use | `maas-gateway-perf-metrics.yml` |
+
+### Test Matrix
+
+Total GuideLLM Jobs = `providers × payload_sizes × concurrency_levels × 2 (baseline + gateway)`
+
+With defaults (`2 providers × 2 sizes × 5 levels × 2 modes`) = **40 GuideLLM Jobs**, each running `--samples` completions.
+
+### Available Providers
+
+| Provider | API Translation | Expected Overhead |
+| -------- | --------------- | ----------------- |
+| `gpt-4o-openai` | Passthrough | Minimal |
+| `gpt-4o-azure` | Path rewrite | Minimal |
+| `gpt-4o-bedrock` | Passthrough | Minimal |
+| `claude-sonnet-anthropic` | Full body translation (OpenAI → Anthropic Messages API) | Higher |
+| `claude-sonnet-vertex` | Full body translation (OpenAI → Vertex AI) | Higher |
+
+### Metrics Collected
+
+The `maas-gateway-perf-metrics.yml` profile scrapes:
+
+- Istio gateway request duration histograms (p50/p95/p99) by destination workload
+- Authorino auth evaluation duration (p95) by authconfig and evaluator
+- Container CPU/memory for gateway, payload-processing, simulator, and maas-api pods
+- Limitador authorized/limited call rates
+- Gateway request rates by response code
+
+### Usage Examples
+
+Minimal run with required flags:
+
+```console
+kube-burner-ocp maas-gateway-perf \
+  --gateway-host=http://maas-default-gateway.openshift-ingress.svc.cluster.local:80 \
+  --simulator-host=http://llm-d-inference-sim.maas-perf-test.svc.cluster.local:8000
+```
+
+Full 5-provider matrix with ES indexing:
+
+```console
+kube-burner-ocp maas-gateway-perf \
+  --gateway-host=http://maas-default-gateway.openshift-ingress.svc.cluster.local:80 \
+  --simulator-host=http://llm-d-inference-sim.maas-perf-test.svc.cluster.local:8000 \
+  --providers=gpt-4o-openai,gpt-4o-azure,gpt-4o-bedrock,claude-sonnet-anthropic,claude-sonnet-vertex \
+  --payload-sizes=small,medium,large,very-large \
+  --concurrency-levels=2,4,8,16,32,64,128,256,512,1024 \
+  --es-server=https://opensearch.example.com:9200 \
+  --es-index=maas-gateway-perf
+```
+
+Quick smoke test:
+
+```console
+kube-burner-ocp maas-gateway-perf \
+  --gateway-host=http://maas-default-gateway.openshift-ingress.svc.cluster.local:80 \
+  --simulator-host=http://llm-d-inference-sim.maas-perf-test.svc.cluster.local:8000 \
+  --providers=gpt-4o-openai \
+  --payload-sizes=small \
+  --concurrency-levels=8,64 \
+  --benchmark-duration=30s --warmup=10s --samples=1
+```
+
+Extract and customize the config:
+
+```console
+kube-burner-ocp maas-gateway-perf --extract
+ls maas-gateway-perf/
+# external-model.yml  guidellm-job.yml  httproute.yml  maas-gateway-perf.yml
+# secret.yml  simulator-deployment.yml  simulator-service.yml
+vi maas-gateway-perf/maas-gateway-perf.yml  # Modify job config
+kube-burner-ocp maas-gateway-perf \
+  --gateway-host=... --simulator-host=...   # Run with modified config
+```
+
+### KPIs
+
+| Metric | Source | Description |
+| ------ | ------ | ----------- |
+| Request latency (mean/p50/p95/p99) | GuideLLM → OpenSearch | End-to-end request latency per provider/payload/concurrency |
+| Requests per second | GuideLLM → OpenSearch | Throughput under load |
+| TTFT | GuideLLM → OpenSearch | Time to first token |
+| ITL | GuideLLM → OpenSearch | Inter-token latency |
+| Gateway overhead | Derived (gateway − baseline) | Net latency added by the MaaS stack |
+| Istio gateway latency | Prometheus → kube-burner | Gateway-level request duration |
+| Authorino auth duration | Prometheus → kube-burner | Authentication evaluation time |
+| Pod CPU/memory | Prometheus → kube-burner | Resource consumption of MaaS components |
 
 ## Berserker-load workload
 

@@ -91,6 +91,7 @@ jobs:
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}
       dataVolumeCounters: []
+      NODE_SELECTOR: {{ .NODE_SELECTOR }}
 
 - name: stop-vm
   jobType: kubevirt
@@ -238,6 +239,7 @@ jobs:
       storageClassName: {{ .storageClassName }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}
+      NODE_SELECTOR: {{ .NODE_SELECTOR }}
       dataVolumeCounters:
       {{ range .dataVolumeCounters }}
       - {{ . }}

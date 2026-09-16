@@ -90,6 +90,7 @@ jobs:
           vmImage: {{.VM_IMAGE}}
           vmCPU: {{.VM_CPU}}
           vmMemory: {{.VM_MEMORY}}
+          NODE_SELECTOR: {{ .NODE_SELECTOR }}
 {{ else }}
       - objectTemplate: vm-nomnt.yml
         replicas: 1
@@ -97,5 +98,6 @@ jobs:
           vmImage: {{.VM_IMAGE}}
           vmCPU: {{.VM_CPU}}
           vmMemory: {{.VM_MEMORY}}
+          NODE_SELECTOR: {{ .NODE_SELECTOR }}
 {{ end }}
 {{ end }}

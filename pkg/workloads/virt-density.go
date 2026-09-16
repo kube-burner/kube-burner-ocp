@@ -44,6 +44,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var vmiRunningThreshold time.Duration
 	var namespacedIterations, mounts, sshCheck bool
 	var churnDelay, churnDuration time.Duration
+	var selector string
 	var metricsProfiles []string
 	var cleanup bool
 	var sshKeyPairPath string
@@ -80,6 +81,11 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				AdditionalVars["publicKey"] = publicKeyPath
 			}
 
+			nodeSelectorJSON, err := buildNodeSelectorJSON(selector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+
 			AdditionalVars["JOB_ITERATIONS"] = totalVMs - vmCount
 			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["VM_IMAGE"] = vmImage
@@ -95,6 +101,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["MOUNTS"] = mounts
 			AdditionalVars["SSH_CHECK"] = sshCheck
+			AdditionalVars["NODE_SELECTOR"] = nodeSelectorJSON
 			setMetrics(cmd, metricsProfiles)
 			AddVirtMetadata(wh, vmImage, "", "")
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -120,6 +127,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }

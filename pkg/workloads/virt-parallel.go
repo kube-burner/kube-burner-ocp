@@ -54,6 +54,9 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	var skipResizeJob bool
 	var skipRestartJob bool
 	var skipSnapshotJob bool
+	var selector string
+	var useBaseImage bool
+	var useSnapshot bool
 	var metricsProfiles []string
 	var cleanup bool
 	var rc int
@@ -90,6 +93,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 					}
 				}
 			}
+
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if cleanup {
@@ -127,6 +131,14 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 			if skipSnapshotJob {
 				log.Infof("skipSnapshotJob is set to true")
 			}
+			if useBaseImage {
+				log.Infof("useBaseImage is set to true")
+			}
+
+			nodeSelectorJSON, err := buildNodeSelectorJSON(selector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
 
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
@@ -141,6 +153,9 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["skipResizeJob"] = skipResizeJob
 			AdditionalVars["skipRestartJob"] = skipRestartJob
 			AdditionalVars["skipSnapshotJob"] = skipSnapshotJob
+			AdditionalVars["NODE_SELECTOR"] = nodeSelectorJSON
+			AdditionalVars["useBaseImage"] = useBaseImage
+			AdditionalVars["useSnapshot"] = useSnapshot
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["VM_CPU"] = vmCPU
 			AdditionalVars["VM_MEMORY"] = vmMemory
@@ -155,6 +170,13 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Infof("Running loop %d with Storage Class [%s]", counter, storageClassName)
 				AdditionalVars["storageClassName"] = storageClassName
 				AdditionalVars["vmCount"] = vmCount
+
+				// Get volumeSnapshotClassName if useBaseImage is enabled
+				var volumeSnapshotClassName string
+				if useBaseImage {
+					_, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
+				}
+				AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
 
 				// Randomly select a node for migration
 				if !skipMigrationJob {
@@ -197,6 +219,9 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&skipResizeJob, "skip-resize-job", false, "Skip the resize propagation check - For now use when values are propagated in a base of 10 instead of 2")
 	cmd.Flags().BoolVar(&skipRestartJob, "skip-restart-job", false, "Skip the VM restart job")
 	cmd.Flags().BoolVar(&skipSnapshotJob, "skip-snapshot-job", false, "Skip the VM snapshot job")
+	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
+	cmd.Flags().BoolVar(&useBaseImage, "use-base-image", false, "Create a base image and clone VMs from it instead of using container disk per VM")
+	cmd.Flags().BoolVar(&useSnapshot, "use-snapshot", true, "Clone from snapshot - only applies when --use-base-image=true")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd

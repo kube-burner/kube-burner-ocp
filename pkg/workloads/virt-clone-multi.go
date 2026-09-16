@@ -50,6 +50,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 	var volumeAccessMode string
 	var jobIterationDelay time.Duration
 	var testNamespaceBaseName string
+	var selector string
 	var metricsProfiles []string
 	var cleanup bool
 	var rc int
@@ -99,6 +100,11 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 			log.Infof("Using Storage Class [%s], VolumeSnapshotClass [%s]", storageClassName, volumeSnapshotClassName)
 			log.Infof("Use Snapshot: %t", useSnapshot)
 
+			nodeSelectorJSON, err := buildNodeSelectorJSON(selector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+
 			AdditionalVars["privateKey"] = privateKeyPath
 			AdditionalVars["publicKey"] = publicKeyPath
 			AdditionalVars["storageClassName"] = storageClassName
@@ -111,6 +117,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["jobIterationDelay"] = jobIterationDelay
 			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
 			AdditionalVars["testNamespaceBaseName"] = testNamespaceBaseName
+			AdditionalVars["NODE_SELECTOR"] = nodeSelectorJSON
 			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["VM_CPU"] = vmCPU
 			AdditionalVars["VM_MEMORY"] = vmMemory
@@ -138,6 +145,7 @@ func NewVirtCloneMulti(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&volumeAccessMode, "access-mode", "RWX", "Access mode for the created volumes - RO, RWO, RWX")
 	cmd.Flags().DurationVar(&jobIterationDelay, "job-iteration-delay", 1*time.Minute, "Delay between namespace iterations")
 	cmd.Flags().StringVarP(&testNamespaceBaseName, "namespace", "n", virtCloneMultiTestName, "Base namespace name for the test")
+	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 
