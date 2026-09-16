@@ -8,6 +8,7 @@ global:
   gcMetrics: {{.GC_METRICS}}
   measurements:
     - name: dataVolumeLatency
+    - name: vmiLatency
 
 metricsEndpoints:
 - indexer:
