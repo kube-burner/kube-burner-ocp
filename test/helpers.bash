@@ -46,6 +46,44 @@ check_destroyed_ns() {
   fi
 }
 
+check_ztwim_svid_metrics() {
+  local uuid=$1
+  local expected_pods=$2
+  local expect_rotation=${3:-0}
+  local dir="collected-metrics-${uuid}"
+  local verification="${dir}/ztwimSvidVerificationMeasurement-ztwim-svid-issuance-pods.json"
+  local latency="${dir}/ztwimSvidLatencyMeasurement-ztwim-svid-issuance-pods.json"
+  check_file_list "${verification}" "${latency}"
+  local vcount
+  vcount=$(jq 'length' "${verification}")
+  local lcount
+  lcount=$(jq 'length' "${latency}")
+  if [[ "${vcount}" -ne "${expected_pods}" ]]; then
+    echo "expected ${expected_pods} verification metrics, got ${vcount}"
+    return 1
+  fi
+  if [[ "${lcount}" -ne "${expected_pods}" ]]; then
+    echo "expected ${expected_pods} SVID latency metrics, got ${lcount}"
+    return 1
+  fi
+  local distinct
+  distinct=$(jq '[.[].spiffeID] | unique | length' "${verification}")
+  if [[ "${distinct}" -ne "${expected_pods}" ]]; then
+    echo "expected ${expected_pods} distinct SPIFFE IDs, got ${distinct}"
+    return 1
+  fi
+  if [[ "${expect_rotation}" -eq 1 ]]; then
+    local not_rotated
+    not_rotated=$(jq '[.[] | select(.rotationObserved != 1)] | length' "${verification}")
+    if [[ "${not_rotated}" -ne 0 ]]; then
+      echo "expected rotationObserved=1 for all pods, ${not_rotated} did not rotate"
+      jq . "${verification}"
+      return 1
+    fi
+  fi
+  return 0
+}
+
 check_file_list() {
   for f in "${@}"; do
     if [[ ! -f ${f} ]]; then
