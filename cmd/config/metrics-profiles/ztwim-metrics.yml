@@ -1,0 +1,40 @@
+# Workload pods
+
+- query: sum(kube_pod_status_phase{namespace="ztwim-perf"}) by (phase) > 0
+  metricName: podStatusCount
+
+# Control plane (kueue-metrics pattern)
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-kube-apiserver"}[2m]))[{{.elapsed}}:])
+  metricName: cpu-kube-apiserver-avg
+  instant: true
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-etcd"}[2m]))[{{.elapsed}}:])
+  metricName: cpu-etcd-avg
+  instant: true
+
+- query: max(max_over_time(sum(container_memory_working_set_bytes{name!="", namespace="openshift-kube-apiserver"})[{{.elapsed}}:]))
+  metricName: max-memory-kube-apiserver-aggregated
+  instant: true
+
+- query: max(max_over_time(sum(container_memory_rss{name!="", namespace="openshift-etcd"})[{{.elapsed}}:]))
+  metricName: max-memory-etcd-aggregated
+  instant: true
+
+# ZTWIM operator namespace
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{namespace="zero-trust-workload-identity-manager",container!=""}[2m]))[{{.elapsed}}:])
+  metricName: ztwimNamespaceCpu
+  instant: true
+
+- query: max(max_over_time(sum(container_memory_working_set_bytes{namespace="zero-trust-workload-identity-manager",container!=""})[{{.elapsed}}:]))
+  metricName: ztwimNamespaceMemory
+  instant: true
+
+# SPIRE — validate metric names on cluster before CI ({__name__=~"spire_.*"})
+
+- query: sum(rate(spire_server_server_ca_sign_x509_svid[2m]))
+  metricName: spireServerX509SvidSignRate
+
+- query: max(spire_agent_workload_api_connections)
+  metricName: spireAgentWorkloadAPIConnectionsMax

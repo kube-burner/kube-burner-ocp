@@ -245,6 +245,11 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} kueue-operator-pods --pod-replicas=50 --workload-runtime=2s
 }
 
+# bats test_tags=workload:ztwim-svid-issuance
+@test "ztwim-svid-issuance" {
+  run_cmd ${KUBE_BURNER_OCP} ztwim-svid-issuance --pod-replicas=5 --workload-runtime=60s --qps=5 --burst=5 --local-indexing
+}
+
 # bats test_tags=workload:kueue-operator
 @test "kueue-operator: jobs-shared" {
   run_cmd ${KUBE_BURNER_OCP} kueue-operator-jobs-shared --job-replicas=10 --iterations=2 --parallelism=5 --workload-runtime=2s

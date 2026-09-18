@@ -74,6 +74,11 @@
   - cmd/config/kueue-operator-pods/*
   - hack/deploy-kueue.sh
   - hack/kueue/*
+- label: workload:ztwim-svid-issuance
+  paths:
+  - pkg/workloads/ztwim-svid-issuance.go
+  - cmd/config/ztwim-svid-issuance/*
+  - cmd/config/metrics-profiles/ztwim-metrics.yml
 - label: workload:virt-capacity-benchmark
   paths:
   - pkg/workloads/virt-capacity-benchmark.go
