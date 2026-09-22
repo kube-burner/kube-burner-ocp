@@ -1,0 +1,65 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: podLatency
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      insecureSkipVerify: true
+      esServers: [{{.ES_SERVER}}]
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+  - name: prereqs
+    jobIterations: 1
+    namespace: ztwim-perf
+    namespacedIterations: false
+    preLoadImages: true
+    skipIndexing: true
+    cleanup: false
+    qps: 5
+    burst: 5
+    objects:
+      - objectTemplate: namespace.yml
+        replicas: 1
+      - objectTemplate: clusterspiffeid.yml
+        replicas: 1
+        inputVars:
+          SPIFFE_CLASS: {{.SPIFFE_CLASS}}
+          APP_LABEL: {{.APP_LABEL}}
+      - objectTemplate: spiffe-helper-configmap.yml
+        replicas: 1
+      - objectTemplate: serviceaccount.yml
+        replicas: 1
+
+  - name: ztwim-svid-issuance-pods
+    namespace: ztwim-perf
+    jobIterations: {{.ITERATIONS}}
+    namespacedIterations: false
+    preLoadImages: true
+    cleanup: true
+    waitWhenFinished: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    objects:
+      - objectTemplate: attestation-pod.yml
+        replicas: {{.POD_REPLICAS}}
+        inputVars:
+          runtime: {{.WORKLOAD_RUNTIME}}
+          SPIFFE_HELPER_IMAGE: {{.SPIFFE_HELPER_IMAGE}}
+          APP_IMAGE: {{.APP_IMAGE}}
+          APP_LABEL: {{.APP_LABEL}}

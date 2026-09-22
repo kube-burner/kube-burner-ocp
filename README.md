@@ -44,6 +44,7 @@ Available Commands:
   rds-core                   Runs rds-core workload
   udn-bgp                    Runs udn-bgp workload
   udn-density-pods           Runs udn-density-pods workload
+  ztwim-svid-issuance        Runs ztwim-svid-issuance workload
   version                    Print the version number of kube-burner
   virt-capacity-benchmark    Runs capacity-benchmark workload
   virt-clone                 Runs virt-clone workload
@@ -1593,6 +1594,50 @@ This workload creates jobs in multiple namespaces that are handled by 10 shared 
 
 This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
 
+## ZTWIM SVID issuance workload
+
+The `ztwim-svid-issuance` workload scales attestation pods on a cluster where [Zero Trust Workload Identity Manager (ZTWIM)](https://github.com/openshift/zero-trust-workload-identity-manager) is already installed. Each pod uses the SPIFFE CSI driver and spiffe-helper to obtain an X.509 SVID written to `/certs/svid.pem`.
+
+### Prerequisites
+
+- OpenShift 4.19+ with ZTWIM installed and operands healthy (`SpireServer`, `SpireAgent`, `SpiffeCSIDriver`)
+- CSI driver `csi.spiffe.io` registered on the cluster
+
+ZTWIM installation is not part of this workload.
+
+### Architecture
+
+1. **prereqs job**: creates a `ClusterSPIFFEID`, spiffe-helper `ConfigMap`, and `ServiceAccount` in namespace `ztwim-perf`
+2. **ztwim-svid-issuance-pods job**: creates N attestation pods (CSI volume + spiffe-helper sidecar + app container) at a controlled QPS
+
+### Key measurements
+
+- `podLatency` — time from pod create to Ready
+- Prometheus metrics via `ztwim-metrics.yml` (control plane, ZTWIM namespace, SPIRE signing rate)
+
+**Known limitation:** `podLatency` measures Pod Ready, not time-to-`svid.pem`. Verify SVID issuance manually during initial validation.
+
+### Example
+
+```bash
+kube-burner-ocp ztwim-svid-issuance \
+  --pod-replicas=5 \
+  --workload-runtime=120s \
+  --qps=5 --burst=5 \
+  --local-indexing
+```
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--pod-replicas` | 100 | Attestation pods per iteration |
+| `--workload-runtime` | 3600s | App container sleep duration |
+| `--iterations` | 1 | Job iterations |
+| `--spiffe-class` | zero-trust-workload-identity-manager-spire | ClusterSPIFFEID className |
+| `--spiffe-helper-image` | ghcr.io/spiffe/spiffe-helper:0.11.0 | spiffe-helper sidecar image |
+| `--app-image` | quay.io/prometheus/busybox | App container image |
+| `--metrics-profile` | ztwim-metrics.yml | Prometheus metrics profile |
 
 ## MaaS Gateway Performance workload
 

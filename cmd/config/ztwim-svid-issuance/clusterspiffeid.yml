@@ -1,0 +1,13 @@
+apiVersion: spire.spiffe.io/v1alpha1
+kind: ClusterSPIFFEID
+metadata:
+  name: ztwim-perf-cspiffeid
+spec:
+  className: {{.SPIFFE_CLASS}}
+  spiffeIDTemplate: "spiffe://{{ "{{" }} .TrustDomain {{ "}}" }}/ns/{{ "{{" }} .PodMeta.Namespace {{ "}}" }}/sa/{{ "{{" }} .PodSpec.ServiceAccountName {{ "}}" }}"
+  podSelector:
+    matchLabels:
+      app: {{.APP_LABEL}}
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: ztwim-perf
