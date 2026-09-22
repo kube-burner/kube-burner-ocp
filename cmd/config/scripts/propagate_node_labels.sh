@@ -17,18 +17,19 @@ echo "Propagating kubevirt.io/nodeName=$NODE_NAME label to VMs in namespace $NAM
 # Get all VMIs running on the selected node
 VM_NAMES=$(oc get vmi -n "$NAMESPACE" -l "kubevirt.io/nodeName=${NODE_NAME}" \
   -o jsonpath='{range .items[*]}{.metadata.name}{" "}{end}')
+read -r -a VM_NAMES <<< "$VM_NAMES"
 
-if [ -z "$VM_NAMES" ]; then
+if [ "${#VM_NAMES[@]}" -eq 0 ]; then
     echo "No VMIs found on node $NODE_NAME in namespace $NAMESPACE"
     exit 0
 fi
 
 # Count VMs
-VM_COUNT=$(echo "$VM_NAMES" | wc -w)
+VM_COUNT=${#VM_NAMES[@]}
 echo "Found $VM_COUNT VMs running on node $NODE_NAME"
 
 # Label all VMs in a single API call
-echo "Labeling VMs: $VM_NAMES"
-oc label vm -n "$NAMESPACE" "$VM_NAMES" "kubevirt.io/nodeName=$NODE_NAME" --overwrite
+echo "Labeling VMs: ${VM_NAMES[*]}"
+oc label vm -n "$NAMESPACE" "${VM_NAMES[@]}" "kubevirt.io/nodeName=$NODE_NAME" --overwrite
 
 echo "Successfully labeled $VM_COUNT VMs with kubevirt.io/nodeName=$NODE_NAME"
