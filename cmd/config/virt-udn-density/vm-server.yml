@@ -15,6 +15,15 @@ spec:
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution: {{.NODE_SELECTOR|toJson}}
+{{ if .sshCheck }}
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: ssh-pub-key
+{{ end }}
       terminationGracePeriodSeconds: 0
       domain:
         cpu:
@@ -65,6 +74,7 @@ spec:
             #cloud-config
             password: perfscale
             chpasswd: { expire: False }
+            disable_root: false
             packages:
               - nginx
             runcmd:
