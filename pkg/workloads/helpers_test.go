@@ -187,6 +187,7 @@ func clusterDensityMSTemplateData(overrides map[string]any) map[string]any {
 		"JOB_ITERATIONS":      1,
 		"LOCAL_INDEXING":      false,
 		"METRICS":             "microshift-metrics.yml",
+		"NODE_SELECTOR":       `{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-role.kubernetes.io/worker","operator":"Exists"}]}]}`,
 		"POD_READY_THRESHOLD": 0,
 		"PPROF":               false,
 		"QPS":                 5,

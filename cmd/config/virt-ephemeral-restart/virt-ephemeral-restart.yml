@@ -164,6 +164,7 @@ jobs:
       storageClassName: {{ .storageClassName }}
       sshPublicKeySecret: {{ $sshPublicKeySecretName }}
       accessMode: {{ .accessMode }}
+      NODE_SELECTOR: {{ .NODE_SELECTOR }}
 
 - name: stop-ephemeral-vms
   jobType: kubevirt

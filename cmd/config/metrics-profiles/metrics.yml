@@ -9,6 +9,32 @@
 - query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb!="WATCH"}[2m])) by (verb,resource,code) > 0
   metricName: APIRequestRate
 
+# API server watches & threads (FIPS DRBG pressure)
+
+- query: sum(apiserver_longrunning_requests{verb="WATCH"}) by (resource)
+  metricName: watchCountByResource
+
+- query: sum(apiserver_longrunning_requests{verb="WATCH"}) by (instance)
+  metricName: watchCountByInstance
+
+- query: sum(apiserver_longrunning_requests{verb="WATCH"})
+  metricName: watchCountTotal
+
+- query: go_threads{job="apiserver"}
+  metricName: apiserverGoThreads
+
+- query: go_goroutines{job="apiserver"}
+  metricName: apiserverGoGoroutines
+
+- query: process_open_fds{job="apiserver"}
+  metricName: apiserverOpenFDs
+
+- query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb="WATCH"}[2m])) by (resource) > 0
+  metricName: watchRequestRate
+
+- query: histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver",verb="WATCH"}[2m])) by (le, resource)) > 0
+  metricName: 99thWatchRequestLatency
+
 # Containers & pod metrics
 
 - query: (sum(irate(container_cpu_usage_seconds_total{name!="",container!~"POD|",namespace=~"openshift-.*|cilium|stackrox|calico.*|tigera.*"}[2m]) * 100) by (container, pod, namespace, node)) > 0
@@ -31,7 +57,7 @@
 - query: sum(process_resident_memory_bytes{service="kubelet",job="crio"}) by (node) and on (node) kube_node_role{role="worker"}
   metricName: crioMemory
 
-- query: irate(container_runtime_crio_operations_latency_microseconds{operation_type="network_setup_pod"}[2m]) > 0
+- query: irate(container_runtime_crio_operations_latency_seconds{operation="network_setup_pod"}[2m]) > 0
   metricName: containerNetworkSetupLatency
 
 # Node metrics: Network
@@ -107,8 +133,8 @@
   metricName: schedulerThroughput
 
 # Scheduler P99 Latency: Time taken for the end-to-end scheduling algorithm..
-- query: histogram_quantile(0.99, sum(rate(scheduler_e2e_scheduling_duration_seconds_bucket[2m])) by (le))
-  metricName: 99thSchedulerE2ELatency
+- query: histogram_quantile(0.99, sum(rate(scheduler_scheduling_attempt_duration_seconds_bucket[2m])) by (le))
+  metricName: 99thSchedulingAttemptLatency
 
 # Cluster metrics
 

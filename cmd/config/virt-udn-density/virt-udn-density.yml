@@ -68,6 +68,7 @@ jobs:
       delay: {{.CHURN_DELAY}}
       mode: {{.CHURN_MODE}}
     namespaceLabels:
+      kube-burner.io/test-name: virt-udn-density
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
@@ -119,6 +120,7 @@ jobs:
           vmImage: {{.VM_IMAGE}}
           vmCPU: {{.VM_CPU}}
           vmMemory: {{.VM_MEMORY}}
+          NODE_SELECTOR: {{ .NODE_SELECTOR }}
       - objectTemplate: vm-server.yml
         replicas: 1
         inputVars:
@@ -126,3 +128,4 @@ jobs:
           vmImage: {{.VM_IMAGE}}
           vmCPU: {{.VM_CPU}}
           vmMemory: {{.VM_MEMORY}}
+          NODE_SELECTOR: {{ .NODE_SELECTOR }}

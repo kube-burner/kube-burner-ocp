@@ -19,6 +19,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloud-bulldozer/go-commons/v2/ssh"
+	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
@@ -30,20 +32,32 @@ var (
 	virtDensityNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, "virt-density")
 )
 
+const (
+	virtDensitySSHKeyFileName = "ssh"
+	virtDensityTmpDirPattern  = "kube-burner-virt-density-*"
+)
+
 // Returns virt-density workload
 func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var vmImage, deletionStrategy, churnMode, vmCPU, vmMemory string
 	var vmsPerNode, iterationsPerNamespace, churnPercent, churnCycles int
 	var vmiRunningThreshold time.Duration
-	var namespacedIterations, mounts bool
+	var namespacedIterations, mounts, sshCheck bool
 	var churnDelay, churnDuration time.Duration
+	var selector string
 	var metricsProfiles []string
 	var cleanup bool
+	var sshKeyPairPath string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          "virt-density",
 		Short:        "Runs virt-density workload",
 		SilenceUsage: true,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			if sshCheck && !virtctl.IsInstalled() {
+				log.Fatalf("Failed to run virtctl. Check that it is installed, in PATH and working")
+			}
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if cleanup {
 				log.Infof("Cleaning up all the resources from the previous run")
@@ -56,6 +70,22 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal(err.Error())
 			}
+
+			var privateKeyPath, publicKeyPath string
+			if sshCheck {
+				privateKeyPath, publicKeyPath, err = ssh.GenerateSSHKeyPair(sshKeyPairPath, virtDensityTmpDirPattern, virtDensitySSHKeyFileName)
+				if err != nil {
+					log.Fatalf("Failed to generate SSH keys for the test - %v", err)
+				}
+				AdditionalVars["privateKey"] = privateKeyPath
+				AdditionalVars["publicKey"] = publicKeyPath
+			}
+
+			nodeSelectorJSON, err := buildNodeSelectorJSON(selector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+
 			AdditionalVars["JOB_ITERATIONS"] = totalVMs - vmCount
 			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["VM_IMAGE"] = vmImage
@@ -70,6 +100,8 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["CHURN_MODE"] = churnMode
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
 			AdditionalVars["MOUNTS"] = mounts
+			AdditionalVars["SSH_CHECK"] = sshCheck
+			AdditionalVars["NODE_SELECTOR"] = nodeSelectorJSON
 			setMetrics(cmd, metricsProfiles)
 			AddVirtMetadata(wh, vmImage, "", "")
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -86,6 +118,8 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
 	cmd.Flags().StringVar(&vmMemory, "vm-memory", "1Gi", "Amount of memory for the VM")
 	cmd.Flags().BoolVar(&mounts, "mounts", true, "Include cloud-init and emptyDir disks (true) or only the containerDisk (false)")
+	cmd.Flags().BoolVar(&sshCheck, "ssh-check", false, "Enable SSH connectivity check after all VMs are running")
+	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generated SSH keys (only used with --ssh-check)")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.GVRDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
@@ -93,6 +127,7 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
+	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
 }
