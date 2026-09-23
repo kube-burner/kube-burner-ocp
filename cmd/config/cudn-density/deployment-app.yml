@@ -34,7 +34,19 @@ spec:
                 operator: DoesNotExist
       containers:
       - name: sampleapp
-        image: quay.io/cloud-bulldozer/sampleapp:latest
+        image: quay.io/cloud-bulldozer/curl:latest
+        command: ["sleep", "infinity"]
+        {{ if .httpServerAddress }}
+        readinessProbe:
+          exec:
+            command:
+            - "/bin/sh"
+            - "-c"
+            - "curl -f -sS http://{{.httpServerAddress}}/1024.html"
+          periodSeconds: 1
+          timeoutSeconds: 5
+          failureThreshold: 1
+        {{ end }}
         resources:
           requests:
             memory: "10Mi"

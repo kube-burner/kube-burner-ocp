@@ -41,6 +41,14 @@ spec:
       port: http
     - protocol: TCP
       port: https
+  {{ if .httpServerIP }}
+  - to:
+    - ipBlock:
+        cidr: {{.httpServerIP}}/32
+    ports:
+    - protocol: TCP
+      port: {{.httpServerPort}}
+  {{ end }}
   # Allow DNS resolution
   - to: []
     ports:
