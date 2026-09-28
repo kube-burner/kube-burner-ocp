@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloud-bulldozer/go-commons/v2/ssh"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	kubeburnermeasurements "github.com/kube-burner/kube-burner/v2/pkg/measurements"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
@@ -31,8 +32,12 @@ import (
 	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 )
 
+const cudnDensitySSHKeyTmpDirPattern = "kube-burner-cudn-density-ssh"
+
 var cudnMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurementFactory{
 	"cudnLatency": measurements.NewCudnLatencyMeasurementFactory,
+	"sshCheck":    measurements.NewSSHCheckMeasurementFactory,
+	"sshLoadTest": measurements.NewSSHLoadTestMeasurementFactory,
 }
 
 // getNodeGatewayMap builds a JSON mapping of nodeInternalIP -> gatewayIP by reading
@@ -96,14 +101,30 @@ func getNodeGatewayMap() string {
 	return string(jsonBytes)
 }
 
+// validateSSHFlags validates SSH-related flag combinations.
+func validateSSHFlags(bgp, sshLatencyCheck, sshLoadTest bool, sshLoadTestDuration time.Duration, externalHost string) {
+	if bgp && externalHost == "" {
+		log.Fatal("--external-host is required when --bgp is enabled (needed for the BGP setup and NetworkPolicy rules)")
+	}
+	if sshLatencyCheck && !bgp {
+		log.Fatal("--ssh-latency-check requires --bgp to be enabled")
+	}
+	if sshLoadTest && !bgp {
+		log.Fatal("--ssh-load-test requires --bgp to be enabled")
+	}
+	if sshLoadTest && sshLoadTestDuration <= 0 {
+		log.Fatal("--ssh-load-test-duration must be > 0 when --ssh-load-test is enabled")
+	}
+}
+
 // NewCudnDensity holds cudn-density workload
 func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations, namespacesPerCudn, cudnsPerRA, incrementalStepSize int
 	var incrementalExpBase float64
 	var deletionStrategy string
-	var l3, pprof, gatewayCheck, bgp, ocpbugs85627Workaround bool
-	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay time.Duration
-	var churnMode, incrementalPattern string
+	var l3, pprof, gatewayCheck, bgp, ocpbugs85627Workaround, sshLatencyCheck, sshLoadTest bool
+	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay, sshLoadTestDuration time.Duration
+	var churnMode, incrementalPattern, externalHost string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -146,6 +167,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 					log.Fatal("incremental load and churn cannot be used together")
 				}
 			}
+			validateSSHFlags(bgp, sshLatencyCheck, sshLoadTest, sshLoadTestDuration, externalHost)
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
@@ -183,8 +205,22 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["BGP"] = bgp
 			AdditionalVars["OCPBUGS_85627_WORKAROUND"] = ocpbugs85627Workaround
 			AdditionalVars["DELETION_STRATEGY"] = deletionStrategy
+			AdditionalVars["SSH_LATENCY_CHECK"] = sshLatencyCheck
+			AdditionalVars["SSH_LOAD_TEST"] = sshLoadTest
+			AdditionalVars["SSH_LOAD_TEST_DURATION"] = sshLoadTestDuration.String()
+			AdditionalVars["SSH_LOAD_TEST_DURATION_SECS"] = int(sshLoadTestDuration.Seconds())
 			if gatewayCheck {
 				AdditionalVars["NODE_GW_MAP"] = getNodeGatewayMap()
+			}
+			if bgp {
+				privateKeyPath, publicKeyPath, err := ssh.GenerateSSHKeyPair("", cudnDensitySSHKeyTmpDirPattern, "ssh")
+				if err != nil {
+					log.Fatalf("Failed to generate SSH keys for the CUDN ssh check - %v", err)
+				}
+				AdditionalVars["privateKey"] = privateKeyPath
+				AdditionalVars["publicKey"] = publicKeyPath
+				AdditionalVars["EXTERNAL_HOST"] = externalHost
+				AdditionalVars["EXTERNAL_HOST_CIDR"] = externalHost + "/32"
 			}
 			wh.SetMeasurements(cudnMeasurementFactoryMap)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
@@ -214,6 +250,10 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&gatewayCheck, "gateway-check", false, "Enable default gateway reachability check from each namespace")
 	cmd.Flags().BoolVar(&ocpbugs85627Workaround, "static-mac-binding-workaround", false, "Deploy OCPBUGS-85627 static MAC binding workaround DaemonSet before creating CUDNs")
 	cmd.Flags().StringVar(&deletionStrategy, "deletion-strategy", config.DefaultDeletionStrategy, "GC deletion mode, default deletes entire namespaces and gvr deletes objects within namespaces before deleting the parent namespace")
+	cmd.Flags().BoolVar(&sshLatencyCheck, "ssh-latency-check", false, "Enable external SSH latency check against CUDN server pods (requires --bgp)")
+	cmd.Flags().BoolVar(&sshLoadTest, "ssh-load-test", false, "Enable SSH load test — parallel connections to all pods for the specified duration, reports success/fail count (requires --bgp). Runs after --ssh-latency-check if both are set")
+	cmd.Flags().DurationVar(&sshLoadTestDuration, "ssh-load-test-duration", 5*time.Minute, "Duration to run the SSH load test")
+	cmd.Flags().StringVar(&externalHost, "external-host", "", "IP address of the external host running the SSH check, used for BGP setup and NetworkPolicy rules. Required when --bgp is set")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	return cmd
