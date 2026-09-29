@@ -42,11 +42,13 @@ func NewEVPN(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var metricsProfiles []string
 	var rc int
 	var scenario string
-	var podReadyThreshold time.Duration
+	var podReadyThreshold, vmiRunningThreshold time.Duration
 	var externalWebserverIP, externalWebserverPort string
 	var connectionTimeout time.Duration
 	var skipReachabilityCheck bool
 	var createExtFrrVrf bool
+	var enableVm bool
+	var vmImage string
 	var l3vniStart int
 	cmd := &cobra.Command{
 		Use:   variant,
@@ -87,6 +89,9 @@ func NewEVPN(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacePerCudn
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
+			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
+			AdditionalVars["ENABLE_VM"] = enableVm
+			AdditionalVars["VM_IMAGE"] = vmImage
 			AdditionalVars["SCENARIO"] = scenario
 
 			// Set external webserver variables for north-south scenarios
@@ -105,6 +110,9 @@ func NewEVPN(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		},
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
+	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 0, "VMI running timeout threshold")
+	cmd.Flags().BoolVar(&enableVm, "vm", false, "Deploy VMs for the test instead of pods")
+	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/openshift-cnv/qe-cnv-tests-fedora:40", "VM image to be deployed")
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
