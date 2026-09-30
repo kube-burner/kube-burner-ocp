@@ -1,0 +1,75 @@
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: agenticRunLatency
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+{{ if .CREATE_TARGET_NAMESPACES }}
+  - name: agentic-run-density-targets
+    jobIterations: 1
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    preLoadImages: false
+    cleanup: true
+    waitWhenFinished: true
+    podWait: false
+    maxWaitTimeout: 5m
+    objects:
+      - objectTemplate: target-namespace.yml
+        replicas: {{.TARGET_NAMESPACE_COUNT}}
+        inputVars:
+          targetNamespaceBase: {{.TARGET_NAMESPACE}}
+          targetNamespaceCount: {{.TARGET_NAMESPACE_COUNT}}
+        waitOptions:
+          customStatusPaths:
+          - key: '.phase'
+            value: Active
+{{ end }}
+  - name: agentic-run-density
+    namespace: {{.NAMESPACE}}
+    jobIterations: {{.JOB_ITERATIONS}}
+    jobIterationDelay: {{.ITERATION_DELAY}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    preLoadImages: false
+    cleanup: true
+    waitWhenFinished: {{.WAIT_FOR_COMPLETION}}
+    podWait: false
+    maxWaitTimeout: {{.RUN_TIMEOUT}}
+    objects:
+      - objectTemplate: agentic-run.yml
+        replicas: 1
+        inputVars:
+          request: "{{.REQUEST}}"
+          targetNamespaceBase: {{.TARGET_NAMESPACE}}
+          targetNamespaceCount: {{.TARGET_NAMESPACE_COUNT}}
+          agent: {{.AGENT}}
+          workflow: {{.WORKFLOW}}
+          mockProfile: "{{.MOCK_PROFILE}}"
+{{ if .WAIT_FOR_COMPLETION }}
+        waitOptions:
+          customStatusPaths:
+          - key: '[(.conditions // [])[] | select(.status == "True")] as $t | (($t | map(.type) | any(. == "Verified" or . == "Escalated" or . == "Denied" or . == "EmergencyStopped")) or ($t | any(.type == "Analyzed" and (.reason // "") == "NoActionRequired")) or ([(.conditions // [])[] | select(.status == "False" and (.reason // "") != "")] | length > 0)) | tostring'
+            value: "true"
+{{ end }}

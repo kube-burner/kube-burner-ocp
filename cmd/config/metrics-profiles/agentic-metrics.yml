@@ -1,0 +1,203 @@
+# Agentic OpenShift Lightspeed — performance and scale metrics.
+
+# Containers — scoped to the operator namespace, which is where the operator,
+# the sandbox pods, and the mock LLM all live.
+
+- query: sum(irate(container_cpu_usage_seconds_total{namespace="openshift-lightspeed",name!="",container!~"POD|"}[2m]) * 100) by (container, pod, namespace, node) > 0
+  metricName: agenticContainerCPU
+
+- query: sum(container_memory_rss{namespace="openshift-lightspeed",name!="",container!~"POD|"}) by (container, pod, namespace, node) > 0
+  metricName: agenticContainerMemoryRSS
+
+- query: sum(rate(container_cpu_cfs_throttled_seconds_total{namespace="openshift-lightspeed",name!="",container!~"POD|"}[2m])) by (container, pod) > 0
+  metricName: agenticContainerThrottledCPU
+
+- query: sum(increase(kube_pod_container_status_restarts_total{namespace="openshift-lightspeed"}[30s])) by (pod, container) > 0
+  metricName: podRestarts
+
+- query: sum(kube_pod_container_status_last_terminated_reason{reason="OOMKilled",namespace="openshift-lightspeed"}) by (pod, container) > 0
+  metricName: oomKills
+
+- query: sum(kube_pod_status_phase{phase="Pending",namespace="openshift-lightspeed"})
+  metricName: pendingPods
+
+# Controller health — the agentic-specific additions and the most diagnostic
+# signals here. The `controller` label values are agenticrun, agenticolsconfig
+# and configmap-watcher; agenticrun is the one under test.
+
+- query: histogram_quantile(0.99, sum(rate(controller_runtime_reconcile_time_seconds_bucket{namespace="openshift-lightspeed",job=~".*agentic.*"}[2m])) by (le, controller))
+  metricName: reconcileDurationP99
+
+- query: sum(rate(controller_runtime_reconcile_total{namespace="openshift-lightspeed",job=~".*agentic.*"}[2m])) by (controller, result)
+  metricName: reconcileRate
+
+- query: sum(rate(controller_runtime_reconcile_errors_total{namespace="openshift-lightspeed",job=~".*agentic.*"}[2m])) by (controller)
+  metricName: reconcileErrors
+
+# Saturation. activeWorkers against maxConcurrentReconciles is the ratio that
+# says whether the operator is the bottleneck or merely waiting on the model.
+- query: sum(controller_runtime_active_workers{namespace="openshift-lightspeed",job=~".*agentic.*"}) by (controller)
+  metricName: reconcileActiveWorkers
+
+- query: sum(controller_runtime_max_concurrent_reconciles{namespace="openshift-lightspeed",job=~".*agentic.*"}) by (controller)
+  metricName: reconcileMaxConcurrent
+  instant: true
+
+# Rare, but a panic that only reconciles get to see would otherwise surface as
+# an unexplained stall in the latency series.
+- query: sum(rate(controller_runtime_reconcile_panics_total{namespace="openshift-lightspeed",job=~".*agentic.*"}[2m])) by (controller)
+  metricName: reconcilePanics
+
+- query: sum(workqueue_depth{namespace="openshift-lightspeed",job=~".*agentic.*"}) by (name)
+  metricName: workqueueDepth
+
+- query: histogram_quantile(0.99, sum(rate(workqueue_queue_duration_seconds_bucket{namespace="openshift-lightspeed",job=~".*agentic.*"}[2m])) by (le, name))
+  metricName: workqueueWaitP99
+
+- query: sum(rate(workqueue_retries_total{namespace="openshift-lightspeed",job=~".*agentic.*"}[2m])) by (name)
+  metricName: workqueueRetries
+
+# Not rest_client_rate_limiter_duration_seconds: client-go removed it, and the
+# operator's endpoint confirms it is gone. Server-side rejection is the
+# throttling signal that survives, and it is the one that matters at scale
+# anyway — 429s are API priority-and-fairness pushing back.
+- query: sum(rate(rest_client_requests_total{namespace="openshift-lightspeed",job=~".*agentic.*",code="429"}[2m])) by (host, method)
+  metricName: clientThrottling
+
+- query: sum(go_goroutines{namespace="openshift-lightspeed",job=~".*agentic.*"}) by (pod)
+  metricName: goGoroutines
+
+# API server, agentic-scoped. These two narrow the shared queries below to the
+# agentic.openshift.io group, which is the cost this workload is responsible for.
+
+- query: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{group="agentic.openshift.io"}[2m])) by (le, verb, resource)) > 0
+  metricName: agenticAPICallsLatency
+
+- query: sum(rate(apiserver_request_total{group="agentic.openshift.io"}[2m])) by (verb, resource, code) > 0
+  metricName: agenticAPIRequestRate
+
+- query: max by (resource) (apiserver_storage_objects{resource=~".*agentic.openshift.io"})
+  metricName: agenticStorageObjects
+
+# API server, cluster-wide — verbatim from metrics.yml.
+
+- query: histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", verb=~"LIST|GET", subresource!~"log|exec|portforward|attach|proxy"}[2m])) by (le, resource, verb, scope)) > 0
+  metricName: readOnlyAPICallsLatency
+
+- query: histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver", verb=~"POST|PUT|DELETE|PATCH", subresource!~"log|exec|portforward|attach|proxy"}[2m])) by (le, resource, verb, scope)) > 0
+  metricName: mutatingAPICallsLatency
+
+- query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb!="WATCH"}[2m])) by (verb,resource,code) > 0
+  metricName: APIRequestRate
+
+- query: sum(apiserver_longrunning_requests{verb="WATCH"}) by (resource)
+  metricName: watchCountByResource
+
+- query: sum(apiserver_longrunning_requests{verb="WATCH"})
+  metricName: watchCountTotal
+
+- query: sum(irate(apiserver_request_total{apiserver="kube-apiserver",verb="WATCH"}[2m])) by (resource) > 0
+  metricName: watchRequestRate
+
+- query: histogram_quantile(0.99, sum(irate(apiserver_request_duration_seconds_bucket{apiserver="kube-apiserver",verb="WATCH"}[2m])) by (le, resource)) > 0
+  metricName: 99thWatchRequestLatency
+
+
+# etcd — verbatim from metrics.yml. The agentic layer is an etcd-heavy workload:
+# every phase transition is a status write, and terminal runs persist until the
+# TTL sweep, so backend commit and fsync latency are first-class signals here.
+
+- query: sum(rate(etcd_server_leader_changes_seen_total[2m]))
+  metricName: etcdLeaderChangesRate
+
+- query: histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket[2m]))
+  metricName: 99thEtcdDiskBackendCommitDurationSeconds
+
+- query: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[2m]))
+  metricName: 99thEtcdDiskWalFsyncDurationSeconds
+
+- query: histogram_quantile(0.99, rate(etcd_network_peer_round_trip_time_seconds_bucket[5m]))
+  metricName: 99thEtcdRoundTripTimeSeconds
+
+- query: delta(etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum[1m:30s])/2 > 0
+  metricName: etcdCompaction
+
+- query: delta(etcd_disk_backend_defrag_duration_seconds_sum[1m:30s])/2 > 0
+  metricName: etcdDefrag
+
+- query: sum by (cluster_version)(etcd_cluster_version)
+  metricName: etcdVersion
+  instant: true
+
+
+# etcd capacity — verbatim from etcd-density-metrics.yml. CR accumulation is the
+# thing being measured, so DB growth and remaining quota matter.
+
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_bytes)
+  metricName: etcdDBTotalSize
+
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes)
+  metricName: etcdDBSizeInUse
+
+- query: avg by (pod) (etcd_mvcc_db_total_size_in_bytes) - avg by (pod) (etcd_mvcc_db_total_size_in_use_in_bytes)
+  metricName: etcdDBFragmentationBytes
+
+- query: (etcd_mvcc_db_total_size_in_bytes / etcd_server_quota_backend_bytes) * 100
+  metricName: etcdDBSpaceUsed
+
+- query: etcd_server_quota_backend_bytes - etcd_mvcc_db_total_size_in_bytes
+  metricName: etcdDBLeftCapacity
+
+
+# Scheduler — verbatim from metrics.yml. Sandbox pods are created and destroyed
+# per step, so scheduling throughput is directly on the critical path.
+
+- query: sum(irate(scheduler_schedule_attempts_total{result="scheduled"}[2m]))
+  metricName: schedulerThroughput
+
+- query: histogram_quantile(0.99, sum(rate(scheduler_scheduling_attempt_duration_seconds_bucket[2m])) by (le))
+  metricName: 99thSchedulingAttemptLatency
+
+
+# Node network — verbatim from metrics.yml.
+
+- query: sum by (instance, device) ( irate(node_network_receive_bytes_total{device!~"lo|ovs-system"}[2m]) > 0 )
+  metricName: nodeRxNetwork
+
+- query: sum by (instance, device) ( irate(node_network_transmit_bytes_total{device!~"lo|ovs-system"}[2m]) > 0 )
+  metricName: nodeTxNetwork
+
+- query: sum by (instance, device) ( irate(node_network_receive_drop_total{device!~"lo|ovs-system"}[2m]) > 0 )
+  metricName: nodeNetworkDeviceDropRXTotal
+
+- query: sum by (instance, device) (irate(node_network_transmit_drop{device!~"lo|ovs-system"}[2m]) > 0 )
+  metricName: nodeNetworkDeviceDropTXTotal
+
+
+# Everything below mockCPU needs the mock ServiceMonitors
+# (deploy-mock-llm.sh --with-servicemonitor, and the mock MCP equivalent) plus
+# user workload monitoring. Without them these series are simply absent.
+
+- query: sum(irate(container_cpu_usage_seconds_total{pod=~"mock-llm-.*|mock-mcp-.*",name!="",container!~"POD|"}[2m]) * 100) by (pod) > 0
+  metricName: mockCPU
+
+- query: sum(rate(mockllm_requests_total[2m])) by (profile, step)
+  metricName: mockLLMRequests
+
+- query: sum(rate(mockllm_turns_total[2m])) by (profile, step)
+  metricName: mockLLMTurns
+
+- query: sum(rate(mockllm_tokens_total[2m])) by (direction)
+  metricName: mockLLMTokens
+
+- query: mockllm_inflight_requests
+  metricName: mockLLMInflight
+
+- query: histogram_quantile(0.99, sum(rate(mockllm_request_duration_seconds_bucket[2m])) by (le))
+  metricName: mockLLMLatencyP99
+
+- query: sum(rate(mockmcp_tool_calls_total[2m])) by (tool)
+  metricName: mockMCPToolCalls
+
+- query: histogram_quantile(0.99, sum(rate(mockmcp_tool_duration_seconds_bucket[2m])) by (le, tool))
+  metricName: mockMCPToolLatencyP99

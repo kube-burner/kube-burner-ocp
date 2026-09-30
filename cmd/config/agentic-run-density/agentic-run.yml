@@ -1,0 +1,20 @@
+{{ $targetNamespace := .targetNamespaceBase }}{{ if gt .targetNamespaceCount 1 }}{{ $targetNamespace = printf "%s-%d" .targetNamespaceBase (mod .Iteration .targetNamespaceCount) }}{{ end }}
+apiVersion: agentic.openshift.io/v1alpha1
+kind: AgenticRun
+metadata:
+  name: agentic-run-density-{{.Iteration}}-{{.Replica}}
+  namespace: openshift-lightspeed
+spec:
+  request: "{{.request}}{{ if .mockProfile }} [mock-profile:{{.mockProfile}}] [mock-ns:{{ $targetNamespace }}]{{ end }}"
+  targetNamespaces:
+    - {{ $targetNamespace }}
+  analysis:
+    agent: {{.agent}}
+{{- if or (eq .workflow "analysis-execution") (eq .workflow "full") }}
+  execution:
+    agent: {{.agent}}
+{{- end }}
+{{- if eq .workflow "full" }}
+  verification:
+    agent: {{.agent}}
+{{- end }}

@@ -1,0 +1,51 @@
+# The agentic CRD chain that points OpenShift Lightspeed at the mock:
+# LLMProvider -> Agent <- AgenticRun, plus the cluster ApprovalPolicy.
+#
+# Applied by test/hack/deploy-mock-llm.sh after __TOKENS__ are substituted.
+# LLMProvider, Agent and ApprovalPolicy are all cluster-scoped.
+---
+apiVersion: agentic.openshift.io/v1alpha1
+kind: LLMProvider
+metadata:
+  name: __PROVIDER_NAME__
+  labels:
+    app.kubernetes.io/part-of: agentic-perf
+spec:
+  type: OpenAI
+  openAI:
+    credentialsSecret:
+      name: __SECRET_NAME__
+    url: http://mock-llm.__NAMESPACE__.svc.cluster.local:8080/v1
+---
+apiVersion: agentic.openshift.io/v1alpha1
+kind: Agent
+metadata:
+  name: __AGENT_NAME__
+  labels:
+    app.kubernetes.io/part-of: agentic-perf
+spec:
+  llmProvider:
+    name: __PROVIDER_NAME__
+  model: __MODEL__
+  timeouts:
+    analysisSeconds: 600
+    executionSeconds: 600
+    verificationSeconds: 1800
+    escalationSeconds: 600
+  maxTurns: __MAX_TURNS__
+---
+apiVersion: agentic.openshift.io/v1alpha1
+kind: ApprovalPolicy
+metadata:
+  name: cluster
+  labels:
+    app.kubernetes.io/part-of: agentic-perf
+spec:
+  maxConcurrentRuns: __MAX_CONCURRENT_RUNS__
+  stages:
+    - name: Analysis
+      approval: Automatic
+    - name: Execution
+      approval: Automatic
+    - name: Verification
+      approval: Automatic

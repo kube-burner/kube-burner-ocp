@@ -141,6 +141,23 @@ teardown_file() {
   run_cmd ${KUBE_BURNER_OCP} crd-scale --iterations=2 --alerting=false
 }
 
+# bats test_tags=workload:agentic-run-density
+@test "agentic-run-density" {
+  # The agentic layer ships only on OCP >= 5.0 and is not part of a default install
+  oc get crd agenticruns.agentic.openshift.io &> /dev/null || skip "agentic.openshift.io CRDs are not installed"
+  ${BATS_TEST_DIRNAME}/hack/deploy-mock-llm.sh --default-profile=short
+  run_cmd ${KUBE_BURNER_OCP} agentic-run-density --iterations=2 --run-timeout=10m \
+    --workflow=full --mock-profile=short \
+    --target-namespace=perf-target --target-namespace-count=2 ${INDEXING_FLAGS}
+  check_metric_value jobSummary agenticRunLatencyMeasurement agenticRunLatencyQuantilesMeasurement
+  if oc get namespace perf-target-0 &> /dev/null; then
+    echo "Target namespace perf-target-0 was not garbage collected"
+    oc get namespace -l kube-burner-job=agentic-run-density-targets
+    return 1
+  fi
+  ${BATS_TEST_DIRNAME}/hack/deploy-mock-llm.sh --delete
+}
+
 # bats test_tags=workload:virt-density
 @test "virt-density" {
   run_cmd ${KUBE_BURNER_OCP} virt-density --vms-per-node=5 --vmi-ready-threshold=1m ${INDEXING_FLAGS}

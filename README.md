@@ -15,6 +15,7 @@ Usage:
   kube-burner-ocp [command]
 
 Available Commands:
+  agentic-run-density        Runs agentic-run-density workload
   anp-density-pods           Runs anp-density-pods workload
   berserker-load             Runs berserker-load workload
   build-farm                 Runs build-farm workload
@@ -1919,6 +1920,188 @@ kube-burner-ocp init -c config.yml --iterations 10 --churn-cycles 5 \
 kube-burner-ocp init -c config.yml --iterations 1 \
   --set WATCHER_MODE=true \
   --set CHAOS_ACTION=rollout --set CHAOS_DELAY=60
+```
+
+## Agentic Run Density workload
+
+`agentic-run-density` drives concurrent OpenShift Lightspeed `AgenticRun` CRs through the agentic-operator and measures how long each one takes to move through analysis, approval, execution and verification.
+
+```console
+kube-burner-ocp agentic-run-density --iterations=50 --namespace=lightspeed-perf --run-timeout=30m
+```
+
+### Prerequisites
+
+- The agentic layer (OCP >= 5.0) must be installed, providing the `agentic.openshift.io/v1alpha1` `AgenticRun` CRD
+- An `Agent` must exist for `--agent` to name, bound to an `LLMProvider`
+- An `ApprovalPolicy` named `cluster` granting automatic approval must exist, otherwise every run stalls waiting for a human reviewer and the job times out at `--run-timeout`
+
+`test/hack/deploy-mock-llm.sh` creates all three against a mock model. See [Mock LLM](#mock-llm) below.
+
+### Flags
+
+| Flag | Default | Description |
+| ---- | ------- | ----------- |
+| `--iterations` | required | Number of `AgenticRun` CRs to create |
+| `--namespace` | `lightspeed-perf` | Namespace the `AgenticRun` CRs are created in |
+| `--target-namespace` | `--namespace` | Namespace the agent is scoped to and where execution RBAC is materialized. Created by the workload |
+| `--target-namespace-count` | `1` | Spread the runs across this many target namespaces, named `<target-namespace>-0..N-1` when above 1 |
+| `--request` | generic remediation request | Remediation request carried by every `AgenticRun` |
+| `--agent` | `default` | `Agent` CR every run step is bound to. Must already exist |
+| `--workflow` | `full` | Steps each run performs: `analysis`, `analysis-execution` or `full` |
+| `--mock-profile` | `typical` | Behaviour to request from the mock LLM. Empty disables token injection |
+| `--run-timeout` | `30m` | How long to wait for a run to reach a terminal phase |
+| `--iteration-delay` | `0` | Delay between creations, used to pace the arrival rate |
+| `--wait-for-completion` | `true` | Wait for every run to reach a terminal phase before finishing the job |
+| `--sandbox-label` | empty | Pod label key holding the `AgenticRun` UID, only needed when sandbox pods carry no ownerReference to their run |
+
+Because an `AgenticRun` is reconciled asynchronously over minutes, the job creates the CRs at `--iteration-delay` pacing and then waits. Concurrency is therefore an *outcome* of the arrival rate and the service time, not a direct input.
+
+`ApprovalPolicy.spec.maxConcurrentRuns` caps how many runs the operator reconciles at once. It defaults to **5** and cannot exceed **20**, so concurrency above that measures the operator's queue rather than its capacity, no matter how fast the workload creates CRs.
+
+#### Workflow shape
+
+`--workflow` controls which steps each run's spec asks for, and omitting a step from the spec is how the operator is told to skip it. `spec.analysis` is required by the CRD and is always present.
+
+| `--workflow` | Steps | Sandbox pods per run | Use for |
+| ------------ | ----- | -------------------- | ------- |
+| `analysis` | analysis | 1 | Isolating analysis latency and sandbox startup from everything downstream |
+| `analysis-execution` | analysis, execution | 2 | Adding RBAC materialization and the mutating path |
+| `full` | analysis, execution, verification | 3 | End to end, the production shape |
+
+Each step gets its own sandbox pod, named `ls-{step}-{agenticRunName}`, and they run strictly serially, so `full` is roughly three sandbox startups deep per run rather than one.
+
+#### Target namespaces
+
+`spec.targetNamespaces` is not just prompt context. At the execution step the operator materializes a `Role` and `RoleBinding` into every namespace listed there, so a target namespace that does not exist makes that write a 404 and fails the run. The workload therefore creates every target namespace it names, in a job that runs before the runs are created and waits for each namespace to reach `Active`.
+
+The default, `--target-namespace` unset, makes the target namespace the same as `--namespace`. That is the shape the alerts adapter produces, where the run lives in the namespace it is about, and kube-burner already creates that namespace for the job, so no extra namespace is created.
+
+`--target-namespace-count` exists because concentrating every run on one target namespace is not the production load shape. Each execution step writes RBAC into its target namespace, so N concurrent runs sharing one target serialize on writes to the same namespace, which production alert-driven runs spread across the cluster never do. Fan out when measuring execution throughput:
+
+```console
+kube-burner-ocp agentic-run-density --iterations=100 --namespace=lightspeed-perf \
+  --target-namespace=perf-target --target-namespace-count=20 --run-timeout=45m --qps=2 --burst=2
+```
+
+Runs are assigned round-robin, iteration `i` targeting `perf-target-<(i-1) mod 20>`. The namespaces are created empty; add objects to them with a preceding custom job if the agent needs something real to investigate.
+
+#### Mock LLM
+
+Driving this workload against a real model measures the model. Inference latency dominates every phase, varies run to run and costs money per iteration, so results are not comparable across runs. `test/hack/deploy-mock-llm.sh` replaces just the model with a deterministic one and leaves the operator, the sandbox pods and the RBAC path fully exercised:
+
+```console
+./test/hack/deploy-mock-llm.sh                     # deploy, wire up the CRs, smoke test
+./test/hack/deploy-mock-llm.sh --sleep 4 --replicas 6   # add realistic inference latency
+./test/hack/deploy-mock-llm.sh --dry-run           # render everything, apply nothing
+./test/hack/deploy-mock-llm.sh --delete            # tear it all down
+```
+
+It creates a `ConfigMap` holding the server source, so there is no image to build, and runs it under a stock UBI python image. It then creates the `Secret`, `Deployment`, `Service`, `LLMProvider` (`type: OpenAI`, pointed at the Service), `Agent` and the `cluster` `ApprovalPolicy`.
+
+`LLMProvider.spec.type` is a CEL-enforced enum of five real providers with no fake variant, which is why lightspeed-service's `fake_provider` cannot be used here. Presenting an OpenAI-shaped endpoint is the supported way in.
+
+How much work the mock pretends to do is chosen per run by `--mock-profile`, which the object template appends to `spec.request` as a `[mock-profile:...]` token. That is the only channel available: the sandbox builds its own request to the model and sets its own headers, so the workload cannot steer it with one.
+
+| Profile | Tool-call turns | Remediation options | Actions | Exercises |
+| ------- | --------------- | ------------------- | ------- | --------- |
+| `trivial` | 0 | 0 | 0 | Floor: operator plus sandbox startup with no agent work |
+| `short` | 4 | 1 | 3 | A small remediation |
+| `typical` | 12 | 2 | 6 | The default working shape |
+| `long` | 55 | 3 | 12 | A deep investigation |
+| `max-turns` | never terminates | 1 | 1 | The `Agent.spec.maxTurns` clamp |
+| `timeout` | never terminates, 30s per turn | 1 | 1 | The `Agent.spec.timeouts` budgets |
+| `malformed` | 2 | 1 | 1 | Invalid JSON on the response parse path |
+
+The template also appends a `[mock-ns:<namespace>]` token carrying the run's target namespace. The operator's analysis prompt does not include `spec.targetNamespaces`, so without this the mock could not know which namespace to request RBAC for, and the execution step's `Role`/`RoleBinding` materialization — one of the things worth measuring — would never fire. A namespace outside `spec.targetNamespaces` is rejected by the operator, so the token and the spec are asserted to agree in the unit tests.
+
+Set `--mock-profile=""` to drop both tokens and run against a real provider.
+
+With `--with-servicemonitor` the mock's own counters (`mockllm_requests_total`, `mockllm_turns_total`, `mockllm_tokens_total`, `mockllm_request_duration_seconds`) are scraped into the cluster Prometheus and become collectable through the same metrics profile as everything else. It needs user workload monitoring enabled.
+
+### AgenticRun Latency Metrics
+
+`agenticRunLatency` records the lifecycle of every `AgenticRun` created by the workload. All latencies are in ms. It is enabled by the workload's own config:
+
+```yaml
+  measurements:
+  - name: agenticRunLatency
+```
+
+The measurement collects an `agenticRunLatencyMeasurement` timeseries document per run plus `agenticRunLatencyQuantilesMeasurement` summary documents per latency series.
+
+`AgenticRun` never stores a phase field: phase is derived from `status.conditions` with the precedence `EmergencyStopped > Escalated > Denied > Verified > Executed > Analyzed`. The measurement reimplements that derivation, so the `phase` it indexes matches what the operator and the console would show.
+
+Two groups of latencies are recorded. The cumulative group measures from the `AgenticRun` `creationTimestamp`:
+
+| Series | Meaning |
+| ------ | ------- |
+| `Analyzed` | Creation until the `Analyzed` condition turns True |
+| `Approved` | Creation until `Approved` |
+| `Executed` | Creation until `Executed` |
+| `Verified` | Creation until `Verified` |
+| `Escalated` | Creation until `Escalated` |
+| `Terminal` | Creation until the run reaches any terminal phase, the end to end latency |
+
+The per-phase group measures the duration of an individual phase, each from the end of the phase preceding it:
+
+| Series | Meaning |
+| ------ | ------- |
+| `AnalysisPhase` | Creation until `Analyzed` |
+| `ApprovalPhase` | `Analyzed` until `Approved` |
+| `ExecutionPhase` | `Approved` (or `Analyzed` when approval is implicit) until `Executed` |
+| `VerificationPhase` | `Executed` until `Verified` |
+| `EscalationPhase` | `Verified` (or `Executed`) until `Escalated` |
+
+Analysis, approval, execution and verification are sequential points on one timeline. **`EscalationPhase` is a branch off a failed verification, not a further stage**: a run reports either the verified path or the escalated one, never both.
+
+**`ApprovalPhase` is not a latency in the same sense as the others.** It is wall-clock time waiting on an approval decision rather than compute. Under an auto-approving `ApprovalPolicy` it collapses to reconcile noise; under a human reviewer it dwarfs every other series and drags `Terminal` with it. Read it separately from the rest.
+
+The sandbox group measures pod provisioning. A run provisions at most four sandbox pods, one per agent step, and they run strictly serially. Approval has no sandbox; it is a controller-side gate. A clean verified run therefore uses three pods, a `NoActionRequired` run one, and an escalating run four:
+
+| Series | Meaning |
+| ------ | ------- |
+| `SandboxStartup` | Creation until Ready of the earliest sandbox pod of the run |
+| `SandboxStartupAnalysis` | Creation until Ready of the `ls-analysis-*` pod |
+| `SandboxStartupExecution` | Creation until Ready of the `ls-execution-*` pod |
+| `SandboxStartupVerification` | Creation until Ready of the `ls-verification-*` pod |
+| `SandboxStartupEscalation` | Creation until Ready of the `ls-escalation-*` pod |
+
+Because the steps are serial, peak concurrent sandbox pods on the cluster is roughly the number of in-flight runs, not four times that. That is the number to size `--qps` and `--burst` against.
+
+A run only contributes to the series it actually went through, so a run that completes at `Verified` does not push a zero into the escalation quantiles. Runs that never reach a terminal phase are still indexed, and they are counted in the measurement's error rate.
+
+Sandbox pods are created by the agentic-operator rather than by kube-burner, so they carry no kube-burner labels. They are correlated back to their run through their ownerReference, falling back to the `--sandbox-label` pod label when the operator sets no owner. The step is recovered from the pod name, which `SandboxManager.Create` builds as `ls-{step}-{agenticRunName}`. In sandbox-claim mode the pod is named by the sandbox controller instead, so it still counts towards `sandboxPodCount` and `SandboxStartup` but contributes to no per-step series.
+
+One document such as the following is indexed per `AgenticRun`:
+
+```json
+{
+  "timestamp": "2026-09-29T10:14:02Z",
+  "analyzedLatency": 8421,
+  "approvedLatency": 9110,
+  "executedLatency": 31882,
+  "verifiedLatency": 44190,
+  "terminalLatency": 44190,
+  "analysisPhaseLatency": 8421,
+  "approvalPhaseLatency": 689,
+  "executionPhaseLatency": 22772,
+  "verificationPhaseLatency": 12308,
+  "sandboxStartupLatency": 2104,
+  "sandboxStartupAnalysisLatency": 2104,
+  "sandboxStartupExecutionLatency": 3517,
+  "sandboxStartupVerificationLatency": 1988,
+  "sandboxPodCount": 3,
+  "phase": "Completed",
+  "analyzedReason": "RemediationProposed",
+  "metricName": "agenticRunLatencyMeasurement",
+  "uuid": "6c8a1f52-3b21-4f0e-9d7a-19b4c2f6ad38",
+  "jobName": "agentic-run-density",
+  "jobIteration": 4,
+  "replica": 1,
+  "namespace": "lightspeed-perf",
+  "agenticRunName": "agentic-run-density-4-1"
+}
 ```
 
 ## Custom Workload: Bring your own workload
