@@ -11,6 +11,8 @@ spec:
       labels:
         app: redhat-ocpbugs-85627
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: redhat-ocpbugs-85627-sa
       containers:
       - name: script-runner
