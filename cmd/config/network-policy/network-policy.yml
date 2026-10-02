@@ -11,6 +11,9 @@ global:
           metric: P99
           threshold: {{.NETPOL_READY_THRESHOLD}}
 {{ end }}
+{{ end }}
+{{ if .MULTI_NETWORK_POLICY }}
+    - name: mnpLatency
 {{ end }}        
 metricsEndpoints:
 {{ if .ES_SERVER }}
@@ -38,9 +41,9 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: true
     podWait: false
-    waitWhenFinished: true
+    waitWhenFinished: {{ if .VIRT }}false{{ else }}true{{ end }}
     preLoadImages: false
-    jobPause: 15s
+    jobPause: {{ if .VIRT }}{{.VM_STARTUP_PAUSE}}{{ else }}15s{{ end }}
     skipIndexing: true
     namespaceLabels:
       kube-burner.io/skip-networkpolicy-latency: true
@@ -49,15 +52,48 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
+{{ if .MULTI_NETWORK_POLICY }}
+      - objectTemplate: nncp.yml
+        replicas: {{.VLANS}}
+        runOnce: true
+
+      - objectTemplate: nad-vlan.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
+
+{{ if not .VIRT }}
+{{ if .MULTI_NETWORK_POLICY }}
+      - objectTemplate: pod-mnp.yml
+        replicas: {{.PODS_PER_NAMESPACE}}
+        inputVars:
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ else }}
       - objectTemplate: pod.yml
         replicas: {{.PODS_PER_NAMESPACE}}
+{{ end }}
+{{ else }}
+      - objectTemplate: vm-localnet.yml
+        replicas: {{.VMS_PER_NAMESPACE}}
+        inputVars:
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
 
+{{ if not .MULTI_NETWORK_POLICY }}
       - objectTemplate: np-deny-all.yml
         replicas: 1
+{{ else }}
+      - objectTemplate: mnp-deny-all.yml
+        replicas: 1
+        inputVars:
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
 
+{{ if not .MULTI_NETWORK_POLICY }}
       - objectTemplate: np-allow-from-proxy.yml
         replicas: 1
-
+{{ end }}
   - name: network-policy-perf
     namespace: network-policy-perf
     jobIterations: {{.JOB_ITERATIONS}}
@@ -75,10 +111,18 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
     objects:
+{{ if not .MULTI_NETWORK_POLICY }}
       - objectTemplate: ingress-np.yml
+{{ else }}
+      - objectTemplate: ingress-mnp.yml
+{{ end }}
         replicas: {{.NETPOLS_PER_NAMESPACE}}
         inputVars:
+{{ if not .MULTI_NETWORK_POLICY }}
           namespaces: {{.JOB_ITERATIONS}}
+{{ else }}
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
           pods_per_namespace: {{.PODS_PER_NAMESPACE}}
           netpols_per_namespace: {{.NETPOLS_PER_NAMESPACE}}
           local_pods: {{.LOCAL_PODS}}
@@ -90,10 +134,18 @@ jobs:
           cidr_rules: {{.CIDRS}}
           except_rules: {{.EXCEPT_RULES}}
 {{ if not .NETPOL_LATENCY }}
+{{ if not .MULTI_NETWORK_POLICY }}
       - objectTemplate: egress-np.yml
+{{ else }}
+      - objectTemplate: egress-mnp.yml
+{{ end }}
         replicas: {{.NETPOLS_PER_NAMESPACE}}
         inputVars:
+{{ if not .MULTI_NETWORK_POLICY }}
           namespaces: {{.JOB_ITERATIONS}}
+{{ else }}
+          namespaces_per_vlan: {{.NAMESPACES_PER_VLAN}}
+{{ end }}
           pods_per_namespace: {{.PODS_PER_NAMESPACE}}
           netpols_per_namespace: {{.NETPOLS_PER_NAMESPACE}}
           local_pods: {{.LOCAL_PODS}}

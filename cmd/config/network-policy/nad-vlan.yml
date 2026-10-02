@@ -1,0 +1,18 @@
+{{- $vlanId := add (div $.Iteration .namespaces_per_vlan) 1}}
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: br-ex-vlan-{{$vlanId}}
+spec:
+  config: |
+    {
+      "cniVersion": "0.3.1",
+      "name": "br-ex-vlan-{{$vlanId}}",
+      "type": "ovn-k8s-cni-overlay",
+      "topology":"localnet",
+      "subnets": "10.10.{{$vlanId}}.0/24",
+      "allowPersistentIPs": true,
+      "vlanID": {{$vlanId}},
+      "mtu": 1500,
+      "netAttachDefName": "network-policy-perf-{{.Iteration}}/br-ex-vlan-{{$vlanId}}"
+    }
