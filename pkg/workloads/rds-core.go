@@ -79,7 +79,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&sriovDpdkDevicepool, "dpdk-devicepool", "intelnics2", "SRIOV Device pool name for DPDK VFs in the cluster")
 	cmd.Flags().StringVar(&sriovNetDevicepool, "net-devicepool", "intelnics2", "SRIOV Device pool name for Kernel VFs in the cluster")
 	cmd.Flags().StringVar(&workerLabel, "worker-label", "worker-dpdk", "Node label value for DPDK worker node affinity")
-	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of iterations/namespaces")
+	cmd.Flags().IntVar(&iterations, "iterations", 1, "Number of iterations/namespaces")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&perfProfile, "perf-profile", "default", "Performance profile implemented in the cluster")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")

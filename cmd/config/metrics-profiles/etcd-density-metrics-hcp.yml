@@ -73,13 +73,13 @@
 # ---------------------------------------------------------------------------
 
 - query: delta(etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[1m:30s])/2 > 0
-  metricName: 99thEtcdCompaction
+  metricName: etcdCompaction
 
 - query: etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
   metricName: etcdCompactionDurationTotal
 
 - query: delta(etcd_disk_backend_defrag_duration_seconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}[1m:30s])/2 > 0
-  metricName: 99thEtcdDefrag
+  metricName: etcdDefrag
 
 - query: etcd_disk_backend_defrag_duration_seconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
   metricName: etcdDefragDurationTotal
@@ -315,12 +315,12 @@
   captureStart: true
 
 - query: etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
-  metricName: 99thEtcdCompaction-raw
+  metricName: etcdCompaction-raw
   instant: true
   captureStart: true
 
 - query: etcd_disk_backend_defrag_duration_seconds_sum{namespace="{{.HOSTED_CLUSTER_NAMESPACE}}"}
-  metricName: 99thEtcdDefrag-raw
+  metricName: etcdDefrag-raw
   instant: true
   captureStart: true
 

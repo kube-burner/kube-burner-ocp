@@ -19,6 +19,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloud-bulldozer/go-commons/v2/ssh"
+	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
@@ -30,21 +32,32 @@ var (
 	virtCUDNDensityNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, "virt-cudn-density")
 )
 
+const (
+	virtUDNDensityTmpDirPattern  = "kube-burner-virt-udn-density-*"
+	virtUDNDensitySSHKeyFileName = "ssh"
+)
+
 // Returns virt-density workload
 func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, vmsPerNode int
 	var vmiRunningThreshold, pprofInterval time.Duration
 	var metricsProfiles []string
 	var churnPercent, churnCycles int
-	var l3, pprof bool
+	var l3, pprof, sshCheck bool
 	var churnDelay, churnDuration time.Duration
 	var deletionStrategy, vmImage, bindingMethod, churnMode, vmCPU, vmMemory, selector string
 	var cleanup bool
+	var sshKeyPairPath string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
 		SilenceUsage: true,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			if sshCheck && !virtctl.IsInstalled() {
+				log.Fatalf("Failed to run virtctl. Check that it is installed, in PATH and working")
+			}
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if cleanup {
 				log.Infof("Cleaning up all the resources from the previous run")
@@ -55,9 +68,19 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				}
 				return
 			}
+			var err error
 			if bindingMethod != "passt" && bindingMethod != "l2bridge" {
 				fmt.Println("Invalid value for --binding-method. Allowed values are 'passt' or 'l2bridge'.")
 				os.Exit(1)
+			}
+			var privateKeyPath, publicKeyPath string
+			if sshCheck {
+				privateKeyPath, publicKeyPath, err = ssh.GenerateSSHKeyPair(sshKeyPairPath, virtUDNDensityTmpDirPattern, virtUDNDensitySSHKeyFileName)
+				if err != nil {
+					log.Fatalf("Failed to generate SSH keys for the test - %v", err)
+				}
+				AdditionalVars["SSH_PRIVATE_KEY"] = privateKeyPath
+				AdditionalVars["SSH_PUBLIC_KEY"] = publicKeyPath
 			}
 			setMetrics(cmd, metricsProfiles)
 
@@ -90,6 +113,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				log.Fatal(err.Error())
 			}
 			AdditionalVars["NODE_SELECTOR"] = nodeSelectorJSON
+			AdditionalVars["SSH_CHECK"] = sshCheck
+
 			if l3 {
 				log.Info("Layer 3 is enabled")
 				AddVirtMetadata(wh, vmImage, "layer3", bindingMethod)
@@ -118,6 +143,8 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 50, "VMs per node")
 	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 0, "VMI ready timeout threshold")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	cmd.Flags().BoolVar(&sshCheck, "ssh-check", false, "Enable SSH check for the VM")
+	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generated SSH keys (only used with --ssh-check)")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
