@@ -75,13 +75,20 @@ jobs:
       pod-security.kubernetes.io/warn: privileged
       k8s.ovn.org/primary-user-defined-network: ""
     objects:
-      {{ if .ENABLE_LAYER_3 }}
+
+    {{ if .SSH_CHECK }}
+      - objectTemplate: ssh-secret.yml
+        replicas: 1
+        inputVars:
+          ssh_public_key: {{.SSH_PUBLIC_KEY}}
+    {{ end }}
+    {{ if .ENABLE_LAYER_3 }}
       - objectTemplate: cudn_l3.yml
         replicas: 1
-      {{ else }}
+    {{ else }}
       - objectTemplate: cudn_l2.yml
         replicas: 1
-      {{ end }}
+    {{ end }}
       - objectTemplate: ds.yml
         replicas: 1
         runOnce: true
@@ -107,6 +114,11 @@ jobs:
     cleanup: false
     waitWhenFinished: true
     jobPause: 2m
+    {{ if .SSH_CHECK }}
+    hooks:
+    - cmd: ["./check-udn.sh", "kube-burner.io/job", "virt-density-cudn", "", "{{ .SSH_PRIVATE_KEY }}", "fedora", "kube-burner.io/test-name=virt-cudn-density"]
+      when: beforeCleanup
+    {{ end }}
     objects:
       - objectTemplate: service.yml
       - objectTemplate: vm-client.yml
@@ -114,6 +126,7 @@ jobs:
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
           vmImage: {{.VM_IMAGE}}
+          sshCheck: {{.SSH_CHECK}}
           vmCPU: {{.VM_CPU}}
           vmMemory: {{.VM_MEMORY}}
           NODE_SELECTOR: {{ .NODE_SELECTOR }}
@@ -122,6 +135,7 @@ jobs:
         inputVars:
           bindingMethod: {{.UDN_BINDING_METHOD}}
           vmImage: {{.VM_IMAGE}}
+          sshCheck: {{.SSH_CHECK}}
           vmCPU: {{.VM_CPU}}
           vmMemory: {{.VM_MEMORY}}
           NODE_SELECTOR: {{ .NODE_SELECTOR }}
