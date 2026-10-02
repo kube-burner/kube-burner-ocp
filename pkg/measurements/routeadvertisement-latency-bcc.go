@@ -776,8 +776,8 @@ func (r *raLatencyBCC) waitForCompletion(desiredCount uint64) {
 			log.Debugf("count %v , desiredCount %v", count, desiredCount)
 			if count >= desiredCount {
 				log.Debugf("Desired count reached, signaling stop.")
-				// Give additional 10 seconds for threads to finish (pings after detecting routes)
-				time.Sleep(10 * time.Second)
+				// Give additional 60 seconds for threads to finish (pings after detecting routes)
+				time.Sleep(60 * time.Second)
 				return
 			}
 		case <-timeoutTimer.C:
