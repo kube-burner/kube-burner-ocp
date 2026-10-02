@@ -1,0 +1,11 @@
+apiVersion: networking.openshift.io/v1beta1
+kind: BGPRouting
+metadata:
+  name: bgprouting-{{.Iteration}}
+spec:
+  network:
+    name: cudn-{{.Iteration}}
+    subnets:
+    {{- $firstOctet := add (div $.Iteration 255) 40 }}
+    {{- $secondOctet := mod $.Iteration 255 }}
+    - {{ print $firstOctet "." $secondOctet ".0.0/16" }}
