@@ -7,6 +7,7 @@
 {{ $benchmarkDuration := .BENCHMARK_DURATION | default 90 }}
 {{ $warmup := .WARMUP | default 30 }}
 {{ $pause := .PAUSE | default "10s" }}
+{{ $jobDeadline := .JOB_DEADLINE | default 0 }}
 {{ $simulatorHost := .SIMULATOR_HOST }}
 {{ $gatewayHost := .GATEWAY_HOST }}
 {{ $gatewayIP := .GATEWAY_IP }}
@@ -72,6 +73,7 @@ jobs:
         jobName: baseline-{{ $size }}-{{ $provider }}-c{{ $rate }}
         parallelism: {{ $parallelism }}
         completions: {{ $samples }}
+        jobDeadline: {{ $jobDeadline }}
         env:
           GUIDELLM_TARGET: {{ $simulatorHost }}
           GUIDELLM_MAX_SECONDS: "{{ $benchmarkDuration }}"
@@ -113,6 +115,7 @@ jobs:
         gatewayHostname: {{ $.GATEWAY_HOSTNAME }}
         parallelism: {{ $parallelism }}
         completions: {{ $samples }}
+        jobDeadline: {{ $jobDeadline }}
         env:
           GUIDELLM_TARGET: {{ $gatewayHost }}
           GUIDELLM_MAX_SECONDS: "{{ $benchmarkDuration }}"

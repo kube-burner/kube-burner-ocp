@@ -7,6 +7,9 @@ spec:
   parallelism: {{.parallelism}}
   completionMode: Indexed
   backoffLimit: 0
+{{- if .jobDeadline }}
+  activeDeadlineSeconds: {{ .jobDeadline }}
+{{- end }}
   template:
     metadata:
       annotations:
