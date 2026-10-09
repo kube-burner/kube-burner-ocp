@@ -141,12 +141,12 @@ type raMetricBCC struct {
 
 // detectedRoute holds route detection timestamps for each subnet.
 type detectedRoute struct {
-	subnet              string
-	t0_RAInSpec         time.Time
-	t0_5_RAAccepted     time.Time
-	t1_RibTimestamp     time.Time
-	t2_FibTimestamp     time.Time
-	t3_VpcTimestamp     time.Time
+	subnet          string
+	t0_RAInSpec     time.Time
+	t0_5_RAAccepted time.Time
+	t1_RibTimestamp time.Time
+	t2_FibTimestamp time.Time
+	t3_VpcTimestamp time.Time
 }
 
 // podMeasurement holds pod lifecycle timestamps.
