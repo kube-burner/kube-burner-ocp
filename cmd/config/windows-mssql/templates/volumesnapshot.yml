@@ -1,0 +1,8 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: windows-mssql-snapshot-{{.Iteration}}
+spec:
+  volumeSnapshotClassName: {{.volumeSnapshotClassName}}
+  source:
+    persistentVolumeClaimName: {{.sourceDVName}}-{{.Iteration}}

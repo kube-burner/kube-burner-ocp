@@ -718,6 +718,7 @@ The different variants are:
 - [virt-clone-multi](#virt-clone-multi)
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
 - [virt-migration](#virt-migration)
+- [windows-mssql](cmd/config/windows-mssql/README.md)
 
 ### Environment Requirements
 
@@ -732,6 +733,7 @@ Therefore, `virtctl` must be installed and available in the `PATH`.
 - [virt-clone-multi](#virt-clone-multi)
 - [virt-ephemeral-restart](#virt-ephemeral-restart)
 - [virt-migration](#virt-migration)
+- [windows-mssql](cmd/config/windows-mssql/README.md)
 
 See the [Temporary SSH Keys](#temporary-ssh-keys) for details on the SSH keys used for the test
 

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: windows-mssql-scripts
+data:
+  # Benchmark configuration
+  benchmark_config.json: |
+    {
+      "db_workers": {{.dbWorkers}},
+      "db_warehouses": {{.dbWarehouses}},
+      "db_transactions": {{.dbTransactions}},
+      "db_min_workers": {{.dbMinWorkers}},
+      "db_iterations": {{.dbIterations}},
+      "db_rampup": "{{.dbRampup}}",
+      "db_runtime": "{{.dbRuntime}}"
+    }
