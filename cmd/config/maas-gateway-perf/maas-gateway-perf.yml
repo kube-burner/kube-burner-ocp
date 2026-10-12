@@ -1,5 +1,5 @@
 ---
-{{ $guidellmImage := .GUIDELLM_IMAGE | default "ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.4" }}
+{{ $guidellmImage := .GUIDELLM_IMAGE | default "ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.5" }}
 {{ $guidellmES := .ES_SERVER }}
 {{ $guidellmESIndex := .ES_INDEX }}
 {{ $samples := .SAMPLES | default 3 }}
@@ -75,13 +75,14 @@ jobs:
         completions: {{ $samples }}
         jobDeadline: {{ $jobDeadline }}
         env:
-          GUIDELLM_TARGET: {{ $simulatorHost }}
-          GUIDELLM_MAX_SECONDS: "{{ $benchmarkDuration }}"
-          GUIDELLM_WARMUP: "{{ $warmup }}"
-          GUIDELLM_PROFILE: constant
-          GUIDELLM_RATE: "{{ $rate }}"
-          GUIDELLM_DATA: "prompt_tokens={{ $payload.prompt }},output_tokens={{ $payload.output }}"
-          GUIDELLM_MODEL: "{{ $provider }}"
+          BENCH_TARGET: {{ $simulatorHost }}
+          BENCH_MAX_SECONDS: "{{ $benchmarkDuration }}"
+          BENCH_WARMUP: "{{ $warmup }}"
+          BENCH_PROFILE: constant
+          BENCH_RATE: "{{ $rate }}"
+          BENCH_PROMPT_TOKENS: "{{ $payload.prompt }}"
+          BENCH_OUTPUT_TOKENS: "{{ $payload.output }}"
+          BENCH_MODEL: "{{ $provider }}"
         image: {{ $guidellmImage }}
         ES_SERVER: {{ $guidellmES }}
         ES_INDEX: {{ $guidellmESIndex }}
@@ -117,13 +118,14 @@ jobs:
         completions: {{ $samples }}
         jobDeadline: {{ $jobDeadline }}
         env:
-          GUIDELLM_TARGET: {{ $gatewayHost }}
-          GUIDELLM_MAX_SECONDS: "{{ $benchmarkDuration }}"
-          GUIDELLM_WARMUP: "{{ $warmup }}"
-          GUIDELLM_PROFILE: constant
-          GUIDELLM_RATE: "{{ $rate }}"
-          GUIDELLM_DATA: "prompt_tokens={{ $payload.prompt }},output_tokens={{ $payload.output }}"
-          GUIDELLM_MODEL: "{{ $provider }}"
+          BENCH_TARGET: {{ $gatewayHost }}
+          BENCH_MAX_SECONDS: "{{ $benchmarkDuration }}"
+          BENCH_WARMUP: "{{ $warmup }}"
+          BENCH_PROFILE: constant
+          BENCH_RATE: "{{ $rate }}"
+          BENCH_PROMPT_TOKENS: "{{ $payload.prompt }}"
+          BENCH_OUTPUT_TOKENS: "{{ $payload.output }}"
+          BENCH_MODEL: "{{ $provider }}"
         image: {{ $guidellmImage }}
         ES_SERVER: {{ $guidellmES }}
         ES_INDEX: {{ $guidellmESIndex }}
