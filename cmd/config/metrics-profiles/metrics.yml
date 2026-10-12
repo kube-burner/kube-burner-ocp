@@ -117,10 +117,10 @@
   metricName: 99thEtcdRoundTripTimeSeconds
 
 - query: delta(etcd_debugging_mvcc_db_compaction_total_duration_milliseconds_sum[1m:30s])/2 > 0
-  metricName: 99thEtcdCompaction
+  metricName: etcdCompaction
 
 - query: delta(etcd_disk_backend_defrag_duration_seconds_sum[1m:30s])/2 > 0
-  metricName: 99thEtcdDefrag
+  metricName: etcdDefrag
 
 - query: sum by (cluster_version)(etcd_cluster_version)
   metricName: etcdVersion

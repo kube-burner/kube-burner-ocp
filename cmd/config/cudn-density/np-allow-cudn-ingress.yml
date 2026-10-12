@@ -57,5 +57,13 @@ spec:
       port: http
     - protocol: TCP
       port: https
+  {{ if .bgp }}
+  - from:
+    - ipBlock:
+        cidr: {{.externalHostCidr}}
+    ports:
+    - protocol: TCP
+      port: 2222
+  {{ end }}
   policyTypes:
   - Ingress
