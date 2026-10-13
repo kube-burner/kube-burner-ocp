@@ -15,8 +15,10 @@
 package workloads
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -25,6 +27,7 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -34,6 +37,7 @@ const (
 	fioVMLinuxCollectExtra     = 30 * time.Minute
 	fioVMLinuxSSHTmpDirPattern = "kube-burner-fio-vmlinux-ssh-*"
 	fioVMLinuxSSHKeyFileName   = "ssh"
+	fioVMLinuxDefaultSourceDV  = "fio-vmlinux-source-dv"
 )
 
 var (
@@ -43,7 +47,7 @@ var (
 // NewFioVMLinux holds the fio-vmlinux workload (Linux VM fio)
 func NewFioVMLinux(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
-	var vmImage, vmCPU, vmMemory, rootVolumeSize string
+	var vmImage, vmCPU, vmMemory, rootVolumeSize, sourceDVName string
 	var vms int
 	var testNamespace string
 	var volumeAccessMode string
@@ -54,7 +58,8 @@ func NewFioVMLinux(wh *workloads.WorkloadHelper) *cobra.Command {
 	var collectFioResults bool
 	var sshUsername, sshPassword, sshKeyPairPath string
 	var collectTimeout time.Duration
-	var cleanup bool
+	var cleanup, perNodeDV bool
+	var createdSCName string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          fioVMLinuxTestName,
@@ -71,6 +76,14 @@ func NewFioVMLinux(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal("Failed to run virtctl. Check that it is installed, in PATH and working (required to start fio via SSH)")
 			}
 			storageClassName, _ = getStorageAndSnapshotClasses(storageClassName, false, true)
+			if perNodeDV {
+				scName, err := createSnapshotCloneSC(context.Background(), storageClassName)
+				if err != nil {
+					log.Fatalf("Failed to create snapshot clone StorageClass: %v", err)
+				}
+				createdSCName = scName
+				storageClassName = scName
+			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if cleanup {
@@ -90,7 +103,25 @@ func NewFioVMLinux(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal(err.Error())
 			}
 
+			k8s := getK8SConnector()
+			workerList, err := k8s.ClientSet().CoreV1().Nodes().List(cmd.Context(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/worker"})
+			if err != nil {
+				log.Fatalf("Failed to list worker nodes: %v", err)
+			}
+			workerNames := make([]string, 0, len(workerList.Items))
+			for _, n := range workerList.Items {
+				workerNames = append(workerNames, n.Name)
+			}
+			sort.Strings(workerNames)
+			if len(workerNames) == 0 {
+				log.Fatal("No worker nodes found")
+			}
+
 			AdditionalVars["VM_IMAGE"] = vmImage
+			AdditionalVars["sourceDVName"] = sourceDVName
+			AdditionalVars["perNodeDV"] = perNodeDV
+			AdditionalVars["workerNodes"] = strings.Join(workerNames, " ")
+			AdditionalVars["workerCount"] = len(workerNames)
 			AdditionalVars["VM_CPU"] = vmCPU
 			AdditionalVars["VM_MEMORY"] = vmMemory
 			AdditionalVars["storageClassName"] = storageClassName
@@ -162,6 +193,9 @@ func NewFioVMLinux(wh *workloads.WorkloadHelper) *cobra.Command {
 					cleanupTestNamespaces(cmd.Context(), fioVMLinuxNamespaceLabelSelector)
 				}
 			}
+			if createdSCName != "" {
+				deleteSnapshotCloneSC(context.Background(), createdSCName)
+			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -171,6 +205,8 @@ func NewFioVMLinux(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&vms, "vms", 1, "Number of VirtualMachines to create")
 	cmd.Flags().StringVarP(&testNamespace, "namespace", "n", fioVMLinuxTestName, "Namespace to run the test in")
 	cmd.Flags().StringVar(&vmImage, "vm-image", "quay.io/containerdisks/fedora:41", "Linux VM image to be deployed")
+	cmd.Flags().StringVar(&sourceDVName, "source-dv-name", fioVMLinuxDefaultSourceDV, "Name prefix of the source DataVolume for PVC cloning")
+	cmd.Flags().BoolVar(&perNodeDV, "per-node-dv", false, "Create one source DV per worker node (required for node-local storage like LVMS)")
 	cmd.Flags().StringVar(&vmCPU, "vm-cpu", "1", "Number of CPU cores for the VM")
 	cmd.Flags().StringVar(&vmMemory, "vm-memory", "512Mi", "Amount of memory for the VM")
 	cmd.Flags().StringVar(&rootVolumeSize, "root-volume-size", "10Gi", "Size of the VM root volume")

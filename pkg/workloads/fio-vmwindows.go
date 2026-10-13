@@ -15,8 +15,10 @@
 package workloads
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -25,6 +27,7 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -34,6 +37,7 @@ const (
 	fioVMWindowsCollectExtra     = 60 * time.Minute
 	fioVMWindowsSSHTmpDirPattern = "kube-burner-fio-vmwindows-ssh-*"
 	fioVMWindowsSSHKeyFileName   = "ssh"
+	fioVMWindowsDefaultSourceDV  = "fio-vmwindows-source-dv"
 )
 
 var (
@@ -43,7 +47,7 @@ var (
 // NewFioVMWindows holds the fio-vmwindows workload (Windows VM fio)
 func NewFioVMWindows(wh *workloads.WorkloadHelper) *cobra.Command {
 	var storageClassName string
-	var windowsImageURL, cdiSourceType, cdiSourceS3Cred string
+	var windowsImageURL, cdiSourceType, cdiSourceS3Cred, sourceDVName string
 	var vmCPU, vmMemory, rootVolumeSize string
 	var vms int
 	var testNamespace string
@@ -55,7 +59,8 @@ func NewFioVMWindows(wh *workloads.WorkloadHelper) *cobra.Command {
 	var collectFioResults bool
 	var sshUsername, sshPassword, sshKeyPairPath string
 	var collectTimeout time.Duration
-	var cleanup bool
+	var cleanup, perNodeDV bool
+	var createdSCName string
 	var rc int
 	cmd := &cobra.Command{
 		Use:          fioVMWindowsTestName,
@@ -78,6 +83,14 @@ func NewFioVMWindows(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal("Failed to run virtctl. Check that it is installed, in PATH and working (required to start fio via SSH)")
 			}
 			storageClassName, _ = getStorageAndSnapshotClasses(storageClassName, false, true)
+			if perNodeDV {
+				scName, err := createSnapshotCloneSC(context.Background(), storageClassName)
+				if err != nil {
+					log.Fatalf("Failed to create snapshot clone StorageClass: %v", err)
+				}
+				createdSCName = scName
+				storageClassName = scName
+			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if cleanup {
@@ -97,9 +110,27 @@ func NewFioVMWindows(wh *workloads.WorkloadHelper) *cobra.Command {
 				log.Fatal(err.Error())
 			}
 
+			k8s := getK8SConnector()
+			workerList, err := k8s.ClientSet().CoreV1().Nodes().List(cmd.Context(), metav1.ListOptions{LabelSelector: "node-role.kubernetes.io/worker"})
+			if err != nil {
+				log.Fatalf("Failed to list worker nodes: %v", err)
+			}
+			workerNames := make([]string, 0, len(workerList.Items))
+			for _, n := range workerList.Items {
+				workerNames = append(workerNames, n.Name)
+			}
+			sort.Strings(workerNames)
+			if len(workerNames) == 0 {
+				log.Fatal("No worker nodes found")
+			}
+
 			AdditionalVars["WINDOWS_IMAGE_URL"] = windowsImageURL
 			AdditionalVars["cdiSourceType"] = cdiSourceType
 			AdditionalVars["cdiSourceS3Cred"] = cdiSourceS3Cred
+			AdditionalVars["sourceDVName"] = sourceDVName
+			AdditionalVars["perNodeDV"] = perNodeDV
+			AdditionalVars["workerNodes"] = strings.Join(workerNames, " ")
+			AdditionalVars["workerCount"] = len(workerNames)
 			AdditionalVars["VM_CPU"] = vmCPU
 			AdditionalVars["VM_MEMORY"] = vmMemory
 			AdditionalVars["storageClassName"] = storageClassName
@@ -173,6 +204,9 @@ func NewFioVMWindows(wh *workloads.WorkloadHelper) *cobra.Command {
 					cleanupTestNamespaces(cmd.Context(), fioVMWindowsNamespaceLabelSelector)
 				}
 			}
+			if createdSCName != "" {
+				deleteSnapshotCloneSC(context.Background(), createdSCName)
+			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
@@ -181,6 +215,8 @@ func NewFioVMWindows(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&windowsImageURL, "windows-image-url", "", "HTTP/S3 URL to Windows QCOW2 disk image (required)")
 	cmd.Flags().StringVar(&cdiSourceType, "cdi-source-type", "http", "CDI source type: http or s3")
 	cmd.Flags().StringVar(&cdiSourceS3Cred, "cdi-source-s3-cred", "", "Secret name for S3 CDI source authentication")
+	cmd.Flags().StringVar(&sourceDVName, "source-dv-name", fioVMWindowsDefaultSourceDV, "Name prefix of the source DataVolume for PVC cloning")
+	cmd.Flags().BoolVar(&perNodeDV, "per-node-dv", false, "Create one source DV per worker node (required for node-local storage like LVMS)")
 	cmd.Flags().StringVar(&storageClassName, "storage-class", "", "Name of the Storage Class to test")
 	cmd.Flags().IntVar(&vms, "vms", 1, "Number of VirtualMachines to create")
 	cmd.Flags().StringVarP(&testNamespace, "namespace", "n", fioVMWindowsTestName, "Namespace to run the test in")
