@@ -1,0 +1,75 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+    spec:
+    {{ if .rootdiskVolumeSource }}
+      source: {{ .rootdiskVolumeSource | mustToJson }}
+    {{ end }}
+      storage:
+        accessModes:
+        - {{ .accessMode }}
+        storageClassName: {{ .storageClassName }}
+        resources:
+          requests:
+            storage: {{ default "10Gi" .rootVolumeSize }}
+  runStrategy: RerunOnFailure
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution: {{.NODE_SELECTOR|toJson}}
+      architecture: amd64
+      domain:
+        cpu:
+          cores: {{ default "1" .vmCPU }}
+        resources:
+          requests:
+            memory: {{ default "512Mi" .vmMemory }}
+        devices:
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+            bootOrder: 1
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - name: default
+            masquerade: {}
+            bootOrder: 2
+        machine:
+          type: pc-q35-rhel9.4.0
+      networks:
+      - name: default
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+        name: rootdisk
+      - cloudInitNoCloud:
+          userData: |
+            #cloud-config
+            disable_root: false
+            ssh_pwauth: true
+            chpasswd:
+              expire: false
+              list: |
+                root:fedora
+            {{ if .sshAuthorizedKey }}
+            # Injected by kube-burner for non-interactive collect (sshpass cannot drive virtctl's password prompt).
+            ssh_authorized_keys:
+              - {{ .sshAuthorizedKey }}
+            {{ end }}
+            # Install fio during first boot; orchestrator starts the timed fio run via virtctl ssh as root.
+            packages:
+              - fio
+            runcmd:
+              # /root/testdir: works on Fedora/CentOS/other RPM containerdisks without a distro-specific user.
+              - mkdir -p /root/testdir
+        name: cloudinitdisk
