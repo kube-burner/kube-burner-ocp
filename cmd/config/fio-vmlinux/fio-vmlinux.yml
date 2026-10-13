@@ -39,6 +39,42 @@ jobs:
     labelSelector:
       {{ $testNamespacesLabelKey }}: {{ $testName }}
 
+- name: create-source-dv
+  jobType: create
+  jobIterations: {{if .perNodeDV}}{{.workerCount}}{{else}}1{{end}}
+  qps: {{.QPS}}
+  burst: {{.BURST}}
+  namespacedIterations: false
+  namespace: {{ .testNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testName }}
+    security.openshift.io/scc.podSecurityLabelSync: false
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: true
+  podWait: false
+  maxWaitTimeout: 2h
+  jobPause: 10s
+  cleanup: false
+  objects:
+  - objectTemplate: templates/dv.yml
+    replicas: 1
+    inputVars:
+      dvNamePrefix: {{ .sourceDVName }}
+      perNodeDV: {{.perNodeDV}}
+      vmImage: {{.VM_IMAGE}}
+      storageClassName: {{.storageClassName}}
+      accessMode: {{.accessMode}}
+      storageSize: {{.rootVolumeSize}}
+      workerNodes: {{.workerNodes}}
+    waitOptions:
+      customStatusPaths:
+      - key: '(.conditions.[] | select(.type == "Ready")).status'
+        value: "True"
+
 - name: {{ $createVMsJobName }}
   jobType: create
   jobIterations: {{ .vms }}
@@ -66,9 +102,11 @@ jobs:
     replicas: 1
     inputVars:
       vmName: {{ $vmName }}
-      rootdiskVolumeSource:
-        registry:
-          url: "docker://{{.VM_IMAGE}}"
+      sourceNamespace: {{ .testNamespace }}
+      sourceDVName: {{ .sourceDVName }}
+      perNodeDV: {{.perNodeDV}}
+      workerNodes: {{.workerNodes}}
+      workerCount: {{.workerCount}}
       vmCPU: {{.VM_CPU}}
       vmMemory: {{.VM_MEMORY}}
       storageClassName: {{ .storageClassName }}
