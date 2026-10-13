@@ -115,6 +115,13 @@ teardown_file() {
 }
 
 # bats test_tags=workload:index
+@test "index: embedded metrics profile" {
+  # metrics.yml is not in the test directory, so it must resolve from the embedded profiles
+  run_cmd ${KUBE_BURNER_OCP} index --uuid=${UUID} --metrics-profile metrics.yml
+  check_file_list collected-metrics-${UUID}/jobSummary.json
+}
+
+# bats test_tags=workload:index
 @test "index: metrics-endpoints=true; es-indexing=true" {
   run_cmd ${KUBE_BURNER_OCP} index --uuid="${UUID}" --metrics-endpoint metrics-endpoints.yaml --user-metadata user-metadata.yml
 }
