@@ -1,0 +1,116 @@
+{{- $testName := "fio-vmlinux" }}
+{{- $testNamespacesLabelKey := "kube-burner.io/test-name" -}}
+{{- $vmName := $testName -}}
+{{- $createVMsJobName := "create-fio-vmlinux-vms" -}}
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+  - name: vmiLatency
+  - name: dataVolumeLatency
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+- metrics: [{{.METRICS}}]
+  alerts: [{{.ALERTS}}]
+  indexer:
+    esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: true
+    defaultIndex: {{.ES_INDEX}}
+    type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+- metrics: [{{.METRICS}}]
+  alerts: [{{.ALERTS}}]
+  indexer:
+    type: local
+    metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+- name: start-fresh
+  jobType: delete
+  waitForDeletion: true
+  qps: 5
+  burst: 10
+  objects:
+  - kind: Namespace
+    labelSelector:
+      {{ $testNamespacesLabelKey }}: {{ $testName }}
+
+- name: create-source-dv
+  jobType: create
+  jobIterations: {{if .perNodeDV}}{{.workerCount}}{{else}}1{{end}}
+  qps: {{.QPS}}
+  burst: {{.BURST}}
+  namespacedIterations: false
+  namespace: {{ .testNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testName }}
+    security.openshift.io/scc.podSecurityLabelSync: false
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: true
+  podWait: false
+  maxWaitTimeout: 2h
+  jobPause: 10s
+  cleanup: false
+  objects:
+  - objectTemplate: templates/dv.yml
+    replicas: 1
+    inputVars:
+      dvNamePrefix: {{ .sourceDVName }}
+      perNodeDV: {{.perNodeDV}}
+      vmImage: {{.VM_IMAGE}}
+      storageClassName: {{.storageClassName}}
+      accessMode: {{.accessMode}}
+      storageSize: {{.rootVolumeSize}}
+      workerNodes: {{.workerNodes}}
+    waitOptions:
+      customStatusPaths:
+      - key: '(.conditions.[] | select(.type == "Ready")).status'
+        value: "True"
+
+- name: {{ $createVMsJobName }}
+  jobType: create
+  jobIterations: {{ .vms }}
+  qps: {{.QPS}}
+  burst: {{.BURST}}
+  namespacedIterations: false
+  namespace: {{ .testNamespace }}
+  namespaceLabels:
+    {{ $testNamespacesLabelKey }}: {{ $testName }}
+    security.openshift.io/scc.podSecurityLabelSync: false
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+  verifyObjects: true
+  errorOnVerify: true
+  waitWhenFinished: true
+  podWait: true
+  maxWaitTimeout: 2h
+  # Fio is started via virtctl ssh after Ready (not during jobPause). Collect/Index follows.
+  jobPause: 0s
+  cleanup: false
+  defaultMissingKeysWithZero: true
+  objects:
+  - objectTemplate: templates/vm.yml
+    replicas: 1
+    inputVars:
+      vmName: {{ $vmName }}
+      sourceNamespace: {{ .testNamespace }}
+      sourceDVName: {{ .sourceDVName }}
+      perNodeDV: {{.perNodeDV}}
+      workerNodes: {{.workerNodes}}
+      workerCount: {{.workerCount}}
+      vmCPU: {{.VM_CPU}}
+      vmMemory: {{.VM_MEMORY}}
+      storageClassName: {{ .storageClassName }}
+      accessMode: {{ .accessMode }}
+      rootVolumeSize: {{ .rootVolumeSize }}
+      NODE_SELECTOR: {{ .NODE_SELECTOR }}
+      sshAuthorizedKey: {{ .SSH_AUTHORIZED_KEY }}

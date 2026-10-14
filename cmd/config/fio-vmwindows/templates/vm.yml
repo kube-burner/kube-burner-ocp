@@ -1,0 +1,122 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+  labels:
+    kubevirt.io/vm: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+spec:
+  dataVolumeTemplates:
+  - metadata:
+      name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+      annotations:
+        cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+{{- if .perNodeDV }}
+        volume.kubernetes.io/selected-node: {{index (splitList " " .workerNodes) (mod (default 0 .Iteration) (default 1 .workerCount))}}
+{{- end }}
+    spec:
+      source:
+        pvc:
+          namespace: {{.sourceNamespace}}
+          name: {{.sourceDVName}}-{{if .perNodeDV}}{{mod (default 0 .Iteration) (default 1 .workerCount)}}{{else}}0{{end}}
+      storage:
+        accessModes:
+        - {{ .accessMode }}
+        volumeMode: Block
+        storageClassName: {{ .storageClassName }}
+        resources:
+          requests:
+            storage: {{ default "76Gi" .rootVolumeSize }}
+  runStrategy: RerunOnFailure
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution: {{.NODE_SELECTOR|toJson}}
+      terminationGracePeriodSeconds: 180
+      domain:
+        firmware:
+          bootloader:
+            efi:
+              secureBoot: false
+        clock:
+          timer:
+            hpet:
+              present: false
+            hyperv: {}
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+          utc: {}
+        cpu:
+          cores: {{ default "2" .vmCPU }}
+          sockets: 1
+          threads: 1
+        ioThreads:
+          supplementalPoolThreadCount: 8
+        ioThreadsPolicy: supplementalPool
+        devices:
+          autoattachMemBalloon: false
+          blockMultiQueue: true
+          disks:
+          - disk:
+              bus: virtio
+            name: rootdisk
+            bootOrder: 1
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          inputs:
+          - bus: virtio
+            name: tablet
+            type: tablet
+          tpm: {}
+          interfaces:
+          - masquerade: {}
+            model: virtio
+            name: nic-0
+          networkInterfaceMultiqueue: true
+        features:
+          acpi: {}
+          apic: {}
+          hyperv:
+            frequencies: {}
+            reenlightenment: {}
+            reset: {}
+            ipi: {}
+            tlbflush: {}
+            relaxed: {}
+            runtime: {}
+            spinlocks:
+              spinlocks: 8191
+            synic: {}
+            synictimer:
+              direct: {}
+            vapic: {}
+            vpindex: {}
+          smm: {}
+        machine:
+          type: q35
+        resources:
+          requests:
+            cpu: {{ default "2" .vmCPU }}
+            memory: {{ default "4Gi" .vmMemory }}
+      networks:
+      - name: nic-0
+        pod: {}
+      volumes:
+      - dataVolume:
+          name: "{{ .vmName }}-{{ .Iteration }}-{{ .Replica }}"
+        name: rootdisk
+      - cloudInitNoCloud:
+          # Key install only (~1KB). fio is started later via virtctl ssh (avoids 2048-byte userdata limit).
+          userData: |
+            #cloud-config
+            runcmd:
+              - powershell -Command "New-Item -ItemType Directory -Force -Path 'C:\ProgramData\ssh' | Out-Null; Set-Content -Path 'C:\ProgramData\ssh\administrators_authorized_keys' -Value '{{.sshAuthorizedKey}}' -Encoding ascii -Force; icacls 'C:\ProgramData\ssh\administrators_authorized_keys' /inheritance:r /grant 'Administrators:F' /grant 'SYSTEM:F'"
+              - cmd /c "mkdir C:\Users\Administrator\.ssh >nul 2>&1 & icacls C:\Users\Administrator\.ssh /grant Everyone:F >nul 2>&1 & takeown /f C:\Users\Administrator\.ssh\authorized_keys >nul 2>&1 & icacls C:\Users\Administrator\.ssh\authorized_keys /grant Everyone:F >nul 2>&1 & del /f C:\Users\Administrator\.ssh\authorized_keys >nul 2>&1"
+              - powershell -Command "Copy-Item 'C:\ProgramData\ssh\administrators_authorized_keys' 'C:\Users\Administrator\.ssh\authorized_keys' -Force; icacls 'C:\Users\Administrator\.ssh\authorized_keys' /inheritance:r /grant 'Administrators:F' /grant 'SYSTEM:F'; icacls 'C:\Users\Administrator\.ssh' /inheritance:r /grant 'Administrators:F' /grant 'SYSTEM:F'"
+        name: cloudinitdisk
