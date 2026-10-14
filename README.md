@@ -1520,18 +1520,9 @@ One document, such as the following, is indexed per each internal (through Route
       "ocpVersion": "4.19.0-ec.3"
     },
     "scenario": "ExportRoutes",
-    "latency": [
-      10031
-    ],
-    "minReadyLatency": 10031,
-    "maxReadyLatency": 10031,
-    "readyLatency": 10031,
-    "netlinkRouteLatency": [
-      10026
-    ],
-    "maxNetlinkRouteLatency": 10026,
-    "minNetlinkRouteLatency": 10026,
-    "p99NetlinkRouteLatency": 10026
+    "acceptedLatency": 120,
+    "latency": 10031,
+    "netlinkRouteLatency": 10026
   },
   {
     "timestamp": "2025-04-15T08:42:20.060393739Z",
@@ -1544,12 +1535,7 @@ One document, such as the following, is indexed per each internal (through Route
       "ocpVersion": "4.19.0-ec.3"
     },
     "scenario": "ImportRoutes",
-    "latency": [
-      13
-    ],
-    "minReadyLatency": 13,
-    "maxReadyLatency": 13,
-    "readyLatency": 13
+    "latency": 13
   }
 ]
 ```
