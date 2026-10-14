@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{.JobName}}-{{.Replica}}
+  namespace: ztwim-perf
+  labels:
+    app: {{.APP_LABEL}}
+spec:
+  serviceAccountName: ztwim-perf-sa
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+    - name: spiffe-workload-api
+      csi:
+        driver: csi.spiffe.io
+        readOnly: true
+    - name: certs
+      emptyDir: {}
+    - name: spiffe-helper-config
+      configMap:
+        name: spiffe-helper-config
+  containers:
+    - name: spiffe-helper
+      image: {{.SPIFFE_HELPER_IMAGE}}
+      imagePullPolicy: IfNotPresent
+      args: ["-config", "/run/spiffe-helper/helper.conf"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      volumeMounts:
+        - name: spiffe-workload-api
+          mountPath: /spiffe-workload-api
+          readOnly: true
+        - name: certs
+          mountPath: /certs
+        - name: spiffe-helper-config
+          mountPath: /run/spiffe-helper
+          readOnly: true
+    - name: app
+      image: {{.APP_IMAGE}}
+      imagePullPolicy: IfNotPresent
+      command: ["/bin/sh", "-c", "sleep {{.runtime}}; exec sleep inf"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      volumeMounts:
+        - name: certs
+          mountPath: /certs

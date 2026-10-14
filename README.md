@@ -44,6 +44,7 @@ Available Commands:
   rds-core                   Runs rds-core workload
   udn-bgp                    Runs udn-bgp workload
   udn-density-pods           Runs udn-density-pods workload
+  ztwim-svid-issuance        Runs ztwim-svid-issuance workload
   version                    Print the version number of kube-burner
   virt-capacity-benchmark    Runs capacity-benchmark workload
   virt-clone                 Runs virt-clone workload
@@ -1593,6 +1594,87 @@ This workload creates jobs in multiple namespaces that are handled by 10 shared 
 
 This workload creates pods in a single namespace that are handled by a single ClusterQueue with pre-defined CPU, memory and pod quotas. Key measurements are Kueue admission wait time and pod ready latency.
 
+## ZTWIM SVID issuance workload
+
+The `ztwim-svid-issuance` workload scales attestation pods on a cluster where [Zero Trust Workload Identity Manager (ZTWIM)](https://github.com/openshift/zero-trust-workload-identity-manager) is already installed. Each pod uses the SPIFFE CSI driver and spiffe-helper to obtain an X.509 SVID written to `/certs/svid.pem`.
+
+### Prerequisites
+
+- OpenShift 4.19+ with ZTWIM installed and operands healthy (`SpireServer`, `SpireAgent`, `SpiffeCSIDriver`)
+- CSI driver `csi.spiffe.io` registered on the cluster
+
+ZTWIM installation is not part of this workload.
+
+### Ticket mapping (ZTWIM perf)
+
+| Ticket pillar | Coverage in this workload |
+|---------------|---------------------------|
+| **Max SPIFFE IDs** | `--pod-replicas=N` with per-pod SPIFFE ID template; `ztwimSvidVerification` checks N distinct IDs |
+| **Attestation throughput** | `podLatency` + **`ztwimSvidLatency`** (pod create → valid `svid.pem` on disk); SPIRE signing metrics in `ztwim-metrics.yml` when Prometheus scrapes SPIRE |
+| **SVID rotation** | `--svid-ttl` + `--rotation-soak` + `ztwimSvidVerification` (SVID age after soak; not serial-by-serial like operator E2E) |
+
+### Architecture
+
+1. **prereqs job**: creates a `ClusterSPIFFEID` (per-pod SPIFFE ID template + configurable SVID TTL), spiffe-helper `ConfigMap`, and `ServiceAccount` in namespace `ztwim-perf`
+2. **ztwim-svid-issuance-pods job**: creates N attestation pods (CSI volume + spiffe-helper sidecar + app container) at a controlled QPS, then optionally soaks to observe SVID rotation
+
+Each attestation pod receives a **distinct SPIFFE ID** of the form `spiffe://<trust>/ns/ztwim-perf/pod/<pod-name>`.
+
+### Key measurements
+
+- `podLatency` — time from pod create to Ready
+- `ztwimSvidLatency` — time from pod create until valid `svid.pem` is present (polls `/certs/svid.pem` in the app container)
+- `ztwimSvidVerification` — distinct SPIFFE ID count per pod; after `--rotation-soak`, checks that on-disk SVID age indicates renewal within TTL
+- Prometheus metrics via `ztwim-metrics.yml` (control plane, ZTWIM namespace, SPIRE signing rate)
+
+**Known limitations:**
+
+- `podLatency` measures Pod Ready, not time-to-`svid.pem`.
+- `ztwimSvidVerification` reads `/certs/svid.pem` after the soak window; rotation success uses cert age vs TTL (not explicit serial polling).
+- SPIRE metrics in `ztwim-metrics.yml` require SPIRE to be scraped by cluster Prometheus (often empty on default OpenShift monitoring).
+- ZTWIM must be installed and healthy before the workload runs (not validated by this command beyond generic cluster health).
+- Namespace `ztwim-perf` and operator metrics namespace `zero-trust-workload-identity-manager` are fixed strings.
+- Use `--iterations=1` for SVID measurements; higher values are untested and may mix pods across waves (`app=ztwim-perf` plus kube-burner run id in measurements).
+- SVID measurements only consider pods from the current kube-burner run (run id label), not leftover pods when `--gc=false`.
+
+**Cleanup:** With default `--gc=true`, the workload deletes attestation pods/namespace and runs a delete job for `ClusterSPIFFEID` labeled `kube-burner.io/test=ztwim-svid-issuance`. With `--gc=false`, delete the CR manually before reruns: `oc delete clusterspiffeid ztwim-perf-cspiffeid`.
+
+### Validating SPIRE Prometheus metrics
+
+After a run with `--local-indexing`, check `collected-metrics-*/` for `spireServerX509SvidSignRate` and related JSON files. If they are empty, on the cluster list available SPIRE metric names:
+
+```bash
+oc exec -n openshift-monitoring prometheus-k8s-0 -c prometheus -- \
+  wget -qO- 'http://localhost:9090/api/v1/label/__name__/values' | tr ',' '\n' | grep spire
+```
+
+Update [`ztwim-metrics.yml`](cmd/config/metrics-profiles/ztwim-metrics.yml) if names differ. Operand CPU queries (`spireServerPodCpu`, `spireAgentPodCpu`) still populate when SPIRE process metrics are missing. Use a longer job window (`--rotation-soak`, `--workload-runtime`) so `{{.elapsed}}` range queries have data.
+
+### Example
+
+```bash
+kube-burner-ocp ztwim-svid-issuance \
+  --pod-replicas=5 \
+  --workload-runtime=120s \
+  --qps=5 --burst=5 \
+  --local-indexing
+```
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--pod-replicas` | 100 | Attestation pods per iteration |
+| `--workload-runtime` | 3600s | App container active duration before idle (pods stay running) |
+| `--svid-ttl` | 60s | ClusterSPIFFEID X.509 SVID TTL |
+| `--rotation-soak` | 150s | Pause after pods are ready to allow SVID rotation (`0` skips rotation check) |
+| `--svid-latency-timeout` | 5m | Max wait for `svid.pem` (`ztwimSvidLatency` and `ztwimSvidVerification`) |
+| `--svid-latency-poll-interval` | 2s | Poll interval for ZTWIM SVID measurements |
+| `--iterations` | 1 | Job iterations |
+| `--spiffe-class` | zero-trust-workload-identity-manager-spire | ClusterSPIFFEID className |
+| `--spiffe-helper-image` | ghcr.io/spiffe/spiffe-helper:0.11.0 | spiffe-helper sidecar image |
+| `--app-image` | quay.io/prometheus/busybox | App container image |
+| `--metrics-profile` | ztwim-metrics.yml | Prometheus metrics profile |
 
 ## MaaS Gateway Performance workload
 
