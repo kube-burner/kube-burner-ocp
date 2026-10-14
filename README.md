@@ -1426,7 +1426,13 @@ Unlike a UDN network, a CUDN network will be cluster scoped and can be used by m
 This workload defines multiple jobs as per CUDN requirement. Some of the requirements:
 1. Namespace with label "k8s.ovn.org/primary-user-defined-network" before the CUDN creation
 2. OVN should create all the necessary resources for CUDN before a pod (or VM) is created on it. Currently we don't have a mechanism to detect if the OVN has created all CUDN's resources. So we are using separate jobs for CUDN and pods/VMs with jobPause. Workload defines one pod or VM per CUDN or, alternatively, `--cidrs-per-cudn` allows for multiple pods (or VMs) per subnet per CUDN.
-3. RouteAdvertiments CRD selecting the CUDN. We use 1:1 RA:CUDN mapping.
+3. RouteAdvertisements resources selecting the CUDNs. By default, each RA selects one CUDN. Use `--cudns-per-ra` to advertise multiple CUDNs with each RA. The final RA selects the remaining CUDNs when the CUDN count is not divisible by this value.
+
+For example, the following command creates 72 namespaces, 72 CUDNs, and 12 RAs, each selecting six CUDNs:
+
+```console
+kube-burner-ocp udn-bgp --iterations=72 --cudns-per-ra=6 --frr-external-ip=<external-frr-ip>
+```
 
 As we want to measure BGP route exchange latency, this workload skips measurements for all the resources except RouteAdvertisements.
 
