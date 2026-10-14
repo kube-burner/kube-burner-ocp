@@ -336,6 +336,8 @@ Use an external Prometheus that scrapes MicroShift directly. OpenShift Prometheu
 
 The `microshift-metrics.yml` profile expects kubelet metrics with `job="kubelet-microshift"`, cAdvisor metrics with `job="kubelet-microshift-cadvisor"`, node exporter with `job="node"`, CRI-O with `job="crio"`, and named-process-exporter with `job="process"`.
 
+The `microshiftComponentCPU` and `microshiftComponentMemoryRSS` metrics group named-process-exporter process groups into MicroShift components, one series per `component` label: `microshift`, `cni`, `csi`, `runtime`, `dns`, `ingress` and `service-ca`. CPU is in percent of one core and memory is resident set size in bytes, like the other metrics in the profile.
+
 Run a small workload with OpenSearch indexing:
 
 ```console
@@ -350,7 +352,7 @@ kube-burner-ocp cluster-density-ms \
 
 The `--metrics-endpoint` flag remains available for advanced cases where the full Prometheus endpoint and indexer configuration are supplied in a separate file.
 
-The `index` subcommand also honors `--prometheus-url` and `--prometheus-token` when scraping an existing MicroShift run.
+The `index` subcommand also honors `--prometheus-url` and `--prometheus-token` when scraping an existing MicroShift run. Like the workload subcommands, it resolves metrics profile names such as `microshift-metrics.yml` from the embedded profiles, so no `--extract` is needed; a local file with the same name takes precedence.
 
 Summary metadata keeps the existing top-level OpenShift wrapper shape. Metrics documents keep metadata under their nested `metadata` field and include `distribution`, `microshift`, `microshiftVersion`, `microshiftMajorVersion`, `k8sVersion`, and `totalNodes` when those values are discovered.
 
