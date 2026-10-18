@@ -12,6 +12,8 @@ spec:
 {{- end }}
   template:
     metadata:
+      labels:
+        app: guidellm
       annotations:
         sidecar.istio.io/inject: "false"
     spec:
@@ -43,12 +45,44 @@ spec:
           # endpoint still surfaces immediately as errored requests.
           BACKEND="kind=openai_http,target=${BENCH_TARGET},model=${BENCH_MODEL}"
           BACKEND="${BACKEND},verify=false,validate_backend=false"
-          if [ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]; then
+          # Per-identity simulation. Each indexed pod binds to one row of the
+          # key pool, so a Job with parallelism=N drives the target as N
+          # distinct tenants -- N distinct api_key_auth cache entries and N
+          # distinct metering attributions -- instead of one shared credential.
+          # Falls back to the ServiceAccount token when no pool is mounted.
+          IDENTITY="serviceaccount"
+          if [ -s /identities/keys.txt ]; then
+            POOL_SIZE=$(grep -c . /identities/keys.txt)
+            SLOT=$(( ${JOB_COMPLETION_INDEX:-0} % POOL_SIZE ))
+            ROW=$(grep . /identities/keys.txt | sed -n "$((SLOT + 1))p")
+            IDENTITY=$(printf '%s' "${ROW}" | cut -f1)
+            BACKEND="${BACKEND},api_key=$(printf '%s' "${ROW}" | cut -f2)"
+            echo "identity slot ${SLOT} of ${POOL_SIZE}: ${IDENTITY}"
+          elif [ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]; then
             BACKEND="${BACKEND},api_key=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+          fi
+          # Open-loop profiles (constant, poisson) take the level as a request
+          # rate and keep sending regardless of how slow the backend gets.
+          # The closed-loop profile (concurrent) takes it as a stream count and
+          # self-throttles, so throughput becomes an output rather than an input.
+          case "${BENCH_PROFILE}" in
+            concurrent)
+              PROFILE="kind=concurrent,streams=${BENCH_RATE}"
+              ;;
+            *)
+              PROFILE="kind=${BENCH_PROFILE},rate=${BENCH_RATE}"
+              ;;
+          esac
+          PROFILE="${PROFILE},warmup=${BENCH_WARMUP}"
+          if [ -f /tokenizer/tokenizer.tar.gz ]; then
+            mkdir -p /results/tokenizer
+            tar xzf /tokenizer/tokenizer.tar.gz -C /results/tokenizer
           fi
           guidellm run \
             --backend "${BACKEND}" \
-            --profile "kind=${BENCH_PROFILE},rate=${BENCH_RATE},warmup=${BENCH_WARMUP}" \
+            --label "identity=${IDENTITY}" \
+            --label "profile=${BENCH_PROFILE}" \
+            --profile "${PROFILE}" \
             --constraint "kind=max_duration,seconds=${BENCH_MAX_SECONDS}" \
             --data "kind=synthetic_text,prompt_tokens=${BENCH_PROMPT_TOKENS},output_tokens=${BENCH_OUTPUT_TOKENS}" \
             --tokenizer "kind=huggingface_auto,model=${BENCH_TOKENIZER}" \
@@ -70,13 +104,36 @@ spec:
         - name: {{ $k }}
           value: "{{ $v }}"
         {{ end }}
+        {{- if .tokenizerConfigMap }}
+        # Pre-downloaded tokenizer: required on clusters with no egress to
+        # huggingface.co, where AutoTokenizer.from_pretrained() otherwise
+        # stalls and fails the pod. Shipped as a tarball because an
+        # uncompressed gpt2 tokenizer (2.8MB) exceeds the 1MiB ConfigMap limit.
         - name: BENCH_TOKENIZER
-          value: "gpt2"
+          value: "/results/tokenizer"
+        - name: HF_HUB_OFFLINE
+          value: "1"
+        - name: TRANSFORMERS_OFFLINE
+          value: "1"
+        {{- else }}
+        - name: BENCH_TOKENIZER
+          value: "{{ .tokenizer | default "gpt2" }}"
+        {{- end }}
         - name: HF_HOME
           value: /results
         volumeMounts:
         - name: results
           mountPath: /results
+        {{- if .apiKeySecret }}
+        - name: identities
+          mountPath: /identities
+          readOnly: true
+        {{- end }}
+        {{- if .tokenizerConfigMap }}
+        - name: tokenizer
+          mountPath: /tokenizer
+          readOnly: true
+        {{- end }}
         resources:
           requests:
             cpu: "250m"
@@ -84,3 +141,15 @@ spec:
       volumes:
       - name: results
         emptyDir: {}
+      {{- if .apiKeySecret }}
+      # Pool of simulated tenants: keys.txt holds one `user<TAB>key` row per
+      # identity. Pods select their row by JOB_COMPLETION_INDEX.
+      - name: identities
+        secret:
+          secretName: {{ .apiKeySecret }}
+      {{- end }}
+      {{- if .tokenizerConfigMap }}
+      - name: tokenizer
+        configMap:
+          name: {{ .tokenizerConfigMap }}
+      {{- end }}
