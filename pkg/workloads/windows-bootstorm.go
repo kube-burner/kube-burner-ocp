@@ -16,12 +16,17 @@ package workloads
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/cloud-bulldozer/go-commons/v2/indexers"
 	"github.com/cloud-bulldozer/go-commons/v2/virtctl"
+	"github.com/kube-burner/kube-burner/v2/pkg/config"
+	"github.com/kube-burner/kube-burner/v2/pkg/measurements"
+	"github.com/kube-burner/kube-burner/v2/pkg/measurements/types"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -135,7 +140,36 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 
 			if rc == 0 || rc == 3 {
+				kubeClientProvider := config.NewKubeClientProvider("", "")
+				labelSelector := fmt.Sprintf("%s=%s", config.KubeBurnerLabelRunID, workloads.ConfigSpec.GlobalConfig.RUNID)
+				msFactory := measurements.NewMeasurementsFactory(workloads.ConfigSpec, wh.MetricsMetadata, nil)
+				vmJob := workloads.ConfigSpec.Jobs[len(workloads.ConfigSpec.Jobs)-1]
+				vmiJob := &config.Job{
+					Name:         "bootstorm-vm-start",
+					JobType:      config.CreationJob,
+					QPS:          vmJob.QPS,
+					Burst:        vmJob.Burst,
+					Measurements: []types.Measurement{{Name: "vmiLatency", BaselinePhase: "vmiPending"}},
+				}
+				vmiMs := msFactory.NewMeasurements(vmiJob, kubeClientProvider, nil, labelSelector)
+				vmiMs.Start()
+
 				results := startAndMeasureVMs(cmd.Context(), bulkSleepTime, sshConcurrencyLimit)
+
+				if err := vmiMs.Stop(); err != nil {
+					log.Errorf("vmiLatency stop error: %v", err)
+				}
+				for _, endpoint := range workloads.ConfigSpec.MetricsEndpoints {
+					if endpoint.Type == "" {
+						continue
+					}
+					idx, err := indexers.NewIndexer(endpoint.IndexerConfig)
+					if err != nil {
+						log.Errorf("Failed to create indexer for vmiLatency: %v", err)
+						continue
+					}
+					vmiMs.Index("bootstorm-vm-start", map[string]indexers.Indexer{"default": *idx})
+				}
 				if len(results) == 0 {
 					log.Error("Bootstorm measurement produced no results")
 					rc = 1

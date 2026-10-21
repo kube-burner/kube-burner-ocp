@@ -5,6 +5,7 @@ metadata:
   name: {{ .baseDataVolumeName }}
   annotations:
     cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+    cdi.kubevirt.io/storage.usePopulator: "{{ default false (get . "usePopulator") }}"
 spec:
   source:
     registry:
