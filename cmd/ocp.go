@@ -196,6 +196,7 @@ func openShiftCmd() *cobra.Command {
 		ocpWorkloads.NewEtcdDensity(&wh),
 		ocpWorkloads.NewBerserkerLoad(&wh),
 		ocpWorkloads.NewMaasGatewayPerf(&wh),
+		ocpWorkloads.NewZtwimSvidIssuance(&wh),
 	)
 	util.SetupCmd(ocpCmd)
 	return ocpCmd
