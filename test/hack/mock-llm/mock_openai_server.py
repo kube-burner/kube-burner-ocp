@@ -47,6 +47,14 @@ Each workflow step asks for a different JSON schema, so the step is recovered
 by looking for schema-specific markers in the request body. `[mock-step:...]`
 in the prompt overrides the guess.
 
+There is one extra caller on the same endpoint: tool-result safety inspection.
+After every tool runs, the sandbox asks a separate classifier completion
+("You are a tool-result safety classifier.") with no tools attached. That call
+needs the tiny ClassifierDecision object, not a workflow payload and not a
+tool_call. Answering it with analysis JSON is what produced schema_mismatch
+and ToolResultSafetyInspectionFailed on every short/typical density run when
+inspection was left on. [cluster-verified 2026-10-23]
+
 Prompt tokens
 -------------
 The sandbox controls its own HTTP headers, so the only channel the load
@@ -77,10 +85,14 @@ LOG_REQUESTS = os.environ.get("MOCK_LOG_REQUESTS", "") not in ("", "0", "false")
 
 PROFILE_TOKEN = re.compile(r"\[mock-profile:([a-zA-Z0-9_-]+)\]")
 NAMESPACE_TOKEN = re.compile(r"\[mock-ns:([a-z0-9][-a-z0-9]{0,61}[a-z0-9])\]")
-STEP_TOKEN = re.compile(r"\[mock-step:(analysis|execution|verification|escalation)\]")
+STEP_TOKEN = re.compile(
+    r"\[mock-step:(analysis|execution|verification|escalation|inspection)\]"
+)
 ROLE_SENTENCE = re.compile(
     r"You are an?\s+(analysis|execution|verification|escalation)\s+agent", re.IGNORECASE
 )
+# Phrase from the sandbox classifier system instruction.
+CLASSIFIER_MARKER = re.compile(r"tool-result safety classifier", re.IGNORECASE)
 
 PROFILES = {
     "trivial": {"tool_calls": 0, "options": 0, "actions": 0, "sleep": 0.0},
@@ -178,12 +190,33 @@ def estimate_tokens(text):
     return max(1, len(text) // 4)
 
 
+def is_classifier_request(body_text, prompt_text):
+    """True when this completion is a tool-result safety classifier call.
+
+    Same endpoint as the agent loop, but a wrong answer here fails the whole
+    run. Detected before the schema-marker fallbacks below: the user message
+    carries untrusted tool output, so it can contain the words actionRequired
+    or actionsTaken by accident and steal the step guess.
+    """
+    haystack = body_text + "\n" + prompt_text
+    if CLASSIFIER_MARKER.search(haystack):
+        return True
+    explicit = STEP_TOKEN.search(haystack)
+    if explicit and explicit.group(1) == "inspection":
+        return True
+    # Classifier system text names injectionDetected; the user JSON has toolName.
+    if '"toolName"' in haystack and '"chunkIndex"' in haystack and "injectionDetected" in haystack:
+        return True
+    return False
+
+
 def detect_step(body_text, prompt_text):
     """Recover which workflow step is being served.
 
     Returns (step, rule) so the caller can log which evidence decided it.
 
-    The role sentence is authoritative. Everything else is a fallback for a
+    Classifier calls are checked first (see is_classifier_request). After that
+    the role sentence is authoritative. Everything else is a fallback for a
     prompt this mock has not seen, and the fallbacks are the dangerous part:
     they key on output-schema property names, but a step's request also quotes
     the *previous* step's output. The verification prompt embeds the approved
@@ -202,6 +235,8 @@ def detect_step(body_text, prompt_text):
     field it merely quotes: verification before execution before analysis.
     """
     haystack = body_text + "\n" + prompt_text
+    if is_classifier_request(body_text, prompt_text):
+        return "inspection", "classifier"
     explicit = STEP_TOKEN.search(haystack)
     if explicit:
         return explicit.group(1), "token"
@@ -365,8 +400,21 @@ def escalation_payload():
     }
 
 
+def classifier_payload():
+    """Always-allow answer for the tool-result safety classifier.
+
+    The sandbox accepts only this shape: a JSON boolean injectionDetected and a
+    category. Safe content is false + "none"; anything else (extra keys, a
+    stringly boolean, a tool_call envelope) is schema_mismatch and the run dies.
+    Density wants the happy path, so this is fixed to allow.
+    """
+    return {"injectionDetected": False, "category": "none"}
+
+
 def terminal_content(step, spec, namespace):
-    if step == "execution":
+    if step == "inspection":
+        payload = classifier_payload()
+    elif step == "execution":
         payload = execution_payload(spec)
     elif step == "verification":
         payload = verification_payload(spec)
@@ -414,6 +462,13 @@ def tool_arguments(parameters):
 
 def build_message(turn, spec, step, namespace, request_tools):
     """Return (message, finish_reason, terminal)."""
+    # Inspection is a one-shot answer; never open a tool loop for it.
+    if step == "inspection":
+        return (
+            {"role": "assistant", "content": terminal_content(step, spec, namespace)},
+            "stop",
+            True,
+        )
     tool_name, parameters = pick_tool(request_tools)
     if turn < spec["tool_calls"] and tool_name:
         return (
@@ -513,7 +568,9 @@ class Handler(BaseHTTPRequestHandler):
         namespace = namespace_token.group(1) if namespace_token else ""
         turn = sum(1 for message in messages if message.get("role") == "assistant")
 
-        delay = spec.get("sleep", 0.0) + EXTRA_SLEEP
+        # Do not inherit profile sleep: timeout's 30s-per-turn would make every
+        # tool's classifier call look like a hang.
+        delay = 0.0 if step == "inspection" else spec.get("sleep", 0.0) + EXTRA_SLEEP
         if delay > 0:
             time.sleep(delay)
 
