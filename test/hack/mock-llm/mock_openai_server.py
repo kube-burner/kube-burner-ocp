@@ -53,7 +53,7 @@ After every tool runs, the sandbox asks a separate classifier completion
 needs the tiny ClassifierDecision object, not a workflow payload and not a
 tool_call. Answering it with analysis JSON is what produced schema_mismatch
 and ToolResultSafetyInspectionFailed on every short/typical density run when
-inspection was left on. [cluster-verified 2026-10-23]
+inspection was left on.
 
 Prompt tokens
 -------------
