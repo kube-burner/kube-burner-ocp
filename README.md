@@ -1520,18 +1520,9 @@ One document, such as the following, is indexed per each internal (through Route
       "ocpVersion": "4.19.0-ec.3"
     },
     "scenario": "ExportRoutes",
-    "latency": [
-      10031
-    ],
-    "minReadyLatency": 10031,
-    "maxReadyLatency": 10031,
-    "readyLatency": 10031,
-    "netlinkRouteLatency": [
-      10026
-    ],
-    "maxNetlinkRouteLatency": 10026,
-    "minNetlinkRouteLatency": 10026,
-    "p99NetlinkRouteLatency": 10026
+    "acceptedLatency": 120,
+    "latency": 10031,
+    "netlinkRouteLatency": 10026
   },
   {
     "timestamp": "2025-04-15T08:42:20.060393739Z",
@@ -1544,12 +1535,7 @@ One document, such as the following, is indexed per each internal (through Route
       "ocpVersion": "4.19.0-ec.3"
     },
     "scenario": "ImportRoutes",
-    "latency": [
-      13
-    ],
-    "minReadyLatency": 13,
-    "maxReadyLatency": 13,
-    "readyLatency": 13
+    "latency": 13
   }
 ]
 ```
@@ -1627,9 +1613,10 @@ kube-burner-ocp maas-gateway-perf
 | `--providers` | Comma-separated provider model names | `gpt-4o-openai,claude-sonnet-anthropic` |
 | `--payload-sizes` | Comma-separated sizes: small(32/64), medium(256/512), large(1024/1024), very-large(2048/2048) | `small,medium` |
 | `--concurrency-levels` | Comma-separated concurrency levels | `8,32,64,128,512` |
+| `--job-deadline` | Hard per-Job deadline (`activeDeadlineSeconds`); `0` derives it as `ceil(samples/parallelism) × (warmup + benchmark-duration) × 3 + 5m` | `0` (derived) |
 | `--benchmark-duration` | Duration of each benchmark run | `90s` |
 | `--warmup` | Warmup period discarded from results | `30s` |
-| `--guidellm-image` | GuideLLM container image with parser | `ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.4` |
+| `--guidellm-image` | GuideLLM container image with parser | `ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.5` |
 | `--samples` | Benchmark samples per Job (K8s Job completions) | `3` |
 | `--parallelism` | K8s Job parallelism | `1` |
 | `--pause` | Pause after each benchmark job completes | `10s` |
