@@ -24,11 +24,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	deadlineFactor = 3
+	deadlineGrace  = 5 * time.Minute
+)
+
+// autoJobDeadline covers every sample batch, since activeDeadlineSeconds applies
+// to the whole Job rather than a single pod.
+func autoJobDeadline(samples, parallelism int, warmup, benchmarkDuration time.Duration) time.Duration {
+	if samples < 1 {
+		samples = 1
+	}
+	if parallelism < 1 {
+		parallelism = 1
+	}
+	batches := (samples + parallelism - 1) / parallelism
+	return time.Duration(batches)*(warmup+benchmarkDuration)*deadlineFactor + deadlineGrace
+}
+
 // NewMaasGatewayPerf holds MaaS Gateway performance benchmark workload
 func NewMaasGatewayPerf(wh *workloads.WorkloadHelper) *cobra.Command {
 	var gatewayHost, gatewayIP, simulatorHost, providers, payloadSizes, concurrencyLevels string
 	var guidellmImage string
-	var benchmarkDuration, warmup, pause time.Duration
+	var benchmarkDuration, warmup, pause, jobDeadline time.Duration
 	var samples, parallelism int
 	var metricsProfiles []string
 	var rc int
@@ -49,6 +67,11 @@ func NewMaasGatewayPerf(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["PROVIDERS"] = providers
 			AdditionalVars["PAYLOAD_SIZES"] = payloadSizes
 			AdditionalVars["CONCURRENCY_LEVELS"] = concurrencyLevels
+			if jobDeadline <= 0 {
+				jobDeadline = autoJobDeadline(samples, parallelism, warmup, benchmarkDuration)
+			}
+			log.Infof("Per-Job deadline (activeDeadlineSeconds): %s", jobDeadline)
+			AdditionalVars["JOB_DEADLINE"] = int(jobDeadline.Seconds())
 			AdditionalVars["BENCHMARK_DURATION"] = int(benchmarkDuration.Seconds())
 			AdditionalVars["WARMUP"] = int(warmup.Seconds())
 			AdditionalVars["GUIDELLM_IMAGE"] = guidellmImage
@@ -67,9 +90,10 @@ func NewMaasGatewayPerf(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&providers, "providers", "gpt-4o-openai,claude-sonnet-anthropic", "Comma-separated provider model names")
 	cmd.Flags().StringVar(&payloadSizes, "payload-sizes", "small,medium", "Comma-separated payload sizes from: small(32/64), medium(256/512), large(1024/1024), very-large(2048/2048)")
 	cmd.Flags().StringVar(&concurrencyLevels, "concurrency-levels", "8,32,64,128,512", "Comma-separated concurrency levels")
+	cmd.Flags().DurationVar(&jobDeadline, "job-deadline", 0, "Hard per-Job deadline (activeDeadlineSeconds); 0 derives it from samples, warmup and benchmark-duration")
 	cmd.Flags().DurationVar(&benchmarkDuration, "benchmark-duration", 90*time.Second, "Duration of each benchmark run")
 	cmd.Flags().DurationVar(&warmup, "warmup", 30*time.Second, "Warmup period discarded from results")
-	cmd.Flags().StringVar(&guidellmImage, "guidellm-image", "ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.4", "GuideLLM container image with parser")
+	cmd.Flags().StringVar(&guidellmImage, "guidellm-image", "ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.5", "GuideLLM container image with parser")
 	cmd.Flags().IntVar(&samples, "samples", 3, "Number of benchmark samples (Job completions)")
 	cmd.Flags().IntVar(&parallelism, "parallelism", 1, "Job parallelism for benchmark runs")
 	cmd.Flags().DurationVar(&pause, "pause", 10*time.Second, "Pause after each benchmark job completes")
