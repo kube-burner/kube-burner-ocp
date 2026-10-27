@@ -1,0 +1,119 @@
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: dvLatency
+    - name: vmiLatency
+
+metricsEndpoints:
+- indexer:
+    type: local
+    metricsDirectory: ./windows-mssql-results
+{{ if .ES_SERVER }}
+- metrics: [{{.METRICS}}]
+  alerts: [{{.ALERTS}}]
+  indexer:
+    esServers: ["{{.ES_SERVER}}"]
+    insecureSkipVerify: true
+    defaultIndex: {{.ES_INDEX}}
+    type: opensearch
+{{ end }}
+
+jobs:
+  # Job 1: Create source DataVolume(s)
+  - name: create-mssql-source-dv
+    namespace: {{.namespace}}
+    jobType: create
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    jobIterations: {{.sourceDVCount}}
+    waitWhenFinished: true
+    namespacedIterations: false
+    namespaceLabels:
+      kube-burner.io/test-name: {{.namespace}}
+      security.openshift.io/scc.podSecurityLabelSync: false
+    objects:
+      - objectTemplate: templates/source-dv.yml
+        replicas: 1
+        inputVars:
+          windowsImageURL: {{.windowsImageURL}}
+          storageClassName: {{.storageClassName}}
+          accessMode: {{.accessMode}}
+          storageSize: {{.rootDiskSize}}
+          cdiSourceType: {{.cdiSourceType}}
+          cdiSourceS3Cred: {{.cdiSourceS3Cred}}
+          dvNamePrefix: {{.sourceDVName}}
+          perNodeDV: {{.perNodeDV}}
+          workerNodes: {{.workerNodes}}
+          sourceNamespace: {{.namespace}}
+
+  # Job 2: Create scripts ConfigMap
+  - name: create-mssql-scripts
+    namespace: {{.namespace}}
+    jobType: create
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    jobIterations: 1
+    waitWhenFinished: true
+    namespacedIterations: false
+    objects:
+      - objectTemplate: templates/scripts-configmap.yml
+        replicas: 1
+        inputVars:
+          dbUsers: {{.dbUsersCSV}}
+          dbWarehouses: {{.dbWarehouses}}
+          dbTransactions: {{.dbTransactions}}
+          dbIterations: {{.dbIterations}}
+          dbRampup: {{.dbRampup}}
+          dbRuntime: {{.dbRuntime}}
+
+{{- if .useSnapshot }}
+  # Job 3: Create VolumeSnapshots (ODF snapshot mode)
+  - name: create-mssql-snapshots
+    namespace: {{.namespace}}
+    jobType: create
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    jobIterations: {{if .perNodeDV}}{{.workerCount}}{{else}}1{{end}}
+    waitWhenFinished: true
+    namespacedIterations: false
+    objects:
+      - objectTemplate: templates/volumesnapshot.yml
+        replicas: 1
+        inputVars:
+          sourceDVName: {{.sourceDVName}}
+          volumeSnapshotClassName: {{.volumeSnapshotClassName}}
+{{- end }}
+
+  # Job {{if .useSnapshot}}4{{else}}3{{end}}: Create VirtualMachines
+  - name: create-mssql-vms
+    namespace: {{.namespace}}
+    jobType: create
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    jobIterations: {{.JOB_ITERATIONS}}
+    waitWhenFinished: false
+    namespacedIterations: false
+    objects:
+      - objectTemplate: templates/vm.yml
+        replicas: 1
+        inputVars:
+          vmMemory: {{.vmMemory}}
+          vmMemoryRequest: {{.vmMemoryRequest}}
+          vmCPU: {{.vmCPU}}
+          vmCPURequest: {{.vmCPURequest}}
+          ioThreadCount: {{.ioThreadCount}}
+          rootDiskSize: {{.rootDiskSize}}
+          dataDiskSize: {{.dataDiskSize}}
+          storageClassName: {{.storageClassName}}
+          accessMode: {{.accessMode}}
+          evictionStrategy: {{.evictionStrategy}}
+          sourceDVName: {{.sourceDVName}}
+          sourceNamespace: {{.namespace}}
+          perNodeDV: {{.perNodeDV}}
+          useSnapshot: {{.useSnapshot}}
+          workerNodes: {{.workerNodes}}
+          workerCount: {{.workerCount}}
+          nodeDistribution: {{.nodeDistribution}}
+          vmsPerNode: {{.vmsPerNode}}
+          sshPublicKey: {{.sshPublicKey}}
