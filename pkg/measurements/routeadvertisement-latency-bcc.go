@@ -60,6 +60,7 @@ import (
 const (
 	raLatencyBCCMeasurement          = "raLatencyBCCMeasurement"
 	raLatencyBCCQuantilesMeasurement = "raLatencyBCCQuantilesMeasurement"
+	conditionStatusTrue              = "True"
 )
 
 var (
@@ -310,7 +311,7 @@ func (r *raLatencyBCC) handleRAUpdate(oldObj, newObj any) {
 			condType, _, _ := unstructured.NestedString(condMap, "type")
 			status, _, _ := unstructured.NestedString(condMap, "status")
 
-			if (condType == "Accepted" || condType == "Ready") && status == "True" {
+			if (condType == "Accepted" || condType == "Ready") && status == conditionStatusTrue {
 				lastTransitionTime, _, _ := unstructured.NestedString(condMap, "lastTransitionTime")
 				acceptedTime, err := time.Parse(time.RFC3339, lastTransitionTime)
 				if err != nil {
