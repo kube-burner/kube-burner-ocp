@@ -20,6 +20,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
+	kubeburnermeasurements "github.com/kube-burner/kube-burner/v2/pkg/measurements"
 	"github.com/kube-burner/kube-burner/v2/pkg/util"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	"github.com/spf13/cobra"
@@ -28,10 +30,15 @@ import (
 // NewNetworkPolicy holds network-policy workload
 func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, podsPerNamespace, netpolPerNamespace, localPods, podSelectors, singlePorts, portRanges, remoteNamespaces, remotePods, cidrs, exceptRules int
-	var netpolLatency bool
+	var vlans, namespacesPerVlan, vmsPerNamespace int
+	var netpolLatency, multiNetworkPolicy, virt bool
 	var metricsProfiles []string
-	var netpolReadyThreshold time.Duration
+	var netpolReadyThreshold, vmStartupPause time.Duration
 	var rc int
+
+	mnpMeasurementFactoryMap := map[string]kubeburnermeasurements.NewMeasurementFactory{
+		"mnpLatency": measurements.NewMnpLatencyMeasurementFactory,
+	}
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
@@ -39,10 +46,24 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			if exceptRules > 0 && netpolLatency {
 				return fmt.Errorf("cannot use --except-rules > 0 with --networkpolicy-latency=true: network policy latency measurement does not work correctly with except rules")
 			}
+			if multiNetworkPolicy && netpolLatency {
+				return fmt.Errorf("cannot use --multi-network-policy with --networkpolicy-latency=true: network policy latency measurement is not supported for MultiNetworkPolicy, use --networkpolicy-latency=false")
+			}
+			if virt && !multiNetworkPolicy {
+				return fmt.Errorf("--virt requires --multi-network-policy: VMs use secondary interfaces which require MultiNetworkPolicy")
+			}
+			if multiNetworkPolicy {
+				if namespacesPerVlan <= 0 {
+					return fmt.Errorf("--namespaces-per-vlan must be greater than 0")
+				}
+				requiredVlans := (iterations + namespacesPerVlan - 1) / namespacesPerVlan
+				if vlans < requiredVlans {
+					return fmt.Errorf("--vlans %d is too few for --iterations %d with --namespaces-per-vlan %d (need at least %d VLANs)", vlans, iterations, namespacesPerVlan, requiredVlans)
+				}
+			}
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			// Register template functions used only by network-policy templates
 			util.AddRenderingFunction("GetSubnet16", func(subnetIdx int) string {
 				first := byte((subnetIdx >> 8) + 1)
 				second := byte(subnetIdx & 0xFF)
@@ -68,7 +89,19 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 			AdditionalVars["EXCEPT_RULES"] = exceptRules
 			AdditionalVars["NETPOL_LATENCY"] = netpolLatency
 			AdditionalVars["NETPOL_READY_THRESHOLD"] = netpolReadyThreshold
+			AdditionalVars["MULTI_NETWORK_POLICY"] = multiNetworkPolicy
+			AdditionalVars["VIRT"] = virt
+			AdditionalVars["VLANS"] = vlans
+			AdditionalVars["NAMESPACES_PER_VLAN"] = namespacesPerVlan
+			AdditionalVars["VMS_PER_NAMESPACE"] = vmsPerNamespace
+			if virt {
+				AdditionalVars["PODS_PER_NAMESPACE"] = vmsPerNamespace
+				AdditionalVars["VM_STARTUP_PAUSE"] = vmStartupPause
+			}
 
+			if multiNetworkPolicy {
+				wh.SetMeasurements(mnpMeasurementFactoryMap)
+			}
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -89,5 +122,11 @@ func NewNetworkPolicy(wh *workloads.WorkloadHelper, variant string) *cobra.Comma
 	cmd.Flags().IntVar(&exceptRules, "except-rules", 0, "Number of except rules to exclude traffic from ingress and egress cidr blocks")
 	cmd.Flags().BoolVar(&netpolLatency, "networkpolicy-latency", true, "Enable network policy latency measurement")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
+	cmd.Flags().BoolVar(&multiNetworkPolicy, "multi-network-policy", false, "Enable multi network policy for secondary interfaces")
+	cmd.Flags().BoolVar(&virt, "virt", false, "Use virtual machines instead of pods (requires --multi-network-policy)")
+	cmd.Flags().IntVar(&vlans, "vlans", 10, "Number of localnet VLANs created on br-ex using NNCP")
+	cmd.Flags().IntVar(&namespacesPerVlan, "namespaces-per-vlan", 2, "Number of namespaces sharing the same VLAN")
+	cmd.Flags().IntVar(&vmsPerNamespace, "vms-per-namespace", 10, "Number of VMs created in a namespace")
+	cmd.Flags().DurationVar(&vmStartupPause, "vm-startup-pause", 2*time.Minute, "How long to wait after VM creation before proceeding (--virt mode only, replaces waitWhenFinished due to CNV status bug)")
 	return cmd
 }
