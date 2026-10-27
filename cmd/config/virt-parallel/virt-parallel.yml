@@ -185,6 +185,7 @@ jobs:
       usePopulator: {{ .usePopulator }}
       vmLabels:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+        virt-parallel.kube-burner.io/namespace: {{ $nsName }}
       rootVolumeLabels:
         {{ $volumeLabelKey }}: {{ $volumeLabelValueRoot }}
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
@@ -312,21 +313,6 @@ jobs:
 {{ end }}
 
 {{ if not .skipMigrationJob }}
-- name: {{ $testName }}-propagate-labels-{{ .counter }}
-  jobType: read
-  qps: 1
-  burst: 1
-  jobIterations: 1
-  preLoadImages: false
-  objects:
-  - apiVersion: kubevirt.io/v1
-    kind: VirtualMachine
-    labelSelector:
-      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
-  hooks:
-  - cmd: ["./propagate_node_labels.sh", "{{ .selectedNode }}", "{{ $nsName }}"]
-    when: beforeCleanup
-
 - name: {{ $testName }}-migrate-vms-{{ .counter }}
   measurements:
   - name: vmimLatency
@@ -338,12 +324,18 @@ jobs:
   objectDelay: 1m
   waitWhenFinished: true
   hooks:
+  - cmd: ["./check_migrations.sh", "prepare", "{{ $nsName }}", "{{ $jobCounterLabelKey }}={{ $jobCounterLabelValue }}", "{{ $vmCount }}", "virt-parallel-migration-{{ .counter }}.json"]
+    when: beforeJobExecution
+  - cmd: ["./check_migrations.sh", "verify", "{{ $nsName }}", "{{ $jobCounterLabelKey }}={{ $jobCounterLabelValue }}", "{{ $vmCount }}", "virt-parallel-migration-{{ .counter }}.json"]
+    when: beforeCleanup
   - cmd: ["./check.sh", "check_vm_running", "{{ $jobCounterLabelKey }}", "{{ $jobCounterLabelValue }}", "{{ $nsName }}", "{{ .privateKey }}", "fedora"]
     when: beforeCleanup
   objects:
   - kubeVirtOp: migrate
     labelSelector:
-      kubevirt.io/nodeName: {{ .selectedNode }}
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+      virt-parallel.kube-burner.io/namespace: {{ $nsName }}
+      kube-burner.io/uuid: {{ .UUID }}
 {{ end }}
 
 - name: {{ $testName }}-delete-vms-{{ .counter }}
