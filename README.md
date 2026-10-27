@@ -336,6 +336,8 @@ Use an external Prometheus that scrapes MicroShift directly. OpenShift Prometheu
 
 The `microshift-metrics.yml` profile expects kubelet metrics with `job="kubelet-microshift"`, cAdvisor metrics with `job="kubelet-microshift-cadvisor"`, node exporter with `job="node"`, CRI-O with `job="crio"`, and named-process-exporter with `job="process"`.
 
+The `microshiftComponentCPU` and `microshiftComponentMemoryRSS` metrics group named-process-exporter process groups into MicroShift components, one series per `component` label: `microshift`, `cni`, `csi`, `runtime`, `dns`, `ingress` and `service-ca`. CPU is in percent of one core and memory is resident set size in bytes, like the other metrics in the profile.
+
 Run a small workload with OpenSearch indexing:
 
 ```console
@@ -350,7 +352,7 @@ kube-burner-ocp cluster-density-ms \
 
 The `--metrics-endpoint` flag remains available for advanced cases where the full Prometheus endpoint and indexer configuration are supplied in a separate file.
 
-The `index` subcommand also honors `--prometheus-url` and `--prometheus-token` when scraping an existing MicroShift run.
+The `index` subcommand also honors `--prometheus-url` and `--prometheus-token` when scraping an existing MicroShift run. Like the workload subcommands, it resolves metrics profile names such as `microshift-metrics.yml` from the embedded profiles, so no `--extract` is needed; a local file with the same name takes precedence.
 
 Summary metadata keeps the existing top-level OpenShift wrapper shape. Metrics documents keep metadata under their nested `metadata` field and include `distribution`, `microshift`, `microshiftVersion`, `microshiftMajorVersion`, `k8sVersion`, and `totalNodes` when those values are discovered.
 
@@ -1520,18 +1522,9 @@ One document, such as the following, is indexed per each internal (through Route
       "ocpVersion": "4.19.0-ec.3"
     },
     "scenario": "ExportRoutes",
-    "latency": [
-      10031
-    ],
-    "minReadyLatency": 10031,
-    "maxReadyLatency": 10031,
-    "readyLatency": 10031,
-    "netlinkRouteLatency": [
-      10026
-    ],
-    "maxNetlinkRouteLatency": 10026,
-    "minNetlinkRouteLatency": 10026,
-    "p99NetlinkRouteLatency": 10026
+    "acceptedLatency": 120,
+    "latency": 10031,
+    "netlinkRouteLatency": 10026
   },
   {
     "timestamp": "2025-04-15T08:42:20.060393739Z",
@@ -1544,12 +1537,7 @@ One document, such as the following, is indexed per each internal (through Route
       "ocpVersion": "4.19.0-ec.3"
     },
     "scenario": "ImportRoutes",
-    "latency": [
-      13
-    ],
-    "minReadyLatency": 13,
-    "maxReadyLatency": 13,
-    "readyLatency": 13
+    "latency": 13
   }
 ]
 ```
@@ -1627,9 +1615,10 @@ kube-burner-ocp maas-gateway-perf
 | `--providers` | Comma-separated provider model names | `gpt-4o-openai,claude-sonnet-anthropic` |
 | `--payload-sizes` | Comma-separated sizes: small(32/64), medium(256/512), large(1024/1024), very-large(2048/2048) | `small,medium` |
 | `--concurrency-levels` | Comma-separated concurrency levels | `8,32,64,128,512` |
+| `--job-deadline` | Hard per-Job deadline (`activeDeadlineSeconds`); `0` derives it as `ceil(samples/parallelism) × (warmup + benchmark-duration) × 3 + 5m` | `0` (derived) |
 | `--benchmark-duration` | Duration of each benchmark run | `90s` |
 | `--warmup` | Warmup period discarded from results | `30s` |
-| `--guidellm-image` | GuideLLM container image with parser | `ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.4` |
+| `--guidellm-image` | GuideLLM container image with parser | `ghcr.io/cloud-bulldozer/guidellm-results-parser:v0.0.5` |
 | `--samples` | Benchmark samples per Job (K8s Job completions) | `3` |
 | `--parallelism` | K8s Job parallelism | `1` |
 | `--pause` | Pause after each benchmark job completes | `10s` |

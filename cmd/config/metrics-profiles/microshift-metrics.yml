@@ -96,3 +96,30 @@
 
 - query: sum(namedprocess_namegroup_num_threads{job="process",groupname=~"ovs-vswitchd|ovsdb-server|microshift|microshift-etcd|crio|ovnkube|coredns|haproxy|lvms|openshift-route|service-ca-oper|snapshot-contro|ovn-controller|conmon|kube-rbac-proxy|ovn-northd|ovn-k8s-cni-ove"}) by (groupname,instance) > 0
   metricName: namedprocessThreads
+
+# MicroShift system components aggregated from named-process-exporter groups.
+# Each series carries a "component" label: microshift (microshift, microshift-etcd),
+# cni (OVN/OVS), csi (LVMS/TopoLVM/CSI sidecars), runtime (crio, conmon),
+# dns (coredns, kube-rbac-proxy), ingress (haproxy, openshift-route, start-haproxy) and
+# service-ca. Idle components report 0; a component with no matching process is
+# absent. Memory is resident set size (VmRSS) summed per process, which counts
+# shared pages once per process; it is kept for comparability with earlier releases.
+- query: >-
+    label_replace(sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"microshift.*"}[2m]) * 100) by (instance), "component", "microshift", "", "")
+    or label_replace(sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"ov.*"}[2m]) * 100) by (instance), "component", "cni", "", "")
+    or label_replace(sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"csi.*|topo.*|lvmd|lvms|livenessprobe|snapshot.*"}[2m]) * 100) by (instance), "component", "csi", "", "")
+    or label_replace(sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"crio|conmon"}[2m]) * 100) by (instance), "component", "runtime", "", "")
+    or label_replace(sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"coredns|kube-rbac-proxy"}[2m]) * 100) by (instance), "component", "dns", "", "")
+    or label_replace(sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"haproxy|openshift-route|start-haproxy"}[2m]) * 100) by (instance), "component", "ingress", "", "")
+    or label_replace(sum(irate(namedprocess_namegroup_cpu_seconds_total{job="process",groupname=~"service-ca-oper"}[2m]) * 100) by (instance), "component", "service-ca", "", "")
+  metricName: microshiftComponentCPU
+
+- query: >-
+    label_replace(sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"microshift.*"}) by (instance), "component", "microshift", "", "")
+    or label_replace(sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"ov.*"}) by (instance), "component", "cni", "", "")
+    or label_replace(sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"csi.*|topo.*|lvmd|lvms|livenessprobe|snapshot.*"}) by (instance), "component", "csi", "", "")
+    or label_replace(sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"crio|conmon"}) by (instance), "component", "runtime", "", "")
+    or label_replace(sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"coredns|kube-rbac-proxy"}) by (instance), "component", "dns", "", "")
+    or label_replace(sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"haproxy|openshift-route|start-haproxy"}) by (instance), "component", "ingress", "", "")
+    or label_replace(sum(namedprocess_namegroup_memory_bytes{job="process",memtype="resident",groupname=~"service-ca-oper"}) by (instance), "component", "service-ca", "", "")
+  metricName: microshiftComponentMemoryRSS
