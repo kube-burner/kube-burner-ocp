@@ -15,7 +15,6 @@
 package workloads
 
 import (
-	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -28,14 +27,17 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/burner"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/prometheus"
+	"github.com/kube-burner/kube-burner/v2/pkg/util/fileutils"
 	"github.com/kube-burner/kube-burner/v2/pkg/util/metrics"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-// NewIndex orchestrates indexing for ocp wrapper
-func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
+// NewIndex orchestrates indexing for ocp wrapper. embedCfg resolves metrics and alert
+// profile names from the embedded configuration, like the workload subcommands do;
+// a local file with the same name still takes precedence.
+func NewIndex(wh *workloads.WorkloadHelper, embedCfg *fileutils.EmbedConfiguration) *cobra.Command {
 	var jobName string
 	var metricsProfiles []string
 	var start, end int64
@@ -113,6 +115,7 @@ func NewIndex(wh *workloads.WorkloadHelper, ocpConfig embed.FS) *cobra.Command {
 				MetricsEndpoint: wh.MetricsEndpoint,
 				UserMetaData:    userMetadata,
 				MetricsMetadata: metadata,
+				EmbedCfg:        embedCfg,
 			})
 			for _, prometheusClient := range metricsScraper.PrometheusClients {
 				prometheusJob := prometheus.Job{
