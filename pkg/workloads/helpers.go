@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -54,6 +55,9 @@ const (
 	kubeBurnerTestNameLabelKey = "kube-burner.io/test-name"
 	// WorkerNodeSelector is the default node selector for workloads targeting worker nodes
 	WorkerNodeSelector = "node-role.kubernetes.io/worker=,node-role.kubernetes.io/infra!=,node-role.kubernetes.io/workload!="
+	// VM node distribution strategies
+	nodeDistributionSequential = "sequential"
+	nodeDistributionRoundRobin = "round-robin"
 )
 
 var (
@@ -960,4 +964,569 @@ func deleteSnapshotCloneSC(ctx context.Context, scName string) {
 	} else {
 		log.Infof("Deleted StorageClass %s", scName)
 	}
+}
+
+// MSSQL workload types and helper functions
+
+type mssqlResult struct {
+	VMName        string
+	Node          string
+	PeakTPM       float64
+	PeakUsers     int
+	UserResults   []mssqlUserResult
+	BenchmarkTime float64
+	TotalRunTime  float64
+	Status        int
+}
+
+type mssqlUserResult struct {
+	Users int
+	TPM   float64
+}
+
+func runBenchmarksAndCollectResults(ctx context.Context, namespace string, bulkSleepTime time.Duration, sshConcurrencyLimit int) []mssqlResult {
+	k8sConnector := getK8SConnector()
+	vmGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachines"}
+
+	vmList, err := k8sConnector.DynamicClient().Resource(vmGVR).Namespace(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("kube-burner.io/job=%s", mssqlJobLabel),
+	})
+	if err != nil {
+		log.Errorf("Failed to list VMs: %v", err)
+		return nil
+	}
+
+	vmNames := make([]string, 0, len(vmList.Items))
+	for _, vm := range vmList.Items {
+		vmNames = append(vmNames, vm.GetName())
+	}
+	sort.Strings(vmNames)
+
+	if len(vmNames) == 0 {
+		log.Errorf("No VMs found in namespace %s", namespace)
+		return nil
+	}
+
+	log.Infof("Running benchmarks on %d VMs (concurrency: %d)", len(vmNames), sshConcurrencyLimit)
+
+	var allResults []mssqlResult
+	var mu sync.Mutex
+	firstStartTime := time.Now()
+
+	for i := 0; i < len(vmNames); i += sshConcurrencyLimit {
+		end := i + sshConcurrencyLimit
+		if end > len(vmNames) {
+			end = len(vmNames)
+		}
+		bulk := vmNames[i:end]
+		log.Infof("Processing bulk %d-%d (%d VMs)", i, end-1, len(bulk))
+
+		var wg sync.WaitGroup
+		for _, vmName := range bulk {
+			wg.Add(1)
+			go func(name string) {
+				defer wg.Done()
+
+				result := executeBenchmarkOnVM(ctx, namespace, name)
+				result.TotalRunTime = float64(time.Since(firstStartTime).Milliseconds())
+
+				mu.Lock()
+				allResults = append(allResults, result)
+				mu.Unlock()
+			}(vmName)
+		}
+		wg.Wait()
+
+		if end < len(vmNames) {
+			log.Infof("Bulk complete, resting %s", bulkSleepTime)
+			select {
+			case <-ctx.Done():
+				return allResults
+			case <-time.After(bulkSleepTime):
+			}
+		}
+	}
+
+	log.Infof("Benchmark execution complete: %d/%d VMs", len(allResults), len(vmNames))
+	return allResults
+}
+
+func executeBenchmarkOnVM(ctx context.Context, namespace, vmName string) mssqlResult {
+	result := mssqlResult{
+		VMName: vmName,
+		Status: 0, // Assume failure until success
+	}
+
+	// Start the VM
+	log.Infof("Starting VM %s", vmName)
+	if err := exec.CommandContext(ctx, "virtctl", "start", vmName, "-n", namespace).Run(); err != nil {
+		log.Warnf("Failed to start VM %s: %v", vmName, err)
+		return result
+	}
+
+	// Wait for VM to be Running
+	for attempt := 0; attempt < 200; attempt++ {
+		if ctx.Err() != nil {
+			return result
+		}
+		output, err := exec.CommandContext(ctx, "kubectl", "get", "vm", vmName, "-n", namespace,
+			"-o", "jsonpath={.status.printableStatus}").Output()
+		if err != nil {
+			log.Warnf("Failed to get VM %s status: %v", vmName, err)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+		if strings.TrimSpace(string(output)) == "Running" {
+			break
+		}
+		if attempt == 199 {
+			log.Warnf("VM %s not Running after max retries", vmName)
+			return result
+		}
+		time.Sleep(3 * time.Second)
+	}
+
+	// Get VM node
+	nodeOutput, err := exec.CommandContext(ctx, "kubectl", "get", "vmi", vmName, "-n", namespace,
+		"-o", "jsonpath={.status.nodeName}").Output()
+	if err == nil {
+		result.Node = strings.TrimSpace(string(nodeOutput))
+	}
+
+	// Wait for SSH to be ready (Windows takes time to boot after VM Running)
+	log.Infof("Waiting for SSH on %s", vmName)
+	sshKeyPath := AdditionalVars["sshKeyPath"].(string)
+	sshReady := false
+	for attempt := 0; attempt < 200; attempt++ {
+		if ctx.Err() != nil {
+			return result
+		}
+		// Test SSH connectivity using identity file (like benchmark-runner)
+		testCmd := exec.CommandContext(ctx, "virtctl",
+			"-n", namespace,
+			"ssh",
+			"--username=Administrator",
+			fmt.Sprintf("--identity-file=%s", sshKeyPath),
+			"--known-hosts=",
+			"-t", "-oStrictHostKeyChecking=no",
+			"-t", "-oUserKnownHostsFile=/dev/null",
+			"-t", "-oBatchMode=yes",
+			"--command=echo ready",
+			fmt.Sprintf("vm/%s", vmName))
+		output, _ := testCmd.CombinedOutput()
+		if testCmd.ProcessState != nil && testCmd.ProcessState.ExitCode() == 0 && strings.Contains(string(output), "ready") {
+			sshReady = true
+			log.Infof("SSH ready on %s after %d attempts", vmName, attempt+1)
+			break
+		}
+		time.Sleep(3 * time.Second)
+	}
+	if !sshReady {
+		log.Warnf("SSH not ready on %s after max retries", vmName)
+		return result
+	}
+
+	// Step 1: Transfer scripts
+	if !transferScriptsToVM(ctx, namespace, vmName) {
+		log.Warnf("Failed to transfer scripts to %s", vmName)
+		return result
+	}
+
+	// Step 2: Run preparation script
+	log.Infof("Running preparation on %s", vmName)
+	prepCmd := exec.CommandContext(ctx, "virtctl",
+		"-n", namespace,
+		"ssh",
+		"--username=Administrator",
+		fmt.Sprintf("--identity-file=%s", sshKeyPath),
+		"--known-hosts=",
+		"-t", "-oStrictHostKeyChecking=no",
+		"-t", "-oUserKnownHostsFile=/dev/null",
+		"--command=powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\tools\\hammerdb-4.12\\run_prepare_hammerdb.ps1",
+		fmt.Sprintf("vm/%s", vmName))
+	prepOutput, err := prepCmd.CombinedOutput()
+	if err != nil {
+		log.Warnf("Failed to prepare %s: %v", vmName, err)
+		if len(prepOutput) > 0 {
+			log.Warnf("Preparation output from %s: %s", vmName, string(prepOutput))
+		}
+		return result
+	}
+	log.Infof("Preparation completed on %s", vmName)
+
+	// Step 3: Run benchmark script
+	log.Infof("Running benchmark on %s", vmName)
+	benchmarkStartTime := time.Now()
+	benchCmd := exec.CommandContext(ctx, "virtctl",
+		"-n", namespace,
+		"ssh",
+		"--username=Administrator",
+		fmt.Sprintf("--identity-file=%s", sshKeyPath),
+		"--known-hosts=",
+		"-t", "-oStrictHostKeyChecking=no",
+		"-t", "-oUserKnownHostsFile=/dev/null",
+		"--command=powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\\tools\\hammerdb-4.12\\run_hammerdb_benchmark.ps1",
+		fmt.Sprintf("vm/%s", vmName))
+	benchOutput, err := benchCmd.CombinedOutput()
+	result.BenchmarkTime = float64(time.Since(benchmarkStartTime).Milliseconds())
+
+	// Always log benchmark output to help diagnose issues
+	if len(benchOutput) > 0 {
+		log.Infof("Benchmark output from %s:\n%s", vmName, string(benchOutput))
+	}
+
+	if err != nil {
+		log.Warnf("Failed to run benchmark on %s: %v", vmName, err)
+		return result
+	}
+	log.Infof("Benchmark completed on %s in %.2fs", vmName, result.BenchmarkTime/1000)
+
+	// Step 3.5: Retrieve log files for debugging
+	logFiles := []string{
+		"run_prepare_hammerdb.log",
+		"run_hammerdb_benchmark.log",
+	}
+	for _, logFile := range logFiles {
+		// Use forward slashes for Windows paths (works on Windows and avoids escaping issues)
+		logPath := fmt.Sprintf("C:/tools/hammerdb-4.12/%s", logFile)
+		localPath := fmt.Sprintf("/tmp/%s-%s", vmName, logFile)
+
+		logCmd := exec.CommandContext(ctx, "virtctl",
+			"-n", namespace,
+			"scp",
+			"--username=Administrator",
+			fmt.Sprintf("--identity-file=%s", sshKeyPath),
+			"--known-hosts=",
+			"-t", "-oStrictHostKeyChecking=no",
+			"-t", "-oUserKnownHostsFile=/dev/null",
+			fmt.Sprintf("vm/%s:%s", vmName, logPath),
+			localPath)
+
+		if output, err := logCmd.CombinedOutput(); err == nil {
+			if logContent, err := os.ReadFile(localPath); err == nil {
+				log.Infof("Log file %s from %s:\n%s", logFile, vmName, string(logContent))
+				os.Remove(localPath) // Cleanup
+			}
+		} else {
+			log.Debugf("Could not retrieve %s from %s: %v - %s", logFile, vmName, err, string(output))
+		}
+	}
+
+	// Step 4: Retrieve results from VM
+	log.Infof("Retrieving results from %s", vmName)
+
+	// Check if results file exists
+	checkCmd := exec.CommandContext(ctx, "virtctl",
+		"-n", namespace,
+		"ssh",
+		"--username=Administrator",
+		fmt.Sprintf("--identity-file=%s", sshKeyPath),
+		"--known-hosts=",
+		"-t", "-oStrictHostKeyChecking=no",
+		"-t", "-oUserKnownHostsFile=/dev/null",
+		"--command=powershell -Command \"Get-ChildItem C:\\tools\\hammerdb-4.12\\results\\*.json | Select-Object -ExpandProperty Name\"",
+		fmt.Sprintf("vm/%s", vmName))
+	checkOutput, _ := checkCmd.CombinedOutput()
+	log.Infof("Results files on %s: %s", vmName, string(checkOutput))
+
+	localPath := fmt.Sprintf("/tmp/mssql-results-%s.json", vmName)
+	var scpErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		// Use forward slashes for Windows paths in SCP (works on Windows and avoids escaping issues)
+		scpCmd := exec.CommandContext(ctx, "virtctl",
+			"-n", namespace,
+			"scp",
+			fmt.Sprintf("--identity-file=%s", sshKeyPath),
+			"--known-hosts=",
+			"-t", "-oStrictHostKeyChecking=no",
+			"-t", "-oUserKnownHostsFile=/dev/null",
+			fmt.Sprintf("Administrator@vm/%s:C:/tools/hammerdb-4.12/results/hammerdb_result.json", vmName),
+			localPath)
+		scpOutput, scpErr := scpCmd.CombinedOutput()
+		if scpErr == nil {
+			break
+		}
+		log.Warnf("SCP attempt %d failed for %s: %v - %s", attempt+1, vmName, scpErr, string(scpOutput))
+		time.Sleep(5 * time.Second)
+	}
+	if scpErr != nil {
+		log.Warnf("Failed to retrieve results from %s after 3 attempts", vmName)
+		return result
+	}
+
+	data, err := os.ReadFile(localPath)
+	if err != nil {
+		log.Warnf("Failed to read results file for %s: %v", vmName, err)
+		return result
+	}
+
+	// Strip UTF-8 BOM if present (PowerShell adds it by default)
+	data = bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
+
+	// Parse JSON array from PowerShell script (simple format: [{current_user, tpm}, ...])
+	var jsonResults []struct {
+		CurrentUser int     `json:"current_user"`
+		TPM         float64 `json:"tpm"`
+	}
+
+	if err := json.Unmarshal(data, &jsonResults); err != nil {
+		log.Warnf("Failed to parse results for %s: %v", vmName, err)
+		return result
+	}
+
+	result.UserResults = make([]mssqlUserResult, len(jsonResults))
+	peakTPM := 0.0
+	peakUsers := 0
+
+	for i, r := range jsonResults {
+		result.UserResults[i] = mssqlUserResult{
+			Users: r.CurrentUser,
+			TPM:   r.TPM,
+		}
+
+		if r.TPM > peakTPM {
+			peakTPM = r.TPM
+			peakUsers = r.CurrentUser
+		}
+	}
+
+	result.PeakTPM = peakTPM
+	result.PeakUsers = peakUsers
+	result.Status = 1 // Success
+
+	log.Infof("VM %s: Peak TPM=%.2f @ %d users, tested %d user counts",
+		vmName, result.PeakTPM, result.PeakUsers, len(result.UserResults))
+
+	return result
+}
+
+func transferScriptsToVM(ctx context.Context, namespace, vmName string) bool {
+	sshKeyPath := AdditionalVars["sshKeyPath"].(string)
+	scripts := []string{
+		"run_prepare_hammerdb.ps1",
+		"run_hammerdb_benchmark.ps1",
+		"01_provision-data-disk.ps1",
+		"02_create_db.sql",
+		"03_buildschema_mssql.tcl",
+		"04_traceflags.sql",
+		"05_hammerdb-auto-runs.ps1",
+		"06_parse_results.ps1",
+		"snapshot_template.yaml",
+	}
+
+	// Helper function to convert time strings to numeric minutes
+	parseMinutes := func(timeStr string) int {
+		// "1m" → 1, "2m" → 2, "10m" → 10, etc.
+		cleaned := strings.TrimSuffix(timeStr, "m")
+		cleaned = strings.TrimSuffix(cleaned, "M")
+		if val, err := strconv.Atoi(cleaned); err == nil {
+			return val
+		}
+		return 1 // Default to 1 minute if parsing fails
+	}
+
+	// Template variables for script processing (convert Jinja2 {{ }} to values)
+	scriptVars := map[string]interface{}{
+		"db_warehouses":   AdditionalVars["dbWarehouses"],
+		"db_num_users":    AdditionalVars["dbUsersCSV"],
+		"db_schema_users": AdditionalVars["dbSchemaUsers"],
+		"db_transactions": AdditionalVars["dbTransactions"],
+		"db_iterations":   AdditionalVars["dbIterations"],
+		"db_rampup":       AdditionalVars["dbRampup"],
+		"db_runtime":      AdditionalVars["dbRuntime"],
+		// Additional variables used in scripts (convert time strings to numbers for TCL)
+		"transactions": AdditionalVars["dbTransactions"],
+		"rampup":       parseMinutes(AdditionalVars["dbRampup"].(string)),
+		"runtime":      parseMinutes(AdditionalVars["dbRuntime"].(string)),
+		"iterations":   AdditionalVars["dbIterations"],
+		"trunc_uuid":   AdditionalVars["UUID"].(string)[:8], // Truncated UUID
+		"namespace":    AdditionalVars["namespace"],
+	}
+
+	for _, script := range scripts {
+		localPath := fmt.Sprintf("cmd/config/windows-mssql/scripts/%s", script)
+
+		// Read and process script as template (replace Jinja2-style {{ var }} with actual values)
+		content, err := os.ReadFile(localPath)
+		if err != nil {
+			log.Warnf("Failed to read script %s: %v", script, err)
+			return false
+		}
+
+		// Replace template variables
+		processedContent := string(content)
+		for key, value := range scriptVars {
+			placeholder := fmt.Sprintf("{{ %s }}", key)
+			processedContent = strings.ReplaceAll(processedContent, placeholder, fmt.Sprintf("%v", value))
+		}
+
+		// Write processed content to temp file
+		tempFile := fmt.Sprintf("/tmp/%s-%s", vmName, script)
+		if err = os.WriteFile(tempFile, []byte(processedContent), 0644); err != nil {
+			log.Warnf("Failed to write temp script %s: %v", tempFile, err)
+			return false
+		}
+		defer os.Remove(tempFile)
+
+		localPath = tempFile
+		var remotePath string
+		// TCL file goes to nested hammerdb directory (same as benchmark-runner)
+		if script == "03_buildschema_mssql.tcl" {
+			remotePath = "C:\\tools\\hammerdb-4.12\\scripts\\tcl\\mssqls\\tprocc\\03_buildschema_mssql.tcl"
+		} else {
+			// All other scripts go to root hammerdb directory (same as benchmark-runner)
+			remotePath = fmt.Sprintf("C:\\tools\\hammerdb-4.12\\%s", script)
+		}
+
+		for attempt := 0; attempt < 3; attempt++ {
+			scpCmd := exec.CommandContext(ctx, "virtctl",
+				"-n", namespace,
+				"scp",
+				fmt.Sprintf("--identity-file=%s", sshKeyPath),
+				"--known-hosts=",
+				"-t", "-oStrictHostKeyChecking=no",
+				"-t", "-oUserKnownHostsFile=/dev/null",
+				localPath,
+				fmt.Sprintf("Administrator@vm/%s:%s", vmName, remotePath))
+			err = scpCmd.Run()
+			if err == nil {
+				log.Infof("Copied %s to %s", script, vmName)
+				break
+			}
+			log.Warnf("SCP attempt %d failed for %s/%s: %v", attempt+1, vmName, script, err)
+			time.Sleep(5 * time.Second)
+		}
+		if err != nil {
+			log.Errorf("Failed to transfer %s to %s after 3 attempts", script, vmName)
+			return false
+		}
+	}
+
+	log.Infof("Successfully transferred all scripts to %s", vmName)
+	return true
+}
+
+func writeMssqlResults(results []mssqlResult, wh *workloads.WorkloadHelper, imageURL string, scale int) {
+	if len(results) == 0 {
+		log.Warn("No MSSQL results to index")
+		return
+	}
+
+	vmOSVersion := strings.TrimSuffix(path.Base(imageURL), path.Ext(imageURL))
+	var docs []interface{}
+
+	// Create one document per user count per VM (multi-document indexing)
+	for _, vmResult := range results {
+		if vmResult.Status == 0 {
+			continue // Skip failed VMs
+		}
+
+		// Index each user result as a separate document
+		for _, wr := range vmResult.UserResults {
+			runStatus := "complete"
+			doc := map[string]any{
+				"vm_name":        vmResult.VMName,
+				"node":           vmResult.Node,
+				"users":          wr.Users,
+				"tpm":            wr.TPM,
+				"is_peak":        (wr.TPM == vmResult.PeakTPM),
+				"benchmark_time": vmResult.BenchmarkTime,
+				"total_run_time": vmResult.TotalRunTime,
+				"kind":           "vm",
+				"run_status":     runStatus,
+				"vm_os_version":  vmOSVersion,
+				"scale":          scale,
+				"uuid":           AdditionalVars["UUID"],
+				"metricName":     "mssqlTPCCMeasurement",
+				"jobName":        "windows-mssql",
+				"timestamp":      time.Now().UTC().Format(time.RFC3339),
+				"metadata":       wh.MetricsMetadata,
+				// Benchmark configuration
+				"db_users":        AdditionalVars["dbUsers"],
+				"db_warehouses":   AdditionalVars["dbWarehouses"],
+				"db_transactions": AdditionalVars["dbTransactions"],
+				"db_iterations":   AdditionalVars["dbIterations"],
+				"db_rampup":       AdditionalVars["dbRampup"],
+				"db_runtime":      AdditionalVars["dbRuntime"],
+				// VM configuration
+				"vm_cpu":         AdditionalVars["vmCPU"],
+				"vm_memory":      AdditionalVars["vmMemory"],
+				"root_disk_size": AdditionalVars["rootDiskSize"],
+				"data_disk_size": AdditionalVars["dataDiskSize"],
+				"storage_class":  AdditionalVars["storageClassName"],
+				"access_mode":    AdditionalVars["accessMode"],
+			}
+			docs = append(docs, doc)
+		}
+	}
+
+	log.Infof("Indexing %d user-level results from %d VMs", len(docs), len(results))
+
+	// Index to all configured endpoints (same pattern as bootstorm)
+	for _, endpoint := range workloads.ConfigSpec.MetricsEndpoints {
+		if endpoint.Type == "" {
+			continue
+		}
+		idx, err := indexers.NewIndexer(endpoint.IndexerConfig)
+		if err != nil {
+			log.Errorf("Failed to create indexer: %v", err)
+			continue
+		}
+		resp, err := (*idx).Index(docs, indexers.IndexingOpts{
+			MetricName: "mssqlTPCCMeasurement",
+		})
+		if err != nil {
+			log.Errorf("Failed to index MSSQL results: %v", err)
+		} else {
+			log.Infof("MSSQL results indexed: %s", resp)
+		}
+	}
+}
+
+func stopAndDeleteMssqlVMs(ctx context.Context, namespace string) {
+	k8sConnector := getK8SConnector()
+	vmGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachines"}
+	vmiGVR := schema.GroupVersionResource{Group: "kubevirt.io", Version: "v1", Resource: "virtualmachineinstances"}
+
+	vmList, err := k8sConnector.DynamicClient().Resource(vmGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil || len(vmList.Items) == 0 {
+		return
+	}
+
+	log.Infof("Stopping and deleting %d VMs in namespace %s", len(vmList.Items), namespace)
+
+	for _, vm := range vmList.Items {
+		vmName := vm.GetName()
+		// Stop VMI first
+		if err := k8sConnector.DynamicClient().Resource(vmiGVR).Namespace(namespace).Delete(ctx, vmName, metav1.DeleteOptions{}); err != nil {
+			log.Warnf("Failed to delete VMI %s: %v", vmName, err)
+		}
+		// Delete VM
+		if err := k8sConnector.DynamicClient().Resource(vmGVR).Namespace(namespace).Delete(ctx, vmName, metav1.DeleteOptions{}); err != nil {
+			log.Warnf("Failed to delete VM %s: %v", vmName, err)
+		}
+	}
+
+	log.Infof("Deleted VMs in namespace %s", namespace)
+}
+
+func deleteMssqlDVs(ctx context.Context, namespace string) {
+	k8sConnector := getK8SConnector()
+	dvGVR := schema.GroupVersionResource{Group: "cdi.kubevirt.io", Version: "v1beta1", Resource: "datavolumes"}
+
+	dvList, err := k8sConnector.DynamicClient().Resource(dvGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil || len(dvList.Items) == 0 {
+		return
+	}
+
+	log.Infof("Deleting %d DataVolumes in namespace %s", len(dvList.Items), namespace)
+
+	for _, dv := range dvList.Items {
+		dvName := dv.GetName()
+		if err := k8sConnector.DynamicClient().Resource(dvGVR).Namespace(namespace).Delete(ctx, dvName, metav1.DeleteOptions{}); err != nil {
+			log.Warnf("Failed to delete DataVolume %s: %v", dvName, err)
+		}
+	}
+
+	log.Infof("Deleted DataVolumes in namespace %s", namespace)
 }

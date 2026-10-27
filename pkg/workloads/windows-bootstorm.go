@@ -76,7 +76,7 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 			if !virtctl.IsInstalled() {
 				log.Fatal("Failed to run virtctl. Check that it is installed, in PATH and working")
 			}
-			if nodeDistribution != "round-robin" && nodeDistribution != "sequential" {
+			if nodeDistribution != nodeDistributionRoundRobin && nodeDistribution != nodeDistributionSequential {
 				log.Fatalf("Unsupported node-distribution: %s (use round-robin or sequential)", nodeDistribution)
 			}
 			if vmCPURequest == 0 {
@@ -220,7 +220,7 @@ func NewWindowsBootstorm(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().BoolVar(&perNodeDV, "per-node-dv", false, "Create one source DV per worker node (required for node-local storage like LVMS)")
 	cmd.Flags().BoolVar(&clearNodeCaches, "clear-node-caches", true, "Clear worker node buffer caches before the benchmark")
 	cmd.Flags().DurationVar(&bulkSleepTime, "bulk-sleep", 30*time.Second, "Rest duration between VM start bulks")
-	cmd.Flags().StringVar(&nodeDistribution, "node-distribution", "sequential", "VM node assignment strategy: sequential or round-robin")
+	cmd.Flags().StringVar(&nodeDistribution, "node-distribution", nodeDistributionSequential, "VM node assignment strategy: sequential or round-robin")
 	cmd.Flags().IntVar(&sshConcurrencyLimit, "ssh-concurrency-limit", defaultSSHConcurrency, "Number of concurrent SSH measurement threads")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	return cmd
