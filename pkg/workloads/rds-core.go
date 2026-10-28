@@ -30,7 +30,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations, churnPercent, churnCycles, dpdkCores int
 	var svcLatency bool
 	var churnDelay, churnDuration, podReadyThreshold, idleDuration time.Duration
-	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool, churnMode, workerLabel string
+	var deletionStrategy, perfProfile, dpdkHugepages, sriovDpdkDevicepool, sriovNetDevicepool, churnMode, workerLabel, schedulerName string
 	var metricsProfiles []string
 	var phased bool
 	var rc int
@@ -62,6 +62,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["INGRESS_DOMAIN"] = ingressDomain
 			AdditionalVars["PHASED"] = phased
 			AdditionalVars["DPDK_WORKER_LABEL"] = workerLabel
+			AdditionalVars["DPDK_SCHEDULER_NAME"] = schedulerName
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
@@ -79,6 +80,7 @@ func NewRDSCore(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&sriovDpdkDevicepool, "dpdk-devicepool", "intelnics2", "SRIOV Device pool name for DPDK VFs in the cluster")
 	cmd.Flags().StringVar(&sriovNetDevicepool, "net-devicepool", "intelnics2", "SRIOV Device pool name for Kernel VFs in the cluster")
 	cmd.Flags().StringVar(&workerLabel, "worker-label", "worker-dpdk", "Node label value for DPDK worker node affinity")
+	cmd.Flags().StringVar(&schedulerName, "dpdk-scheduler-name", "default-scheduler", "Scheduler used to schedule DPDK pods, e.g. topo-aware-scheduler for NUMA-aware scheduling")
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "Number of iterations/namespaces")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&perfProfile, "perf-profile", "default", "Performance profile implemented in the cluster")

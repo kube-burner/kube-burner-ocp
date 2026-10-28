@@ -147,6 +147,7 @@ jobs:
           dpdk_hugepages: {{.DPDK_HUGEPAGES}}
           perf_profile: {{.PERF_PROFILE}}
           worker_label: {{.DPDK_WORKER_LABEL}}
+          scheduler_name: {{.DPDK_SCHEDULER_NAME}}
 
 {{ if .PHASED }}
   # Post-churn idle for metrics collection
