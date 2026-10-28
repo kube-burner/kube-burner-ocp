@@ -224,13 +224,6 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 				}
 				AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
 
-				// Randomly select a node for migration
-				if !skipMigrationJob {
-					selectedNode := verifyOrGetRandomWorkerNodeName("")
-					AdditionalVars["selectedNode"] = selectedNode
-					log.Infof("Selected node for migration: %s", selectedNode)
-				}
-
 				os.Setenv("counter", fmt.Sprint(counter))
 				rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 				if rc != 0 {
