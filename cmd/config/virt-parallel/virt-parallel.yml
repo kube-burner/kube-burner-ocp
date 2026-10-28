@@ -344,6 +344,23 @@ jobs:
   qps: 5
   burst: 10
   objects:
-  - kind: Namespace
+  - apiVersion: kubevirt.io/v1
+    kind: VirtualMachine
     labelSelector:
-      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  - apiVersion: cdi.kubevirt.io/v1beta1
+    kind: DataVolume
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  - apiVersion: snapshot.storage.k8s.io/v1
+    kind: VolumeSnapshot
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  - apiVersion: cdi.kubevirt.io/v1beta1
+    kind: DataSource
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}

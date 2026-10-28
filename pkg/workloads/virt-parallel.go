@@ -209,6 +209,10 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 			setMetrics(cmd, metricsProfiles)
 
 			log.Infof("Running tests in Namespace [%s]", testNamespace)
+
+			// Save original GC value to restore after all iterations complete
+			originalGC := AdditionalVars["GC"]
+
 			counter := 0
 			vmCount = initialVms
 			for {
@@ -224,6 +228,9 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 				}
 				AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
 
+				// Disable GC during iterations - cleanup happens after loop completes
+				AdditionalVars["GC"] = false
+
 				os.Setenv("counter", fmt.Sprint(counter))
 				rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 				if rc != 0 {
@@ -236,6 +243,12 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 					log.Infof("Reached maxIterations [%d]", maxIterations)
 					break
 				}
+			}
+
+			// Cleanup after all iterations complete if GC was enabled
+			if originalGC != nil && originalGC.(bool) {
+				log.Infof("Cleaning up test resources after all iterations")
+				cleanupTestNamespaces(cmd.Context(), virtParallelNamespaceLabelSelector)
 			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
