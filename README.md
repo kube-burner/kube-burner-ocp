@@ -704,7 +704,7 @@ Input parameters specific to the workload:
 | ------------------- | ------------------------------------------------------------------------------------------------ | ----------------- |
 | dpdk-cores          | Number of cores assigned for each DPDK pod (should fill all the isolated cores of one NUMA node) | 2                 |
 | performance-profile | Name of the performance profile implemented on the cluster                                       | default           |
-| dpdk-scheduler-name | Scheduler used for the DPDK pods, e.g. `topo-aware-scheduler` for NUMA-aware scheduling          | default-scheduler |
+| dpdk-scheduler      | Scheduler used for the DPDK pods, e.g. `topo-aware-scheduler` for NUMA-aware scheduling          | default-scheduler |
 
 
 ## Virt Workloads
