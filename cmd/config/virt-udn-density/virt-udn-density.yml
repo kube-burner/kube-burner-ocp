@@ -114,6 +114,9 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: true
     preLoadImages: true
+{{ if .PRELOAD_NODE_LABELS }}
+    preLoadNodeLabels: {{.PRELOAD_NODE_LABELS}}
+{{ end }}
     cleanup: false
     waitWhenFinished: true
     jobPause: 2m
