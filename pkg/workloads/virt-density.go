@@ -85,7 +85,12 @@ func NewVirtDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			if err != nil {
 				log.Fatal(err.Error())
 			}
+			nodeLabelsJSON, err := buildNodeLabelsJSON(selector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
 
+			AdditionalVars["PRELOAD_NODE_LABELS"] = nodeLabelsJSON
 			AdditionalVars["JOB_ITERATIONS"] = totalVMs - vmCount
 			AdditionalVars["VMI_RUNNING_THRESHOLD"] = vmiRunningThreshold
 			AdditionalVars["VM_IMAGE"] = vmImage

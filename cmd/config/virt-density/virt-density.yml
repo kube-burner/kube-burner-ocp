@@ -38,6 +38,9 @@ jobs:
     namespacedIterations: {{.NAMESPACED_ITERATIONS}}
     iterationsPerNamespace: {{.ITERATIONS_PER_NAMESPACE}}
     preLoadImages: true
+{{ if .PRELOAD_NODE_LABELS }}
+    preLoadNodeLabels: {{.PRELOAD_NODE_LABELS}}
+{{ end }}
     waitWhenFinished: true
     churnConfig:
       cycles: {{.CHURN_CYCLES}}
