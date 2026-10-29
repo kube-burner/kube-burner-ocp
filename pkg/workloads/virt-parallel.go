@@ -15,6 +15,7 @@
 package workloads
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"os"
@@ -25,6 +26,11 @@ import (
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 )
 
 const (
@@ -36,6 +42,36 @@ const (
 var (
 	virtParallelNamespaceLabelSelector = fmt.Sprintf("%s=%s", kubeBurnerTestNameLabelKey, virtParallelTestName)
 )
+
+var volumePopulatorGVR = schema.GroupVersionResource{
+	Group:    "populator.storage.k8s.io",
+	Version:  "v1beta1",
+	Resource: "volumepopulators",
+}
+
+func hasVolumeImportSourcePopulator(ctx context.Context, client dynamic.Interface) (bool, error) {
+	list, err := client.Resource(volumePopulatorGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	for _, item := range list.Items {
+		group, groupFound, err := unstructured.NestedString(item.Object, "sourceKind", "group")
+		if err != nil {
+			return false, err
+		}
+		kind, kindFound, err := unstructured.NestedString(item.Object, "sourceKind", "kind")
+		if err != nil {
+			return false, err
+		}
+		if groupFound && kindFound && group == "cdi.kubevirt.io" && kind == "VolumeImportSource" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
 
 // NewVirtParallel holds the virt-parallel workload
 func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
@@ -92,6 +128,16 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 						log.Fatalf("Storage Class [%s] does not support volume expansion", storageClassName)
 					}
 				}
+			}
+
+			usePopulator, err := hasVolumeImportSourcePopulator(cmd.Context(), getK8SConnector().DynamicClient())
+			if err != nil {
+				log.Fatalf("Failed to detect CDI VolumeImportSource populator: %v", err)
+			}
+			AdditionalVars["usePopulator"] = usePopulator
+			log.Infof("CDI VolumeImportSource populator registered: %t", usePopulator)
+			if !usePopulator && skipMigrationJob {
+				log.Fatalf("virt-parallel: legacy CDI imports require ReadWriteMany; --skip-migration-job selects ReadWriteOnce, so use a ReadWriteMany-capable storage class and omit --skip-migration-job")
 			}
 
 		},
@@ -177,13 +223,6 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 					_, volumeSnapshotClassName = getStorageAndSnapshotClasses(storageClassName, useSnapshot, cmd.Flags().Lookup("use-snapshot").Changed)
 				}
 				AdditionalVars["volumeSnapshotClassName"] = volumeSnapshotClassName
-
-				// Randomly select a node for migration
-				if !skipMigrationJob {
-					selectedNode := verifyOrGetRandomWorkerNodeName("")
-					AdditionalVars["selectedNode"] = selectedNode
-					log.Infof("Selected node for migration: %s", selectedNode)
-				}
 
 				os.Setenv("counter", fmt.Sprint(counter))
 				rc = RunWorkload(cmd, wh, cmd.Name()+".yml")

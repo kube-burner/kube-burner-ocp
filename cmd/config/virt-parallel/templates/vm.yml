@@ -1,4 +1,5 @@
 {{- $storageClassName := .storageClassName -}}
+{{- $root := . -}}
 {{- $dataVolumeLabels := .dataVolumeLabels -}}
 {{- $dataVolumeSize := (default "1Gi" .dataVolumeSize) -}}
 {{- $name := .name -}}
@@ -18,6 +19,8 @@ spec:
   dataVolumeTemplates:
   - metadata:
       name: "{{ $name }}-{{ $counter }}-{{ $replica }}-root"
+      annotations:
+        cdi.kubevirt.io/storage.usePopulator: "{{ default false (get $root "usePopulator") }}"
       labels:
       {{range $key, $value := .rootVolumeLabels }}
         {{ $key }}: {{ $value }}
@@ -43,6 +46,8 @@ spec:
   {{ range $dataVolumeIndex := .dataVolumeCounters }}
   - metadata:
       name: "{{ $name }}-{{ $counter }}-{{ $replica }}-data-{{ $dataVolumeIndex }}"
+      annotations:
+        cdi.kubevirt.io/storage.usePopulator: "{{ default false (get $root "usePopulator") }}"
       labels:
       {{range $key, $value := $dataVolumeLabels }}
         {{ $key }}: {{ $value }}
