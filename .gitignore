@@ -10,3 +10,4 @@ dist
 site/
 *.log
 virt-clone-multi-results/
+collected-metrics-*

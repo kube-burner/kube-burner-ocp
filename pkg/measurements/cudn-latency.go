@@ -166,7 +166,7 @@ func getNetworkAllocTransitionTime(cudn *unstructured.Unstructured) (time.Time, 
 		}
 		condType, _, _ := unstructured.NestedString(condition, "type")
 		condStatus, _, _ := unstructured.NestedString(condition, "status")
-		if condType == cudnReadyConditionType && condStatus == "True" {
+		if condType == cudnReadyConditionType && condStatus == conditionStatusTrue {
 			ltt, _, _ := unstructured.NestedString(condition, "lastTransitionTime")
 			if t, err := time.Parse(time.RFC3339, ltt); err == nil {
 				return t, true
