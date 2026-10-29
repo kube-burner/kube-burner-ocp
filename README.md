@@ -1599,9 +1599,9 @@ kube-burner-ocp maas-gateway-perf
     5x ExternalModel CRs (openai, azure-openai, bedrock, anthropic, vertexai)
     5x HTTPRoutes (path-based + header-based routing)
     5x Secrets (dummy provider credentials)
-  Jobs 2..N: baseline-{size}-{provider}-c{rate}
+  Jobs 2..N: baseline-[{profile}-]{size}-{provider}-c{level}
     GuideLLM K8s Job → direct to simulator (no gateway)
-  Jobs N+1..2N: gateway-{size}-{provider}-c{rate}
+  Jobs N+1..2N: gateway-[{profile}-]{size}-{provider}-c{level}
     GuideLLM K8s Job → through MaaS gateway (BBR)
   Last job: cleanup
 ```
@@ -1614,7 +1614,13 @@ kube-burner-ocp maas-gateway-perf
 | `--simulator-host` | Simulator service URL | **(required)** |
 | `--providers` | Comma-separated provider model names | `gpt-4o-openai,claude-sonnet-anthropic` |
 | `--payload-sizes` | Comma-separated sizes: small(32/64), medium(256/512), large(1024/1024), very-large(2048/2048) | `small,medium` |
-| `--concurrency-levels` | Comma-separated concurrency levels | `8,32,64,128,512` |
+| `--concurrency-levels` | Comma-separated load levels. Requests/sec for `constant` and `poisson`; concurrent streams for `concurrent` | `8,32,64,128,512` |
+| `--load-profiles` | Comma-separated GuideLLM profile kinds: `constant`, `poisson`, `concurrent` | `constant` |
+| `--api-key-secret` | Pre-existing Secret holding a `keys.txt` of `user<TAB>key` rows for per-identity simulation | `""` (ServiceAccount token) |
+| `--identities` | Mint this many tenants before the run and revoke them after | `0` (disabled) |
+| `--metering-namespace` | Namespace of the `metering-service` that mints identities; required with `--identities` | `""` |
+| `--tokenizer` | Tokenizer for synthetic prompts (HuggingFace id, needs egress) | `gpt2` |
+| `--tokenizer-configmap` | ConfigMap of pre-downloaded tokenizer files; mounts at `/tokenizer` and runs offline | `""` |
 | `--job-deadline` | Hard per-Job deadline (`activeDeadlineSeconds`); `0` derives it as `ceil(samples/parallelism) × (warmup + benchmark-duration) × 3 + 5m` | `0` (derived) |
 | `--benchmark-duration` | Duration of each benchmark run | `90s` |
 | `--warmup` | Warmup period discarded from results | `30s` |
@@ -1624,11 +1630,114 @@ kube-burner-ocp maas-gateway-perf
 | `--pause` | Pause after each benchmark job completes | `10s` |
 | `--metrics-profile` | Metrics profiles to use | `maas-gateway-perf-metrics.yml` |
 
+### Load profiles (open loop vs closed loop)
+
+`--load-profiles` selects how load is applied. This is the single most
+important choice in the run, because the two families answer different
+questions and are not comparable:
+
+| Profile | Loop | `--concurrency-levels` means | Use it to |
+| ------- | ---- | ---------------------------- | --------- |
+| `constant` | Open | requests/sec, uniformly paced | Find saturation. Arrivals do not slow down when the service does, so queueing and overload become visible. |
+| `poisson` | Open | requests/sec, random arrivals | Same, but with realistic burstiness. Uniform pacing understates queueing at the same mean rate. |
+| `concurrent` | Closed | number of in-flight streams | Model a fixed client population. Throughput becomes an *output*; the system can never be driven past N concurrent. |
+
+A closed-loop run cannot overload the target: when the backend slows, each
+stream waits, so offered load drops in sympathy. That self-throttling hides
+exactly the window you care about (coordinated omission), which is why
+saturation hunting needs `constant` or `poisson`. Conversely, `concurrent` is
+the honest way to ask "what do N simultaneous clients experience".
+
+When reading results, check error rate *before* latency. A target that sheds
+load (HTTP 429) returns rejections fast, which pulls p95 **down** — a shedding
+backend can score better on latency than a healthy one.
+
+### Per-identity simulation
+
+By default every benchmark pod authenticates with the same ServiceAccount
+token, so the gateway sees one tenant. Pass `--api-key-secret` to simulate
+distinct users instead:
+
+```bash
+printf 'user-01\tsk-aaa\nuser-02\tsk-bbb\nuser-03\tsk-ccc\n' > keys.txt
+oc -n maas-perf-test create secret generic maas-identities --from-file=keys.txt
+
+kube-burner-ocp maas-gateway-perf \
+  --gateway-host https://maas.apps.example.com \
+  --simulator-host http://llm-d-inference-sim.llm.svc.cluster.local:8000 \
+  --api-key-secret maas-identities \
+  --parallelism 3
+```
+
+Each indexed pod binds to one row via `JOB_COMPLETION_INDEX % pool_size`, so
+`--parallelism N` drives the gateway as N concurrent tenants — N distinct
+`api_key_auth` cache entries and N distinct metering attributions. The chosen
+identity is attached to the results as a `identity=<user>` label.
+
+Granularity is one identity per pod, not per request: GuideLLM holds a single
+credential per process. That is enough to exercise per-tenant policy, quota
+and metering attribution. Driving thousands of identities to stress the
+key-validation cache needs a pod count to match, or a different tool.
+
+#### Minting identities automatically
+
+`--identities N` mints the pool for you via `beforeAllJobs` / `afterAllJobs`
+hooks, so no Secret has to be prepared by hand:
+
+```bash
+kube-burner-ocp maas-gateway-perf \
+  --gateway-host https://maas.apps.example.com \
+  --simulator-host http://llm-d-inference-sim.llm.svc.cluster.local:8000 \
+  --identities 10 --metering-namespace <metering-ns>
+```
+
+It implies `--api-key-secret maas-perf-identities`, raises `--parallelism` to
+`N`, and sets `completions = samples × N` so each sample sweeps the whole pool.
+Users are tagged `origin=kube-burner-maas-perf` and minting sweeps leftovers
+carrying that tag before it starts — an aborted run cannot accumulate orphans,
+since the teardown hook is best-effort but the sweep is not. To recover
+manually when the Secret is gone:
+
+```bash
+bash cmd/config/scripts/maas-identities.sh sweep <metering-ns>
+```
+
+The hook runs on the kube-burner host (it needs `oc` and `python3`) and
+port-forwards to `metering-service`.
+
+#### Tokenizer on clusters without egress
+
+GuideLLM generates synthetic prompts with a HuggingFace tokenizer, so by
+default every benchmark pod needs egress to `huggingface.co`. Without it the
+pod stalls for minutes and then fails with
+`OSError: We couldn't connect to 'https://huggingface.co'`. Pre-download the
+tokenizer and pass it as a ConfigMap:
+
+```bash
+mkdir -p /tmp/gpt2 && cd /tmp/gpt2
+for f in vocab.json merges.txt tokenizer_config.json config.json; do
+  curl -sLO "https://huggingface.co/gpt2/resolve/main/$f"
+done
+tar czf /tmp/tokenizer.tar.gz -C /tmp/gpt2.
+
+oc -n maas-perf-test create configmap gpt2-tokenizer --from-file=/tmp/tokenizer.tar.gz
+
+kube-burner-ocp maas-gateway-perf ... --tokenizer-configmap gpt2-tokenizer
+```
+
+The pod unpacks it to `/results/tokenizer` and sets `HF_HUB_OFFLINE=1` and
+`TRANSFORMERS_OFFLINE=1`, so GuideLLM never touches the network. Verified
+against `guidellm-results-parser:v0.0.5` with networking disabled: the image
+ships no tokenizer and no HuggingFace cache, so without this the workload
+cannot run on a disconnected cluster.
+
 ### Test Matrix
 
-Total GuideLLM Jobs = `providers × payload_sizes × concurrency_levels × 2 (baseline + gateway)`
+Total GuideLLM Jobs = `load_profiles × providers × payload_sizes × concurrency_levels × 2 (baseline + gateway)`
 
-With defaults (`2 providers × 2 sizes × 5 levels × 2 modes`) = **40 GuideLLM Jobs**, each running `--samples` completions.
+With defaults (`1 profile × 2 providers × 2 sizes × 5 levels × 2 modes`) = **40 GuideLLM Jobs**, each running `--samples` completions. Adding a profile multiplies the matrix, so raise `--load-profiles` and `--concurrency-levels` together with care.
+
+Job names are unchanged for `constant` (`baseline-{size}-{provider}-c{rate}`) so existing dashboards keep working; other profiles are named `baseline-{profile}-{size}-{provider}-c{level}`.
 
 ### Available Providers
 
