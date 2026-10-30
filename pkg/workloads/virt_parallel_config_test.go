@@ -60,10 +60,10 @@ func TestVirtParallelMigrationConfiguration(t *testing.T) {
 				if hook.Cmd[4] != strconv.Itoa(20) {
 					t.Fatalf("wrong migration count: %v", hook.Cmd)
 				}
-				if hook.Cmd[1] == "prepare" && hook.When == config.HookBeforeJobExecution {
+				if hook.Cmd[1] == "prepare" && hook.When == "beforeJobExecution" {
 					prepared = true
 				}
-				if hook.Cmd[1] == "verify" && hook.When == config.HookBeforeCleanup {
+				if hook.Cmd[1] == "verify" && hook.When == "beforeCleanup" {
 					verified = true
 				}
 			}
