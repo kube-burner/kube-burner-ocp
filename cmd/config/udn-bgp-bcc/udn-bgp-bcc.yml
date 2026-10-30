@@ -1,0 +1,60 @@
+# BGP Cloud Connector variant of the UDN-BGP workload.
+---
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: raLatencyBCC
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+jobs:
+  - name: udn-bgp-bcc-create-namespaces
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    skipIndexing: true
+    jobPause: 60s
+    cleanup: false
+    objects:
+      - objectTemplate: namespace.yml
+        replicas: 1
+      - objectTemplate: configmap.yml
+        replicas: 1
+
+  - name: udn-bgp-bcc-create-bgp-routing
+    jobIterations: {{.JOB_ITERATIONS}}
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    namespacedIterations: false
+    waitWhenFinished: true
+    cleanup: false
+    preLoadImages: true
+    objects:
+      - objectTemplate: bgprouting.yml
+        replicas: 1
+        inputVars:
+          maxTimeout: 10m
+          awsRegion: {{.AWS_REGION}}
+          routeServerId: {{.ROUTE_SERVER_ID}}
+          vpcId: {{.VPC_ID}}
+      - objectTemplate: pod.yml
+        replicas: 1
+        inputVars:
+          podReplicas: 1
