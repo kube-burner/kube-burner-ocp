@@ -56,9 +56,10 @@ func validateFrrExternalIP(frrExternalIP string) error {
 // NewUdnBgp holds udn-bgp workload
 func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, namespacePerCudn, cidrsPerCudn int
-	var enableVm, layer2 bool
+	var enableVm, layer2, pprof bool
 	var frrExternalIP string
 	var raConnectionCheck string
+	var pprofInterval time.Duration
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -97,6 +98,8 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["ENABLE_VM"] = enableVm
 			AdditionalVars["LAYER2"] = layer2
 			AdditionalVars["RA_CONNECTION_CHECK"] = raConnectionCheck
+			AdditionalVars["PPROF"] = pprof
+			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			wh.SetMeasurements(additionalMeasurementFactoryMap)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
@@ -111,6 +114,8 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&cidrsPerCudn, "cidrs-per-cudn", 1, "Number of CIDRs per CUDN")
 	cmd.Flags().StringVar(&frrExternalIP, "frr-external-ip", "", "IP address of the external FRR router (required)")
 	cmd.Flags().StringVar(&raConnectionCheck, "ra-connection-check", "import,export", "RA connection check mode: none (only accepted latency), export (accepted latency + export ping), import (accepted latency + import ping), import,export (all checks)")
+	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	cmd.MarkFlagRequired("frr-external-ip")
