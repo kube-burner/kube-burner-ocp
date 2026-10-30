@@ -120,3 +120,4 @@ jobs:
           exportScenarioMaxTimeout: 10m
           importScenarioMaxTimeout: 10m
           layer2: {{.LAYER2}}
+          raConnectionCheck: "{{.RA_CONNECTION_CHECK}}"

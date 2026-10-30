@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	kubeburnermeasurements "github.com/kube-burner/kube-burner/v2/pkg/measurements"
@@ -57,6 +58,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, namespacePerCudn, cidrsPerCudn int
 	var enableVm, layer2 bool
 	var frrExternalIP string
+	var raConnectionCheck string
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -74,6 +76,14 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			if totalCIDRs := (iterations / namespacePerCudn) * cidrsPerCudn; totalCIDRs > 55080 {
 				return fmt.Errorf("--iterations/--namespaces-per-cudn * --cidrs-per-cudn yields %d total CIDRs, exceeding the maximum of 55080 (would produce an invalid first IP octet > 255)", totalCIDRs)
 			}
+			raConnectionCheck = strings.ReplaceAll(raConnectionCheck, " ", "")
+			validChecks := map[string]bool{
+				"none": true, "export": true, "import": true,
+				"export,import": true, "import,export": true,
+			}
+			if !validChecks[raConnectionCheck] {
+				return fmt.Errorf("unsupported --ra-connection-check value: %s. Valid values: none, export, import, export,import", raConnectionCheck)
+			}
 			if err := validateFrrExternalIP(frrExternalIP); err != nil {
 				return err
 			}
@@ -86,6 +96,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CIDRS_PER_CUDN"] = cidrsPerCudn
 			AdditionalVars["ENABLE_VM"] = enableVm
 			AdditionalVars["LAYER2"] = layer2
+			AdditionalVars["RA_CONNECTION_CHECK"] = raConnectionCheck
 			wh.SetMeasurements(additionalMeasurementFactoryMap)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
@@ -99,6 +110,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
 	cmd.Flags().IntVar(&cidrsPerCudn, "cidrs-per-cudn", 1, "Number of CIDRs per CUDN")
 	cmd.Flags().StringVar(&frrExternalIP, "frr-external-ip", "", "IP address of the external FRR router (required)")
+	cmd.Flags().StringVar(&raConnectionCheck, "ra-connection-check", "none", "RA connection check mode: none (only accepted latency), export (accepted latency + export ping), import (accepted latency + import ping), export,import (all checks)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	cmd.MarkFlagRequired("frr-external-ip")
