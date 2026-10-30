@@ -25,6 +25,7 @@ spec:
         ]'
     spec:
       runtimeClassName: performance-{{.perf_profile}}
+      schedulerName: {{.scheduler_name}}
       containers:
         - name: dpdk
           image: ghcr.io/abraham2512/fedora-stress-ng:master

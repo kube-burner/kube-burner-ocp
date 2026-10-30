@@ -1,3 +1,7 @@
+{{- $kubeBurnerFQDN := "kube-burner.io" -}}
+{{- $testName := "virt-density" -}}
+{{- $testNamespacesLabelKey := (list $kubeBurnerFQDN "/test-name") | join "" -}}
+{{- $testNamespacesLabelValue := $testName -}}
 ---
 global:
   gc: {{.GC}}
@@ -46,6 +50,7 @@ jobs:
       delay: {{.CHURN_DELAY}}
       mode: {{.CHURN_MODE}}
     namespaceLabels:
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
       pod-security.kubernetes.io/audit: privileged
