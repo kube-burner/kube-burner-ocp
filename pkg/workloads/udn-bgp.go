@@ -54,7 +54,7 @@ func validateFrrExternalIP(frrExternalIP string) error {
 
 // NewUdnBgp holds udn-bgp workload
 func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
-	var iterations, namespacePerCudn, cidrsPerCudn int
+	var iterations, namespacePerCudn, cidrsPerCudn, cudnsPerRA int
 	var enableVm, layer2 bool
 	var frrExternalIP string
 	var metricsProfiles []string
@@ -63,6 +63,9 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if cudnsPerRA < 1 {
+				return fmt.Errorf("--cudns-per-ra must be >= 1, got %d", cudnsPerRA)
+			}
 			if cidrsPerCudn < 1 {
 				return fmt.Errorf("--cidrs-per-cudn must be >= 1, got %d", cidrsPerCudn)
 			}
@@ -84,6 +87,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacePerCudn
 			AdditionalVars["CIDRS_PER_CUDN"] = cidrsPerCudn
+			AdditionalVars["CUDNS_PER_RA"] = cudnsPerRA
 			AdditionalVars["ENABLE_VM"] = enableVm
 			AdditionalVars["LAYER2"] = layer2
 			wh.SetMeasurements(additionalMeasurementFactoryMap)
@@ -98,6 +102,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().BoolVar(&layer2, "layer2", false, "Use Layer2 topology for CUDNs instead of Layer3")
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
 	cmd.Flags().IntVar(&cidrsPerCudn, "cidrs-per-cudn", 1, "Number of CIDRs per CUDN")
+	cmd.Flags().IntVar(&cudnsPerRA, "cudns-per-ra", 1, "Number of CUDNs advertised by each RouteAdvertisements resource")
 	cmd.Flags().StringVar(&frrExternalIP, "frr-external-ip", "", "IP address of the external FRR router (required)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
