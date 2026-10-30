@@ -1,5 +1,6 @@
 {{- $testName := "virt-migration" }}
 {{- $testNamespacesLabelKey := "kube-burner.io/test-name" -}}
+{{- $testNamespacesLabelValue := $testName -}}
 {{- $vmName := $testName -}}
 {{- $sshPublicKeySecretName := $testName -}}
 {{- $createMigratingVMsJobName := "create-migrating-vms" -}}
@@ -36,7 +37,7 @@ jobs:
   objects:
   - kind: Namespace
     labelSelector:
-      {{ $testNamespacesLabelKey }}: {{ $testName }}
+      {{ $testNamespacesLabelKey }}: {{ $testNamespacesLabelValue }}
 
 - name: {{ $createMigratingVMsJobName }}
   jobType: create
