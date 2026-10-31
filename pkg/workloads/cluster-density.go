@@ -102,8 +102,13 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 					log.Fatal("Error obtaining default ingress domain: ", err.Error())
 				}
 			}
+			nodeLabelsJSON, err := buildNodeLabelsJSON(selector)
+			if err != nil {
+				log.Fatal(err.Error())
+			}
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NODE_SELECTOR"] = string(nodeSelectorJson)
+			AdditionalVars["PRELOAD_NODE_LABELS"] = nodeLabelsJSON
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			AdditionalVars["PPROF_KUBELET"] = pprofKubelet
