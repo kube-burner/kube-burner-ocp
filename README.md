@@ -1972,6 +1972,38 @@ Flags:
   -h, --help                       help for index
 ```
 
+## OVN perf collection
+
+Kube-burner-ocp can collect Linux `perf` CPU profiles for the OVN C components during the `cudn-density` and `udn-bgp-bcc` workloads. Profiling is disabled by default and each component is enabled independently:
+
+```console
+kube-burner-ocp cudn-density --iterations=10 --perf-ovn-controller --perf-ovn-northd --perf-ovn-frequency=99
+```
+
+Collection uses one worker node and executes `perf` in that node's existing privileged `ovnkube-node` pod. Results are written to:
+
+```text
+perf-data/<uuid>/
+```
+
+The OVN-K image must contain `perf`. Matching debug symbols are expected but are not validated before collection.
+
+For the benchmarking wrapper, add the component flags to `EXTRA_FLAGS` only when profiling is requested. For example:
+
+```bash
+if [[ "${ENABLE_PERF_OVN_CONTROLLER:-false}" == "true" ]]; then
+  EXTRA_FLAGS+=" --perf-ovn-controller"
+fi
+
+if [[ "${ENABLE_PERF_OVN_NORTHD:-false}" == "true" ]]; then
+  EXTRA_FLAGS+=" --perf-ovn-northd"
+fi
+
+if [[ "${ENABLE_PERF_OVN_CONTROLLER:-false}" == "true" || "${ENABLE_PERF_OVN_NORTHD:-false}" == "true" ]]; then
+  EXTRA_FLAGS+=" --perf-ovn-frequency=${PERF_OVN_FREQUENCY:-99}"
+fi
+```
+
 ## Metrics-profile type
 
 By specifying `--profile-type`, kube-burner can use two different metrics profiles when scraping metrics from prometheus. By default is configured with `both`, meaning that it will use the regular metrics profiles bound to the workload in question and the reporting metrics profile.
