@@ -23,12 +23,32 @@
 {{ $selectedProviders := splitList "," .PROVIDERS }}
 {{ $selectedPayloads := splitList "," .PAYLOAD_SIZES }}
 {{ $concurrencyLevels := splitList "," .CONCURRENCY_LEVELS }}
+{{ $loadProfiles := splitList "," (.LOAD_PROFILES | default "constant") }}
+{{ $apiKeySecret := .API_KEY_SECRET }}
+{{ $identities := .IDENTITIES | default 0 }}
+{{ $meteringNamespace := .METERING_NAMESPACE | default "enmaas" }}
+{{ $completions := .COMPLETIONS | default $samples }}
+{{ $tokenizer := .TOKENIZER | default "gpt2" }}
+{{ $tokenizerConfigMap := .TOKENIZER_CONFIGMAP }}
+{{ $targets := splitList "," (.TARGETS | default "baseline,gateway") }}
 
 global:
   gc: {{.GC}}
   gcMetrics: {{.GC_METRICS}}
   measurements:
     - name: jobLatency
+{{- if gt ($identities | int) 0 }}
+  # Mint the tenant pool before any job and revoke it after the last one.
+  # afterAllJobs runs even when jobs fail; the mint side also sweeps leftovers,
+  # so an aborted run cannot accumulate orphaned users.
+  hooks:
+    - cmd: ["maas-identities.sh", "mint", "{{ $identities }}", "{{ $apiKeySecret }}", "maas-perf-test", "{{ $meteringNamespace }}"]
+      when: beforeAllJobs
+      background: false
+    - cmd: ["maas-identities.sh", "revoke", "{{ $apiKeySecret }}", "maas-perf-test", "{{ $meteringNamespace }}"]
+      when: afterAllJobs
+      background: false
+{{- end }}
 
 metricsEndpoints:
 {{ if .ES_SERVER }}
@@ -52,11 +72,15 @@ jobs:
   # -------------------------------------------------------
   # Baseline benchmarks — direct to simulator (no gateway)
   # -------------------------------------------------------
+{{ if has "baseline" $targets }}
+{{ range $profile := $loadProfiles }}
 {{ range $provider := $selectedProviders }}
 {{ range $size := $selectedPayloads }}
 {{ $payload := get $payloads $size }}
 {{ range $rate := $concurrencyLevels }}
-  - name: baseline-{{ $size }}-{{ $provider }}-c{{ $rate }}
+{{ $name := printf "baseline-%s-%s-c%s" $size $provider $rate }}
+{{ if ne $profile "constant" }}{{ $name = printf "baseline-%s-%s-%s-c%s" $profile $size $provider $rate }}{{ end }}
+  - name: {{ $name }}
     namespace: maas-perf-test
     jobIterations: 1
     namespacedIterations: false
@@ -70,15 +94,18 @@ jobs:
     objects:
     - objectTemplate: guidellm-job.yml
       inputVars:
-        jobName: baseline-{{ $size }}-{{ $provider }}-c{{ $rate }}
+        jobName: {{ $name }}
         parallelism: {{ $parallelism }}
-        completions: {{ $samples }}
+        completions: {{ $completions }}
         jobDeadline: {{ $jobDeadline }}
+        apiKeySecret: {{ $apiKeySecret }}
+        tokenizer: {{ $tokenizer }}
+        tokenizerConfigMap: {{ $tokenizerConfigMap }}
         env:
           BENCH_TARGET: {{ $simulatorHost }}
           BENCH_MAX_SECONDS: "{{ $benchmarkDuration }}"
           BENCH_WARMUP: "{{ $warmup }}"
-          BENCH_PROFILE: constant
+          BENCH_PROFILE: {{ $profile }}
           BENCH_RATE: "{{ $rate }}"
           BENCH_PROMPT_TOKENS: "{{ $payload.prompt }}"
           BENCH_OUTPUT_TOKENS: "{{ $payload.output }}"
@@ -86,6 +113,8 @@ jobs:
         image: {{ $guidellmImage }}
         ES_SERVER: {{ $guidellmES }}
         ES_INDEX: {{ $guidellmESIndex }}
+{{ end }}
+{{ end }}
 {{ end }}
 {{ end }}
 {{ end }}
@@ -93,11 +122,15 @@ jobs:
   # -------------------------------------------------------
   # Gateway benchmarks — through MaaS gateway
   # -------------------------------------------------------
+{{ if has "gateway" $targets }}
+{{ range $profile := $loadProfiles }}
 {{ range $provider := $selectedProviders }}
 {{ range $size := $selectedPayloads }}
 {{ $payload := get $payloads $size }}
 {{ range $rate := $concurrencyLevels }}
-  - name: gateway-{{ $size }}-{{ $provider }}-c{{ $rate }}
+{{ $name := printf "gateway-%s-%s-c%s" $size $provider $rate }}
+{{ if ne $profile "constant" }}{{ $name = printf "gateway-%s-%s-%s-c%s" $profile $size $provider $rate }}{{ end }}
+  - name: {{ $name }}
     namespace: maas-perf-test
     jobIterations: 1
     namespacedIterations: false
@@ -111,17 +144,20 @@ jobs:
     objects:
     - objectTemplate: guidellm-job.yml
       inputVars:
-        jobName: gateway-{{ $size }}-{{ $provider }}-c{{ $rate }}
+        jobName: {{ $name }}
         gatewayIP: {{ $gatewayIP }}
         gatewayHostname: {{ $.GATEWAY_HOSTNAME }}
         parallelism: {{ $parallelism }}
-        completions: {{ $samples }}
+        completions: {{ $completions }}
         jobDeadline: {{ $jobDeadline }}
+        apiKeySecret: {{ $apiKeySecret }}
+        tokenizer: {{ $tokenizer }}
+        tokenizerConfigMap: {{ $tokenizerConfigMap }}
         env:
           BENCH_TARGET: {{ $gatewayHost }}
           BENCH_MAX_SECONDS: "{{ $benchmarkDuration }}"
           BENCH_WARMUP: "{{ $warmup }}"
-          BENCH_PROFILE: constant
+          BENCH_PROFILE: {{ $profile }}
           BENCH_RATE: "{{ $rate }}"
           BENCH_PROMPT_TOKENS: "{{ $payload.prompt }}"
           BENCH_OUTPUT_TOKENS: "{{ $payload.output }}"
@@ -129,6 +165,8 @@ jobs:
         image: {{ $guidellmImage }}
         ES_SERVER: {{ $guidellmES }}
         ES_INDEX: {{ $guidellmESIndex }}
+{{ end }}
+{{ end }}
 {{ end }}
 {{ end }}
 {{ end }}
