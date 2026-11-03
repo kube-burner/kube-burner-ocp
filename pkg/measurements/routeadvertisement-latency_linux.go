@@ -412,6 +412,9 @@ func pingAddress(srcIP, destIP string, pingerTimeoutMsec int) error {
 		log.Debugf("Ping to %s failed: %v", destIP, err)
 		return err
 	}
+	if pinger.Statistics().PacketsRecv == 0 {
+		return fmt.Errorf("ping to %s timed out without receiving a reply", destIP)
+	}
 	return nil
 }
 
