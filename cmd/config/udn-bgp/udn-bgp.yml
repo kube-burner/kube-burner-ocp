@@ -105,6 +105,7 @@ jobs:
     burst: {{.BURST}}
     namespacedIterations: false
     waitWhenFinished: true
+    metricsClosing: afterMeasurements
     namespaceLabels:
       security.openshift.io/scc.podSecurityLabelSync: false
       pod-security.kubernetes.io/enforce: privileged
