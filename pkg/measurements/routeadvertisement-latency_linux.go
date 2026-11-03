@@ -498,7 +498,7 @@ This export go thread, reads the route (subnet), retrieves the corresponding cud
 */
 
 func (r *raLatency) exportWorker() {
-	r.wg.Done()
+	defer r.wg.Done()
 	for {
 		select {
 		case update, ok := <-r.routeCh:
@@ -531,7 +531,7 @@ func (r *raLatency) exportWorker() {
 				}
 			}
 		case <-r.exportDoneCh:
-			break
+			return
 		}
 	}
 }
@@ -787,9 +787,6 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 			}
 			log.Debugf("count %v , desiredCount %v", count, desiredCount)
 			if count >= desiredCount {
-				log.Debugf("Desired count reached, signaling stop.")
-				// Give additional 10 seconds for threads to finish (ping test after detecting routes)
-				time.Sleep(10 * time.Second)
 				return
 			}
 		case <-timeoutTimer.C:
