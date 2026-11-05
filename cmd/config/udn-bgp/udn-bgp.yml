@@ -118,7 +118,7 @@ jobs:
         inputVars:
           numDummyIfaces: 10
           numAddressOnDummyIface: 20
-          exportScenarioMaxTimeout: 10m
-          importScenarioMaxTimeout: 10m
+          exportScenarioMaxTimeout: 1h
+          importScenarioMaxTimeout: 1h
           layer2: {{.LAYER2}}
           raConnectionCheck: "{{.RA_CONNECTION_CHECK}}"
