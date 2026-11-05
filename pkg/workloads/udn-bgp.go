@@ -110,7 +110,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
 	cmd.Flags().IntVar(&cidrsPerCudn, "cidrs-per-cudn", 1, "Number of CIDRs per CUDN")
 	cmd.Flags().StringVar(&frrExternalIP, "frr-external-ip", "", "IP address of the external FRR router (required)")
-	cmd.Flags().StringVar(&raConnectionCheck, "ra-connection-check", "none", "RA connection check mode: none (only accepted latency), export (accepted latency + export ping), import (accepted latency + import ping), export,import (all checks)")
+	cmd.Flags().StringVar(&raConnectionCheck, "ra-connection-check", "import,export", "RA connection check mode: none (only accepted latency), export (accepted latency + export ping), import (accepted latency + import ping), import,export (all checks)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	cmd.MarkFlagRequired("frr-external-ip")

@@ -1477,28 +1477,28 @@ Sequent of events during workload execution
 | `--frr-external-ip` | IP address of the external FRR router (required) | - |
 | `--vm` | Deploy a VM for the test instead of a pod | false |
 | `--layer2` | Use Layer2 topology for CUDNs instead of Layer3 | false |
-| `--ra-connection-check` | RA connection check mode (see below) | `none` |
+| `--ra-connection-check` | RA connection check mode (see below) | `import,export` |
 | `--metrics-profile` | Comma separated list of metrics profiles to use | `metrics.yml` |
 
 ### RA Connection Check
 
-By default, the workload only measures RouteAdvertisement accepted latency without running any ping tests. The `--ra-connection-check` flag controls which ping-based connectivity checks are executed:
+By default, the workload runs all connectivity checks (accepted latency plus export and import ping tests). The `--ra-connection-check` flag controls which ping-based connectivity checks are executed:
 
 | Value | Accepted Latency | Export Ping | Import Ping |
 |---|---|---|---|
-| `none` (default) | Yes | No | No |
+| `none` | Yes | No | No |
 | `export` | Yes | Yes | No |
 | `import` | Yes | No | Yes |
-| `export,import` | Yes | Yes | Yes |
+| `import,export` (default) | Yes | Yes | Yes |
 
 - **none**: Only measures the time from RA creation to `Accepted=True`. No ping tests are performed. Export latency and netlink route latency are reported as `-1`.
 - **export**: Measures accepted latency and validates that CUDN subnets are correctly advertised to the external host by pinging CUDN pods from outside the cluster.
 - **import**: Measures accepted latency and validates that externally generated routes are correctly imported into CUDN gateway routers by pinging CUDN pods using newly created source addresses.
-- **export,import**: Runs all checks (equivalent to the full workload behavior). Both orderings (`export,import` and `import,export`) are accepted, with or without spaces.
+- **import,export**: Runs all checks (equivalent to the full workload behavior). Both orderings (`export,import` and `import,export`) are accepted, with or without spaces.
 
 #### Usage Examples
 
-Measure only accepted latency (default):
+Run both export and import ping tests (default):
 
 ```console
 kube-burner-ocp udn-bgp --iterations=10 --frr-external-ip=192.168.0.1
@@ -1510,10 +1510,10 @@ Run only export ping tests:
 kube-burner-ocp udn-bgp --iterations=10 --frr-external-ip=192.168.0.1 --ra-connection-check=export
 ```
 
-Run both export and import ping tests:
+Measure only accepted latency:
 
 ```console
-kube-burner-ocp udn-bgp --iterations=10 --frr-external-ip=192.168.0.1 --ra-connection-check=export,import
+kube-burner-ocp udn-bgp --iterations=10 --frr-external-ip=192.168.0.1 --ra-connection-check=none
 ```
 
 ### Testing with VMs
