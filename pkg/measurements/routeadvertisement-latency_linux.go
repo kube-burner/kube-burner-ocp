@@ -44,16 +44,16 @@ import (
 )
 
 const (
-	// Measurement name
+	// Metric names and the RouteAdvertisement condition used for acceptance timing.
 	raLatencyMeasurement          = "raLatencyMeasurement"
 	raLatencyQuantilesMeasurement = "raLatencyQuantilesMeasurement"
 	raAcceptedConditionType       = "Accepted"
-	// number of threads validating exported routes in export scenario
+	// Workers that verify routes advertised from the cluster to this host.
 	exportWorkerCount = 20
 	pingAttempts      = 100
-	// number of threads generating external routes and validating them in import scenario
+	// Workers that generate external routes and verify their import into the cluster.
 	importWorkerCount = 10
-	// Tuning parameters for ping test
+	// Ping timeouts and retry delays, in milliseconds.
 	importWaitBeforePingRetryMsec = 100
 	importPingerTimeoutMsec       = 10
 	exportWaitBeforePingRetryMsec = 100
@@ -103,7 +103,7 @@ type routeImport struct {
 	pod  string
 }
 
-// channel for route advertisement informer
+// stopCh controls the RouteAdvertisement informer, independently of the ping workers.
 var stopCh = make(chan struct{})
 
 type raMetric struct {
@@ -134,7 +134,6 @@ type cudnPods struct {
 
 // type holds route detection and cudn pod's ping timestamp
 type netlinkRoutes struct {
-	// linux doesn't allow adding duplicate routes, so routeTimestamp is not a slice
 	// measure timestamp when a route (belonging to cudn's subnet) detected by the kernel
 	routeTimestamp time.Time
 	// cudn subnet is exported as route. KB detected this route in its host. Now KB pings one corresponding cudn pod and stores the success timestamp.
@@ -151,6 +150,7 @@ type raLatency struct {
 	cudnConnTimestamp sync.Map
 	// how many routes verified during export scenario, helpful for closing the export threads
 	verifiedExportRouteCount uint64
+	verifiedExportRoutes     sync.Map
 	// how many routes verified during impport scenario, helpful for closing the import threads
 	verifiedImportRouteCount uint64
 	// how many RAs have Accepted=True recorded, used when ra-connection-check=none
@@ -161,6 +161,8 @@ type raLatency struct {
 	exportDoneCh chan struct{}
 	// channel to notify closure of import workers
 	importDoneCh chan struct{}
+	// channel used by workers to report verification failures
+	scenarioErrCh chan error
 	// channel wused between main thread and import threads. Main thread notifies import threads which routes to generate.
 	routeImportChan chan routeImport
 	wg              sync.WaitGroup
@@ -412,6 +414,9 @@ func pingAddress(srcIP, destIP string, pingerTimeoutMsec int) error {
 		log.Debugf("Ping to %s failed: %v", destIP, err)
 		return err
 	}
+	if pinger.Statistics().PacketsRecv == 0 {
+		return fmt.Errorf("ping to %s timed out without receiving a reply", destIP)
+	}
 	return nil
 }
 
@@ -419,17 +424,18 @@ func pingAddress(srcIP, destIP string, pingerTimeoutMsec int) error {
 During the import scenario, ping one CUDN pod to validate that the CUDN's gateway router imported the external route.
 
 Each ping will be attempted pingAttempts times with a sleep between attempts.
-Returns latency in ms when the ping succeeds, or -1 on failure.
+Returns latency in ms and nil when the ping succeeds, or -1 and the last error on failure.
 */
-func pingOneCudn(destPod, srcAddr string) float64 {
+func pingOneCudn(destPod, srcAddr string) (float64, error) {
 	importTimestamp := time.Now().UTC()
+	var pingErr error
 	for range pingAttempts {
-		if err := pingAddress(srcAddr, destPod, importPingerTimeoutMsec); err == nil {
-			return float64(time.Since(importTimestamp).Milliseconds())
+		if pingErr = pingAddress(srcAddr, destPod, importPingerTimeoutMsec); pingErr == nil {
+			return float64(time.Since(importTimestamp).Milliseconds()), nil
 		}
 		time.Sleep(importWaitBeforePingRetryMsec * time.Millisecond)
 	}
-	return -1
+	return -1, pingErr
 }
 
 /*
@@ -468,7 +474,12 @@ func (r *raLatency) importWorker() {
 			if err != nil {
 				log.Errorf("Failed to add IP address: %v", err)
 			}
-			importLatency := pingOneCudn(mc.pod, ipAddr.String())
+			importLatency, err := pingOneCudn(mc.pod, ipAddr.String())
+			if err != nil {
+				log.Errorf("Failed to verify import route %s: %v", mc.addr, err)
+				r.scenarioErrCh <- fmt.Errorf("verify import route %s: %w", mc.addr, err)
+				return
+			}
 			log.Debugf("Import route %s ping latency: %v ms", mc.addr, importLatency)
 
 			m := raMetric{
@@ -498,7 +509,7 @@ This export go thread, reads the route (subnet), retrieves the corresponding cud
 */
 
 func (r *raLatency) exportWorker() {
-	r.wg.Done()
+	defer r.wg.Done()
 	for {
 		select {
 		case update, ok := <-r.routeCh:
@@ -508,35 +519,52 @@ func (r *raLatency) exportWorker() {
 			if update.Type == unix.RTM_NEWROUTE {
 				cudnpods, exists := r.cudnSubnet[update.Dst.String()]
 				if exists {
-					// linux doesn't allow adding duplicate routes, so new routeTimestamp should be added
 					log.Debugf("Netlink route: %s received for udn: %s at: %v", update.Dst.String(), cudnpods.cudn, time.Now().UTC())
-					val, _ := r.cudnConnTimestamp.LoadOrStore(cudnpods.cudn, netlinkRoutes{
+					val, loaded := r.cudnConnTimestamp.LoadOrStore(cudnpods.cudn, netlinkRoutes{
 						routeTimestamp: time.Now().UTC(),
 					})
+					if loaded {
+						// Another event already claimed this CUDN; keep serving other CUDNs.
+						continue
+					}
 					if nlRouteVal, ok := val.(netlinkRoutes); ok {
-						if len(cudnpods.pods) > 0 {
+						if nlRouteVal.pingTimestamp.IsZero() {
+							if len(cudnpods.pods) == 0 {
+								r.scenarioErrCh <- fmt.Errorf("verify export route %s for CUDN %s: no pods available", update.Dst.String(), cudnpods.cudn)
+								return
+							}
 							pod := cudnpods.pods[0]
+							var pingErr error
 							for range pingAttempts {
-								if err := pingAddress("", pod, exportPingerTimeoutMsec); err == nil {
+								pingErr = pingAddress("", pod, exportPingerTimeoutMsec)
+								if pingErr == nil {
 									log.Debugf("Ping success to pod %s for the Netlink route: %s received for udn: %s at: %v", pod, update.Dst.String(), cudnpods.cudn, time.Now().UTC())
 									nlRouteVal.pingTimestamp = time.Now().UTC()
 									break
 								}
 								time.Sleep(exportWaitBeforePingRetryMsec * time.Millisecond)
 							}
+							if nlRouteVal.pingTimestamp.IsZero() {
+								r.scenarioErrCh <- fmt.Errorf("verify export route %s for CUDN %s: %w", update.Dst.String(), cudnpods.cudn, pingErr)
+								return
+							}
 						}
-						atomic.AddUint64(&r.verifiedExportRouteCount, 1)
-						r.cudnConnTimestamp.Store(cudnpods.cudn, nlRouteVal)
+						if !nlRouteVal.pingTimestamp.IsZero() {
+							r.cudnConnTimestamp.Store(cudnpods.cudn, nlRouteVal)
+							if _, loaded := r.verifiedExportRoutes.LoadOrStore(update.Dst.String(), struct{}{}); !loaded {
+								atomic.AddUint64(&r.verifiedExportRouteCount, 1)
+							}
+						}
 					}
 				}
 			}
 		case <-r.exportDoneCh:
-			break
+			return
 		}
 	}
 }
 
-// Import scenario creates dummy interfaces, we need to cleanup them
+// deleteDummyInterface removes an import interface and its assigned addresses/routes.
 func (r *raLatency) deleteDummyInterface(i int) error {
 	var err error
 	ifaceName := fmt.Sprintf("dummy%d", i)
@@ -551,11 +579,8 @@ func (r *raLatency) deleteDummyInterface(i int) error {
 	return err
 }
 
-/*
-Import scenario creates dummy interfaces.
-
-Note: Route is generated only when an ip address is added on the dummy interface.
-*/
+// createDummyInterface creates and brings up dummy<i> for import verification.
+// Routes are generated later, when import workers assign addresses to it.
 func (r *raLatency) createDummyInterface(i int) error {
 	var err error
 	// Define the name of the dummy interface
@@ -588,18 +613,14 @@ func (r *raLatency) createDummyInterface(i int) error {
 	return err
 }
 
-/*
-In the import scenario, main thread creates all the dummy interfaces. It then writes to the channel
-1. which ip address should be created on these dummy interfaces and
-2. one cudn pod to ping for the route import verification
-
-Then it starts all import threads. All import threads simultaneously read from the channel and
-1. adds ip address (kernel automatically generates the route when an ip address is added)
-2. ping one cudn pod (to verify if the above generated route is exchanged with cudn or not)
-*/
+// startImportScenario selects a CUDN pod, creates dummy interfaces, and queues
+// one unique source CIDR per interface/address pair before starting workers.
+// It closes the populated queue so workers exit once all tasks are consumed.
+// If no target pod is available, it returns without starting workers.
 func (r *raLatency) startImportScenario() error {
 	var err error
-	// Deterministically pick one CUDN's first pod for import verification.
+	// Choose a target by sorted CUDN name. If a CUDN spans multiple subnets,
+	// subnetByCudn retains one subnet from map iteration.
 	cudnNames := make([]string, 0, len(r.cudnSubnet))
 	subnetByCudn := make(map[string]string, len(r.cudnSubnet))
 	for subnet, cpods := range r.cudnSubnet {
@@ -667,11 +688,9 @@ func (r *raLatency) startRAInformer() error {
 	return nil
 }
 
-/*
-Start export scenario
-1. Main thread subscribes (through routeCh channel) from netlink route monitoring with the kernel
-2. Starts export workers, which read from the subscribed routeCh channel
-*/
+// startExportScenario subscribes to kernel route updates and starts export workers.
+// Stop closes exportDoneCh to stop the subscription and signal the workers, then
+// waits for workers through r.wg. The subscription itself is not in that group.
 func (r *raLatency) startExportScenario() error {
 	r.cudnConnTimestamp = sync.Map{}
 	r.routeCh = make(chan netlink.RouteUpdate, 10000)
@@ -689,7 +708,7 @@ func (r *raLatency) startExportScenario() error {
 	return nil
 }
 
-// Read input variables from job templates
+// setInputVars applies route counts, scenario timeouts, and enabled checks from job objects.
 func (r *raLatency) setInputVars() {
 	var err error
 	for _, obj := range r.JobConfig.Objects {
@@ -717,7 +736,9 @@ func (r *raLatency) setInputVars() {
 	}
 }
 
-// start raLatency measurement
+// Start resets measurement state, discovers ping targets, and starts the RA informer.
+// Export workers start here if enabled; import workers start later in Stop.
+// measurementWg signals initialization completion and is separate from r.wg.
 func (r *raLatency) Start(measurementWg *sync.WaitGroup) error {
 	// Reset latency slices, required in multi-job benchmarks
 	r.LatencyQuantiles, r.NormLatencies = nil, nil
@@ -735,9 +756,11 @@ func (r *raLatency) Start(measurementWg *sync.WaitGroup) error {
 
 	// channel to notify export workers to exit
 	r.exportDoneCh = make(chan struct{})
+	r.scenarioErrCh = make(chan error, exportWorkerCount+importWorkerCount)
 
 	// cudn pods which will be pinged during both import and export scenarios
 	r.cudnSubnet = make(map[string]cudnPods)
+	r.verifiedExportRoutes = sync.Map{}
 
 	// Maintain a list of cudn subnets and their pods, which will be used in both export and import scenarios
 	r.getPods()
@@ -757,16 +780,16 @@ func (r *raLatency) Start(measurementWg *sync.WaitGroup) error {
 	return nil
 }
 
+// Collect only signals completion; informer callbacks and workers gather the data.
 func (r *raLatency) Collect(measurementWg *sync.WaitGroup) {
 	defer measurementWg.Done()
 }
 
-/*
-Wait till the given export, import, or accepted scenario completes.
-Periodically check if the scenario completed by measuring how many routes/RAs validated.
-Exit if we hit maxTimeout though the scenario might not have completed. We later notify all scenario threads to return in this case.
-*/
-func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout time.Duration, scenario string) {
+// waitForSceanrioCompletion polls the export, import, or acceptance counter every
+// ten seconds until it reaches desiredCount. It returns an error on worker failure
+// or timeout. The caller must still signal and wait for workers; this function
+// neither stops them nor interrupts in-flight ping retries.
+func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout time.Duration, scenario string) error {
 	var count uint64
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -776,6 +799,8 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 
 	for {
 		select {
+		case err := <-r.scenarioErrCh:
+			return fmt.Errorf("%s scenario failed: %w", scenario, err)
 		case <-ticker.C:
 			switch scenario {
 			case "export":
@@ -787,19 +812,19 @@ func (r *raLatency) waitForSceanrioCompletion(desiredCount uint64, maxTimeout ti
 			}
 			log.Debugf("count %v , desiredCount %v", count, desiredCount)
 			if count >= desiredCount {
-				log.Debugf("Desired count reached, signaling stop.")
-				// Give additional 10 seconds for threads to finish (ping test after detecting routes)
-				time.Sleep(10 * time.Second)
-				return
+				return nil
 			}
 		case <-timeoutTimer.C:
 			log.Debugf("Timeout reached, signaling stop.")
-			return
+			return fmt.Errorf("%s scenario timed out after %s: verified %d of %d routes", scenario, maxTimeout, count, desiredCount)
 		}
 	}
 }
 
-// Stop stops raLatency measurement
+// Stop completes the enabled scenarios in order: export, then import.
+// Each phase signals and waits for its workers before returning an error or moving on.
+// Import interfaces are removed after workers exit. With no ping checks enabled,
+// Stop waits for RA acceptance before normalizing metrics and checking thresholds.
 func (r *raLatency) Stop() error {
 	if r.JobConfig.SkipIndexing {
 		return nil
@@ -808,12 +833,15 @@ func (r *raLatency) Stop() error {
 	// Export ping: wait + stop workers only if enabled
 	if r.isExportEnabled() {
 		log.Debugf("Export scenario is enabled")
-		// Wait till all CUDNs exported using RAs i.e wait for export scenario validation
-		// We are assuming all CUDN's will be exported using RAs
+		// The completion target currently counts discovered subnets, while workers
+		// claim verification per CUDN; this assumes one discovered subnet per CUDN.
 		desiredCount := uint64(len(r.cudnSubnet))
-		r.waitForSceanrioCompletion(desiredCount, exportScenarioMaxTimeout, "export")
-		// stop export workers
+		exportErr := r.waitForSceanrioCompletion(desiredCount, exportScenarioMaxTimeout, "export")
 		close(r.exportDoneCh)
+		r.wg.Wait()
+		if exportErr != nil {
+			return exportErr
+		}
 	} else {
 		log.Debugf("Export scenario is not enabled")
 	}
@@ -825,11 +853,20 @@ func (r *raLatency) Stop() error {
 		if err := r.startImportScenario(); err != nil {
 			return err
 		}
-		// wait for import scenario completion
 		desiredCount := uint64(importRoutesCount)
-		r.waitForSceanrioCompletion(desiredCount, importScenarioMaxTimeout, "import")
-		// stop import workers
+		importErr := r.waitForSceanrioCompletion(desiredCount, importScenarioMaxTimeout, "import")
 		close(r.importDoneCh)
+		r.wg.Wait()
+
+		// cleanup dummy interfaces only if import was run
+		for i := range numDummyIfaces {
+			if err := r.deleteDummyInterface(i); err != nil {
+				log.Errorf("Error deleting dummy interface %d: %v", i, err)
+			}
+		}
+		if importErr != nil {
+			return importErr
+		}
 	} else {
 		log.Debugf("Import scenario is not enabled")
 	}
@@ -838,17 +875,8 @@ func (r *raLatency) Stop() error {
 	// informer. Wait explicitly so Accepted latency is recorded before indexing.
 	if !r.isExportEnabled() && !r.isImportEnabled() {
 		log.Debugf("Waiting for RA Accepted conditions (ra-connection-check=none)")
-		r.waitForSceanrioCompletion(uint64(r.JobConfig.JobIterations), exportScenarioMaxTimeout, "accepted")
-	}
-
-	r.wg.Wait()
-
-	// cleanup dummy interfaces only if import was run
-	if r.isImportEnabled() {
-		for i := range numDummyIfaces {
-			if err := r.deleteDummyInterface(i); err != nil {
-				log.Error("Error deleting dummy interfaces: %w", err)
-			}
+		if err := r.waitForSceanrioCompletion(uint64(r.JobConfig.JobIterations), exportScenarioMaxTimeout, "accepted"); err != nil {
+			return err
 		}
 	}
 
