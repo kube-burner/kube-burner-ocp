@@ -1,0 +1,164 @@
+# fio / storage-focused Prometheus profile for CNV VM workloads (fio-vmlinux, fio-vmwindows).
+# Mix of timeseries (range over the scrape window) and instant aggregates using {{.elapsed}}.
+#
+# Usage:
+#   kube-burner-ocp fio-vmlinux --metrics-profile io-cnv-metrics.yml ...
+#   kube-burner-ocp fio-vmwindows --metrics-profile io-cnv-metrics.yml ...
+#
+# Guest fio bw/iops/lat still come from metricName fioResult (SSH collect), not this file.
+# Some Ceph/ODF queries return empty on non-ODF clusters; that is expected.
+
+# ---------------------------------------------------------------------------
+# Node disk I/O (host side of guest fio — include rbd/dm for ODF/Ceph)
+# ---------------------------------------------------------------------------
+
+- query: sum by (instance, device) (rate(node_disk_read_bytes_total{device!~"^(loop|ram).*"}[2m]) > 0)
+  metricName: nodeDiskReadBytes
+
+- query: sum by (instance, device) (rate(node_disk_written_bytes_total{device!~"^(loop|ram).*"}[2m]) > 0)
+  metricName: nodeDiskWrittenBytes
+
+- query: sum by (instance, device) (rate(node_disk_reads_completed_total{device!~"^(loop|ram).*"}[2m]) > 0)
+  metricName: nodeDiskReadIOPS
+
+- query: sum by (instance, device) (rate(node_disk_writes_completed_total{device!~"^(loop|ram).*"}[2m]) > 0)
+  metricName: nodeDiskWriteIOPS
+
+- query: sum by (instance, device) (rate(node_disk_read_time_seconds_total{device!~"^(loop|ram).*"}[2m]) > 0)
+  metricName: nodeDiskReadTimeSeconds
+
+- query: sum by (instance, device) (rate(node_disk_write_time_seconds_total{device!~"^(loop|ram).*"}[2m]) > 0)
+  metricName: nodeDiskWriteTimeSeconds
+
+- query: sum by (instance, device) (rate(node_disk_io_time_seconds_total{device!~"^(loop|ram).*"}[2m]) > 0)
+  metricName: nodeDiskIOTimeSeconds
+
+- query: sum by (instance, device) (node_disk_io_now{device!~"^(loop|ram).*"} > 0)
+  metricName: nodeDiskIOInProgress
+
+# Approximate device service time (seconds per op) when IOPS > 0
+- query: |
+    sum by (instance, device) (rate(node_disk_read_time_seconds_total{device!~"^(loop|ram).*"}[2m]))
+    /
+    clamp_min(sum by (instance, device) (rate(node_disk_reads_completed_total{device!~"^(loop|ram).*"}[2m])), 1e-9)
+  metricName: nodeDiskReadLatencySeconds
+
+- query: |
+    sum by (instance, device) (rate(node_disk_write_time_seconds_total{device!~"^(loop|ram).*"}[2m]))
+    /
+    clamp_min(sum by (instance, device) (rate(node_disk_writes_completed_total{device!~"^(loop|ram).*"}[2m])), 1e-9)
+  metricName: nodeDiskWriteLatencySeconds
+
+# ---------------------------------------------------------------------------
+# KubeVirt VMI storage (guest virtio disk as seen by CNV)
+# ---------------------------------------------------------------------------
+
+- query: sum by (name, namespace, node) (rate(kubevirt_vmi_storage_iops_read_total[2m]) > 0)
+  metricName: vmiStorageReadIOPS
+
+- query: sum by (name, namespace, node) (rate(kubevirt_vmi_storage_iops_write_total[2m]) > 0)
+  metricName: vmiStorageWriteIOPS
+
+- query: sum by (name, namespace, node) (rate(kubevirt_vmi_storage_read_traffic_bytes_total[2m]) > 0)
+  metricName: vmiStorageReadBytes
+
+- query: sum by (name, namespace, node) (rate(kubevirt_vmi_storage_write_traffic_bytes_total[2m]) > 0)
+  metricName: vmiStorageWriteBytes
+
+# Job-window averages ({{.elapsed}} = scrape end-start, e.g. fio runtime window)
+- query: avg(avg_over_time(rate(kubevirt_vmi_storage_iops_read_total[60s])[{{.elapsed}}:])) by (name, namespace)
+  metricName: avg-vmi-read-iops
+  instant: true
+
+- query: avg(avg_over_time(rate(kubevirt_vmi_storage_iops_write_total[60s])[{{.elapsed}}:])) by (name, namespace)
+  metricName: avg-vmi-write-iops
+  instant: true
+
+- query: avg(avg_over_time(rate(kubevirt_vmi_storage_read_traffic_bytes_total[60s])[{{.elapsed}}:])) by (name, namespace)
+  metricName: avg-vmi-storage-read-traffic
+  instant: true
+
+- query: avg(avg_over_time(rate(kubevirt_vmi_storage_write_traffic_bytes_total[60s])[{{.elapsed}}:])) by (name, namespace)
+  metricName: avg-vmi-storage-write-traffic
+  instant: true
+
+# ---------------------------------------------------------------------------
+# PVC / volume capacity (kubelet)
+# ---------------------------------------------------------------------------
+
+- query: sum by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes) > 0
+  metricName: pvcUsedBytes
+
+- query: sum by (namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes) > 0
+  metricName: pvcCapacityBytes
+
+- query: |
+    sum by (namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes)
+    /
+    clamp_min(sum by (namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes), 1)
+  metricName: pvcUsedRatio
+
+# ---------------------------------------------------------------------------
+# ODF / Ceph (empty if cluster has no Ceph metrics)
+# ---------------------------------------------------------------------------
+
+- query: sum by (ceph_daemon) (rate(ceph_osd_op_r[2m]) > 0)
+  metricName: cephOSDReadOps
+
+- query: sum by (ceph_daemon) (rate(ceph_osd_op_w[2m]) > 0)
+  metricName: cephOSDWriteOps
+
+- query: sum by (ceph_daemon) (rate(ceph_osd_op_r_out_bytes[2m]) > 0)
+  metricName: cephOSDReadBytes
+
+- query: sum by (ceph_daemon) (rate(ceph_osd_op_w_in_bytes[2m]) > 0)
+  metricName: cephOSDWriteBytes
+
+- query: ceph_health_status
+  metricName: cephHealthStatus
+  instant: true
+
+# ---------------------------------------------------------------------------
+# CNV / virt-launcher context during fio
+# ---------------------------------------------------------------------------
+
+- query: kubevirt_hyperconverged_operator_health_status{}
+  metricName: hco-operator-health
+  instant: true
+
+- query: sum(cnv:vmi_status_running:count)
+  metricName: total-vmi-running
+  instant: true
+
+- query: avg_over_time(label_replace(sum(rate(container_cpu_usage_seconds_total{pod=~"virt-launcher.*"}[2m])) by (pod), "vmi", "$1", "pod", "virt-launcher-(.*)-[^-]+$")[{{.elapsed}}:])
+  metricName: avg-cpu-usage-by-vmi
+  instant: true
+
+- query: avg_over_time(label_replace(sum(container_memory_rss{pod=~"virt-launcher.*"}) by (pod), "vmi", "$1", "pod", "virt-launcher-(.*)-[^-]+$")[{{.elapsed}}:])
+  metricName: avg-mem-usage-by-vmi
+  instant: true
+
+- query: sum by (pod, namespace, node) (rate(container_cpu_usage_seconds_total{pod=~"virt-launcher.*", container!="", container!="POD"}[2m]) * 100) > 0
+  metricName: virtLauncherCPU
+
+- query: sum by (pod, namespace, node) (container_memory_rss{pod=~"virt-launcher.*", container!="", container!="POD"}) > 0
+  metricName: virtLauncherMemory
+
+# ---------------------------------------------------------------------------
+# Lean OCP node context (workers — where VMs usually run)
+# ---------------------------------------------------------------------------
+
+- query: (sum(irate(node_cpu_seconds_total[2m])) by (mode, instance) and on (instance) label_replace(kube_node_role{role="worker"}, "instance", "$1", "node", "(.+)")) > 0
+  metricName: nodeCPU-Workers
+
+- query: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) and on (instance) label_replace(kube_node_role{role="worker"}, "instance", "$1", "node", "(.+)")
+  metricName: nodeMemoryUtilization-Workers
+
+- query: rate(node_vmstat_pgmajfault[1m])
+  metricName: nodeMajorFaults
+
+- query: sum by (instance, device) (irate(node_network_receive_bytes_total{device!~"lo|ovs-system"}[2m]) > 0)
+  metricName: nodeRxNetwork
+
+- query: sum by (instance, device) (irate(node_network_transmit_bytes_total{device!~"lo|ovs-system"}[2m]) > 0)
+  metricName: nodeTxNetwork

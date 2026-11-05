@@ -102,6 +102,7 @@ func openShiftCmd() *cobra.Command {
 		}
 		workloadDir := filepath.Join(rootDir, configDir)
 		wh = workloads.NewWorkloadHelper(workloadConfig, &ocpConfig, workloadDir, metricsProfilesDir, alertsDir, scriptsDir, kubeClientProvider)
+		ocpWorkloads.InitFioMetricsEmbed(&ocpConfig, metricsProfilesDir, alertsDir)
 
 		// Set common variables that all workloads can use
 		ocpWorkloads.AdditionalVars = map[string]any{
@@ -185,6 +186,8 @@ func openShiftCmd() *cobra.Command {
 		ocpWorkloads.NewVirtCapacityBenchmark(&wh),
 		ocpWorkloads.NewVirtParallel(&wh),
 		ocpWorkloads.NewVirtClone(&wh),
+		ocpWorkloads.NewFioVMLinux(&wh),
+		ocpWorkloads.NewFioVMWindows(&wh),
 		ocpWorkloads.NewVirtCloneMulti(&wh),
 		ocpWorkloads.NewVirtEphemeralRestart(&wh),
 		ocpWorkloads.NewDVClone(&wh),
