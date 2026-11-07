@@ -184,23 +184,28 @@ func (s *raImportScenario) worker() {
 
 // processImportRoute generates an external route by assigning its source address,
 // then verifies connectivity to the target pod and records the result.
+// Setup errors are logged and skipped; verification errors are returned.
 func (s *raImportScenario) processImportRoute(route routeImport) error {
 	link, err := netlink.LinkByName(route.link)
 	if err != nil {
-		log.Errorf("Failed to get link %s: %v", route.link, err)
+		log.Errorf("Skipping import route %s: failed to get link %s: %v", route.addr, route.link, err)
+		return nil
 	}
 	addr, err := netlink.ParseAddr(route.addr)
 	if err != nil {
-		log.Errorf("Failed to parse IP address: %v", err)
+		log.Errorf("Skipping import route %s: failed to parse IP address: %v", route.addr, err)
+		return nil
 	}
 
 	importTimestamp := time.Now().UTC()
 	if err := netlink.AddrAdd(link, addr); err != nil {
-		log.Errorf("Failed to add IP address: %v", err)
+		log.Errorf("Skipping import route %s: failed to add IP address to %s: %v", route.addr, route.link, err)
+		return nil
 	}
 	sourceIP, _, err := net.ParseCIDR(route.addr)
 	if err != nil {
-		log.Errorf("Failed to add IP address: %v", err)
+		log.Errorf("Skipping import route %s: failed to parse source CIDR: %v", route.addr, err)
+		return nil
 	}
 	latency, err := pingPod(route.pod, sourceIP.String())
 	if err != nil {
