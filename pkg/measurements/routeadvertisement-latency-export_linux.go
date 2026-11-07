@@ -21,6 +21,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
 
@@ -99,8 +100,7 @@ func (s *raExportScenario) results() map[string]netlinkRoutes {
 	return results
 }
 
-// worker matches kernel route updates to discovered CUDNs and pings a pod to
-// verify connectivity. Only one worker claims each CUDN.
+// worker consumes route updates until shutdown or a verification failure.
 func (s *raExportScenario) worker() {
 	defer s.wg.Done()
 	for {
@@ -109,50 +109,58 @@ func (s *raExportScenario) worker() {
 			if !ok {
 				return
 			}
-			if update.Type == unix.RTM_NEWROUTE {
-				cudnpods, exists := s.cudnSubnet[update.Dst.String()]
-				if exists {
-					log.Debugf("Netlink route: %s received for udn: %s at: %v", update.Dst.String(), cudnpods.cudn, time.Now().UTC())
-					val, loaded := s.cudnConnTimestamp.LoadOrStore(cudnpods.cudn, netlinkRoutes{
-						routeTimestamp: time.Now().UTC(),
-					})
-					if loaded {
-						// Another event already claimed this CUDN; keep serving other CUDNs.
-						continue
-					}
-					if nlRouteVal, ok := val.(netlinkRoutes); ok {
-						if nlRouteVal.pingTimestamp.IsZero() {
-							if len(cudnpods.pods) == 0 {
-								s.errCh <- fmt.Errorf("verify export route %s for CUDN %s: no pods available", update.Dst.String(), cudnpods.cudn)
-								return
-							}
-							pod := cudnpods.pods[0]
-							var pingErr error
-							for range pingAttempts {
-								pingErr = pingAddress("", pod, exportPingerTimeoutMsec)
-								if pingErr == nil {
-									log.Debugf("Ping success to pod %s for the Netlink route: %s received for udn: %s at: %v", pod, update.Dst.String(), cudnpods.cudn, time.Now().UTC())
-									nlRouteVal.pingTimestamp = time.Now().UTC()
-									break
-								}
-								time.Sleep(exportWaitBeforePingRetryMsec * time.Millisecond)
-							}
-							if nlRouteVal.pingTimestamp.IsZero() {
-								s.errCh <- fmt.Errorf("verify export route %s for CUDN %s: %w", update.Dst.String(), cudnpods.cudn, pingErr)
-								return
-							}
-						}
-						if !nlRouteVal.pingTimestamp.IsZero() {
-							s.cudnConnTimestamp.Store(cudnpods.cudn, nlRouteVal)
-							if _, loaded := s.verifiedRoutes.LoadOrStore(update.Dst.String(), struct{}{}); !loaded {
-								atomic.AddUint64(&s.verifiedRouteCount, 1)
-							}
-						}
-					}
-				}
+			if err := s.processRouteUpdate(update); err != nil {
+				s.errCh <- err
+				return
 			}
 		case <-s.doneCh:
 			return
 		}
 	}
+}
+
+// processRouteUpdate claims a CUDN before pinging so duplicate updates cannot
+// trigger concurrent verification of the same CUDN.
+func (s *raExportScenario) processRouteUpdate(update netlink.RouteUpdate) error {
+	if update.Type != unix.RTM_NEWROUTE {
+		return nil
+	}
+	subnet := update.Dst.String()
+	cudn, exists := s.cudnSubnet[subnet]
+	if !exists {
+		return nil
+	}
+	log.Debugf("Netlink route: %s received for udn: %s at: %v", subnet, cudn.cudn, time.Now().UTC())
+	state := netlinkRoutes{routeTimestamp: time.Now().UTC()}
+	if _, loaded := s.cudnConnTimestamp.LoadOrStore(cudn.cudn, state); loaded {
+		return nil
+	}
+	if len(cudn.pods) == 0 {
+		return fmt.Errorf("verify export route %s for CUDN %s: no pods available", subnet, cudn.cudn)
+	}
+
+	pingTimestamp, err := pingExportPod(cudn.pods[0])
+	if err != nil {
+		return fmt.Errorf("verify export route %s for CUDN %s: %w", subnet, cudn.cudn, err)
+	}
+	log.Debugf("Ping success to pod %s for the Netlink route: %s received for udn: %s at: %v", cudn.pods[0], subnet, cudn.cudn, pingTimestamp)
+	// Preserve the existing latency boundary after the success log.
+	state.pingTimestamp = time.Now().UTC()
+	s.cudnConnTimestamp.Store(cudn.cudn, state)
+	if _, loaded := s.verifiedRoutes.LoadOrStore(subnet, struct{}{}); !loaded {
+		atomic.AddUint64(&s.verifiedRouteCount, 1)
+	}
+	return nil
+}
+
+// pingExportPod returns the successful ping time or the last error after retries.
+func pingExportPod(pod string) (time.Time, error) {
+	var pingErr error
+	for range pingAttempts {
+		if pingErr = pingAddress("", pod, exportPingerTimeoutMsec); pingErr == nil {
+			return time.Now().UTC(), nil
+		}
+		time.Sleep(exportWaitBeforePingRetryMsec * time.Millisecond)
+	}
+	return time.Time{}, pingErr
 }
