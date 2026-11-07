@@ -71,7 +71,24 @@ type routeImport struct {
 func (s *raImportScenario) start(targets map[string]cudnPods) error {
 	s.errCh = make(chan error, importWorkerCount)
 	s.doneCh = make(chan struct{})
-	var err error
+
+	targetPod := selectImportPod(targets)
+	if targetPod == "" {
+		return nil
+	}
+	if err := s.createDummyInterfaces(); err != nil {
+		return err
+	}
+	s.queueImportRoutes(targetPod)
+
+	for range importWorkerCount {
+		s.wg.Add(1)
+		go s.worker()
+	}
+	return nil
+}
+
+func selectImportPod(targets map[string]cudnPods) string {
 	// Choose a target by sorted CUDN name. If a CUDN spans multiple subnets,
 	// subnetByCudn retains one subnet from map iteration.
 	cudnNames := make([]string, 0, len(targets))
@@ -81,44 +98,41 @@ func (s *raImportScenario) start(targets map[string]cudnPods) error {
 		subnetByCudn[cpods.cudn] = subnet
 	}
 	slices.Sort(cudnNames)
-	podToPingDuringImport := ""
 	for _, cudnName := range cudnNames {
 		subnet := subnetByCudn[cudnName]
 		cpods := targets[subnet]
 		if len(cpods.pods) > 0 {
-			podToPingDuringImport = cpods.pods[0]
-			break
+			return cpods.pods[0]
 		}
 	}
-	if podToPingDuringImport == "" {
-		return nil
-	}
-	for i := range s.numDummyIfaces {
-		err = s.createDummyInterface(i)
-		if err != nil {
+	return ""
+}
+
+func (s *raImportScenario) createDummyInterfaces() error {
+	for interfaceIndex := range s.numDummyIfaces {
+		if err := s.createDummyInterface(interfaceIndex); err != nil {
 			return err
 		}
 	}
-	importRoutesCount := s.numAddressOnDummyIface * s.numDummyIfaces
-	s.expectedRouteCount = importRoutesCount
-	s.routeImportChan = make(chan routeImport, importRoutesCount)
-	for i := range s.numAddressOnDummyIface {
-		for j := range s.numDummyIfaces {
-			mm := routeImport{
-				link: fmt.Sprintf("dummy%d", j),
-				addr: fmt.Sprintf("20.%d.%d.1/24", j, i+1),
-				pod:  podToPingDuringImport,
+	return nil
+}
+
+// queueImportRoutes fills and closes the buffered queue before workers start.
+func (s *raImportScenario) queueImportRoutes(targetPod string) {
+	routeCount := s.numAddressOnDummyIface * s.numDummyIfaces
+	s.expectedRouteCount = routeCount
+	s.routeImportChan = make(chan routeImport, routeCount)
+	for addressIndex := range s.numAddressOnDummyIface {
+		for interfaceIndex := range s.numDummyIfaces {
+			route := routeImport{
+				link: fmt.Sprintf("dummy%d", interfaceIndex),
+				addr: fmt.Sprintf("20.%d.%d.1/24", interfaceIndex, addressIndex+1),
+				pod:  targetPod,
 			}
-			s.routeImportChan <- mm
+			s.routeImportChan <- route
 		}
 	}
 	close(s.routeImportChan)
-	// Start import worker goroutines
-	for range importWorkerCount {
-		s.wg.Add(1)
-		go s.worker()
-	}
-	return nil
 }
 
 func (s *raImportScenario) verifiedCount() uint64 {
