@@ -22,11 +22,12 @@ import (
 	"sync"
 	"time"
 
-	k8sconnector "github.com/cloud-bulldozer/go-commons/v2/k8s-connector"
 	"github.com/kube-burner/kube-burner/v2/pkg/config"
 	"github.com/kube-burner/kube-burner/v2/pkg/measurements"
 	"github.com/kube-burner/kube-burner/v2/pkg/measurements/types"
 	"github.com/kube-burner/kube-burner/v2/pkg/util/fileutils"
+	raclient "github.com/ovn-kubernetes/ovn-kubernetes/go-controller/pkg/crd/routeadvertisements/v1/apis/clientset/versioned"
+	udnclient "github.com/ovn-kubernetes/ovn-kubernetes/go-controller/pkg/crd/userdefinednetwork/v1/apis/clientset/versioned"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -131,14 +132,22 @@ func (r *raLatency) Start(measurementWg *sync.WaitGroup) error {
 
 	// Acceptance timing is observed regardless of the connectivity mode.
 	log.Infof("Creating Router Advertisement latency watcher for %s", r.JobConfig.Name)
-	connector, err := k8sconnector.NewK8SConnector(r.RestConfig)
+	raClient, err := raclient.NewForConfig(r.RestConfig)
 	if err != nil {
 		log.Error(err)
 		return err
 	}
-	r.observer.start(connector.DynamicClient())
+	udnClient, err := udnclient.NewForConfig(r.RestConfig)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	r.observer.start(raClient, udnClient.K8sV1().ClusterUserDefinedNetworks())
 	if r.isExportEnabled() {
-		return r.exportScenario.start(r.cudnSubnet)
+		if err := r.exportScenario.start(r.cudnSubnet); err != nil {
+			r.observer.stop()
+			return err
+		}
 	}
 	return nil
 }
@@ -196,6 +205,7 @@ func (r *raLatency) Stop() error {
 	if r.JobConfig.SkipIndexing {
 		return nil
 	}
+	defer r.observer.stop()
 
 	if r.isExportEnabled() {
 		log.Debugf("Export scenario is enabled")
@@ -238,6 +248,8 @@ func (r *raLatency) Stop() error {
 		}
 	}
 
+	// Freeze observations before normalizing metrics.
+	r.observer.stop()
 	return r.StopMeasurement(r.normalizeMetrics, r.getLatency)
 }
 

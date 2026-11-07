@@ -20,12 +20,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	rav1 "github.com/ovn-kubernetes/ovn-kubernetes/go-controller/pkg/crd/routeadvertisements/v1"
+	raclient "github.com/ovn-kubernetes/ovn-kubernetes/go-controller/pkg/crd/routeadvertisements/v1/apis/clientset/versioned"
+	rainformers "github.com/ovn-kubernetes/ovn-kubernetes/go-controller/pkg/crd/routeadvertisements/v1/apis/informers/externalversions"
+	udnclient "github.com/ovn-kubernetes/ovn-kubernetes/go-controller/pkg/crd/userdefinednetwork/v1/apis/clientset/versioned/typed/userdefinednetwork/v1"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -34,39 +34,39 @@ const raAcceptedConditionType = "Accepted"
 // raObserver records RouteAdvertisement creation and acceptance independently
 // of the import and export connectivity checks.
 type raObserver struct {
-	client                dynamic.Interface
+	cudnClient            udnclient.ClusterUserDefinedNetworkInterface
 	metrics               *sync.Map
 	metricContext         raMetricContext
 	verifiedAcceptedCount uint64
-}
-
-// stopCh controls the RouteAdvertisement informer, independently of the ping workers.
-var stopCh = make(chan struct{})
-
-var raGVR = schema.GroupVersionResource{
-	Group:    "k8s.ovn.org",
-	Version:  "v1",
-	Resource: "routeadvertisements",
-}
-
-var cudnGVR = schema.GroupVersionResource{
-	Group:    "k8s.ovn.org",
-	Version:  "v1",
-	Resource: "clusteruserdefinednetworks",
+	factory               rainformers.SharedInformerFactory
+	stopCh                chan struct{}
+	stopOnce              sync.Once
 }
 
 // start registers an informer for RouteAdvertisement resource creation/update events.
 // This is always needed to measure RA accepted latency regardless of the ra-connection-check mode.
-func (o *raObserver) start(client dynamic.Interface) {
-	o.client = client
-	raFactory := dynamicinformer.NewFilteredDynamicSharedInformerFactory(o.client, time.Minute, metav1.NamespaceAll, nil)
-	raInformer := raFactory.ForResource(raGVR).Informer()
+func (o *raObserver) start(client raclient.Interface, cudnClient udnclient.ClusterUserDefinedNetworkInterface) {
+	o.cudnClient = cudnClient
+	o.stopCh = make(chan struct{})
+	o.factory = rainformers.NewSharedInformerFactory(client, time.Minute)
+	raInformer := o.factory.K8s().V1().RouteAdvertisements().Informer()
 	raInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    o.handleAdd,
 		UpdateFunc: o.handleUpdate,
 	})
-	raFactory.Start(stopCh)
-	raFactory.WaitForCacheSync(stopCh)
+	o.factory.Start(o.stopCh)
+	o.factory.WaitForCacheSync(o.stopCh)
+}
+
+// stop joins this observer's informer independently of other measurements.
+func (o *raObserver) stop() {
+	if o.factory == nil {
+		return
+	}
+	o.stopOnce.Do(func() {
+		close(o.stopCh)
+		o.factory.Shutdown()
+	})
 }
 
 func (o *raObserver) acceptedCount() uint64 {
@@ -76,45 +76,28 @@ func (o *raObserver) acceptedCount() uint64 {
 // handleAdd records the RouteAdvertisement name, creation time, and acceptance.
 // Assumes one RA maps to exactly one CUDN.
 func (o *raObserver) handleAdd(obj any) {
-	ra := obj.(*unstructured.Unstructured)
-	networkSelectors, found, err := unstructured.NestedSlice(ra.UnstructuredContent(), "spec", "networkSelectors")
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	if !found || len(networkSelectors) == 0 {
+	ra := obj.(*rav1.RouteAdvertisements)
+	if len(ra.Spec.NetworkSelectors) == 0 {
 		log.Errorf("No networkSelectors found")
 		return
 	}
-	networkSelector, ok := networkSelectors[0].(map[string]interface{})
-	if !ok {
-		log.Errorf("NetworkSelector doesn't exist")
-		return
-	}
-	labels, found, err := unstructured.NestedStringMap(networkSelector, "clusterUserDefinedNetworkSelector", "networkSelector", "matchLabels")
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	if !found {
+	networkSelector := ra.Spec.NetworkSelectors[0].ClusterUserDefinedNetworkSelector
+	if networkSelector == nil || networkSelector.NetworkSelector.MatchLabels == nil {
 		log.Errorf("No labels found in networkSelector")
 		return
 	}
 
-	ls := &metav1.LabelSelector{}
-	err = metav1.Convert_Map_string_To_string_To_v1_LabelSelector(&labels, ls, nil)
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	selector, err := metav1.LabelSelectorAsSelector(ls)
+	// Preserve the existing matchLabels-only selection of the first network.
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: networkSelector.NetworkSelector.MatchLabels,
+	})
 	if err != nil {
 		log.Error(err)
 		return
 	}
 	listOptions := metav1.ListOptions{}
 	listOptions.LabelSelector = selector.String()
-	udns, err := o.client.Resource(cudnGVR).Namespace(metav1.NamespaceAll).List(context.TODO(), listOptions)
+	udns, err := o.cudnClient.List(context.TODO(), listOptions)
 	if err != nil {
 		log.Error(err)
 		return
@@ -123,14 +106,13 @@ func (o *raObserver) handleAdd(obj any) {
 		log.Errorf("No CUDN found for RA selector")
 		return
 	}
-	cudn, _, _ := unstructured.NestedString(udns.Items[0].UnstructuredContent(), "metadata", "name")
-	raName, _, _ := unstructured.NestedString(ra.UnstructuredContent(), "metadata", "name")
-	ts, _, _ := unstructured.NestedString(ra.UnstructuredContent(), "metadata", "creationTimestamp")
-	t, err := time.Parse(time.RFC3339, ts)
-	if err != nil {
-		log.Error(err)
+	if ra.CreationTimestamp.IsZero() {
+		log.Errorf("RA %s: missing creationTimestamp", ra.Name)
 		return
 	}
+	cudn := udns.Items[0].Name
+	raName := ra.Name
+	t := ra.CreationTimestamp.Time.UTC()
 	acceptedLatency := float64(-1)
 	if transitionTime, ok := getRAAcceptedTransitionTime(ra); ok {
 		acceptedLatency = float64(transitionTime.Sub(t.UTC()).Milliseconds())
@@ -155,12 +137,12 @@ func (o *raObserver) handleAdd(obj any) {
 
 // handleUpdate records Accepted latency the first time the RA reaches Accepted=True.
 func (o *raObserver) handleUpdate(_, newObj any) {
-	ra := newObj.(*unstructured.Unstructured)
+	ra := newObj.(*rav1.RouteAdvertisements)
 	transitionTime, accepted := getRAAcceptedTransitionTime(ra)
 	if !accepted {
 		return
 	}
-	raName, _, _ := unstructured.NestedString(ra.UnstructuredContent(), "metadata", "name")
+	raName := ra.Name
 	val, ok := o.metrics.Load(raName)
 	if !ok {
 		return
@@ -177,22 +159,11 @@ func (o *raObserver) handleUpdate(_, newObj any) {
 
 // getRAAcceptedTransitionTime returns the lastTransitionTime of the Accepted=True
 // condition, and true if found.
-func getRAAcceptedTransitionTime(ra *unstructured.Unstructured) (time.Time, bool) {
-	conditions, found, err := unstructured.NestedSlice(ra.UnstructuredContent(), "status", "conditions")
-	if err != nil || !found {
-		return time.Time{}, false
-	}
-	for _, c := range conditions {
-		condition, ok := c.(map[string]interface{})
-		if !ok {
-			continue
-		}
-		condType, _, _ := unstructured.NestedString(condition, "type")
-		condStatus, _, _ := unstructured.NestedString(condition, "status")
-		if condType == raAcceptedConditionType && condStatus == "True" {
-			ltt, _, _ := unstructured.NestedString(condition, "lastTransitionTime")
-			if t, err := time.Parse(time.RFC3339, ltt); err == nil {
-				return t.UTC(), true
+func getRAAcceptedTransitionTime(ra *rav1.RouteAdvertisements) (time.Time, bool) {
+	for _, condition := range ra.Status.Conditions {
+		if condition.Type == raAcceptedConditionType && condition.Status == metav1.ConditionTrue {
+			if !condition.LastTransitionTime.IsZero() {
+				return condition.LastTransitionTime.Time.UTC(), true
 			}
 			log.Warnf("RA %s: Accepted=True but missing/invalid lastTransitionTime, using current time", ra.GetName())
 			return time.Now().UTC(), true

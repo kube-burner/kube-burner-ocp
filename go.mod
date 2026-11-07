@@ -4,6 +4,10 @@ go 1.25.0
 
 toolchain go1.25.9
 
+// OVN is used only for CRD types and generated clients. Retain the runtime
+// required by kube-burner's KEDA dependency, which still uses webhook.Validator.
+replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.19.1
+
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.0
 	github.com/aws/aws-sdk-go-v2/config v1.28.1
@@ -13,6 +17,7 @@ require (
 	github.com/kube-burner/kube-burner/v2 v2.8.7
 	github.com/openshift/api v0.0.0-20260408160412-464776f95207
 	github.com/openshift/client-go v0.0.0-20260330134249-7e1499aaacd7
+	github.com/ovn-kubernetes/ovn-kubernetes/go-controller v0.0.0-20260302222150-d9abf3077749
 	github.com/praserx/ipconv v1.2.1
 	github.com/prometheus-community/pro-bing v0.7.0
 	github.com/sirupsen/logrus v1.9.4
@@ -57,7 +62,7 @@ require (
 	github.com/dennwc/varint v1.0.0 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.17.10 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
-	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
+	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/expr-lang/expr v1.16.9 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
@@ -97,7 +102,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.6.0 // indirect
+	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.7.7 // indirect
 	github.com/kedacore/keda/v2 v2.16.0 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0 // indirect
@@ -115,7 +120,6 @@ require (
 	github.com/opensearch-project/opensearch-go v1.1.0 // indirect
 	github.com/openshift/custom-resource-status v1.1.2 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.68.0 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
@@ -147,7 +151,7 @@ require (
 	golang.org/x/term v0.43.0 // indirect
 	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
+	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/api v0.265.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
@@ -167,7 +171,7 @@ require (
 	kubevirt.io/client-go v1.8.1 // indirect
 	kubevirt.io/containerized-data-importer-api v1.64.0 // indirect
 	kubevirt.io/controller-lifecycle-operator-sdk/api v0.2.4 // indirect
-	sigs.k8s.io/controller-runtime v0.19.1 // indirect
+	sigs.k8s.io/controller-runtime v0.22.1 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
