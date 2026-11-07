@@ -162,55 +162,19 @@ func (s *raImportScenario) cleanup() {
 	}
 }
 
-// worker assigns addresses to generate routes that BGP advertises to the cluster.
-// Pinging a CUDN pod from each new address verifies that its route was imported.
+// worker consumes import tasks until shutdown or a verification failure.
 func (s *raImportScenario) worker() {
 	defer s.wg.Done()
 	for {
 		select {
-		case mc, ok := <-s.routeImportChan:
+		case route, ok := <-s.routeImportChan:
 			if !ok {
 				return
 			}
-			// Get the netlink.Link object for the given interface name
-			link, err := netlink.LinkByName(mc.link)
-			if err != nil {
-				log.Errorf("Failed to get link %s: %v", mc.link, err)
-			}
-			// Parse IP address
-			addr, err := netlink.ParseAddr(mc.addr)
-			if err != nil {
-				log.Errorf("Failed to parse IP address: %v", err)
-			}
-
-			importTimestamp := time.Now().UTC()
-			// Generate route by adding IP address to the interface
-			if err := netlink.AddrAdd(link, addr); err != nil {
-				log.Errorf("Failed to add IP address: %v", err)
-			}
-			ipAddr, _, err := net.ParseCIDR(mc.addr)
-			if err != nil {
-				log.Errorf("Failed to add IP address: %v", err)
-			}
-			importLatency, err := pingOneCudn(mc.pod, ipAddr.String())
-			if err != nil {
-				log.Errorf("Failed to verify import route %s: %v", mc.addr, err)
-				s.errCh <- fmt.Errorf("verify import route %s: %w", mc.addr, err)
+			if err := s.processImportRoute(route); err != nil {
+				s.errCh <- err
 				return
 			}
-			log.Debugf("Import route %s ping latency: %v ms", mc.addr, importLatency)
-
-			s.metrics.LoadOrStore(mc.addr, raMetric{
-				Name:       mc.addr,
-				Timestamp:  importTimestamp,
-				MetricName: raLatencyMeasurement,
-				UUID:       s.metricContext.uuid,
-				Metadata:   s.metricContext.metadata,
-				JobName:    s.metricContext.jobName,
-				Scenario:   "ImportRoutes",
-				Latency:    importLatency,
-			})
-			atomic.AddUint64(&s.verifiedRouteCount, 1)
 
 		case <-s.doneCh:
 			return
@@ -218,13 +182,57 @@ func (s *raImportScenario) worker() {
 	}
 }
 
-// pingOneCudn retries a ping from an external address to a CUDN pod. It returns
+// processImportRoute generates an external route by assigning its source address,
+// then verifies connectivity to the target pod and records the result.
+func (s *raImportScenario) processImportRoute(route routeImport) error {
+	link, err := netlink.LinkByName(route.link)
+	if err != nil {
+		log.Errorf("Failed to get link %s: %v", route.link, err)
+	}
+	addr, err := netlink.ParseAddr(route.addr)
+	if err != nil {
+		log.Errorf("Failed to parse IP address: %v", err)
+	}
+
+	importTimestamp := time.Now().UTC()
+	if err := netlink.AddrAdd(link, addr); err != nil {
+		log.Errorf("Failed to add IP address: %v", err)
+	}
+	sourceIP, _, err := net.ParseCIDR(route.addr)
+	if err != nil {
+		log.Errorf("Failed to add IP address: %v", err)
+	}
+	latency, err := pingPod(route.pod, sourceIP.String())
+	if err != nil {
+		log.Errorf("Failed to verify import route %s: %v", route.addr, err)
+		return fmt.Errorf("verify import route %s: %w", route.addr, err)
+	}
+	log.Debugf("Import route %s ping latency: %v ms", route.addr, latency)
+	s.recordImportResult(route, importTimestamp, latency)
+	return nil
+}
+
+func (s *raImportScenario) recordImportResult(route routeImport, startedAt time.Time, latency float64) {
+	s.metrics.LoadOrStore(route.addr, raMetric{
+		Name:       route.addr,
+		Timestamp:  startedAt,
+		MetricName: raLatencyMeasurement,
+		UUID:       s.metricContext.uuid,
+		Metadata:   s.metricContext.metadata,
+		JobName:    s.metricContext.jobName,
+		Scenario:   "ImportRoutes",
+		Latency:    latency,
+	})
+	atomic.AddUint64(&s.verifiedRouteCount, 1)
+}
+
+// pingPod retries a ping from an external address to a CUDN pod. It returns
 // elapsed milliseconds on success, or -1 and the last error on failure.
-func pingOneCudn(destPod, srcAddr string) (float64, error) {
+func pingPod(targetPod, sourceIP string) (float64, error) {
 	importTimestamp := time.Now().UTC()
 	var pingErr error
 	for range pingAttempts {
-		if pingErr = pingAddress(srcAddr, destPod, importPingerTimeoutMsec); pingErr == nil {
+		if pingErr = pingAddress(sourceIP, targetPod, importPingerTimeoutMsec); pingErr == nil {
 			return float64(time.Since(importTimestamp).Milliseconds()), nil
 		}
 		time.Sleep(importWaitBeforePingRetryMsec * time.Millisecond)
