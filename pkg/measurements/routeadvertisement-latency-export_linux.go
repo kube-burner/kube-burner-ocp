@@ -21,7 +21,6 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
 )
 
@@ -38,9 +37,9 @@ type raExportScenario struct {
 	cudnSubnet map[string]cudnPods
 	errCh      chan error
 
-	routeCh chan netlink.RouteUpdate
-	doneCh  chan struct{}
-	wg      sync.WaitGroup
+	subscription *raRouteSubscription
+	doneCh       chan struct{}
+	wg           sync.WaitGroup
 
 	verifiedRouteCount uint64
 	verifiedRoutes     sync.Map // subnet -> struct{}
@@ -59,12 +58,13 @@ func (s *raExportScenario) start(targets map[string]cudnPods) error {
 	s.cudnSubnet = targets
 	s.errCh = make(chan error, exportWorkerCount)
 	s.doneCh = make(chan struct{})
-	s.routeCh = make(chan netlink.RouteUpdate, 10000)
 
-	if err := netlink.RouteSubscribe(s.routeCh, s.doneCh); err != nil {
+	subscription, err := subscribeRARoutes()
+	if err != nil {
 		log.Errorf("Failed to subscribe to route updates: %v", err)
 		return err
 	}
+	s.subscription = subscription
 
 	// Start export worker goroutines
 	for range exportWorkerCount {
@@ -82,10 +82,10 @@ func (s *raExportScenario) errors() <-chan error {
 	return s.errCh
 }
 
-// stop stops the subscription and signals workers, then waits for workers.
-// The netlink subscription itself is not part of the wait group.
+// stop signals workers and stops the subscription before waiting for workers.
 func (s *raExportScenario) stop() {
 	close(s.doneCh)
+	s.subscription.stop()
 	s.wg.Wait()
 }
 
@@ -105,7 +105,7 @@ func (s *raExportScenario) worker() {
 	defer s.wg.Done()
 	for {
 		select {
-		case update, ok := <-s.routeCh:
+		case update, ok := <-s.subscription.updates():
 			if !ok {
 				return
 			}
