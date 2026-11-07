@@ -126,8 +126,8 @@ func (r *raLatency) Start(measurementWg *sync.WaitGroup) error {
 	}
 	r.observer.metricContext = metricContext
 	r.importScenario.metricContext = metricContext
-	// Preserve partial discovery results on API errors, which getPods logs.
-	r.cudnSubnet, _ = getPods(context.TODO(), r.ClientSet.CoreV1(), r.Uuid)
+	// Preserve partial discovery results on API errors, which discovery logs.
+	r.cudnSubnet, _ = discoverCUDNPods(context.TODO(), r.ClientSet.CoreV1(), r.Uuid)
 
 	// Acceptance timing is observed regardless of the connectivity mode.
 	log.Infof("Creating Router Advertisement latency watcher for %s", r.JobConfig.Name)
