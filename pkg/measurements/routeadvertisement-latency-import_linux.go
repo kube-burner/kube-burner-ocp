@@ -27,11 +27,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const (
-	importWorkerCount             = 10
-	importWaitBeforePingRetryMsec = 100
-	importPingerTimeoutMsec       = 10
-)
+const importWorkerCount = 10
 
 var (
 	// Job input defaults; generated route count is the product of these values.
@@ -67,7 +63,7 @@ type routeImport struct {
 
 // start selects a CUDN pod, creates dummy interfaces, and queues
 // one unique source CIDR per interface/address pair before starting workers.
-// It closes the populated queue so workers exit once all tasks are consumed.
+// It closes the populated queue; workers keep pending pingers alive until shutdown.
 // If no target pod is available, it returns without starting workers.
 func (s *raImportScenario) start(targets map[string]cudnPods) error {
 	s.errCh = make(chan error, importWorkerCount)
@@ -152,9 +148,23 @@ func (s *raImportScenario) errors() <-chan error {
 }
 
 // stop cancels active pings and retry delays, then waits for workers to exit.
-func (s *raImportScenario) stop() {
+func (s *raImportScenario) stop() error {
 	s.cancel()
 	s.wg.Wait()
+	// Completion may win the coordinator's select while a fatal error is queued.
+	var firstErr error
+	for {
+		select {
+		case err := <-s.errCh:
+			if firstErr == nil {
+				firstErr = err
+				continue
+			}
+			log.Debugf("Additional import scenario error: %v", err)
+		default:
+			return firstErr
+		}
+	}
 }
 
 // cleanup removes the dummy interfaces after workers have exited.
@@ -166,100 +176,121 @@ func (s *raImportScenario) cleanup() {
 	}
 }
 
-// worker consumes import tasks until shutdown or a verification failure.
-func (s *raImportScenario) worker(ctx context.Context) {
-	defer s.wg.Done()
-	for {
-		select {
-		case route, ok := <-s.routeImportChan:
-			if !ok {
-				return
+// worker configures routes and owns independent pingers until scenario shutdown.
+func (s *raImportScenario) worker(parent context.Context) {
+	ctx, cancel := context.WithCancel(parent)
+	var pingers sync.WaitGroup
+	// Each queued route is consumed once and emits at most two results. Capacity
+	// for both allows shutdown to join all pingers before draining their results.
+	results := make(chan raImportPingResult, raPingEventsPerTarget*s.expectedRouteCount)
+	var workerErr error
+	defer func() {
+		cancel()
+		pingers.Wait()
+		close(results)
+		for result := range results {
+			if result.err != nil {
+				if workerErr == nil {
+					workerErr = result.err
+				}
+				continue
 			}
-			if err := s.processImportRoute(ctx, route); err != nil {
+			s.recordImportResult(result)
+		}
+		if workerErr != nil {
+			// At most one error per worker fits the scenario's error buffer.
+			s.errCh <- workerErr
+		}
+		s.wg.Done()
+	}()
+
+	routes := s.routeImportChan
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+		select {
+		case route, ok := <-routes:
+			if !ok {
+				// Setup is finished; pending pingers still need results or timeout.
+				routes = nil
+				continue
+			}
+			target, err := prepareImportRoute(ctx, route)
+			if err != nil {
 				if ctx.Err() == nil {
-					s.errCh <- err
+					workerErr = err
 				}
 				return
 			}
-
+			if target == nil {
+				continue
+			}
+			pingers.Add(1)
+			go func(target raImportPingTarget) {
+				defer pingers.Done()
+				runImportPinger(ctx, target, results)
+			}(*target)
+		case result := <-results:
+			if result.err != nil {
+				workerErr = result.err
+				return
+			}
+			s.recordImportResult(result)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-// processImportRoute generates an external route by assigning its source address,
-// then verifies connectivity to the target pod and records the result.
-// Setup errors are logged and skipped; verification errors are returned.
-func (s *raImportScenario) processImportRoute(ctx context.Context, route routeImport) error {
+// prepareImportRoute assigns an external source address and returns its ping target.
+// Setup errors are logged and skipped so workers can configure remaining routes.
+func prepareImportRoute(ctx context.Context, route routeImport) (*raImportPingTarget, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	link, err := netlink.LinkByName(route.link)
 	if err != nil {
 		log.Errorf("Skipping import route %s: failed to get link %s: %v", route.addr, route.link, err)
-		return nil
+		return nil, nil
 	}
 	addr, err := netlink.ParseAddr(route.addr)
 	if err != nil {
 		log.Errorf("Skipping import route %s: failed to parse IP address: %v", route.addr, err)
-		return nil
+		return nil, nil
 	}
 
 	importTimestamp := time.Now().UTC()
 	if err := netlink.AddrAdd(link, addr); err != nil {
 		log.Errorf("Skipping import route %s: failed to add IP address to %s: %v", route.addr, route.link, err)
-		return nil
+		return nil, nil
 	}
 	sourceIP, _, err := net.ParseCIDR(route.addr)
 	if err != nil {
 		log.Errorf("Skipping import route %s: failed to parse source CIDR: %v", route.addr, err)
-		return nil
+		return nil, nil
 	}
-	latency, err := pingPod(ctx, route.pod, sourceIP.String())
-	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		log.Errorf("Failed to verify import route %s: %v", route.addr, err)
-		return fmt.Errorf("verify import route %s: %w", route.addr, err)
-	}
-	log.Debugf("Import route %s ping latency: %v ms", route.addr, latency)
-	s.recordImportResult(route, importTimestamp, latency)
-	return nil
+	return &raImportPingTarget{
+		route:          route,
+		sourceIP:       sourceIP.String(),
+		routeTimestamp: importTimestamp,
+	}, nil
 }
 
-func (s *raImportScenario) recordImportResult(route routeImport, startedAt time.Time, latency float64) {
+func (s *raImportScenario) recordImportResult(result raImportPingResult) {
+	route := result.target.route
+	log.Debugf("Import route %s ping latency: %v ms", route.addr, result.latency)
 	s.metrics.LoadOrStore(route.addr, raMetric{
 		Name:       route.addr,
-		Timestamp:  startedAt,
+		Timestamp:  result.target.routeTimestamp,
 		MetricName: raLatencyMeasurement,
 		UUID:       s.metricContext.uuid,
 		Metadata:   s.metricContext.metadata,
 		JobName:    s.metricContext.jobName,
 		Scenario:   "ImportRoutes",
-		Latency:    latency,
+		Latency:    result.latency,
 	})
 	atomic.AddUint64(&s.verifiedRouteCount, 1)
-}
-
-// pingPod retries until the pod replies or the scenario cancels its context.
-// It returns elapsed milliseconds on success, or -1 and the cancellation error.
-func pingPod(ctx context.Context, targetPod, sourceIP string) (float64, error) {
-	importTimestamp := time.Now().UTC()
-	for {
-		if err := ctx.Err(); err != nil {
-			return -1, err
-		}
-		if err := pingAddress(ctx, sourceIP, targetPod, importPingerTimeoutMsec); err == nil {
-			return float64(time.Since(importTimestamp).Milliseconds()), nil
-		}
-		select {
-		case <-ctx.Done():
-			return -1, ctx.Err()
-		case <-time.After(importWaitBeforePingRetryMsec * time.Millisecond):
-		}
-	}
 }
 
 // deleteDummyInterface removes an import interface and its assigned addresses/routes.

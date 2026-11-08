@@ -18,18 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
-	"sync"
 	"time"
-
-	probing "github.com/prometheus-community/pro-bing"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/sys/unix"
-)
-
-const (
-	exportPingInterval        = 100 * time.Millisecond
-	exportPingEventsPerTarget = 2
 )
 
 type raExportPingTarget struct {
@@ -48,63 +37,12 @@ type raExportPingResult struct {
 // runExportPinger emits one first reply and, at most, one terminal error. The
 // owning worker supplies enough result capacity to join pingers before draining.
 func runExportPinger(ctx context.Context, target raExportPingTarget, results chan<- raExportPingResult) {
-	var firstReply sync.Once
-	for ctx.Err() == nil {
-		pinger, err := probing.NewPinger(target.pod)
-		if err != nil {
-			results <- exportPingFailure(target, err)
-			return
-		}
-		pinger.Count = -1
-		pinger.Interval = exportPingInterval
-		pinger.RecordRtts = false
-		pinger.RecordTTLs = false
-		pinger.SetLogger(probing.NoopLogger{})
-		pinger.OnRecv = func(_ *probing.Packet) {
-			firstReply.Do(func() {
-				results <- raExportPingResult{target: target, firstReply: time.Now().UTC()}
-				pinger.Stop()
-			})
-		}
-		var sendErr error
-		pinger.OnSendError = func(_ *probing.Packet, err error) {
-			log.Debugf("Export ping to pod %s failed: %v", target.pod, err)
-			if !retryableExportPingError(err) {
-				// pro-bing otherwise logs errors from later sends and keeps running.
-				sendErr = err
-				pinger.Stop()
-			}
-		}
-		// RunWithContext also joins the library's sender and receiver goroutines.
-		// The first reply stops the pinger; worker cancellation stops unanswered pings.
-		err = pinger.RunWithContext(ctx)
-		if sendErr != nil {
-			results <- exportPingFailure(target, sendErr)
-			return
-		}
-		if pinger.Statistics().PacketsRecv > 0 {
-			return
-		}
-		if ctx.Err() != nil {
-			return
-		}
-		if !retryableExportPingError(err) {
-			if err == nil {
-				err = fmt.Errorf("pinger stopped before worker shutdown")
-			}
-			results <- exportPingFailure(target, err)
-			return
-		}
-		// A transient error can terminate a pro-bing instance. Keep the logical
-		// ping task alive by replacing that instance within the same worker.
-		log.Debugf("Retrying export pinger for pod %s after network error: %v", target.pod, err)
-		timer := time.NewTimer(exportPingInterval)
-		select {
-		case <-ctx.Done():
-			timer.Stop()
-			return
-		case <-timer.C:
-		}
+	firstReply, err := pingPod(ctx, target.pod, "")
+	if !firstReply.IsZero() {
+		results <- raExportPingResult{target: target, firstReply: firstReply}
+	}
+	if err != nil && !errors.Is(err, ctx.Err()) {
+		results <- exportPingFailure(target, err)
 	}
 }
 
@@ -113,15 +51,4 @@ func exportPingFailure(target raExportPingTarget, err error) raExportPingResult 
 		target: target,
 		err:    fmt.Errorf("verify export route %s for CUDN %s: %w", target.subnet, target.cudn, err),
 	}
-}
-
-func retryableExportPingError(err error) bool {
-	var networkErr net.Error
-	if errors.As(err, &networkErr) && networkErr.Timeout() {
-		return true
-	}
-	return errors.Is(err, unix.ENETUNREACH) || errors.Is(err, unix.EHOSTUNREACH) ||
-		errors.Is(err, unix.ENETDOWN) || errors.Is(err, unix.EHOSTDOWN) ||
-		errors.Is(err, unix.ECONNREFUSED) || errors.Is(err, unix.ENOBUFS) ||
-		errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.ETIMEDOUT)
 }

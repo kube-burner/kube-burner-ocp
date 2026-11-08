@@ -119,7 +119,7 @@ func (s *raExportScenario) worker() {
 	var pingers sync.WaitGroup
 	// Each claimed CUDN emits at most a first reply and a terminal error. Keeping
 	// room for both lets shutdown join producers before draining pending results.
-	results := make(chan raExportPingResult, exportPingEventsPerTarget*len(s.cudnSubnet))
+	results := make(chan raExportPingResult, raPingEventsPerTarget*len(s.cudnSubnet))
 	var workerErr error
 	defer func() {
 		cancel()

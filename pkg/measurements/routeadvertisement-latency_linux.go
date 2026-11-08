@@ -234,10 +234,13 @@ func (r *raLatency) Stop() error {
 		importRoutesCount = int(r.importScenario.expectedCount())
 		desiredCount := r.importScenario.expectedCount()
 		err := r.waitForScenarioCompletion(desiredCount, importScenarioMaxTimeout, "import")
-		r.importScenario.stop()
+		stopErr := r.importScenario.stop()
 		r.importScenario.cleanup()
 		if err != nil {
 			return err
+		}
+		if stopErr != nil {
+			return fmt.Errorf("import scenario failed: %w", stopErr)
 		}
 	} else {
 		log.Debugf("Import scenario is not enabled")
