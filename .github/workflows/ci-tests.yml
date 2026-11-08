@@ -17,3 +17,6 @@ jobs:
 
   build-matrix:
     uses: ./.github/workflows/build-matrix.yml
+
+  ra-integration:
+    uses: ./.github/workflows/test-ra-integration.yml

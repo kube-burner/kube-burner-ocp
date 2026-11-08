@@ -1,0 +1,23 @@
+name: Route advertisement integration tests
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ra-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run API and network namespace integration tests
+        run: make test-ra-integration RA_INTEGRATION_RUNNER="sudo --preserve-env=KUBEBUILDER_ASSETS"
