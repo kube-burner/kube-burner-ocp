@@ -35,6 +35,11 @@ import (
 
 var supportedRaLatencyJobTypes = []config.JobType{config.CreationJob, config.PatchJob}
 
+// msToDuration converts a latency expressed in milliseconds to a Duration for readable logging.
+func msToDuration(ms float64) time.Duration {
+	return time.Duration(ms * float64(time.Millisecond))
+}
+
 // raLatency coordinates RA observation and the enabled connectivity scenarios.
 type raLatency struct {
 	measurements.BaseMeasurement
@@ -263,9 +268,12 @@ func (r *raLatency) normalizeMetrics() float64 {
 	for _, m := range generateResults(&r.Metrics, r.exportScenario.results()) {
 		switch m.Scenario {
 		case "ExportRoutes":
-			log.Debugf("%s: acceptedLatency=%v ms latency=%v ms netlinkRouteLatency=%v ms", m.Name, m.AcceptedLatency, m.Latency, m.NetlinkRouteLatency)
+			log.Debugf("%s: acceptedLatency=%v latency=%v netlinkRouteLatency=%v", m.Name,
+				msToDuration(m.AcceptedLatency),
+				msToDuration(m.Latency),
+				msToDuration(m.NetlinkRouteLatency))
 		case "ImportRoutes":
-			log.Debugf("%s: importLatency=%v ms", m.Name, m.Latency)
+			log.Debugf("%s: importLatency=%v", m.Name, msToDuration(m.Latency))
 		}
 		r.NormLatencies = append(r.NormLatencies, m)
 	}

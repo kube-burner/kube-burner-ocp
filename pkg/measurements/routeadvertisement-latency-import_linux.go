@@ -279,7 +279,7 @@ func prepareImportRoute(ctx context.Context, route routeImport) (*raImportPingTa
 
 func (s *raImportScenario) recordImportResult(result raImportPingResult) {
 	route := result.target.route
-	log.Debugf("Import route %s ping latency: %v ms", route.addr, result.latency)
+	log.Debugf("Import route %s ping latency: %v", route.addr, msToDuration(result.latency))
 	s.metrics.LoadOrStore(route.addr, raMetric{
 		Name:       route.addr,
 		Timestamp:  result.target.routeTimestamp,

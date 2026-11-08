@@ -116,7 +116,7 @@ func (o *raObserver) handleAdd(obj any) {
 	acceptedLatency := float64(-1)
 	if transitionTime, ok := getRAAcceptedTransitionTime(ra); ok {
 		acceptedLatency = float64(transitionTime.Sub(t.UTC()).Milliseconds())
-		log.Debugf("RA %s already has Accepted=True, acceptedLatency: %vms", raName, acceptedLatency)
+		log.Debugf("RA %s already has Accepted=True, acceptedLatency: %v", raName, msToDuration(acceptedLatency))
 	}
 	log.Debugf("RA %s discovered at: %v created at: %v cudn: %s", raName, time.Now().UTC(), t.UTC(), cudn)
 	_, loaded := o.metrics.LoadOrStore(raName, raMetric{
@@ -154,7 +154,7 @@ func (o *raObserver) handleUpdate(_, newObj any) {
 	m.AcceptedLatency = float64(transitionTime.Sub(m.Timestamp).Milliseconds())
 	o.metrics.Store(raName, m)
 	atomic.AddUint64(&o.verifiedAcceptedCount, 1)
-	log.Debugf("RA %s Accepted after %vms", raName, m.AcceptedLatency)
+	log.Debugf("RA %s Accepted after %v", raName, msToDuration(m.AcceptedLatency))
 }
 
 // getRAAcceptedTransitionTime returns the lastTransitionTime of the Accepted=True
