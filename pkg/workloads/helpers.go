@@ -207,6 +207,37 @@ func buildNodeSelectorJSON(selector string) (string, error) {
 	return string(nodeSelectorJSON), nil
 }
 
+// buildNodeLabelsJSON extracts equality-based labels from a Kubernetes label selector
+// string and returns them as a JSON map suitable for use as preLoadNodeLabels.
+// Inequality selectors (!=) are skipped since NodeSelector only supports equality matching.
+func buildNodeLabelsJSON(selector string) (string, error) {
+	labelSelector, err := labels.Parse(selector)
+	if err != nil {
+		return "", err
+	}
+	nodeLabels := make(map[string]string)
+	reqList, _ := labelSelector.Requirements()
+	for _, req := range reqList {
+		if req.Operator() != "=" {
+			continue
+		}
+		values := req.Values().List()
+		if len(values) == 0 || values[0] == "" {
+			nodeLabels[req.Key()] = ""
+		} else {
+			nodeLabels[req.Key()] = values[0]
+		}
+	}
+	if len(nodeLabels) == 0 {
+		return "", nil
+	}
+	nodeLabelsJSON, err := json.Marshal(nodeLabels)
+	if err != nil {
+		return "", err
+	}
+	return string(nodeLabelsJSON), nil
+}
+
 // addWorkloadFlagsToMetadata adds all flag values from the command to SummaryMetadata
 func addWorkloadFlagsToMetadata(cmd *cobra.Command, wh *workloads.WorkloadHelper) {
 	workloadFlags := make(map[string]string)
