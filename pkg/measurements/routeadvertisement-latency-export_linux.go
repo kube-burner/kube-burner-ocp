@@ -80,18 +80,26 @@ func (s *raExportScenario) errors() <-chan error {
 	return s.errCh
 }
 
-// stop signals workers and stops the subscription before waiting for workers.
+// stop signals workers, stops the subscription, and waits for workers.
+// Any errors queued by the workers are drained so they cannot be read later
+// and reported against another scenario.
 func (s *raExportScenario) stop() error {
 	close(s.doneCh)
 	s.subscription.stop()
 	s.wg.Wait()
-	// A pinger can fail while the coordinator is observing the final success.
-	// Keep that error visible even if completion won the coordinator's select.
-	select {
-	case err := <-s.errCh:
-		return err
-	default:
-		return nil
+
+	var firstErr error
+	for {
+		select {
+		case err := <-s.errCh:
+			if firstErr == nil {
+				firstErr = err
+				continue
+			}
+			log.Debugf("Additional export scenario error: %v", err)
+		default:
+			return firstErr
+		}
 	}
 }
 
