@@ -63,6 +63,7 @@ func runExportPinger(ctx context.Context, target raExportPingTarget, results cha
 		pinger.OnRecv = func(_ *probing.Packet) {
 			firstReply.Do(func() {
 				results <- raExportPingResult{target: target, firstReply: time.Now().UTC()}
+				pinger.Stop()
 			})
 		}
 		var sendErr error
@@ -75,10 +76,13 @@ func runExportPinger(ctx context.Context, target raExportPingTarget, results cha
 			}
 		}
 		// RunWithContext also joins the library's sender and receiver goroutines.
-		// The worker's context controls lifetime, including after the first reply.
+		// The first reply stops the pinger; worker cancellation stops unanswered pings.
 		err = pinger.RunWithContext(ctx)
 		if sendErr != nil {
 			results <- exportPingFailure(target, sendErr)
+			return
+		}
+		if pinger.Statistics().PacketsRecv > 0 {
 			return
 		}
 		if ctx.Err() != nil {

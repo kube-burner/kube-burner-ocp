@@ -15,6 +15,7 @@
 package measurements
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -22,10 +23,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const pingAttempts = 100
-
-// pingAddress sends one ping, optionally bound to a source address.
-func pingAddress(srcIP, destIP string, pingerTimeoutMsec int) error {
+// pingAddress sends one cancellable ping, optionally bound to a source address.
+func pingAddress(ctx context.Context, srcIP, destIP string, pingerTimeoutMsec int) error {
 	pinger, err := probing.NewPinger(destIP)
 	if err != nil {
 		log.Debugf("Failed to create pinger for %s: %v", destIP, err)
@@ -40,7 +39,7 @@ func pingAddress(srcIP, destIP string, pingerTimeoutMsec int) error {
 	}
 	pinger.Count = 1
 	pinger.Timeout = time.Duration(pingerTimeoutMsec) * time.Millisecond
-	if err := pinger.Run(); err != nil {
+	if err := pinger.RunWithContext(ctx); err != nil {
 		log.Debugf("Ping to %s failed: %v", destIP, err)
 		return err
 	}

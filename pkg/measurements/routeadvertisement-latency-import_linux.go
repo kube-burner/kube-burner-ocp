@@ -15,6 +15,7 @@
 package measurements
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"slices"
@@ -50,7 +51,7 @@ type raImportScenario struct {
 	errCh                  chan error
 
 	routeImportChan chan routeImport
-	doneCh          chan struct{}
+	cancel          context.CancelFunc
 	wg              sync.WaitGroup
 
 	verifiedRouteCount uint64
@@ -70,20 +71,23 @@ type routeImport struct {
 // If no target pod is available, it returns without starting workers.
 func (s *raImportScenario) start(targets map[string]cudnPods) error {
 	s.errCh = make(chan error, importWorkerCount)
-	s.doneCh = make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
 
 	targetPod := selectImportPod(targets)
 	if targetPod == "" {
+		cancel()
 		return nil
 	}
 	if err := s.createDummyInterfaces(); err != nil {
+		cancel()
 		return err
 	}
 	s.queueImportRoutes(targetPod)
 
 	for range importWorkerCount {
 		s.wg.Add(1)
-		go s.worker()
+		go s.worker(ctx)
 	}
 	return nil
 }
@@ -147,9 +151,9 @@ func (s *raImportScenario) errors() <-chan error {
 	return s.errCh
 }
 
-// stop signals shutdown and waits for in-flight ping attempts to finish.
+// stop cancels active pings and retry delays, then waits for workers to exit.
 func (s *raImportScenario) stop() {
-	close(s.doneCh)
+	s.cancel()
 	s.wg.Wait()
 }
 
@@ -163,7 +167,7 @@ func (s *raImportScenario) cleanup() {
 }
 
 // worker consumes import tasks until shutdown or a verification failure.
-func (s *raImportScenario) worker() {
+func (s *raImportScenario) worker(ctx context.Context) {
 	defer s.wg.Done()
 	for {
 		select {
@@ -171,12 +175,14 @@ func (s *raImportScenario) worker() {
 			if !ok {
 				return
 			}
-			if err := s.processImportRoute(route); err != nil {
-				s.errCh <- err
+			if err := s.processImportRoute(ctx, route); err != nil {
+				if ctx.Err() == nil {
+					s.errCh <- err
+				}
 				return
 			}
 
-		case <-s.doneCh:
+		case <-ctx.Done():
 			return
 		}
 	}
@@ -185,7 +191,10 @@ func (s *raImportScenario) worker() {
 // processImportRoute generates an external route by assigning its source address,
 // then verifies connectivity to the target pod and records the result.
 // Setup errors are logged and skipped; verification errors are returned.
-func (s *raImportScenario) processImportRoute(route routeImport) error {
+func (s *raImportScenario) processImportRoute(ctx context.Context, route routeImport) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	link, err := netlink.LinkByName(route.link)
 	if err != nil {
 		log.Errorf("Skipping import route %s: failed to get link %s: %v", route.addr, route.link, err)
@@ -207,8 +216,11 @@ func (s *raImportScenario) processImportRoute(route routeImport) error {
 		log.Errorf("Skipping import route %s: failed to parse source CIDR: %v", route.addr, err)
 		return nil
 	}
-	latency, err := pingPod(route.pod, sourceIP.String())
+	latency, err := pingPod(ctx, route.pod, sourceIP.String())
 	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		log.Errorf("Failed to verify import route %s: %v", route.addr, err)
 		return fmt.Errorf("verify import route %s: %w", route.addr, err)
 	}
@@ -231,18 +243,23 @@ func (s *raImportScenario) recordImportResult(route routeImport, startedAt time.
 	atomic.AddUint64(&s.verifiedRouteCount, 1)
 }
 
-// pingPod retries a ping from an external address to a CUDN pod. It returns
-// elapsed milliseconds on success, or -1 and the last error on failure.
-func pingPod(targetPod, sourceIP string) (float64, error) {
+// pingPod retries until the pod replies or the scenario cancels its context.
+// It returns elapsed milliseconds on success, or -1 and the cancellation error.
+func pingPod(ctx context.Context, targetPod, sourceIP string) (float64, error) {
 	importTimestamp := time.Now().UTC()
-	var pingErr error
-	for range pingAttempts {
-		if pingErr = pingAddress(sourceIP, targetPod, importPingerTimeoutMsec); pingErr == nil {
+	for {
+		if err := ctx.Err(); err != nil {
+			return -1, err
+		}
+		if err := pingAddress(ctx, sourceIP, targetPod, importPingerTimeoutMsec); err == nil {
 			return float64(time.Since(importTimestamp).Milliseconds()), nil
 		}
-		time.Sleep(importWaitBeforePingRetryMsec * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return -1, ctx.Err()
+		case <-time.After(importWaitBeforePingRetryMsec * time.Millisecond):
+		}
 	}
-	return -1, pingErr
 }
 
 // deleteDummyInterface removes an import interface and its assigned addresses/routes.
