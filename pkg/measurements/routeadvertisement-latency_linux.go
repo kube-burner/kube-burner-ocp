@@ -211,9 +211,12 @@ func (r *raLatency) Stop() error {
 		log.Debugf("Export scenario is enabled")
 		// Workers verify per CUDN; the target assumes one subnet per CUDN.
 		err := r.waitForScenarioCompletion(uint64(len(r.cudnSubnet)), exportScenarioMaxTimeout, "export")
-		r.exportScenario.stop()
+		stopErr := r.exportScenario.stop()
 		if err != nil {
 			return err
+		}
+		if stopErr != nil {
+			return fmt.Errorf("export scenario failed: %w", stopErr)
 		}
 	} else {
 		log.Debugf("Export scenario is not enabled")
