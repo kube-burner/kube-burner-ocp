@@ -10,7 +10,7 @@ spec:
       clusterUserDefinedNetworkSelector:
         networkSelector:
           matchLabels:
-            cudn-{{.Iteration}}: ""
+            kube-burner.io/udn-bgp-ra: "{{.Iteration}}"
   advertisements:
   - "PodNetwork"
 {{- if not $.layer2 }}

@@ -116,11 +116,11 @@ type raMetric struct {
 	Metadata any    `json:"metadata,omitempty"`
 	// whether this metric represents route latency for import scenario or export scenario
 	Scenario string `json:"scenario,omitempty"`
-	// CUDN advertised by this route advertisement (assumes one RA maps to one CUDN)
-	cudn string
+	// CUDNs advertised by this route advertisement.
+	cudns []string
 	// ms from RA creation to Accepted=True; -1 if never observed (export only)
 	AcceptedLatency float64 `json:"acceptedLatency,omitempty"`
-	// ping test latency in ms for a single target (one pod for export, one CUDN for import)
+	// Ping latency in ms: the last selected CUDN ready for export, one target for import.
 	Latency float64 `json:"latency,omitempty"`
 	// netlink route detection latency in ms
 	NetlinkRouteLatency float64 `json:"netlinkRouteLatency,omitempty"`
@@ -267,7 +267,6 @@ func (r *raLatency) getPods() error {
 }
 
 // Record RouteAdvertisement name and creation timestamp when routeadvertisement resource is detected by the API.
-// Assumes one RA maps to exactly one CUDN.
 func (r *raLatency) handleAdd(obj any) {
 	ra := obj.(*unstructured.Unstructured)
 	networkSelectors, found, err := unstructured.NestedSlice(ra.UnstructuredContent(), "spec", "networkSelectors")
@@ -316,7 +315,10 @@ func (r *raLatency) handleAdd(obj any) {
 		log.Errorf("No CUDN found for RA selector")
 		return
 	}
-	cudn, _, _ := unstructured.NestedString(udns.Items[0].UnstructuredContent(), "metadata", "name")
+	cudns := make([]string, 0, len(udns.Items))
+	for _, udn := range udns.Items {
+		cudns = append(cudns, udn.GetName())
+	}
 	raName, _, _ := unstructured.NestedString(ra.UnstructuredContent(), "metadata", "name")
 	ts, _, _ := unstructured.NestedString(ra.UnstructuredContent(), "metadata", "creationTimestamp")
 	t, err := time.Parse(time.RFC3339, ts)
@@ -329,11 +331,11 @@ func (r *raLatency) handleAdd(obj any) {
 		acceptedLatency = float64(transitionTime.Sub(t.UTC()).Milliseconds())
 		log.Debugf("RA %s already has Accepted=True, acceptedLatency: %vms", raName, acceptedLatency)
 	}
-	log.Debugf("RA %s discovered at: %v created at: %v cudn: %s", raName, time.Now().UTC(), t.UTC(), cudn)
+	log.Debugf("RA %s discovered at: %v created at: %v cudns: %v", raName, time.Now().UTC(), t.UTC(), cudns)
 	_, loaded := r.Metrics.LoadOrStore(raName, raMetric{
 		Name:            raName,
 		Timestamp:       t.UTC(),
-		cudn:            cudn,
+		cudns:           cudns,
 		MetricName:      raLatencyMeasurement,
 		UUID:            r.Uuid,
 		Metadata:        r.Metadata,
@@ -890,13 +892,25 @@ func (r *raLatency) normalizeMetrics() float64 {
 		case "ExportRoutes":
 			m.Latency = -1
 			m.NetlinkRouteLatency = -1
-			val, exists := r.cudnConnTimestamp.Load(m.cudn)
-			if exists {
+			readyCudns, routedCudns := 0, 0
+			for _, cudn := range m.cudns {
+				val, exists := r.cudnConnTimestamp.Load(cudn)
+				if !exists {
+					continue
+				}
 				nlRouteVal := val.(netlinkRoutes)
 				if !nlRouteVal.pingTimestamp.IsZero() {
-					m.Latency = float64(nlRouteVal.pingTimestamp.Sub(m.Timestamp).Milliseconds())
+					m.Latency = max(m.Latency, float64(nlRouteVal.pingTimestamp.Sub(m.Timestamp).Milliseconds()))
+					readyCudns++
 				}
-				m.NetlinkRouteLatency = float64(nlRouteVal.routeTimestamp.Sub(m.Timestamp).Milliseconds())
+				m.NetlinkRouteLatency = max(m.NetlinkRouteLatency, float64(nlRouteVal.routeTimestamp.Sub(m.Timestamp).Milliseconds()))
+				routedCudns++
+			}
+			if readyCudns != len(m.cudns) {
+				m.Latency = -1
+			}
+			if routedCudns != len(m.cudns) {
+				m.NetlinkRouteLatency = -1
 			}
 			log.Debugf("%s: acceptedLatency=%v ms latency=%v ms netlinkRouteLatency=%v ms", m.Name, m.AcceptedLatency, m.Latency, m.NetlinkRouteLatency)
 		case "ImportRoutes":
