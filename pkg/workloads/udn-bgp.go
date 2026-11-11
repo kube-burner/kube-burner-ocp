@@ -56,6 +56,10 @@ func validateFrrExternalIP(frrExternalIP string) error {
 // NewUdnBgp holds udn-bgp workload
 func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, namespacePerCudn, cidrsPerCudn int
+	var exportWorkerCount, importWorkerCount int
+	var importWaitBeforePingRetryMsec, importPingerTimeoutMsec int
+	var exportWaitBeforePingRetryMsec, exportPingerTimeoutMsec int
+	var numDummyIfaces, numAddressOnDummyIface int
 	var enableVm, layer2, pprof bool
 	var frrExternalIP string
 	var raConnectionCheck string
@@ -97,6 +101,14 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["CIDRS_PER_CUDN"] = cidrsPerCudn
 			AdditionalVars["ENABLE_VM"] = enableVm
 			AdditionalVars["LAYER2"] = layer2
+			AdditionalVars["EXPORT_WORKER_COUNT"] = exportWorkerCount
+			AdditionalVars["IMPORT_WORKER_COUNT"] = importWorkerCount
+			AdditionalVars["IMPORT_WAIT_BEFORE_PING_RETRY_MSEC"] = importWaitBeforePingRetryMsec
+			AdditionalVars["IMPORT_PINGER_TIMEOUT_MSEC"] = importPingerTimeoutMsec
+			AdditionalVars["EXPORT_WAIT_BEFORE_PING_RETRY_MSEC"] = exportWaitBeforePingRetryMsec
+			AdditionalVars["EXPORT_PINGER_TIMEOUT_MSEC"] = exportPingerTimeoutMsec
+			AdditionalVars["NUM_DUMMY_IFACES"] = numDummyIfaces
+			AdditionalVars["NUM_ADDRESS_ON_DUMMY_IFACE"] = numAddressOnDummyIface
 			AdditionalVars["RA_CONNECTION_CHECK"] = raConnectionCheck
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
@@ -114,6 +126,14 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&cidrsPerCudn, "cidrs-per-cudn", 1, "Number of CIDRs per CUDN")
 	cmd.Flags().StringVar(&frrExternalIP, "frr-external-ip", "", "IP address of the external FRR router (required)")
 	cmd.Flags().StringVar(&raConnectionCheck, "ra-connection-check", "import,export", "RA connection check mode: none (only accepted latency), export (accepted latency + export ping), import (accepted latency + import ping), import,export (all checks)")
+	cmd.Flags().IntVar(&exportWorkerCount, "export-worker-count", 20, "Number of workers verifying routes advertised from the cluster")
+	cmd.Flags().IntVar(&importWorkerCount, "import-worker-count", 10, "Number of workers generating external routes and verifying import")
+	cmd.Flags().IntVar(&importWaitBeforePingRetryMsec, "import-wait-before-ping-retry-msec", 100, "Wait before retrying import ping, in milliseconds")
+	cmd.Flags().IntVar(&importPingerTimeoutMsec, "import-pinger-timeout-msec", 10, "Import ping timeout, in milliseconds")
+	cmd.Flags().IntVar(&exportWaitBeforePingRetryMsec, "export-wait-before-ping-retry-msec", 100, "Wait before retrying export ping, in milliseconds")
+	cmd.Flags().IntVar(&exportPingerTimeoutMsec, "export-pinger-timeout-msec", 100, "Export ping timeout, in milliseconds")
+	cmd.Flags().IntVar(&numDummyIfaces, "num-dummy-ifaces", 20, "Number of dummy interfaces used to generate import routes")
+	cmd.Flags().IntVar(&numAddressOnDummyIface, "num-address-on-dummy-iface", 10, "Number of addresses per dummy interface used to generate import routes")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
 	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
