@@ -247,7 +247,7 @@ The default metrics profile (`metrics.yml`) collects standard OpenShift/kube met
 
 ### pprof Collection
 
-With [`--pprof`](#cli-flags), CPU and heap profiles are collected from ovnkube-controller and ovnkube-control-plane at configurable intervals (`--pprof-interval`).
+With [`--pprof`](#cli-flags), CPU and heap profiles are collected from ovnkube-controller and ovnkube-control-plane at configurable intervals (`--pprof-interval`). Use [`--pprof-components`](#cli-flags) to choose the profiled components, see [pprof collection](../../../README.md#pprof-collection) for the supported ones.
 
 ---
 
@@ -363,6 +363,7 @@ kube-burner-ocp cudn-density \
 | `--pod-ready-threshold` | `2m` | P99 pod ready timeout threshold |
 | `--pprof` | `false` | Enable [pprof collection](#pprof-collection) for ovnkube components |
 | `--pprof-interval` | `0` | Interval between pprof collections |
+| `--pprof-components` | | Comma separated list of components to collect pprof from, it can be combined with `--pprof`. See [pprof collection](#pprof-collection) |
 | `--churn-cycles` | `0` | Number of churn cycles to execute |
 | `--churn-duration` | `0` | Total churn duration |
 | `--churn-delay` | `2m` | Delay between churn rounds |
