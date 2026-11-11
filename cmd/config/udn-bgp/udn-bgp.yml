@@ -140,6 +140,7 @@ jobs:
         inputVars:
           exportWorkerCount: {{.EXPORT_WORKER_COUNT}}
           importWorkerCount: {{.IMPORT_WORKER_COUNT}}
+          maxConcurrentImportPings: {{.MAX_CONCURRENT_IMPORT_PINGS}}
           importWaitBeforePingRetryMsec: {{.IMPORT_WAIT_BEFORE_PING_RETRY_MSEC}}
           importPingerTimeoutMsec: {{.IMPORT_PINGER_TIMEOUT_MSEC}}
           exportWaitBeforePingRetryMsec: {{.EXPORT_WAIT_BEFORE_PING_RETRY_MSEC}}
