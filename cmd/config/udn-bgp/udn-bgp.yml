@@ -138,9 +138,13 @@ jobs:
       - objectTemplate: ra.yml
         replicas: 1
         inputVars:
-          numDummyIfaces: 10
-          numAddressOnDummyIface: 20
-          exportScenarioMaxTimeout: 1h
-          importScenarioMaxTimeout: 1h
+          exportWorkerCount: {{.EXPORT_WORKER_COUNT}}
+          importWorkerCount: {{.IMPORT_WORKER_COUNT}}
+          importWaitBeforePingRetryMsec: {{.IMPORT_WAIT_BEFORE_PING_RETRY_MSEC}}
+          importPingerTimeoutMsec: {{.IMPORT_PINGER_TIMEOUT_MSEC}}
+          exportWaitBeforePingRetryMsec: {{.EXPORT_WAIT_BEFORE_PING_RETRY_MSEC}}
+          exportPingerTimeoutMsec: {{.EXPORT_PINGER_TIMEOUT_MSEC}}
+          numDummyIfaces: {{.NUM_DUMMY_IFACES}}
+          numAddressOnDummyIface: {{.NUM_ADDRESS_ON_DUMMY_IFACE}}
           layer2: {{.LAYER2}}
           raConnectionCheck: "{{.RA_CONNECTION_CHECK}}"
