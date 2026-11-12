@@ -150,6 +150,38 @@ This metadata can be used for filtering and analysis in your metrics backend.
 !!! Note
     Only local flags specific to each workload are captured. Persistent flags from the parent command (such as `--uuid`, `--qps`, `--burst`, etc.) are not included in `workloadFlags` to avoid duplication..
 
+### pprof collection
+
+Several workloads can collect pprof CPU and heap profiles from cluster components while they run, using the kube-burner [pprof measurement](https://kube-burner.github.io/kube-burner/latest/measurements/#pprof-collection). This is supported by `cluster-density-v2`, `node-density`, `node-density-cni`, `node-density-heavy`, `udn-density-pods`, `cudn-density-pods`, `cudn-density`, `virt-udn-density`, `virt-cudn-density` and `udn-bgp`, through the following flags:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--pprof` | `false` | Collect profiles from the default components: `ovnkube-controller` and `ovnkube-control-plane` |
+| `--pprof-components` | | Comma separated list of components to collect profiles from. It can be combined with `--pprof` |
+| `--pprof-interval` | `0` | Interval between pprof collections, `0` disables the periodic collection |
+
+The supported components are:
+
+| Component | Profiles | Collected from |
+|-----------|----------|----------------|
+| `ovnkube-controller` | `ovnkube-controller-heap`, `ovnkube-controller-cpu` | The `ovnkube-node` pods |
+| `ovnkube-control-plane` | `ovnk-control-plane-heap`, `ovnk-control-plane-cpu` | The `ovnkube-control-plane` pods |
+| `kubelet` | `kubelet-heap`, `kubelet-cpu` | The kubelet of every worker node |
+| `crio` | `crio-heap`, `crio-cpu` | The CRI-O socket of every worker node |
+
+`kubelet` and `crio` are node level components: their profiles are collected through a DaemonSet that kube-burner deploys on the worker nodes for the duration of the benchmark. Profiles are written to the `pprof-data` directory.
+
+These flags are also available in the `init` command: the embedded configurations render the pprof measurement from the `PPROF`, `PPROF_INTERVAL`, `PPROF_TARGETS` and `PPROF_NODE_TARGETS` template variables, which are set from them.
+
+For example, to collect profiles from ovnkube-controller, kubelet and CRI-O every 5 minutes:
+
+```console
+kube-burner-ocp cluster-density-v2 --iterations=100 --pprof-components=ovnkube-controller,kubelet,crio --pprof-interval=5m
+```
+
+!!! Note
+    The `--pprof-kubelet` and `--pprof-crio` flags of `cluster-density-v2` are deprecated in favor of `--pprof-components=kubelet` and `--pprof-components=crio`.
+
 ## Multiple endpoints support
 
 The flag `--metrics-endpoint` can be used to interact with multiple Prometheus endpoints

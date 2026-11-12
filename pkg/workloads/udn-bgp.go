@@ -60,10 +60,10 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var importWaitBeforePingRetryMsec, importPingerTimeoutMsec int
 	var exportWaitBeforePingRetryMsec, exportPingerTimeoutMsec int
 	var numDummyIfaces, numAddressOnDummyIface int
-	var enableVm, layer2, pprof bool
+	var enableVm, layer2 bool
 	var frrExternalIP string
 	var raConnectionCheck string
-	var pprofInterval time.Duration
+	var pprofOpts pprofOptions
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -110,8 +110,9 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["NUM_DUMMY_IFACES"] = numDummyIfaces
 			AdditionalVars["NUM_ADDRESS_ON_DUMMY_IFACE"] = numAddressOnDummyIface
 			AdditionalVars["RA_CONNECTION_CHECK"] = raConnectionCheck
-			AdditionalVars["PPROF"] = pprof
-			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
+			if err := setPprofVars(pprofOpts); err != nil {
+				log.Fatal(err.Error())
+			}
 			wh.SetMeasurements(additionalMeasurementFactoryMap)
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
@@ -134,8 +135,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().IntVar(&exportPingerTimeoutMsec, "export-pinger-timeout-msec", 100, "Export ping timeout, in milliseconds")
 	cmd.Flags().IntVar(&numDummyIfaces, "num-dummy-ifaces", 20, "Number of dummy interfaces used to generate import routes")
 	cmd.Flags().IntVar(&numAddressOnDummyIface, "num-address-on-dummy-iface", 10, "Number of addresses per dummy interface used to generate import routes")
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
+	addPprofFlags(cmd, &pprofOpts)
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.MarkFlagRequired("iterations")
 	cmd.MarkFlagRequired("frr-external-ip")

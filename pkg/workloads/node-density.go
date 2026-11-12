@@ -32,9 +32,10 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	var rc int
 	var metricsProfiles []string
 	var iterationsPerNamespace, podsPerNode, churnCycles, churnPercent, numSriovs int
-	var podReadyThreshold, churnDuration, churnDelay, probesPeriod, pprofInterval time.Duration
+	var podReadyThreshold, churnDuration, churnDelay, probesPeriod time.Duration
 	var containerImage, deletionStrategy, churnMode, selector, perfProfile, sriovNetworkName string
-	var namespacedIterations, pprof, svcLatency bool
+	var namespacedIterations, svcLatency bool
+	var pprofOpts pprofOptions
 	cmd := &cobra.Command{
 		Use:          variant,
 		Short:        fmt.Sprintf("Runs %v workload", variant),
@@ -69,8 +70,9 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			AdditionalVars["SVC_LATENCY"] = svcLatency
 			AdditionalVars["NAMESPACED_ITERATIONS"] = namespacedIterations
 			AdditionalVars["ITERATIONS_PER_NAMESPACE"] = iterationsPerNamespace
-			AdditionalVars["PPROF"] = pprof
-			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
+			if err := setPprofVars(pprofOpts); err != nil {
+				log.Fatal(err.Error())
+			}
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["PERF_PROFILE"] = perfProfile
 			AdditionalVars["NUM_SRIOVS"] = numSriovs
@@ -95,8 +97,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 	cmd.Flags().IntVar(&churnPercent, "churn-percent", 10, "Percentage of job iterations that kube-burner will churn each round")
 	cmd.Flags().StringVar(&churnMode, "churn-mode", string(config.ChurnObjects), "Either namespaces, to churn entire namespaces or objects, to churn individual objects")
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 245, "Pods per node")
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
+	addPprofFlags(cmd, &pprofOpts)
 	switch variant {
 	case "node-density":
 		cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
