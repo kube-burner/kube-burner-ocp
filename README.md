@@ -1493,7 +1493,7 @@ By default, the workload runs all connectivity checks (accepted latency plus exp
 
 - **none**: Only measures the time from RA creation to `Accepted=True`. No ping tests are performed. Export latency and netlink route latency are reported as `-1`.
 - **export**: Measures accepted latency and validates that CUDN subnets are correctly advertised to the external host by pinging CUDN pods from outside the cluster.
-- **import**: Measures accepted latency and validates that externally generated routes are correctly imported into CUDN gateway routers by pinging CUDN pods using newly created source addresses.
+- **import**: Waits for RAs to reach `Accepted=True` to allow BGP convergence, then validates that externally generated routes are correctly imported into CUDN gateway routers by pinging CUDN pods using newly created source addresses. This ensures import latency measures steady-state performance.
 - **import,export**: Runs all checks (equivalent to the full workload behavior). Both orderings (`export,import` and `import,export`) are accepted, with or without spaces.
 
 #### Usage Examples
@@ -1548,16 +1548,16 @@ When the `--vm` flag is enabled:
 
 ### RouteAdvertisement Latency Metrics
 
-RouteAdvertisement accepted latency is always measured. Export and import ping latencies are calculated only when enabled via `--ra-connection-check`. When a scenario is not enabled, its `latency` and `netlinkRouteLatency` fields are reported as `-1`, and import scenario metrics are not emitted at all. These latency metrics are in ms. It can be enabled with:
+RouteAdvertisement accepted latency is always measured. Export and import ping checks run according to `--ra-connection-check`. The workload emits one `raLatencyMeasurement` document per RouteAdvertisement, with `acceptedLatency`, `exportLatency`, `importLatency`, and `netlinkRouteLatency` values in milliseconds. A disabled or unavailable latency is reported as `-1`. `importLatency` is the maximum successful latency across the generated external routes probed against that CUDN; `importRouteFailures` records failed route-to-CUDN probes. If all import probes for a CUDN fail (100% failure rate), `importLatency` is `-1` and the job exits with an error indicating broken BGP or route import. Partial failures (some probes succeed) are recorded but do not fail the job.
 
 ```json
   measurements:
-  - name: podLatency
+  - name: raLatency
 ```
 
-The metrics collected are route advertisement latency timeseries (raLatencyMeasurement) and six documents holding a summary with different route latency quantiles of ping test and netlink route detection latency (raLatencyQuantilesMeasurement).
+The metrics collected are one route advertisement latency document per RouteAdvertisement (`raLatencyMeasurement`) and quantile summaries for accepted, export, import, and netlink route latencies (`raLatencyQuantilesMeasurement`). Import quantiles summarize the per-CUDN maximum import latency values.
 
-One document, such as the following, is indexed per each internal (through Routeadvertisment CRD) and external route (adding ip address on dummy interface) created by the workload:
+One document is indexed per RouteAdvertisement. Its `importLatency` is the maximum successful latency across the external routes tested against that RouteAdvertisement's CUDN:
 
 ```json
 [
@@ -1571,23 +1571,11 @@ One document, such as the following, is indexed per each internal (through Route
       "ocpMajorVersion": "4.19",
       "ocpVersion": "4.19.0-ec.3"
     },
-    "scenario": "ExportRoutes",
     "acceptedLatency": 120,
-    "latency": 10031,
+    "exportLatency": 10031,
+    "importLatency": 47,
+    "importRouteFailures": 2,
     "netlinkRouteLatency": 10026
-  },
-  {
-    "timestamp": "2025-04-15T08:42:20.060393739Z",
-    "metricName": "raLatencyMeasurement",
-    "uuid": "2c8a64a8-0409-4d17-8643-c28db8216821",
-    "jobName": "udn-bgp-route-advertisements",
-    "routeAdvertisementName": "20.0.1.1/24",
-    "metadata": {
-      "ocpMajorVersion": "4.19",
-      "ocpVersion": "4.19.0-ec.3"
-    },
-    "scenario": "ImportRoutes",
-    "latency": 13
   }
 ]
 ```
