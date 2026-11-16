@@ -107,7 +107,16 @@ func NewUdnBgpBCC(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["ROUTE_SERVER_ID"] = routeServerID
 			AdditionalVars["VPC_ID"] = vpcId
 			wh.SetMeasurements(additionalMeasurementFactoryMapBCC)
+			ovnPerfCollector, err := startOVNPerfCollection(cmd, wh)
+			if err != nil {
+				log.Fatalf("Failed to start OVN perf collection: %v", err)
+			}
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(cmd.Context()), 10*time.Minute)
+			defer cancel()
+			if err := ovnPerfCollector.Stop(ctx); err != nil {
+				log.Fatalf("Failed to complete OVN perf collection: %v", err)
+			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			// Clean up resources if GC is enabled
@@ -118,6 +127,7 @@ func NewUdnBgpBCC(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
+	addOVNPerfFlags(cmd)
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().StringVar(&awsRegion, "aws-region", "", "AWS region containing the VPC Route Server")
 	cmd.Flags().StringVar(&routeServerID, "route-server-id", "", "AWS VPC Route Server ID")
