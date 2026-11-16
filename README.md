@@ -1927,7 +1927,7 @@ kube-burner-ocp init -c config.yml --iterations 1 \
 `agentic-run-density` drives concurrent OpenShift Lightspeed `AgenticRun` CRs through the agentic-operator and measures how long each one takes to move through analysis, approval, execution and verification.
 
 ```console
-kube-burner-ocp agentic-run-density --iterations=50 --namespace=lightspeed-perf --run-timeout=30m
+kube-burner-ocp agentic-run-density --iterations=50 --namespace=openshift-lightspeed --run-timeout=30m
 ```
 
 ### Prerequisites
@@ -1973,14 +1973,14 @@ Each step gets its own sandbox pod, named `ls-{step}-{agenticRunName}`, and they
 
 #### Target namespaces
 
-`spec.targetNamespaces` is not just prompt context. At the execution step the operator materializes a `Role` and `RoleBinding` into every namespace listed there, so a target namespace that does not exist makes that write a 404 and fails the run. The workload therefore creates every target namespace it names, in a job that runs before the runs are created and waits for each namespace to reach `Active`.
+Execution RBAC uses the namespaces requested by the selected remediation option, not `spec.targetNamespaces`. The workload creates target namespaces before submitting runs, except when `--target-namespace` equals `--namespace`.
 
 The default, `--target-namespace` unset, makes the target namespace the same as `--namespace`. That is the shape the alerts adapter produces, where the run lives in the namespace it is about, and kube-burner already creates that namespace for the job, so no extra namespace is created.
 
 `--target-namespace-count` exists because concentrating every run on one target namespace is not the production load shape. Each execution step writes RBAC into its target namespace, so N concurrent runs sharing one target serialize on writes to the same namespace, which production alert-driven runs spread across the cluster never do. Fan out when measuring execution throughput:
 
 ```console
-kube-burner-ocp agentic-run-density --iterations=100 --namespace=lightspeed-perf \
+kube-burner-ocp agentic-run-density --iterations=100 --namespace=openshift-lightspeed \
   --target-namespace=perf-target --target-namespace-count=20 --run-timeout=45m --qps=2 --burst=2
 ```
 
@@ -2013,7 +2013,7 @@ How much work the mock pretends to do is chosen per run by `--mock-profile`, whi
 | `timeout` | never terminates, 30s per turn | 1 | 1 | The `Agent.spec.timeouts` budgets |
 | `malformed` | 2 | 1 | 1 | Invalid JSON on the response parse path |
 
-The template also appends a `[mock-ns:<namespace>]` token carrying the run's target namespace. The operator's analysis prompt does not include `spec.targetNamespaces`, so without this the mock could not know which namespace to request RBAC for, and the execution step's `Role`/`RoleBinding` materialization — one of the things worth measuring — would never fire. A namespace outside `spec.targetNamespaces` is rejected by the operator, so the token and the spec are asserted to agree in the unit tests.
+With a mock profile enabled, the template appends a `[mock-ns:<namespace>]` token for the mock to request namespace-scoped execution permissions in its remediation options.
 
 Set `--mock-profile=""` to drop both tokens and run against a real provider.
 
