@@ -56,7 +56,7 @@ func validateFrrExternalIP(frrExternalIP string) error {
 // NewUdnBgp holds udn-bgp workload
 func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, namespacePerCudn, cidrsPerCudn int
-	var exportWorkerCount, importWorkerCount int
+	var exportWorkerCount, importWorkerCount, maxConcurrentImportPings int
 	var importWaitBeforePingRetryMsec, importPingerTimeoutMsec int
 	var exportWaitBeforePingRetryMsec, exportPingerTimeoutMsec int
 	var numDummyIfaces, numAddressOnDummyIface int
@@ -103,6 +103,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			AdditionalVars["LAYER2"] = layer2
 			AdditionalVars["EXPORT_WORKER_COUNT"] = exportWorkerCount
 			AdditionalVars["IMPORT_WORKER_COUNT"] = importWorkerCount
+			AdditionalVars["MAX_CONCURRENT_IMPORT_PINGS"] = maxConcurrentImportPings
 			AdditionalVars["IMPORT_WAIT_BEFORE_PING_RETRY_MSEC"] = importWaitBeforePingRetryMsec
 			AdditionalVars["IMPORT_PINGER_TIMEOUT_MSEC"] = importPingerTimeoutMsec
 			AdditionalVars["EXPORT_WAIT_BEFORE_PING_RETRY_MSEC"] = exportWaitBeforePingRetryMsec
@@ -128,6 +129,7 @@ func NewUdnBgp(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().StringVar(&raConnectionCheck, "ra-connection-check", "import,export", "RA connection check mode: none (only accepted latency), export (accepted latency + export ping), import (accepted latency + import ping), import,export (all checks)")
 	cmd.Flags().IntVar(&exportWorkerCount, "export-worker-count", 20, "Number of workers verifying routes advertised from the cluster")
 	cmd.Flags().IntVar(&importWorkerCount, "import-worker-count", 10, "Number of workers generating external routes and verifying import")
+	cmd.Flags().IntVar(&maxConcurrentImportPings, "max-concurrent-import-pings", 5, "Maximum concurrent pings per import route (limits FD usage)")
 	cmd.Flags().IntVar(&importWaitBeforePingRetryMsec, "import-wait-before-ping-retry-msec", 100, "Wait before retrying import ping, in milliseconds")
 	cmd.Flags().IntVar(&importPingerTimeoutMsec, "import-pinger-timeout-msec", 10, "Import ping timeout, in milliseconds")
 	cmd.Flags().IntVar(&exportWaitBeforePingRetryMsec, "export-wait-before-ping-retry-msec", 100, "Wait before retrying export ping, in milliseconds")
