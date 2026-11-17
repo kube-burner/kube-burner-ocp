@@ -11,47 +11,15 @@ global:
           metric: P99
           threshold: {{.POD_READY_THRESHOLD}}
 {{ end }}
-{{ if or .PPROF .PPROF_KUBELET .PPROF_CRIO }}
+{{ if .PPROF }}
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}
       pprofDirectory: pprof-data
-{{ if or .PPROF_KUBELET .PPROF_CRIO }}
+{{ if .PPROF_NODE_TARGETS }}
       nodeAffinity:
         node-role.kubernetes.io/worker: ""
 {{ end }}
-      pprofTargets:
-{{ if .PPROF }}
-      - name: ovnkube-controller-heap
-        namespace: "openshift-ovn-kubernetes"
-        labelSelector: {app: ovnkube-node}
-        url: http://localhost:29103/debug/pprof/heap
-      - name: ovnkube-controller-cpu
-        namespace: "openshift-ovn-kubernetes"
-        labelSelector: {app: ovnkube-node}
-        url: http://localhost:29103/debug/pprof/profile?seconds=60
-      - name: ovnk-control-plane-heap
-        namespace: "openshift-ovn-kubernetes"
-        labelSelector: {app: ovnkube-control-plane}
-        url: http://localhost:29108/debug/pprof/heap
-      - name: ovnk-control-plane-cpu
-        namespace: "openshift-ovn-kubernetes"
-        labelSelector: {app: ovnkube-control-plane}
-        url: http://localhost:29108/debug/pprof/profile?seconds=60
-{{ end }}
-{{ if .PPROF_KUBELET }}
-      - name: kubelet-heap
-        url: https://${HOSTNAME}:10250/debug/pprof/heap
-      - name: kubelet-cpu
-        url: https://${HOSTNAME}:10250/debug/pprof/profile?seconds=60
-{{ end }}
-{{ if .PPROF_CRIO }}
-      - name: crio-heap
-        url: http://localhost/debug/pprof/heap
-        unixSocketPath: /var/run/crio/crio.sock
-      - name: crio-cpu
-        url: http://localhost/debug/pprof/profile?seconds=60
-        unixSocketPath: /var/run/crio/crio.sock
-{{ end }}
+      pprofTargets: {{.PPROF_TARGETS}}
 {{ end }}
 {{ if .SVC_LATENCY }}
     - name: serviceLatency

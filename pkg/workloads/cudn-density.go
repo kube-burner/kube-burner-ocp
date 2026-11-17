@@ -122,9 +122,10 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var churnPercent, churnCycles, iterations, namespacesPerCudn, cudnsPerRA, incrementalStepSize int
 	var incrementalExpBase float64
 	var deletionStrategy string
-	var l3, pprof, gatewayCheck, bgp, ocpbugs85627Workaround, sshLatencyCheck, sshLoadTest bool
-	var churnDelay, churnDuration, podReadyThreshold, pprofInterval, jobPause, incrementalStepDelay, sshLoadTestDuration time.Duration
+	var l3, gatewayCheck, bgp, ocpbugs85627Workaround, sshLatencyCheck, sshLoadTest bool
+	var churnDelay, churnDuration, podReadyThreshold, jobPause, incrementalStepDelay, sshLoadTestDuration time.Duration
 	var churnMode, incrementalPattern, externalHost string
+	var pprofOpts pprofOptions
 	var metricsProfiles []string
 	var rc int
 	cmd := &cobra.Command{
@@ -184,8 +185,9 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 					incrementalPattern, incrementalStepSize, incrementalStepSize/namespacesPerCudn, incrementalStepDelay)
 			}
 
-			AdditionalVars["PPROF"] = pprof
-			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
+			if err := setPprofVars(pprofOpts); err != nil {
+				log.Fatal(err.Error())
+			}
 			AdditionalVars["JOB_PAUSE"] = jobPause
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
@@ -231,8 +233,7 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 	cmd.Flags().BoolVar(&l3, "layer3", false, "Use Layer3 topology instead of Layer2")
 	cmd.Flags().BoolVar(&bgp, "bgp", false, "Enable BGP route advertisement for each CUDN (requires external FRR on the default gatewaynode)")
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection for ovnkube components")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
+	addPprofFlags(cmd, &pprofOpts)
 	cmd.Flags().DurationVar(&jobPause, "job-pause", 1*time.Minute, "Pause after CUDN creation to allow OVN-K network settling before workload deployment")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")

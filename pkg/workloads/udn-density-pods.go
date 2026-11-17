@@ -28,8 +28,9 @@ import (
 // NewUDNDensityPods holds udn-density-pods and cudn-density-pods workloads
 func NewUDNDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var churnPercent, churnCycles, iterations int
-	var l3, simple, pprof bool
-	var churnDelay, churnDuration, podReadyThreshold, pprofInterval time.Duration
+	var l3, simple bool
+	var churnDelay, churnDuration, podReadyThreshold time.Duration
+	var pprofOpts pprofOptions
 	var deletionStrategy, churnMode string
 	var metricsProfiles []string
 	var rc int
@@ -48,8 +49,9 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				log.Info("Churn is enabled, there will not be a pause after UDN creation")
 			}
 
-			AdditionalVars["PPROF"] = pprof
-			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
+			if err := setPprofVars(pprofOpts); err != nil {
+				log.Fatal(err.Error())
+			}
 			AdditionalVars["SIMPLE"] = simple
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
@@ -67,8 +69,7 @@ func NewUDNDensityPods(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 		},
 	}
 	cmd.Flags().BoolVar(&l3, "layer3", true, "Use UDN layer3 topology")
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
+	addPprofFlags(cmd, &pprofOpts)
 	cmd.Flags().BoolVar(&simple, "simple", false, "only client and server pods to be deployed, no services and networkpolicies")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")

@@ -40,10 +40,11 @@ const (
 // Returns virt-density workload
 func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, vmsPerNode int
-	var vmiRunningThreshold, pprofInterval time.Duration
+	var vmiRunningThreshold time.Duration
 	var metricsProfiles []string
 	var churnPercent, churnCycles int
-	var l3, pprof, sshCheck bool
+	var l3, sshCheck bool
+	var pprofOpts pprofOptions
 	var churnDelay, churnDuration time.Duration
 	var deletionStrategy, vmImage, bindingMethod, churnMode, vmCPU, vmMemory, selector string
 	var cleanup bool
@@ -72,6 +73,9 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			if bindingMethod != "passt" && bindingMethod != "l2bridge" {
 				fmt.Println("Invalid value for --binding-method. Allowed values are 'passt' or 'l2bridge'.")
 				os.Exit(1)
+			}
+			if err := setPprofVars(pprofOpts); err != nil {
+				log.Fatal(err.Error())
 			}
 			var privateKeyPath, publicKeyPath string
 			if sshCheck {
@@ -106,8 +110,6 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			AdditionalVars["VM_MEMORY"] = vmMemory
 			AdditionalVars["UDN_BINDING_METHOD"] = bindingMethod
 			AdditionalVars["ENABLE_LAYER_3"] = l3
-			AdditionalVars["PPROF"] = pprof
-			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			nodeSelectorJSON, err := buildNodeSelectorJSON(selector)
 			if err != nil {
 				log.Fatal(err.Error())
@@ -142,10 +144,9 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	cmd.Flags().IntVar(&iterations, "iterations", 1, "Job iterations, (One UDN will be created per iteration)")
 	cmd.Flags().IntVar(&vmsPerNode, "vms-per-node", 50, "VMs per node")
 	cmd.Flags().DurationVar(&vmiRunningThreshold, "vmi-ready-threshold", 0, "VMI ready timeout threshold")
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
+	addPprofFlags(cmd, &pprofOpts)
 	cmd.Flags().BoolVar(&sshCheck, "ssh-check", false, "Enable SSH check for the VM")
 	cmd.Flags().StringVar(&sshKeyPairPath, "ssh-key-path", "", "Path to save the generated SSH keys (only used with --ssh-check)")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
