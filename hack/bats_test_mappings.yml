@@ -109,3 +109,8 @@
 - label: workload:batch-churn
   paths:
   - cmd/config/batch-churn/*
+- label: workload:enmaas-loadtest
+  paths:
+  - pkg/workloads/enmaas-loadtest.go
+  - cmd/config/enmaas-loadtest/*
+  - cmd/config/metrics-profiles/enmaas-loadtest-metrics.yml

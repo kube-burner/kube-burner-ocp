@@ -1,0 +1,115 @@
+---
+{{ $namespace := .NAMESPACE | default "enmaas-stage-tests" }}
+{{ $image := .LOADTEST_IMAGE }}
+{{ $models := splitList "," .MODELS }}
+{{ $levels := splitList "," .LEVELS }}
+{{ $samples := .SAMPLES | default 1 }}
+{{ $parallelism := .PARALLELISM | default 1 }}
+{{ $jobDeadline := .JOB_DEADLINE | default 0 }}
+{{ $pause := .PAUSE | default "10s" }}
+
+{{ $targets := list }}
+{{ if .URL }}{{ $targets = append $targets (dict "name" "gateway" "url" .URL) }}{{ end }}
+{{ if .BASELINE_URL }}{{ $targets = append $targets (dict "name" "baseline" "url" .BASELINE_URL) }}{{ end }}
+
+global:
+  gc: {{.GC}}
+  gcMetrics: {{.GC_METRICS}}
+  measurements:
+    - name: jobLatency
+
+metricsEndpoints:
+{{ if .ES_SERVER }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      esServers: ["{{.ES_SERVER}}"]
+      insecureSkipVerify: true
+      defaultIndex: {{.ES_INDEX}}
+      type: opensearch
+{{ end }}
+{{ if .LOCAL_INDEXING }}
+  - metrics: [{{.METRICS}}]
+    alerts: [{{.ALERTS}}]
+    indexer:
+      type: local
+      metricsDirectory: collected-metrics-{{.UUID}}
+{{ end }}
+
+jobs:
+{{ if ne .MINT "true" }}
+  # -------------------------------------------------------
+  # Setup — the API key Secret.
+  #
+  # Skipped entirely when the pods mint their own key: there is then no
+  # long-lived key to provision.
+  # -------------------------------------------------------
+  - name: enmaas-loadtest-setup
+    namespace: {{ $namespace }}
+    jobIterations: 1
+    skipIndexing: true
+    namespacedIterations: false
+    gc: false
+    cleanup: false
+    preLoadImages: false
+    waitWhenFinished: true
+    qps: {{.QPS}}
+    burst: {{.BURST}}
+    objects:
+    - objectTemplate: loadtest-secret.yml
+      replicas: 1
+      inputVars:
+        apiKeyB64: {{ .API_KEY_B64 }}
+{{ end }}
+
+  # -------------------------------------------------------
+  # Load test — one kube-burner job per target/model/concurrency triple.
+  # -------------------------------------------------------
+{{ range $target := $targets }}
+{{ range $model := $models }}
+{{ range $level := $levels }}
+  - name: {{ $target.name }}-{{ $model }}-c{{ $level }}
+    namespace: {{ $namespace }}
+    jobIterations: 1
+    namespacedIterations: false
+    gc: false
+    cleanup: false
+    preLoadImages: false
+    waitWhenFinished: true
+    jobPause: {{ $pause }}
+    qps: {{ $.QPS }}
+    burst: {{ $.BURST }}
+    objects:
+    - objectTemplate: loadtest-job.yml
+      replicas: 1
+      inputVars:
+        model: "{{ $model }}"
+        target: "{{ $target.name }}"
+        url: "{{ $target.url }}"
+        concurrency: "{{ $level }}"
+        duration: "{{ $.DURATION }}"
+        tokens: "{{ $.TOKENS }}"
+        maxKey: "{{ $.MAX_KEY }}"
+        ttftFlag: "{{ $.TTFT_FLAG }}"
+        image: {{ $image }}
+        imagePullPolicy: "{{ $.IMAGE_PULL_POLICY }}"
+        scriptName: "{{ $.SCRIPT_NAME }}"
+        scrapeGrace: "{{ $.SCRAPE_GRACE }}"
+        mint: "{{ $.MINT }}"
+        meteringURL: "{{ $.METERING_URL }}"
+        mintNamespace: "{{ $.MINT_NAMESPACE }}"
+        mintSecret: "{{ $.MINT_SECRET }}"
+        mintSecretKey: "{{ $.MINT_SECRET_KEY }}"
+        serviceAccount: "{{ $.SERVICE_ACCOUNT }}"
+        gatewayIP: "{{ $.GATEWAY_IP }}"
+        gatewayHostname: "{{ $.GATEWAY_HOSTNAME }}"
+        completions: {{ $samples }}
+        parallelism: {{ $parallelism }}
+        jobDeadline: {{ $jobDeadline }}
+        cpuRequest: "{{ $.CPU_REQUEST }}"
+        cpuLimit: "{{ $.CPU_LIMIT }}"
+        memoryRequest: {{ $.MEMORY_REQUEST }}
+        memoryLimit: {{ $.MEMORY_LIMIT }}
+{{ end }}
+{{ end }}
+{{ end }}

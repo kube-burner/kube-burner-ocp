@@ -26,6 +26,7 @@ Available Commands:
   cudn-density               Runs cudn-density workload with tiered cross-namespace communication
   dv-clone                   Runs dv-clone workload
   egressip                   Runs egressip workload
+  enmaas-loadtest            Runs enmaas-loadtest workload
   evpn                       Runs evpn workload
   help                       Help about any command
   index                      Runs index sub-command
@@ -2020,6 +2021,68 @@ The reporting profile is very useful to reduce the number of documents sent to t
 ## Grafana Dashboards
 
 Grafana dashboards are available to visualize kube-burner metrics and performance data. See the [dashboards documentation](dashboards/README.md) for details on how to import and use the dashboards with their corresponding metrics profiles.
+
+## EnMaaS load test workload
+
+This workload runs `loadtest.py` from [redhat-et/enmaas-loadtest](https://github.com/redhat-et/enmaas-loadtest) as Kubernetes Jobs, one per model. Each Job measures latency/throughput/errors and indexes results to Elasticsearch.
+
+```console
+kube-burner-ocp enmaas-loadtest \
+  --url=https://api.enmaas.devshift.net/v1/chat/completions \
+  --api-key=<key> \
+  --es-server=https://my.es.server:443 --es-index=enmaas-loadtest
+```
+
+The latest `loadtest.py` from the [enmaas-loadtest](https://github.com/redhat-et/enmaas-loadtest) repo is baked into the load generator image. Its CI publishes `:latest` on every push to `main`, so `--image-pull-policy=Always` (default) keeps your runs up-to-date.
+
+### Key Configuration
+
+| Flag | Description | Default |
+| ---- | ----------- | ------- |
+| `--url` | Gateway completions URL (required) | |
+| `--api-key` / `--api-key-file` / `--mint-key` | How to provide the API key | `--mint-key` mints a throwaway key via the metering API |
+| `--models` | Comma-separated model names | `gpt-4o-openai,gpt-4o-azure,gpt-4o-bedrock,claude-sonnet-anthropic,claude-sonnet-vertex` |
+| `--levels` | Concurrency levels for loadtest.py | `100,200` |
+| `--duration` | Per-level benchmark duration | `300s` |
+| `--tokens` | Max tokens per completion | `16` |
+| `--ttft` | Measure time to first token | `false` |
+| `--baseline-url` | Optional second URL to measure gateway overhead | |
+| `--samples` | Repeats per model (Job completions) | `1` |
+| `--parallelism` | Job parallelism | `1` |
+| `--namespace` | Namespace for test Jobs | `enmaas-loadtest` |
+| `--cleanup` | Delete namespace after results harvested | `true` |
+
+### Metrics
+
+The workload produces three indexed documents per run (all sharing a UUID):
+
+- `enmaasLoadtestLevel`: One per model × concurrency level (latency/throughput/error stats)
+- `enmaasLoadtestSummary`: One per model (peak RPS, worst p99, pass/fail)
+- `enmaasLoadtestArtifact`: Raw result files (CSVs, error logs)
+
+Null TTFT values (when `--ttft` not used) are dropped rather than indexed as zeros.
+
+### Minting keys per run
+
+Use `--mint-key` to let the workload create and revoke a throwaway identity:
+
+```console
+kube-burner-ocp enmaas-loadtest --url=... --mint-key --metering-url=http://...
+```
+
+By default minting targets `http://metering-service.<metering-namespace>.svc.cluster.local:8080`. Port-forward to mint from outside the cluster:
+
+```console
+oc port-forward svc/metering-service 18081:8080 -n enmaas
+kube-burner-ocp enmaas-loadtest ... --mint-key --metering-url=http://localhost:18081
+```
+
+### In-cluster execution
+
+Set `serviceAccountName: kube-burner` to pick up the projected token automatically. The ServiceAccount needs:
+- `create Jobs/Secrets` and `read pod logs` in the test namespace (to collect loadtest results)
+- `get` on the metering Secret in the `enmaas` namespace (for key minting)
+- Read access to Thanos Querier (via `cluster-monitoring-view` ClusterRole)
 
 ## Customizing workloads
 

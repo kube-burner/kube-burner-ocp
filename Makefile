@@ -54,3 +54,27 @@ test: test-ocp
 
 test-ocp:
 	cd test && KUBE_BURNER_OCP=$(TEST_BINARY) bats $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) -F pretty -T --print-output-on-failure test-ocp.bats $(FILTER_TAGS)
+
+# Runner image ----------------------------------------------------------------
+# Downloads a published kube-burner-ocp release rather than building one, so
+# the image contains exactly the binary the project shipped.
+#
+# RELEASE_REPO/RELEASE_VERSION select which release. The default is upstream
+# latest, which does NOT contain the enmaas-loadtest workload until that
+# workload is merged and released; point them at a fork's release meanwhile.
+IMAGE           ?= quay.io/vchalla/kube-burner-ocp:latest
+PLATFORM        ?= linux/amd64
+RELEASE_REPO    ?= kube-burner/kube-burner-ocp
+RELEASE_VERSION ?= latest
+CONTAINER_TOOL  ?= podman
+
+.PHONY: image image-push
+
+image:
+	$(CONTAINER_TOOL) build --platform $(PLATFORM) -t $(IMAGE) \
+	  --build-arg RELEASE_REPO=$(RELEASE_REPO) \
+	  --build-arg RELEASE_VERSION=$(RELEASE_VERSION) \
+	  -f Containerfile .
+
+image-push:
+	$(CONTAINER_TOOL) push $(IMAGE)

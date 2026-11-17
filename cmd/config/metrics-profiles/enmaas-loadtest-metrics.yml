@@ -1,0 +1,84 @@
+# EnMaaS gateway load test metrics
+#
+# Container-level metrics come from cAdvisor and are always available. The
+# Istio/Envoy, Authorino and Limitador queries need PodMonitors/ServiceMonitors
+# scraping those components; without them the queries simply return no
+# datapoints and the rest of the profile still works.
+
+# ---------------------------------------------------------------------------
+# Gateway data plane (openshift-ingress)
+# ---------------------------------------------------------------------------
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container!="POD", namespace="openshift-ingress", pod=~"maas-default-gateway.*|data-science-gateway.*|payload-processing.*|payload-pre-processing.*|kube-auth-proxy.*|istiod-openshift-gateway.*|router-default.*"}[2m]) * 100) by (container, pod, namespace)
+  metricName: enmaasGatewayContainerCPU
+
+- query: sum(container_memory_rss{name!="", container!="POD", namespace="openshift-ingress", pod=~"maas-default-gateway.*|data-science-gateway.*|payload-processing.*|payload-pre-processing.*|kube-auth-proxy.*|istiod-openshift-gateway.*|router-default.*"}) by (container, pod, namespace)
+  metricName: enmaasGatewayContainerMemory
+
+- query: sum(irate(container_network_receive_bytes_total{namespace="openshift-ingress", pod=~"maas-default-gateway.*|data-science-gateway.*|payload-processing.*|payload-pre-processing.*|kube-auth-proxy.*|router-default.*"}[2m])) by (pod, namespace)
+  metricName: enmaasGatewayNetworkReceiveRate
+
+- query: sum(irate(container_network_transmit_bytes_total{namespace="openshift-ingress", pod=~"maas-default-gateway.*|data-science-gateway.*|payload-processing.*|payload-pre-processing.*|kube-auth-proxy.*|router-default.*"}[2m])) by (pod, namespace)
+  metricName: enmaasGatewayNetworkTransmitRate
+
+# ---------------------------------------------------------------------------
+# EnMaaS application plane (praxis, metering, simulator)
+# ---------------------------------------------------------------------------
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container!="POD", namespace=~"enmaas|enmaas-.*"}[2m]) * 100) by (container, pod, namespace)
+  metricName: enmaasAppContainerCPU
+
+- query: sum(container_memory_rss{name!="", container!="POD", namespace=~"enmaas|enmaas-.*"}) by (container, pod, namespace)
+  metricName: enmaasAppContainerMemory
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container!="POD", pod=~"llm-d-inference-sim.*"}[2m]) * 100) by (container, pod, namespace)
+  metricName: enmaasSimulatorContainerCPU
+
+- query: sum(container_memory_rss{name!="", container!="POD", pod=~"llm-d-inference-sim.*"}) by (container, pod, namespace)
+  metricName: enmaasSimulatorContainerMemory
+
+- query: count(kube_pod_status_ready{condition="true", pod=~"llm-d-inference-sim.*"})
+  metricName: enmaasSimulatorReadyPods
+
+# ---------------------------------------------------------------------------
+# Load generator itself — confirms the client was not the bottleneck
+# ---------------------------------------------------------------------------
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container="loadtest"}[2m]) * 100) by (pod, namespace)
+  metricName: enmaasLoadgenContainerCPU
+
+- query: sum(container_memory_rss{name!="", container="loadtest"}) by (pod, namespace)
+  metricName: enmaasLoadgenContainerMemory
+
+# ---------------------------------------------------------------------------
+# Kuadrant policy enforcement (authorino / limitador)
+# ---------------------------------------------------------------------------
+
+- query: sum(irate(container_cpu_usage_seconds_total{name!="", container!="POD", namespace="kuadrant-system", pod=~"authorino.*|limitador.*"}[2m]) * 100) by (container, pod, namespace)
+  metricName: enmaasKuadrantContainerCPU
+
+- query: sum(container_memory_rss{name!="", container!="POD", namespace="kuadrant-system", pod=~"authorino.*|limitador.*"}) by (container, pod, namespace)
+  metricName: enmaasKuadrantContainerMemory
+
+- query: irate(authorized_hits{job="limitador-limitador"}[2m])
+  metricName: enmaasLimitadorAuthorizedHitsRate
+
+# ---------------------------------------------------------------------------
+# Gateway request latency and rate, as seen by Envoy
+# ---------------------------------------------------------------------------
+
+- query: histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{reporter="source", source_workload_namespace="openshift-ingress"}[2m])) by (le, source_workload))
+  metricName: enmaasGatewayRequestDurationP50
+
+- query: histogram_quantile(0.95, sum(rate(istio_request_duration_milliseconds_bucket{reporter="source", source_workload_namespace="openshift-ingress"}[2m])) by (le, source_workload))
+  metricName: enmaasGatewayRequestDurationP95
+
+- query: histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter="source", source_workload_namespace="openshift-ingress"}[2m])) by (le, source_workload))
+  metricName: enmaasGatewayRequestDurationP99
+
+- query: sum(rate(istio_requests_total{reporter="source", source_workload_namespace="openshift-ingress"}[2m])) by (source_workload, response_code)
+  metricName: enmaasGatewayRequestRate
+
+- query: sum(istio_requests_total{reporter="source", source_workload_namespace="openshift-ingress"}) by (source_workload, response_code)
+  metricName: enmaasGatewayRequestCount
+  instant: true

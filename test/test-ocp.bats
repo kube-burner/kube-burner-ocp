@@ -437,3 +437,15 @@ teardown_file() {
     --uuid=${UUID}
 }
 
+
+# bats test_tags=workload:enmaas-loadtest
+@test "enmaas-loadtest: extract" {
+  (
+    cd "$BATS_TEST_TMPDIR"
+    run_cmd ${KUBE_BURNER_OCP} enmaas-loadtest --extract
+    for f in enmaas-loadtest.yml loadtest-job.yml loadtest-scripts.yml \
+             loadtest-secret.yml enmaas-loadtest-metrics.yml; do
+      [ -f "${f}" ] || { echo "extract did not produce ${f}"; ls -l; exit 1; }
+    done
+  )
+}

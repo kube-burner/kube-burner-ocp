@@ -1,0 +1,140 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: enmaas-loadtest-{{ .target }}-{{ .model }}-c{{ .concurrency }}-{{ .Replica }}
+spec:
+  completions: {{ .completions }}
+  parallelism: {{ .parallelism }}
+  completionMode: Indexed
+  backoffLimit: 0
+{{- if .jobDeadline }}
+  activeDeadlineSeconds: {{ .jobDeadline }}
+{{- end }}
+  template:
+    metadata:
+      labels:
+        app: enmaas-loadtest
+        enmaas-loadtest.kube-burner.io/uuid: "{{ .UUID }}"
+        enmaas-loadtest.kube-burner.io/model: "{{ .model }}"
+        enmaas-loadtest.kube-burner.io/target: "{{ .target }}"
+        enmaas-loadtest.kube-burner.io/concurrency: "{{ .concurrency }}"
+        enmaas-loadtest.kube-burner.io/job: "{{ .JobName }}"
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      restartPolicy: Never
+      {{- if .serviceAccount }}
+      serviceAccountName: {{ .serviceAccount }}
+      {{- end }}
+      automountServiceAccountToken: {{ if eq .mint "true" }}true{{ else }}false{{ end }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node-role.kubernetes.io/infra
+                operator: DoesNotExist
+              - key: node-role.kubernetes.io/worker
+                operator: Exists
+      {{- if .gatewayIP }}
+      hostAliases:
+      - ip: "{{ .gatewayIP }}"
+        hostnames:
+        - "{{ .gatewayHostname }}"
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: loadtest
+        image: {{ .image }}
+        imagePullPolicy: {{ .imagePullPolicy }}
+        # The harness writes its results to /results and nothing else. The
+        # orchestrator reads them back with an exec, which needs a live
+        # container, so hold the pod open briefly once the harness is done
+        # rather than letting it vanish with its results.
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          /opt/enmaas-loadtest/container/entrypoint.sh "$@"
+          rc=$?
+          echo "holding container open ${KB_SCRAPE_GRACE}s for result collection"
+          sleep "${KB_SCRAPE_GRACE}"
+          exit $rc
+        - sh
+        - --url
+        - "{{ .url }}"
+        - --model
+        - "{{ .model }}"
+        - --levels
+        - "{{ .concurrency }}"
+        - --duration
+        - "{{ .duration }}"
+        - --tokens
+        - "{{ .tokens }}"
+        - --max-key
+        - "{{ .maxKey }}"
+        {{- if .ttftFlag }}
+        - "{{ .ttftFlag }}"
+        {{- end }}
+        {{- if ne .mint "true" }}
+        - --key-file
+        - /keys/api-key.txt
+        {{- end }}
+        env:
+        - name: KB_SCRAPE_GRACE
+          value: "{{ .scrapeGrace }}"
+        - name: LOADTEST_SCRIPT
+          value: "{{ .scriptName }}"
+        - name: LOADTEST_RESULTS_DIR
+          value: /results
+        - name: LOADTEST_MINT
+          value: "{{ .mint }}"
+        {{- if eq .mint "true" }}
+        - name: LOADTEST_MINT_REVOKE
+          value: "true"
+        - name: LOADTEST_METERING_URL
+          value: "{{ .meteringURL }}"
+        - name: LOADTEST_MINT_NAMESPACE
+          value: "{{ .mintNamespace }}"
+        - name: LOADTEST_MINT_SECRET
+          value: "{{ .mintSecret }}"
+        - name: LOADTEST_MINT_SECRET_KEY
+          value: "{{ .mintSecretKey }}"
+        - name: LOADTEST_KEY_FILE
+          value: /tmp/api-key.txt
+        {{- end }}
+        volumeMounts:
+        {{- if ne .mint "true" }}
+        - name: keys
+          mountPath: /keys
+          readOnly: true
+        {{- end }}
+        - name: results
+          mountPath: /results
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        resources:
+          requests:
+            cpu: "{{ .cpuRequest }}"
+            memory: {{ .memoryRequest }}
+          limits:
+            cpu: "{{ .cpuLimit }}"
+            memory: {{ .memoryLimit }}
+      volumes:
+      {{- if ne .mint "true" }}
+      - name: keys
+        secret:
+          secretName: enmaas-loadtest-keys
+          defaultMode: 0400
+      {{- end }}
+      - name: results
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}

@@ -182,3 +182,7 @@ replace (
 )
 
 exclude github.com/kube-burner/kube-burner v1.20.6 // Published accidentally
+
+replace github.com/kube-burner/kube-burner/v2 => /Users/vchalla/myforks/kube-burner
+
+replace github.com/cloud-bulldozer/go-commons/v2 => /Users/vchalla/myforks/go-commons
