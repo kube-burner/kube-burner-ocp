@@ -1,0 +1,28 @@
+# Scrape config for the mock LLM's own counters.
+#
+# Applied only with --with-servicemonitor, because it needs user workload
+# monitoring enabled:
+#
+#   oc -n openshift-monitoring patch configmap cluster-monitoring-config \
+#     --type merge -p '{"data":{"config.yaml":"enableUserWorkload: true\n"}}'
+#
+# This is what makes the turn and token KPIs collectable through the same
+# kube-burner metrics profile as everything else, instead of needing a span
+# reader to recover them from OTLP.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mock-llm
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: mock-llm
+    app.kubernetes.io/part-of: agentic-perf
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mock-llm
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

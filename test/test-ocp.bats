@@ -8,10 +8,14 @@
 # new test, tag it accordingly and keep the mappings file up to date.
 
 load helpers.bash
+load hack/agentic-test-fixture.bash
 
 setup_file() {
   cd ocp
-  export BATS_TEST_TIMEOUT=2700
+  # The guarded native runner owns its timeout, including setup and teardown.
+  if [[ "${AGENTIC_EXTERNAL_TIMEOUT:-}" != 1 ]]; then
+    export BATS_TEST_TIMEOUT=2700
+  fi
   export ES_SERVER=${PERFSCALE_PROD_ES_SERVER:-"http://localhost:9200"}
   export ES_INDEX="kube-burner-ocp"
   trap print_events ERR
@@ -32,7 +36,10 @@ setup() {
 }
 
 teardown() {
-  oc delete ns -l kube-burner.io/uuid="${UUID}" --ignore-not-found
+  local failed=0
+  oc delete ns -l kube-burner.io/uuid="${UUID}" --ignore-not-found || failed=1
+  agentic_fixture_restore || failed=1
+  return "${failed}"
 }
 
 teardown_file() {
@@ -139,6 +146,24 @@ teardown_file() {
 # bats test_tags=workload:crd-scale
 @test "crd-scale; alerting=false" {
   run_cmd ${KUBE_BURNER_OCP} crd-scale --iterations=2 --alerting=false
+}
+
+# bats test_tags=workload:agentic-run-density
+@test "agentic-run-density" {
+  # The agentic layer ships only on OCP >= 5.0 and is not part of a default install
+  oc get crd agenticruns.agentic.openshift.io &> /dev/null || skip "agentic.openshift.io CRDs are not installed"
+  agentic_fixture_backup
+  ${BATS_TEST_DIRNAME}/hack/deploy-mock-llm.sh --default-profile=short
+  run_cmd ${KUBE_BURNER_OCP} agentic-run-density --iterations=2 --run-timeout=10m \
+    --workflow=full --mock-profile=short \
+    --target-namespace=perf-target --target-namespace-count=2 ${INDEXING_FLAGS}
+  check_metric_value jobSummary agenticRunLatencyMeasurement agenticRunLatencyQuantilesMeasurement
+  if oc get namespace perf-target-0 &> /dev/null; then
+    echo "Target namespace perf-target-0 was not garbage collected"
+    oc get namespace -l kube-burner-job=agentic-run-density-targets
+    return 1
+  fi
+  # teardown restores existing fixtures and removes only newly created ones.
 }
 
 # bats test_tags=workload:virt-density
