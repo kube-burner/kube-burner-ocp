@@ -2,6 +2,7 @@ package workloads
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +12,17 @@ import (
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
 	kubeburnerworkloads "github.com/kube-burner/kube-burner/v2/pkg/workloads"
 	"github.com/spf13/cobra"
+	storagev1 "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes"
+	kubefake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestApplyClusterInfoPopulatesMetadataAndCapabilities(t *testing.T) {
@@ -230,4 +242,120 @@ func renderClusterDensityMSTemplate(t *testing.T, data map[string]any) string {
 		t.Fatalf("failed to render template: %v", err)
 	}
 	return output.String()
+}
+
+type testK8SConnector struct {
+	clientSet     kubernetes.Interface
+	dynamicClient dynamic.Interface
+}
+
+func (c *testK8SConnector) ClientSet() kubernetes.Interface {
+	return c.clientSet
+}
+
+func (c *testK8SConnector) RestConfig() *rest.Config {
+	return nil
+}
+
+func (c *testK8SConnector) DynamicClient() dynamic.Interface {
+	return c.dynamicClient
+}
+
+func TestGetVolumeSnapshotClassName(t *testing.T) {
+	const (
+		storageClassName = "sc-array-2"
+		provisioner      = "csi.example.com"
+	)
+	tests := []struct {
+		name    string
+		objects []runtime.Object
+		want    string
+	}{
+		{
+			name: "uses the snapshotClass of the StorageProfile when several classes share the provisioner",
+			objects: []runtime.Object{
+				testVolumeSnapshotClass("vol-snap-array-1", provisioner),
+				testVolumeSnapshotClass("vol-snap-array-2", provisioner),
+				testStorageProfile(storageClassName, map[string]any{"snapshotClass": "vol-snap-array-2"}),
+			},
+			want: "vol-snap-array-2",
+		},
+		{
+			name: "falls back to the provisioner match when the StorageProfile has no snapshotClass",
+			objects: []runtime.Object{
+				testVolumeSnapshotClass("vol-snap-other", "csi.other.com"),
+				testVolumeSnapshotClass("vol-snap-array-2", provisioner),
+				testStorageProfile(storageClassName, map[string]any{}),
+			},
+			want: "vol-snap-array-2",
+		},
+		{
+			name: "falls back to the provisioner match when there is no StorageProfile",
+			objects: []runtime.Object{
+				testVolumeSnapshotClass("vol-snap-other", "csi.other.com"),
+				testVolumeSnapshotClass("vol-snap-array-2", provisioner),
+			},
+			want: "vol-snap-array-2",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			connector := newSnapshotClassTestConnector(storageClassName, provisioner, tt.objects...)
+
+			got, err := getVolumeSnapshotClassName(connector, storageClassName)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("expected VolumeSnapshotClass %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
+func TestGetVolumeSnapshotClassNameStorageProfileError(t *testing.T) {
+	connector := newSnapshotClassTestConnector("sc", "csi.example.com", testVolumeSnapshotClass("vol-snap", "csi.example.com"))
+	connector.dynamicClient.(*dynamicfake.FakeDynamicClient).PrependReactor("get", "storageprofiles", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("connection refused")
+	})
+
+	if _, err := getVolumeSnapshotClassName(connector, "sc"); err == nil {
+		t.Fatal("expected an error when the StorageProfile cannot be retrieved")
+	}
+}
+
+func newSnapshotClassTestConnector(storageClassName, provisioner string, objects ...runtime.Object) *testK8SConnector {
+	return &testK8SConnector{
+		clientSet: kubefake.NewClientset(&storagev1.StorageClass{
+			ObjectMeta:  metav1.ObjectMeta{Name: storageClassName},
+			Provisioner: provisioner,
+		}),
+		dynamicClient: dynamicfake.NewSimpleDynamicClientWithCustomListKinds(
+			runtime.NewScheme(),
+			map[schema.GroupVersionResource]string{
+				{Group: "snapshot.storage.k8s.io", Version: "v1", Resource: "volumesnapshotclasses"}: "VolumeSnapshotClassList",
+				{Group: "cdi.kubevirt.io", Version: "v1beta1", Resource: "storageprofiles"}:          "StorageProfileList",
+			},
+			objects...,
+		),
+	}
+}
+
+func testVolumeSnapshotClass(name, driver string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion":     "snapshot.storage.k8s.io/v1",
+		"kind":           "VolumeSnapshotClass",
+		"metadata":       map[string]any{"name": name},
+		"driver":         driver,
+		"deletionPolicy": "Delete",
+	}}
+}
+
+func testStorageProfile(name string, status map[string]any) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "cdi.kubevirt.io/v1beta1",
+		"kind":       "StorageProfile",
+		"metadata":   map[string]any{"name": name},
+		"status":     status,
+	}}
 }
