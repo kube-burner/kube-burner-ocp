@@ -28,6 +28,7 @@ import (
 )
 
 const defaultAgenticRunRequest = "Investigate the reported condition in the target namespace, propose a remediation and verify it."
+
 var agenticWorkflows = []string{"analysis", "analysis-execution", "full"}
 var agenticMockProfiles = []string{"trivial", "short", "typical", "long", "max-turns", "timeout", "malformed"}
 
@@ -50,10 +51,10 @@ func resolveTargetNamespaces(namespace, targetNamespace string, count *int) (str
 	if *count < 1 {
 		*count = 1
 	}
-	switch {
-	case targetNamespace == "":
+	switch targetNamespace {
+	case "":
 		return namespace + "-target", true
-	case targetNamespace == namespace:
+	case namespace:
 		return namespace, false
 	default:
 		return targetNamespace, true
