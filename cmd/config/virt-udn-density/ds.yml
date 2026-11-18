@@ -24,6 +24,6 @@ spec:
                 operator: DoesNotExist
       containers:
       - name: pause
-        image: quay.io/cloud-bulldozer/curl:latest
+        image: {{.preloadImage}}
         command: [sleep, inf]
         imagePullPolicy: IfNotPresent
