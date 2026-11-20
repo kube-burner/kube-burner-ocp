@@ -95,6 +95,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	var useSnapshot bool
 	var metricsProfiles []string
 	var cleanup bool
+	var autoClone bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtParallelTestName,
@@ -130,14 +131,24 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 				}
 			}
 
-			usePopulator, err := hasVolumeImportSourcePopulator(cmd.Context(), getK8SConnector().DynamicClient())
-			if err != nil {
-				log.Fatalf("Failed to detect CDI VolumeImportSource populator: %v", err)
-			}
-			AdditionalVars["usePopulator"] = usePopulator
-			log.Infof("CDI VolumeImportSource populator registered: %t", usePopulator)
-			if !usePopulator && skipMigrationJob {
-				log.Fatalf("virt-parallel: legacy CDI imports require ReadWriteMany; --skip-migration-job selects ReadWriteOnce, so use a ReadWriteMany-capable storage class and omit --skip-migration-job")
+			// When --auto-clone is set, skip the usePopulator annotation entirely
+			// This makes virt-parallel behave like virt-capacity-benchmark (no annotation)
+			// and lets CDI choose the optimal clone method automatically
+			if autoClone {
+				log.Infof("Auto-clone enabled: letting CDI choose the optimal clone method automatically")
+				AdditionalVars["usePopulator"] = false
+				AdditionalVars["addPopulatorAnnotation"] = false
+			} else {
+				usePopulator, err := hasVolumeImportSourcePopulator(cmd.Context(), getK8SConnector().DynamicClient())
+				if err != nil {
+					log.Fatalf("Failed to detect CDI VolumeImportSource populator: %v", err)
+				}
+				log.Infof("CDI VolumeImportSource populator registered: %t", usePopulator)
+				AdditionalVars["usePopulator"] = usePopulator
+				AdditionalVars["addPopulatorAnnotation"] = true
+				if !usePopulator && skipMigrationJob {
+					log.Fatalf("virt-parallel: legacy CDI imports require ReadWriteMany; --skip-migration-job selects ReadWriteOnce, so use a ReadWriteMany-capable storage class and omit --skip-migration-job")
+				}
 			}
 
 		},
@@ -274,6 +285,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
 	cmd.Flags().BoolVar(&useBaseImage, "use-base-image", false, "Create a base image and clone VMs from it instead of using container disk per VM")
 	cmd.Flags().BoolVar(&useSnapshot, "use-snapshot", true, "Clone from snapshot - only applies when --use-base-image=true")
+	cmd.Flags().BoolVar(&autoClone, "auto-clone", false, "Let CDI automatically choose the optimal clone method (omits usePopulator annotation)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd
