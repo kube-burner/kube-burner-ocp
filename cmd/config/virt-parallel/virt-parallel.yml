@@ -76,6 +76,7 @@ jobs:
       storageClassName: {{ .storageClassName }}
       baseDataVolumeSize: {{ $rootVolumeSizeStr }}
       usePopulator: {{ .usePopulator }}
+      addPopulatorAnnotation: {{ .addPopulatorAnnotation }}
       accessMode: {{ .skipMigrationJob | ternary "ReadWriteOnce" "ReadWriteMany" }}
     waitOptions:
       customStatusPaths:
@@ -183,6 +184,7 @@ jobs:
       namespace: {{ $nsName }}
       useBaseImage: {{ .useBaseImage }}
       usePopulator: {{ .usePopulator }}
+      addPopulatorAnnotation: {{ .addPopulatorAnnotation }}
       vmLabels:
         {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
         virt-parallel.kube-burner.io/namespace: {{ $nsName }}
