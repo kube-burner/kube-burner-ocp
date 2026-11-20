@@ -46,15 +46,13 @@ jobs:
     waitWhenFinished: true
     cleanup: false
     preLoadImages: true
+    # Metrics cover route propagation until the measurement finishes, and at least one Prometheus step
+    jobPause: 30s
+    metricsClosing: afterMeasurements
     objects:
       - objectTemplate: bgprouting.yml
         replicas: 1
         inputVars:
           maxTimeout: 10m
-          awsRegion: {{.AWS_REGION}}
-          routeServerId: {{.ROUTE_SERVER_ID}}
-          vpcId: {{.VPC_ID}}
       - objectTemplate: pod.yml
         replicas: 1
-        inputVars:
-          podReplicas: 1
