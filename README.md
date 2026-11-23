@@ -76,6 +76,7 @@ Flags:
       --prometheus-token string   Prometheus bearer token to use with --prometheus-url
       --prometheus-url string     Prometheus endpoint URL, overrides OpenShift Prometheus discovery
       --qps int                   QPS (default 20)
+      --resource-inventory        Write a JSON inventory of resources created by the workload
       --set strings               Set arbitrary key=value pairs to override values in the config file
       --timeout duration          Benchmark timeout (default 4h0m0s)
       --user-metadata string      User provided metadata file, in YAML format
@@ -116,6 +117,25 @@ kube-burner-ocp node-density --pods-per-node=100
 ```
 
 With the command above, the wrapper will calculate the required number of pods to deploy across all worker nodes of the cluster.
+
+### Resource inventory
+
+Pass `--resource-inventory` to a workload command to record the Kubernetes
+resources kube-burner creates. For example:
+
+```shell
+kube-burner-ocp node-density --pods-per-node=1 --local-indexing --resource-inventory
+```
+
+Kube-burner writes `resource-inventory.json` beside local or TSDB metrics. If no
+filesystem indexer is configured, it writes to `collected-metrics-<UUID>/`. Each
+row contains the API group, version, resource, namespace, name, UID, and job for
+a direct Kubernetes lookup. Controller-created resources and resources created
+by wrapper setup or hooks are outside the inventory's scope.
+
+The flag requires a kube-burner core build that supports
+`global.resourceInventory`. When developing both repositories together,
+include both checkouts in a Go workspace.
 
 ### Workload Flags Metadata
 

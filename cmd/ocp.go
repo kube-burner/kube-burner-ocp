@@ -18,6 +18,7 @@ import (
 	"embed"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	ocpmetadata "github.com/cloud-bulldozer/go-commons/v2/ocp-metadata"
@@ -49,6 +50,7 @@ func openShiftCmd() *cobra.Command {
 	var esServer, esIndex, prometheusURL, prometheusToken, prometheusTokenFile string
 	var QPS, burst int
 	var gc, gcMetrics, alerting, ignoreHealthCheck, localIndexing, extract, enableFileLogging bool
+	var resourceInventory bool
 	var setValues []string
 	ocpCmd := &cobra.Command{
 		Use:  "kube-burner-ocp",
@@ -61,6 +63,7 @@ func openShiftCmd() *cobra.Command {
 	ocpCmd.PersistentFlags().StringVar(&prometheusToken, "prometheus-token", "", "Prometheus bearer token to use with --prometheus-url")
 	ocpCmd.PersistentFlags().StringVar(&prometheusTokenFile, "prometheus-token-file", "", "Path to a file containing the Prometheus bearer token, re-read on every request for automatic refresh")
 	ocpCmd.PersistentFlags().BoolVar(&localIndexing, "local-indexing", false, "Enable local indexing")
+	ocpCmd.PersistentFlags().BoolVar(&resourceInventory, "resource-inventory", false, "Write a JSON inventory of resources created by the workload")
 	ocpCmd.PersistentFlags().StringVar(&workloadConfig.MetricsEndpoint, "metrics-endpoint", "", "YAML file with a list of metric endpoints, overrides the es-server and es-index flags")
 	ocpCmd.PersistentFlags().BoolVar(&alerting, "alerting", true, "Enable alerting")
 	ocpCmd.PersistentFlags().BoolVar(&ignoreHealthCheck, "ignore-health-check", false, "Run cluster health check, but ignore failures")
@@ -148,7 +151,11 @@ func openShiftCmd() *cobra.Command {
 				log.Debugf("Obtained prometheus endpoint: %s", wh.PrometheusURL)
 			}
 		}
-		ocpWorkloads.SetVars, err = config.ParseSetValues(setValues)
+		overrides := setValues
+		if cmd.Flags().Changed("resource-inventory") {
+			overrides = append([]string{"global.resourceInventory=" + strconv.FormatBool(resourceInventory)}, overrides...)
+		}
+		ocpWorkloads.SetVars, err = config.ParseSetValues(overrides)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
