@@ -62,7 +62,7 @@ generator owns is the request text. Two tokens are recognised anywhere in the
 conversation:
 
     [mock-profile:typical]      select a response profile
-    [mock-ns:perf-target-0]     emit RBAC scoped to this namespace, so the
+    [mock-ns:openshift-lightspeed]  emit RBAC scoped to this namespace, so the
                                 operator actually materializes a Role and
                                 RoleBinding at execution
 
@@ -282,8 +282,8 @@ def rbac_block(namespace):
     """RBAC scoped to a namespace the run actually targets.
 
     Left out unless a namespace is known: `rbac` is optional in the analysis
-    schema, and a rule naming a namespace that is not in spec.targetNamespaces
-    is rejected. Emitting it when we do know the namespace is what makes the
+    schema. The workload supplies the namespace through its [mock-ns:...] token.
+    Emitting it when we do know the namespace is what makes the
     operator materialize a Role and RoleBinding at execution, which is a real
     cost centre worth measuring rather than skipping.
     """

@@ -255,8 +255,7 @@ cat <<EOF
 Drive load against it:
 
   kube-burner-ocp agentic-run-density --iterations=100 \\
-    --agent=${AGENT_NAME} --mock-profile=typical \\
-    --target-namespace=perf-target --target-namespace-count=20
+    --agent=${AGENT_NAME} --mock-profile=typical
 
 Read the mock's own counters:
 

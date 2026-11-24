@@ -1,5 +1,0 @@
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ if gt .targetNamespaceCount 1 }}{{.targetNamespaceBase}}-{{ sub .Replica 1 }}{{ else }}{{.targetNamespaceBase}}{{ end }}

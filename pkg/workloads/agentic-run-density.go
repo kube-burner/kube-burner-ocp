@@ -27,7 +27,7 @@ import (
 	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 )
 
-const defaultAgenticRunRequest = "Investigate the reported condition in the target namespace, propose a remediation and verify it."
+const defaultAgenticRunRequest = "Investigate the reported condition in openshift-lightspeed, propose a remediation and verify it."
 
 var agenticWorkflows = []string{"analysis", "analysis-execution", "full"}
 var agenticMockProfiles = []string{"trivial", "short", "typical", "long", "max-turns", "timeout", "malformed"}
@@ -45,29 +45,13 @@ var agenticMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurem
 // runs somewhere the template will override.
 const agenticOperatorNamespace = "openshift-lightspeed"
 
-// resolveTargetNamespaces decides the base name of spec.targetNamespaces and
-// whether the workload has to create those namespaces itself.
-func resolveTargetNamespaces(namespace, targetNamespace string, count *int) (string, bool) {
-	if *count < 1 {
-		*count = 1
-	}
-	switch targetNamespace {
-	case "":
-		return namespace + "-target", true
-	case namespace:
-		return namespace, false
-	default:
-		return targetNamespace, true
-	}
-}
-
 // NewAgenticRunDensity holds the agentic-run-density workload, which drives
 // concurrent OpenShift Lightspeed AgenticRun CRs through the agentic-operator
 // and measures the per-phase latency of each run with the agenticRunLatency
 // measurement.
 func NewAgenticRunDensity(wh *workloads.WorkloadHelper) *cobra.Command {
-	var iterations, targetNamespaceCount int
-	var namespace, targetNamespace, request, sandboxLabel, agent, workflow, mockProfile string
+	var iterations int
+	var namespace, request, sandboxLabel, agent, workflow, mockProfile string
 	var runTimeout, iterationDelay time.Duration
 	var waitForCompletion bool
 	var metricsProfiles []string
@@ -97,12 +81,8 @@ func NewAgenticRunDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
-			targetBase, createTargets := resolveTargetNamespaces(namespace, targetNamespace, &targetNamespaceCount)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NAMESPACE"] = namespace
-			AdditionalVars["TARGET_NAMESPACE"] = targetBase
-			AdditionalVars["TARGET_NAMESPACE_COUNT"] = targetNamespaceCount
-			AdditionalVars["CREATE_TARGET_NAMESPACES"] = createTargets
 			AdditionalVars["REQUEST"] = request
 			AdditionalVars["AGENT"] = agent
 			AdditionalVars["WORKFLOW"] = workflow
@@ -120,8 +100,6 @@ func NewAgenticRunDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of AgenticRuns to create")
 	cmd.Flags().StringVar(&namespace, "namespace", agenticOperatorNamespace, "Namespace the AgenticRuns are created in, which must be the agentic operator's own namespace")
-	cmd.Flags().StringVar(&targetNamespace, "target-namespace", "", "Namespace the agent is scoped to and where execution RBAC is materialized, created by the workload. Defaults to <namespace>-target")
-	cmd.Flags().IntVar(&targetNamespaceCount, "target-namespace-count", 1, "Spread the AgenticRuns across this many target namespaces, named <target-namespace>-0..N-1 when above 1")
 	cmd.Flags().StringVar(&request, "request", defaultAgenticRunRequest, "Remediation request carried by every AgenticRun")
 	cmd.Flags().StringVar(&agent, "agent", "default", "Agent CR every run step is bound to, must already exist")
 	cmd.Flags().StringVar(&workflow, "workflow", "full", "Steps each run performs, one of analysis, analysis-execution, full. Omitted steps are skipped by the operator")

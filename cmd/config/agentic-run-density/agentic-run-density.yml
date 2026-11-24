@@ -23,28 +23,6 @@ metricsEndpoints:
 {{ end }}
 
 jobs:
-{{ if .CREATE_TARGET_NAMESPACES }}
-  - name: agentic-run-density-targets
-    jobIterations: 1
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    namespacedIterations: false
-    preLoadImages: false
-    cleanup: true
-    waitWhenFinished: true
-    podWait: false
-    maxWaitTimeout: 5m
-    objects:
-      - objectTemplate: target-namespace.yml
-        replicas: {{.TARGET_NAMESPACE_COUNT}}
-        inputVars:
-          targetNamespaceBase: {{.TARGET_NAMESPACE}}
-          targetNamespaceCount: {{.TARGET_NAMESPACE_COUNT}}
-        waitOptions:
-          customStatusPaths:
-          - key: '.phase'
-            value: Active
-{{ end }}
   - name: agentic-run-density
     namespace: {{.NAMESPACE}}
     jobIterations: {{.JOB_ITERATIONS}}
@@ -62,8 +40,6 @@ jobs:
         replicas: 1
         inputVars:
           request: "{{.REQUEST}}"
-          targetNamespaceBase: {{.TARGET_NAMESPACE}}
-          targetNamespaceCount: {{.TARGET_NAMESPACE_COUNT}}
           agent: {{.AGENT}}
           workflow: {{.WORKFLOW}}
           mockProfile: "{{.MOCK_PROFILE}}"
