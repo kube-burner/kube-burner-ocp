@@ -1,0 +1,17 @@
+apiVersion: krkn.krkn-chaos.dev/v1alpha1
+kind: KrknUserGroup
+metadata:
+  name: krkn-{{.UUID}}-group-{{.Iteration}}-{{.Replica}}
+  labels:
+    kube-burner.io/test-name: krkn-crd-scale
+    kube-burner.io/uuid: "{{.UUID}}"
+    krkn-scale-test: "true"
+spec:
+  name: krkn-{{.UUID}}-group-{{.Iteration}}-{{.Replica}}
+  description: kube-burner Krkn operator CRD scale test group
+  clusterPermissions:
+    https://kube-burner.invalid:
+      actions:
+        - view
+        - run
+        - cancel

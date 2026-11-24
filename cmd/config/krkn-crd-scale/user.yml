@@ -1,0 +1,17 @@
+apiVersion: krkn.krkn-chaos.dev/v1alpha1
+kind: KrknUser
+metadata:
+  name: krkn-{{.UUID}}-user-{{.Iteration}}-{{.Replica}}
+  labels:
+    kube-burner.io/test-name: krkn-crd-scale
+    kube-burner.io/uuid: "{{.UUID}}"
+    krkn-scale-test: "true"
+    krkn.krkn-chaos.dev/user-account: "true"
+    krkn.krkn-chaos.dev/role: "user"
+spec:
+  userId: krkn-{{.UUID}}-user-{{.Iteration}}-{{.Replica}}@example.test
+  name: Kube
+  surname: Burner
+  organization: kube-burner-ocp
+  role: user
+  passwordSecretRef: krkn-{{.UUID}}-password-{{.Iteration}}-{{.Replica}}

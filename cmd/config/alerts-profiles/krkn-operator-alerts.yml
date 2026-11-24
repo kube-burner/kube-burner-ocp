@@ -1,0 +1,21 @@
+# Alerts for the Krkn operator CRD scale workload.
+
+- expr: sum(rate(controller_runtime_reconcile_errors_total{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*",controller=~"krkn.*"}[5m])) by (controller) > 0
+  description: Krkn controller {{$labels.controller}} is reporting reconciliation errors. {{$value}} errors/s
+  severity: error
+
+- expr: histogram_quantile(0.99, sum(rate(controller_runtime_reconcile_time_seconds_bucket{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*",controller=~"krkn.*"}[5m])) by (controller, le)) > {{.RECONCILE_P99_THRESHOLD}}
+  description: Krkn controller {{$labels.controller}} p99 reconciliation latency exceeded the configured threshold. {{$value}}s
+  severity: warning
+
+- expr: sum(rate(apiserver_request_total{group="krkn.krkn-chaos.dev",resource=~"krkn.*",code=~"5.."}[5m])) by (verb, resource, code) > 0
+  description: Krkn API requests are returning 5xx responses for {{$labels.verb}}/{{$labels.resource}}. {{$value}} requests/s
+  severity: error
+
+- expr: sum(rate(apiserver_request_total{group="krkn.krkn-chaos.dev",resource=~"krkn.*",code="429"}[5m])) by (verb, resource, code) > 0
+  description: Krkn API requests are being rate limited for {{$labels.verb}}/{{$labels.resource}}. {{$value}} requests/s
+  severity: warning
+
+- expr: changes(process_start_time_seconds{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*"}[5m]) > 0
+  description: The Krkn operator process restarted during the measurement window.
+  severity: error

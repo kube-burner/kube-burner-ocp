@@ -26,7 +26,7 @@ setup_file() {
 }
 
 setup() {
-  export UUID; UUID=$(uuidgen)
+  export UUID; UUID=$(uuidgen | tr '[:upper:]' '[:lower:]')
   export RATE="--qps=10 --burst=10"
   export INDEXING_FLAGS="--es-server=${ES_SERVER} --es-index=${ES_INDEX} --alerting=true ${RATE} --uuid=${UUID}"
 }
@@ -139,6 +139,38 @@ teardown_file() {
 # bats test_tags=workload:crd-scale
 @test "crd-scale; alerting=false" {
   run_cmd ${KUBE_BURNER_OCP} crd-scale --iterations=2 --alerting=false
+}
+
+# bats test_tags=workload:krkn-crd-scale
+@test "krkn-crd-scale; creates and reconciles Krkn resources" {
+  if ! oc get crd krkncategories.krkn.krkn-chaos.dev >/dev/null 2>&1; then
+    skip "Krkn CRDs are not installed"
+  fi
+
+  run_cmd ${KUBE_BURNER_OCP} krkn-crd-scale --iterations=1 --namespace=krkn-operator-system --gc=false --alerting=false --uuid=${UUID}
+  local selector="kube-burner.io/test-name=krkn-crd-scale,kube-burner.io/uuid=${UUID}"
+  verify_object_count krkncategories 5 krkn-operator-system "${selector}"
+  verify_object_count krknusers 6 krkn-operator-system "${selector}"
+  verify_object_count krknusergroups 8 krkn-operator-system "${selector}"
+  verify_object_count krknoperatortargetproviderconfigs 3 krkn-operator-system "${selector}"
+  verify_object_count secret 6 krkn-operator-system "${selector}"
+  run_cmd oc delete krkncategories,krknusers,krknusergroups,krknoperatortargetproviderconfigs,secrets -n krkn-operator-system -l "${selector}" --ignore-not-found --wait=false
+}
+
+# bats test_tags=workload:krkn-crd-scale
+@test "krkn-crd-scale; local metrics" {
+  if ! oc get crd krkncategories.krkn.krkn-chaos.dev >/dev/null 2>&1; then
+    skip "Krkn CRDs are not installed"
+  fi
+
+  run_cmd ${KUBE_BURNER_OCP} krkn-crd-scale --iterations=1 --namespace=krkn-operator-system --operator-namespace=krkn-operator-system --local-indexing --alerting=false --uuid=${UUID}
+  check_file_list \
+    collected-metrics-${UUID}/jobSummary.json \
+    collected-metrics-${UUID}/krknControllerReconcileTotal.json \
+    collected-metrics-${UUID}/krknControllerReconcileErrorRate.json \
+    collected-metrics-${UUID}/krknControllerReconcileP99Seconds.json \
+    collected-metrics-${UUID}/krknOperatorResidentMemoryBytes.json \
+    collected-metrics-${UUID}/krknCRDRequestP99Seconds.json
 }
 
 # bats test_tags=workload:virt-density
