@@ -40,9 +40,8 @@ var agenticMeasurementFactoryMap = map[string]kubeburnermeasurements.NewMeasurem
 // is pinned as a literal in agentic-run.yml for the reason documented there:
 // the operator puts the sandbox pod and its input ConfigMap in its own
 // namespace while owning them from the run, and a cross-namespace owner is
-// collected immediately. The constant exists so the Go side can refuse a
-// --namespace that disagrees with the template rather than silently creating
-// runs somewhere the template will override.
+// collected immediately. The constant keeps the job namespace consistent
+// with the AgenticRun template. Custom namespaces are not supported.
 const agenticOperatorNamespace = "openshift-lightspeed"
 
 // NewAgenticRunDensity holds the agentic-run-density workload, which drives
@@ -51,7 +50,7 @@ const agenticOperatorNamespace = "openshift-lightspeed"
 // measurement.
 func NewAgenticRunDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 	var iterations int
-	var namespace, request, sandboxLabel, agent, workflow, mockProfile string
+	var request, sandboxLabel, agent, workflow, mockProfile string
 	var runTimeout, iterationDelay time.Duration
 	var waitForCompletion bool
 	var metricsProfiles []string
@@ -72,17 +71,13 @@ func NewAgenticRunDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 			if mockProfile != "" && !slices.Contains(agenticMockProfiles, mockProfile) {
 				return fmt.Errorf("invalid --mock-profile %q, must be empty or one of %v", mockProfile, agenticMockProfiles)
 			}
-			if namespace != agenticOperatorNamespace {
-				return fmt.Errorf("--namespace must be %q: the operator creates sandbox pods in its own namespace "+
-					"but owns them from the AgenticRun, and a cross-namespace owner is garbage collected immediately, "+
-					"so every run fails to claim its sandbox", agenticOperatorNamespace)
-			}
+
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
-			AdditionalVars["NAMESPACE"] = namespace
+			AdditionalVars["NAMESPACE"] = agenticOperatorNamespace
 			AdditionalVars["REQUEST"] = request
 			AdditionalVars["AGENT"] = agent
 			AdditionalVars["WORKFLOW"] = workflow
@@ -99,7 +94,6 @@ func NewAgenticRunDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 0, "Number of AgenticRuns to create")
-	cmd.Flags().StringVar(&namespace, "namespace", agenticOperatorNamespace, "Namespace the AgenticRuns are created in, which must be the agentic operator's own namespace")
 	cmd.Flags().StringVar(&request, "request", defaultAgenticRunRequest, "Remediation request carried by every AgenticRun")
 	cmd.Flags().StringVar(&agent, "agent", "default", "Agent CR every run step is bound to, must already exist")
 	cmd.Flags().StringVar(&workflow, "workflow", "full", "Steps each run performs, one of analysis, analysis-execution, full. Omitted steps are skipped by the operator")

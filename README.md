@@ -1927,10 +1927,12 @@ kube-burner-ocp init -c config.yml --iterations 1 \
 `agentic-run-density` drives concurrent OpenShift Lightspeed `AgenticRun` CRs through the agentic-operator and measures how long each one takes to move through analysis, approval, execution and verification.
 
 ```console
-kube-burner-ocp agentic-run-density --iterations=50 --namespace=openshift-lightspeed --run-timeout=30m
+kube-burner-ocp agentic-run-density --iterations=50 --run-timeout=30m
 ```
 
 ### Prerequisites
+
+The workload uses the existing openshift-lightspeed namespace. Custom namespaces are not supported.
 
 - The agentic layer (OCP >= 5.0) must be installed, providing the `agentic.openshift.io/v1alpha1` `AgenticRun` CRD
 - An `Agent` must exist for `--agent` to name, bound to an `LLMProvider`
@@ -1943,7 +1945,6 @@ kube-burner-ocp agentic-run-density --iterations=50 --namespace=openshift-lights
 | Flag | Default | Description |
 | ---- | ------- | ----------- |
 | `--iterations` | required | Number of `AgenticRun` CRs to create |
-| `--namespace` | `openshift-lightspeed` | Existing operator namespace for `AgenticRun` CRs; other values are rejected |
 | `--request` | generic remediation request | Remediation request carried by every `AgenticRun` |
 | `--agent` | `default` | `Agent` CR every run step is bound to. Must already exist |
 | `--workflow` | `full` | Steps each run performs: `analysis`, `analysis-execution` or `full` |
