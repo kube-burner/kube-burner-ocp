@@ -134,7 +134,7 @@ func TestSetMetricsHonorsExplicitBothProfileOnMicroShift(t *testing.T) {
 	}
 }
 
-func TestBuildNodeLabelsJSON(t *testing.T) {
+func TestGetNodeLabelsJSON(t *testing.T) {
 	tests := []struct {
 		name     string
 		selector string
@@ -163,10 +163,7 @@ func TestBuildNodeLabelsJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := buildNodeLabelsJSON(tt.selector)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
+			got := getNodeLabelsJSON(tt.selector)
 			if tt.name == "multiple equality labels" {
 				if !strings.Contains(got, `"node-role.kubernetes.io/worker":""`) {
 					t.Fatalf("expected worker label in output, got %s", got)

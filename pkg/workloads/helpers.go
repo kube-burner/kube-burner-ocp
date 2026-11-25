@@ -207,13 +207,13 @@ func buildNodeSelectorJSON(selector string) (string, error) {
 	return string(nodeSelectorJSON), nil
 }
 
-// buildNodeLabelsJSON extracts equality-based labels from a Kubernetes label selector
+// getNodeLabelsJSON extracts equality-based labels from a Kubernetes label selector
 // string and returns them as a JSON map suitable for use as preLoadNodeLabels.
 // Inequality selectors (!=) are skipped since NodeSelector only supports equality matching.
-func buildNodeLabelsJSON(selector string) (string, error) {
+func getNodeLabelsJSON(selector string) string {
 	labelSelector, err := labels.Parse(selector)
 	if err != nil {
-		return "", err
+		log.Fatalf("Error parsing selector %q: %v", selector, err)
 	}
 	nodeLabels := make(map[string]string)
 	reqList, _ := labelSelector.Requirements()
@@ -229,13 +229,13 @@ func buildNodeLabelsJSON(selector string) (string, error) {
 		}
 	}
 	if len(nodeLabels) == 0 {
-		return "", nil
+		return ""
 	}
 	nodeLabelsJSON, err := json.Marshal(nodeLabels)
 	if err != nil {
-		return "", err
+		log.Fatalf("Error marshaling node labels: %v", err)
 	}
-	return string(nodeLabelsJSON), nil
+	return string(nodeLabelsJSON)
 }
 
 // addWorkloadFlagsToMetadata adds all flag values from the command to SummaryMetadata

@@ -58,11 +58,7 @@ func NewNodeDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command
 			if err != nil {
 				log.Fatal(err.Error())
 			}
-			nodeLabelsJSON, err := buildNodeLabelsJSON(selector)
-			if err != nil {
-				log.Fatal(err.Error())
-			}
-			AdditionalVars["PRELOAD_NODE_LABELS"] = nodeLabelsJSON
+			AdditionalVars["PRELOAD_NODE_LABELS"] = getNodeLabelsJSON(selector)
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
