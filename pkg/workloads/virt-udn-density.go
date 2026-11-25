@@ -113,6 +113,7 @@ func NewVirtUDNDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 				log.Fatal(err.Error())
 			}
 			AdditionalVars["NODE_SELECTOR"] = nodeSelectorJSON
+			AdditionalVars["PRELOAD_NODE_LABELS"] = getNodeLabelsJSON(selector)
 			AdditionalVars["SSH_CHECK"] = sshCheck
 
 			if l3 {

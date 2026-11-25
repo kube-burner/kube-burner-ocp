@@ -134,6 +134,52 @@ func TestSetMetricsHonorsExplicitBothProfileOnMicroShift(t *testing.T) {
 	}
 }
 
+func TestGetNodeLabelsJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		selector string
+		want     string
+	}{
+		{
+			name:     "default worker selector extracts only equality label",
+			selector: "node-role.kubernetes.io/worker=,node-role.kubernetes.io/infra!=,node-role.kubernetes.io/workload!=",
+			want:     `{"node-role.kubernetes.io/worker":""}`,
+		},
+		{
+			name:     "equality with value",
+			selector: "kubernetes.io/os=linux",
+			want:     `{"kubernetes.io/os":"linux"}`,
+		},
+		{
+			name:     "only inequality selectors returns empty",
+			selector: "node-role.kubernetes.io/infra!=",
+			want:     "",
+		},
+		{
+			name:     "multiple equality labels",
+			selector: "node-role.kubernetes.io/worker=,topology.kubernetes.io/zone=us-east-1a",
+			want:     "", // will check keys individually since map ordering is not guaranteed
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getNodeLabelsJSON(tt.selector)
+			if tt.name == "multiple equality labels" {
+				if !strings.Contains(got, `"node-role.kubernetes.io/worker":""`) {
+					t.Fatalf("expected worker label in output, got %s", got)
+				}
+				if !strings.Contains(got, `"topology.kubernetes.io/zone":"us-east-1a"`) {
+					t.Fatalf("expected zone label in output, got %s", got)
+				}
+				return
+			}
+			if got != tt.want {
+				t.Fatalf("expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}
+
 func TestClusterDensityMSTemplateGatesOptionalOpenShiftObjects(t *testing.T) {
 	withoutAPIs := renderClusterDensityMSTemplate(t, clusterDensityMSTemplateData(map[string]any{
 		"HAS_IMAGESTREAM_API": false,
@@ -188,6 +234,7 @@ func clusterDensityMSTemplateData(overrides map[string]any) map[string]any {
 		"LOCAL_INDEXING":      false,
 		"METRICS":             "microshift-metrics.yml",
 		"NODE_SELECTOR":       `{"nodeSelectorTerms":[{"matchExpressions":[{"key":"node-role.kubernetes.io/worker","operator":"Exists"}]}]}`,
+		"PRELOAD_NODE_LABELS": `{"node-role.kubernetes.io/worker":""}`,
 		"POD_READY_THRESHOLD": 0,
 		"PPROF":               false,
 		"QPS":                 5,

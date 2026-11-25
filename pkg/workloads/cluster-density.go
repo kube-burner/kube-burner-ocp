@@ -104,6 +104,7 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			}
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NODE_SELECTOR"] = string(nodeSelectorJson)
+			AdditionalVars["PRELOAD_NODE_LABELS"] = getNodeLabelsJSON(selector)
 			AdditionalVars["PPROF"] = pprof
 			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
 			AdditionalVars["PPROF_KUBELET"] = pprofKubelet
