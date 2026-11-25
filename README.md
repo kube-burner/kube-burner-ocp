@@ -2033,6 +2033,8 @@ make build ARCH=arm64
 make test ARCH=arm64 TEST_FILTER='^agentic-run-density$' FILTER_TAGS=
 ```
 
+After the test finishes, collected metrics are available as JSON files in `test/ocp/collected-metrics-<UUID>/`, relative to the repository root.
+
 ### AgenticRun Latency Metrics
 
 `agenticRunLatency` records the lifecycle of every `AgenticRun` created by the workload. All latencies are in ms. It is enabled by the workload's own config:

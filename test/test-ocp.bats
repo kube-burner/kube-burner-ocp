@@ -149,7 +149,7 @@ teardown_file() {
   namespace_uid=$(oc get namespace openshift-lightspeed -o jsonpath='{.metadata.uid}')
   ${BATS_TEST_DIRNAME}/hack/deploy-mock-llm.sh --default-profile=short
   run_cmd ${KUBE_BURNER_OCP} agentic-run-density --iterations=2 --run-timeout=10m \
-    --workflow=full --mock-profile=short ${INDEXING_FLAGS}
+    --workflow=full --mock-profile=short --local-indexing ${INDEXING_FLAGS}
   check_metric_value jobSummary agenticRunLatencyMeasurement agenticRunLatencyQuantilesMeasurement
   [[ "$(oc get namespace openshift-lightspeed -o jsonpath='{.metadata.uid}')" == "${namespace_uid}" ]]
   ${BATS_TEST_DIRNAME}/hack/deploy-mock-llm.sh --delete
