@@ -356,10 +356,14 @@ jobs:
     kind: PersistentVolumeClaim
     labelSelector:
       {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+  - apiVersion: snapshot.kubevirt.io/v1beta1
+    kind: VirtualMachineSnapshot
+    labelSelector:
+      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
   - apiVersion: snapshot.storage.k8s.io/v1
     kind: VolumeSnapshot
     labelSelector:
-      {{ $jobCounterLabelKey }}: {{ $jobCounterLabelValue }}
+      snapshot.kubevirt.io/source-vm-namespace: {{ $nsName }}
   - apiVersion: cdi.kubevirt.io/v1beta1
     kind: DataSource
     labelSelector:
