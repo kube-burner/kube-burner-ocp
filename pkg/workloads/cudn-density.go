@@ -223,12 +223,22 @@ func NewCudnDensity(wh *workloads.WorkloadHelper) *cobra.Command {
 				AdditionalVars["EXTERNAL_HOST_CIDR"] = externalHost + "/32"
 			}
 			wh.SetMeasurements(cudnMeasurementFactoryMap)
+			ovnPerfCollector, err := startOVNPerfCollection(cmd, wh)
+			if err != nil {
+				log.Fatalf("Failed to start OVN perf collection: %v", err)
+			}
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(cmd.Context()), 10*time.Minute)
+			defer cancel()
+			if err := ovnPerfCollector.Stop(ctx); err != nil {
+				log.Fatalf("Failed to complete OVN perf collection: %v", err)
+			}
 		},
 		PostRun: func(cmd *cobra.Command, args []string) {
 			os.Exit(rc)
 		},
 	}
+	addOVNPerfFlags(cmd)
 	cmd.Flags().BoolVar(&l3, "layer3", false, "Use Layer3 topology instead of Layer2")
 	cmd.Flags().BoolVar(&bgp, "bgp", false, "Enable BGP route advertisement for each CUDN (requires external FRR on the default gatewaynode)")
 	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection for ovnkube components")
