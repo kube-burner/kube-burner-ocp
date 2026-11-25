@@ -2016,6 +2016,23 @@ Set `--mock-profile=""` to drop both tokens and run against a real provider.
 
 With `--with-servicemonitor` the mock's own counters (`mockllm_requests_total`, `mockllm_turns_total`, `mockllm_tokens_total`, `mockllm_request_duration_seconds`) are scraped into the cluster Prometheus and become collectable through the same metrics profile as everything else. It needs user workload monitoring enabled.
 
+### Native regression test
+
+Use **Bats 1.10.0**, matching `.github/workflows/test-ocp.yml`. Bats 1.13.0 and
+1.14.0 have a [timeout cleanup bug](https://github.com/bats-core/bats-core/issues/1206)
+that can delay a failed test until the full 45-minute timeout expires.
+
+From the repository root, run the following for arm64 (use `ARCH=amd64` on x86_64):
+
+```bash
+BATS_DIR=$(mktemp -d)
+git clone --depth 1 --branch v1.10.0 https://github.com/bats-core/bats-core.git "$BATS_DIR"
+export PATH="$BATS_DIR/bin:$PATH"
+bats --version
+make build ARCH=arm64
+make test ARCH=arm64 TEST_FILTER='^agentic-run-density$' FILTER_TAGS=
+```
+
 ### AgenticRun Latency Metrics
 
 `agenticRunLatency` records the lifecycle of every `AgenticRun` created by the workload. All latencies are in ms. It is enabled by the workload's own config:

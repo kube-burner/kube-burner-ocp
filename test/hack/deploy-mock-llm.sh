@@ -177,6 +177,7 @@ if [[ "${DRY_RUN}" == "true" ]]; then
   exit 0
 fi
 
+command -v jq >/dev/null 2>&1 || die "jq is not on PATH"
 oc whoami >/dev/null 2>&1 || die "not logged in to a cluster"
 
 for crd in llmproviders agents approvalpolicies agenticruns; do
@@ -219,6 +220,22 @@ log "waiting for the mock to become ready"
 oc rollout status -n "${NAMESPACE}" deployment/mock-llm --timeout="${TIMEOUT}"
 
 log "applying LLMProvider, Agent and ApprovalPolicy"
+# Exported objects can leave server-managed fields in the previous apply record.
+# Remove only those recorded fields so apply does not try to clear live metadata.
+LAST_APPLIED_ANNOTATION="kubectl.kubernetes.io/last-applied-configuration"
+for resource in "llmprovider.agentic.openshift.io/${PROVIDER_NAME}" \
+  "agent.agentic.openshift.io/${AGENT_NAME}" "approvalpolicy.agentic.openshift.io/cluster"; do
+  current=$(oc get "${resource}" --ignore-not-found -o json)
+  [[ -n "${current}" ]] || continue
+  previous=$(jq -r --arg key "${LAST_APPLIED_ANNOTATION}" '.metadata.annotations[$key] // empty' <<< "${current}")
+  [[ -n "${previous}" ]] || continue
+  cleaned=$(jq -c 'select(.metadata | has("uid") or has("resourceVersion")) |
+    del(.metadata.uid, .metadata.resourceVersion)' <<< "${previous}")
+  [[ -n "${cleaned}" ]] || continue
+  log "repairing apply metadata for ${resource}"
+  oc annotate "${resource}" "${LAST_APPLIED_ANNOTATION}=${cleaned}" --overwrite \
+    --resource-version="$(jq -r '.metadata.resourceVersion' <<< "${current}")"
+done
 render "${ASSET_DIR}/agentic-config.yml" | oc apply -f -
 
 log "smoke testing /v1/chat/completions"
