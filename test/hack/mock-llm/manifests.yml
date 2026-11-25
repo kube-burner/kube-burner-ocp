@@ -1,0 +1,109 @@
+# Mock LLM server for agentic-run-density.
+#
+# Applied by test/hack/deploy-mock-llm.sh, which substitutes the __TOKENS__
+# below. Apply it by hand only if you have already done that substitution.
+#
+# The server itself lives in a ConfigMap the script builds from
+# mock_openai_server.py, so there is no image to build and nothing to pull
+# beyond a stock UBI python image.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: __SECRET_NAME__
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: mock-llm
+    app.kubernetes.io/part-of: agentic-perf
+type: Opaque
+stringData:
+  OPENAI_API_KEY: mock-not-a-real-key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-llm
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: mock-llm
+    app.kubernetes.io/part-of: agentic-perf
+spec:
+  replicas: __REPLICAS__
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mock-llm
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: mock-llm
+        app.kubernetes.io/part-of: agentic-perf
+    spec:
+      containers:
+        - name: server
+          image: __IMAGE__
+          command: ["python3", "-u", "/opt/mock/mock_openai_server.py"]
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DEFAULT_PROFILE
+              value: "__DEFAULT_PROFILE__"
+            - name: MOCK_SLEEP_SECONDS
+              value: "__SLEEP_SECONDS__"
+            - name: MOCK_MODEL
+              value: "__MODEL__"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "2"
+              memory: "1Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: server
+              mountPath: /opt/mock
+              readOnly: true
+      volumes:
+        - name: server
+          configMap:
+            name: __CONFIGMAP_NAME__
+            defaultMode: 0555
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-llm
+  namespace: __NAMESPACE__
+  labels:
+    app.kubernetes.io/name: mock-llm
+    app.kubernetes.io/part-of: agentic-perf
+spec:
+  selector:
+    app.kubernetes.io/name: mock-llm
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP

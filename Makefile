@@ -53,4 +53,4 @@ install:
 test: test-ocp
 
 test-ocp:
-	cd test && KUBE_BURNER_OCP=$(TEST_BINARY) bats $(if $(TEST_FILTER),--filter "$(TEST_FILTER)",) -F pretty -T --print-output-on-failure test-ocp.bats $(FILTER_TAGS)
+	cd test && KUBE_BURNER_OCP=$(TEST_BINARY) bats $(if $(TEST_FILTER),--filter "$(value TEST_FILTER)",) -F pretty -T --print-output-on-failure test-ocp.bats $(FILTER_TAGS)

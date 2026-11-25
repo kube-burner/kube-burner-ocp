@@ -47,6 +47,13 @@
   paths:
   - pkg/workloads/crd-scale.go
   - cmd/config/crd-scale/*
+- label: workload:agentic-run-density
+  paths:
+  - pkg/workloads/agentic-run-density.go
+  - cmd/config/agentic-run-density/*
+  - pkg/measurements/agentic-run-latency.go
+  - test/hack/deploy-mock-llm.sh
+  - test/hack/mock-llm/*
 - label: workload:virt-density
   paths:
   - pkg/workloads/virt-density.go
