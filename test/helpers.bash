@@ -47,10 +47,10 @@ check_destroyed_ns() {
 }
 
 check_ztwim_svid_metrics() {
-  local uuid=$1
+  local run_uuid=$1
   local expected_pods=$2
   local expect_rotation=${3:-0}
-  local dir="collected-metrics-${uuid}"
+  local dir="collected-metrics-${run_uuid}"
   local verification="${dir}/ztwimSvidVerificationMeasurement-ztwim-svid-issuance-pods.json"
   local latency="${dir}/ztwimSvidLatencyMeasurement-ztwim-svid-issuance-pods.json"
   check_file_list "${verification}" "${latency}"

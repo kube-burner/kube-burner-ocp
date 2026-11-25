@@ -16,6 +16,12 @@ package measurements
 
 import "time"
 
+const (
+	ZtwimPerfWorkloadNamespace = "ztwim-perf"
+	ZtwimPerfAppLabel          = "ztwim-perf"
+	ZtwimPerfAppContainer      = "app"
+)
+
 // ZtwimSvidMeasurementConfig is set by the ztwim-svid-issuance workload before each run.
 var ZtwimSvidMeasurementConfig struct {
 	Namespace               string
@@ -27,3 +33,46 @@ var ZtwimSvidMeasurementConfig struct {
 	SvidLatencyPollInterval time.Duration
 }
 
+func ztwimSvidPollSettings(maxWait, pollInterval time.Duration) (time.Duration, time.Duration) {
+	cfg := ZtwimSvidMeasurementConfig
+	if maxWait <= 0 {
+		if cfg.SvidLatencyMaxWait > 0 {
+			maxWait = cfg.SvidLatencyMaxWait
+		} else {
+			maxWait = 5 * time.Minute
+		}
+	}
+	if pollInterval <= 0 {
+		if cfg.SvidLatencyPollInterval > 0 {
+			pollInterval = cfg.SvidLatencyPollInterval
+		} else {
+			pollInterval = 2 * time.Second
+		}
+	}
+	return maxWait, pollInterval
+}
+
+func ztwimSvidWorkloadTargets(namespace, appContainer, appLabel *string) {
+	cfg := ZtwimSvidMeasurementConfig
+	if *namespace == "" {
+		if cfg.Namespace != "" {
+			*namespace = cfg.Namespace
+		} else {
+			*namespace = ZtwimPerfWorkloadNamespace
+		}
+	}
+	if *appContainer == "" {
+		if cfg.AppContainer != "" {
+			*appContainer = cfg.AppContainer
+		} else {
+			*appContainer = ZtwimPerfAppContainer
+		}
+	}
+	if *appLabel == "" {
+		if cfg.AppLabel != "" {
+			*appLabel = cfg.AppLabel
+		} else {
+			*appLabel = ZtwimPerfAppLabel
+		}
+	}
+}

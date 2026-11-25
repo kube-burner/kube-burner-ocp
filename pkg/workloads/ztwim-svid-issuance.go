@@ -18,9 +18,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 	kubeburnermeasurements "github.com/kube-burner/kube-burner/v2/pkg/measurements"
 	"github.com/kube-burner/kube-burner/v2/pkg/workloads"
-	"github.com/kube-burner/kube-burner-ocp/pkg/measurements"
 	"github.com/spf13/cobra"
 )
 
@@ -48,15 +48,15 @@ func NewZtwimSvidIssuance(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["SPIFFE_CLASS"] = spiffeClass
 			AdditionalVars["SPIFFE_HELPER_IMAGE"] = spiffeHelperImage
 			AdditionalVars["APP_IMAGE"] = appImage
-			AdditionalVars["APP_LABEL"] = "ztwim-perf"
+			AdditionalVars["APP_LABEL"] = measurements.ZtwimPerfAppLabel
 			AdditionalVars["QPS"] = QPS
 			AdditionalVars["BURST"] = burst
 			AdditionalVars["SVID_TTL"] = svidTTL.String()
 			AdditionalVars["ROTATION_SOAK"] = rotationSoak.String()
 
-			measurements.ZtwimSvidMeasurementConfig.Namespace = "ztwim-perf"
-			measurements.ZtwimSvidMeasurementConfig.AppContainer = "app"
-			measurements.ZtwimSvidMeasurementConfig.AppLabel = "ztwim-perf"
+			measurements.ZtwimSvidMeasurementConfig.Namespace = measurements.ZtwimPerfWorkloadNamespace
+			measurements.ZtwimSvidMeasurementConfig.AppContainer = measurements.ZtwimPerfAppContainer
+			measurements.ZtwimSvidMeasurementConfig.AppLabel = measurements.ZtwimPerfAppLabel
 			measurements.ZtwimSvidMeasurementConfig.SVIDTTL = svidTTL
 			measurements.ZtwimSvidMeasurementConfig.RotationSoak = rotationSoak
 			measurements.ZtwimSvidMeasurementConfig.SvidLatencyMaxWait = svidLatencyMaxWait

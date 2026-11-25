@@ -37,11 +37,16 @@ import (
 )
 
 const (
-	ztwimSvidVerificationMeasurementName        = "ztwimSvidVerificationMeasurement"
+	ztwimSvidVerificationMeasurementName          = "ztwimSvidVerificationMeasurement"
 	ztwimSvidVerificationQuantilesMeasurementName = "ztwimSvidVerificationQuantilesMeasurement"
 )
 
 var supportedZtwimSvidVerificationJobTypes = []config.JobType{config.CreationJob}
+
+type ztwimSvidPodCert struct {
+	cert     *x509.Certificate
+	spiffeID string
+}
 
 type ztwimSvidVerificationMetric struct {
 	Timestamp         time.Time `json:"timestamp"`
@@ -91,115 +96,126 @@ func (z *ztwimSvidVerification) Stop() error {
 	if z.JobConfig.SkipIndexing {
 		return nil
 	}
+
+	var namespace, appContainer, appLabel string
+	ztwimSvidWorkloadTargets(&namespace, &appContainer, &appLabel)
+	maxWait, pollInterval := ztwimSvidPollSettings(0, 0)
+	podLabelSelector := ztwimPodLabelSelector(appLabel, z.LabelSelector)
+
+	verified, err := z.waitForAttestationSVIDs(namespace, appContainer, podLabelSelector, maxWait, pollInterval)
+	if err != nil {
+		return err
+	}
+
+	pods, err := z.listAttestationPods(namespace, podLabelSelector)
+	if err != nil {
+		return err
+	}
+	if len(pods.Items) == 0 {
+		return fmt.Errorf("no attestation pods found in %s", namespace)
+	}
+	if len(verified) < len(pods.Items) {
+		log.Warnf("%s: only %d/%d pods have SVID after %v; continuing verification", z.JobConfig.Name, len(verified), len(pods.Items), maxWait)
+	}
+
 	cfg := ZtwimSvidMeasurementConfig
-	if cfg.Namespace == "" {
-		cfg.Namespace = "ztwim-perf"
-	}
-	if cfg.AppContainer == "" {
-		cfg.AppContainer = "app"
-	}
-	if cfg.AppLabel == "" {
-		cfg.AppLabel = "ztwim-perf"
+	rotationMaxAge := cfg.SVIDTTL + 30*time.Second
+	if cfg.RotationSoak == 0 {
+		rotationMaxAge = 0
 	}
 
-	maxWait := cfg.SvidLatencyMaxWait
-	if maxWait <= 0 {
-		maxWait = 5 * time.Minute
-	}
-	pollInterval := cfg.SvidLatencyPollInterval
-	if pollInterval <= 0 {
-		pollInterval = 2 * time.Second
-	}
+	failures := z.recordVerificationMetrics(pods.Items, verified, namespace, appContainer, rotationMaxAge, cfg.RotationSoak > 0)
 
+	errorRate := 0.0
+	if len(pods.Items) > 0 {
+		errorRate = float64(failures) / float64(len(pods.Items)) * 100
+	}
+	stopErr := z.StopMeasurement(func() float64 { return errorRate }, z.getLatency)
+	if failures > 0 {
+		return fmt.Errorf("%s: %d SVID verification failures", z.JobConfig.Name, failures)
+	}
+	return stopErr
+}
+
+func (z *ztwimSvidVerification) listAttestationPods(namespace, podLabelSelector string) (*corev1.PodList, error) {
+	pods, err := z.ClientSet.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: podLabelSelector,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("listing attestation pods: %w", err)
+	}
+	return pods, nil
+}
+
+func (z *ztwimSvidVerification) waitForAttestationSVIDs(namespace, appContainer, podLabelSelector string, maxWait, pollInterval time.Duration) (map[string]ztwimSvidPodCert, error) {
 	deadline := time.Now().Add(maxWait)
-	verified := map[string]struct {
-		cert     *x509.Certificate
-		spiffeID string
-	}{}
-
-	podLabelSelector := ztwimPodLabelSelector(cfg.AppLabel, z.LabelSelector)
+	verified := map[string]ztwimSvidPodCert{}
 
 	for time.Now().Before(deadline) {
-		pods, err := z.ClientSet.CoreV1().Pods(cfg.Namespace).List(context.TODO(), metav1.ListOptions{
-			LabelSelector: podLabelSelector,
-		})
+		pods, err := z.listAttestationPods(namespace, podLabelSelector)
 		if err != nil {
-			return fmt.Errorf("listing attestation pods: %w", err)
+			return nil, err
 		}
 		if len(pods.Items) == 0 {
 			time.Sleep(pollInterval)
 			continue
 		}
 
-		allReady := true
+		podSetComplete := true
 		for _, pod := range pods.Items {
 			if _, done := verified[pod.Name]; done {
 				continue
 			}
 			if pod.Status.Phase != corev1.PodRunning {
-				allReady = false
+				podSetComplete = false
 				continue
 			}
-			pemBytes, err := readFileFromPod(z.ClientSet, z.RestConfig, cfg.Namespace, pod.Name, cfg.AppContainer, "/certs/svid.pem")
+			pemBytes, err := readFileFromPod(z.ClientSet, z.RestConfig, namespace, pod.Name, appContainer, "/certs/svid.pem")
 			if err != nil {
 				log.Debugf("pod %s: svid not ready yet: %v", pod.Name, err)
-				allReady = false
+				podSetComplete = false
 				continue
 			}
 			cert, spiffeID, err := parseSVIDCertificate(pemBytes)
 			if err != nil {
 				log.Debugf("pod %s: svid not valid yet: %v", pod.Name, err)
-				allReady = false
+				podSetComplete = false
 				continue
 			}
-			verified[pod.Name] = struct {
-				cert     *x509.Certificate
-				spiffeID string
-			}{cert: cert, spiffeID: spiffeID}
+			verified[pod.Name] = ztwimSvidPodCert{cert: cert, spiffeID: spiffeID}
 		}
-		if allReady && len(verified) == len(pods.Items) {
+		if podSetComplete && len(verified) == len(pods.Items) {
 			break
 		}
 		time.Sleep(pollInterval)
 	}
+	return verified, nil
+}
 
-	pods, err := z.ClientSet.CoreV1().Pods(cfg.Namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: podLabelSelector,
-	})
+func (z *ztwimSvidVerification) readPodSVID(namespace, appContainer, podName string) (*x509.Certificate, string, error) {
+	pemBytes, err := readFileFromPod(z.ClientSet, z.RestConfig, namespace, podName, appContainer, "/certs/svid.pem")
 	if err != nil {
-		return fmt.Errorf("listing attestation pods: %w", err)
+		return nil, "", err
 	}
-	if len(pods.Items) == 0 {
-		return fmt.Errorf("no attestation pods found in %s", cfg.Namespace)
-	}
-	if len(verified) < len(pods.Items) {
-		log.Warnf("%s: only %d/%d pods have SVID after %v; continuing verification", z.JobConfig.Name, len(verified), len(pods.Items), maxWait)
-	}
+	return parseSVIDCertificate(pemBytes)
+}
 
-	rotationMaxAge := cfg.SVIDTTL + 30*time.Second
-	if cfg.RotationSoak == 0 {
-		rotationMaxAge = 0
-	}
-
+func (z *ztwimSvidVerification) recordVerificationMetrics(pods []corev1.Pod, verified map[string]ztwimSvidPodCert, namespace, appContainer string, rotationMaxAge time.Duration, rotationSoakEnabled bool) int {
 	spiffeIDs := map[string]struct{}{}
 	var failures int
 
-	for _, pod := range pods.Items {
+	for _, pod := range pods {
 		if pod.Status.Phase != corev1.PodRunning {
 			log.Warnf("pod %s phase %s, skipping SVID verification", pod.Name, pod.Status.Phase)
 			failures++
 			continue
 		}
+
 		var cert *x509.Certificate
 		var spiffeID string
-		if cfg.RotationSoak > 0 {
-			pemBytes, err := readFileFromPod(z.ClientSet, z.RestConfig, cfg.Namespace, pod.Name, cfg.AppContainer, "/certs/svid.pem")
-			if err != nil {
-				log.Warnf("pod %s: %v", pod.Name, err)
-				failures++
-				continue
-			}
-			cert, spiffeID, err = parseSVIDCertificate(pemBytes)
+		var err error
+		if rotationSoakEnabled {
+			cert, spiffeID, err = z.readPodSVID(namespace, appContainer, pod.Name)
 			if err != nil {
 				log.Warnf("pod %s: %v", pod.Name, err)
 				failures++
@@ -222,7 +238,7 @@ func (z *ztwimSvidVerification) Stop() error {
 			if age <= rotationMaxAge {
 				rotationObserved = 1
 			} else {
-				log.Warnf("pod %s: SVID age %v exceeds rotation window %v (TTL %v); rotation may not have occurred during soak", pod.Name, age.Round(time.Second), rotationMaxAge, cfg.SVIDTTL)
+				log.Warnf("pod %s: SVID age %v exceeds rotation window %v (TTL %v); rotation may not have occurred during soak", pod.Name, age.Round(time.Second), rotationMaxAge, ZtwimSvidMeasurementConfig.SVIDTTL)
 				failures++
 			}
 		}
@@ -251,16 +267,7 @@ func (z *ztwimSvidVerification) Stop() error {
 		m.DistinctSpiffeIDs = distinct
 		z.NormLatencies[i] = m
 	}
-
-	errorRate := 0.0
-	if len(pods.Items) > 0 {
-		errorRate = float64(failures) / float64(len(pods.Items)) * 100
-	}
-	stopErr := z.StopMeasurement(func() float64 { return errorRate }, z.getLatency)
-	if failures > 0 {
-		return fmt.Errorf("%s: %d SVID verification failures", z.JobConfig.Name, failures)
-	}
-	return stopErr
+	return failures
 }
 
 func (z *ztwimSvidVerification) getLatency(normLatency any) map[string]float64 {

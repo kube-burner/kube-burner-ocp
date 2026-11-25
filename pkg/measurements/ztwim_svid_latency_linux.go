@@ -45,23 +45,23 @@ const (
 var supportedZtwimSvidLatencyJobTypes = []config.JobType{config.CreationJob}
 
 type ztwimSvidLatencyMetric struct {
-	Timestamp    time.Time `json:"timestamp"`
-	MetricName   string    `json:"metricName"`
-	UUID         string    `json:"uuid"`
-	JobName      string    `json:"jobName,omitempty"`
-	PodName      string    `json:"podName"`
-	Namespace    string    `json:"namespace"`
-	SpiffeID     string    `json:"spiffeID,omitempty"`
-	SvidLatency  int       `json:"svidLatencyMs"`
-	Metadata     any       `json:"metadata,omitempty"`
+	Timestamp   time.Time `json:"timestamp"`
+	MetricName  string    `json:"metricName"`
+	UUID        string    `json:"uuid"`
+	JobName     string    `json:"jobName,omitempty"`
+	PodName     string    `json:"podName"`
+	Namespace   string    `json:"namespace"`
+	SpiffeID    string    `json:"spiffeID,omitempty"`
+	SvidLatency int       `json:"svidLatencyMs"`
+	Metadata    any       `json:"metadata,omitempty"`
 }
 
 type ztwimSvidLatency struct {
 	measurements.BaseMeasurement
-	stopCh      chan struct{}
+	stopCh       chan struct{}
 	informerStop chan struct{}
-	pollWg      sync.WaitGroup
-	tracked     sync.Map
+	pollWg       sync.WaitGroup
+	tracked      sync.Map
 }
 
 type ztwimSvidLatencyMeasurementFactory struct {
@@ -81,27 +81,8 @@ func (f ztwimSvidLatencyMeasurementFactory) NewMeasurement(jobConfig *config.Job
 }
 
 func (z *ztwimSvidLatency) measurementConfig() (namespace, appContainer, appLabel string, maxWait, pollInterval time.Duration) {
-	cfg := ZtwimSvidMeasurementConfig
-	namespace = cfg.Namespace
-	if namespace == "" {
-		namespace = "ztwim-perf"
-	}
-	appContainer = cfg.AppContainer
-	if appContainer == "" {
-		appContainer = "app"
-	}
-	appLabel = cfg.AppLabel
-	if appLabel == "" {
-		appLabel = "ztwim-perf"
-	}
-	maxWait = cfg.SvidLatencyMaxWait
-	if maxWait <= 0 {
-		maxWait = 5 * time.Minute
-	}
-	pollInterval = cfg.SvidLatencyPollInterval
-	if pollInterval <= 0 {
-		pollInterval = 2 * time.Second
-	}
+	ztwimSvidWorkloadTargets(&namespace, &appContainer, &appLabel)
+	maxWait, pollInterval = ztwimSvidPollSettings(0, 0)
 	return namespace, appContainer, appLabel, maxWait, pollInterval
 }
 
