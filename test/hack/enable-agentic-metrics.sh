@@ -1,31 +1,11 @@
 #!/usr/bin/env bash
 #
-# Makes the agentic operator's controller-runtime metrics reachable from
-# Prometheus so the controller-health half of agentic-metrics.yml returns data.
-#
-# Three things are missing on a stock cluster and all three are required:
-#
-#   1. User workload monitoring is off by default, so nothing scrapes anything
-#      in openshift-lightspeed, not even the mock LLM's ServiceMonitor.
-#   2. The operator exposes a `metrics` container port on 8080 but has no
-#      Service in front of it, and a ServiceMonitor selects Services.
-#   3. The operator ships no ServiceMonitor of its own.
-#
-# This script does 2 and 3. It deliberately does not do 1: enabling user
-# workload monitoring edits cluster-monitoring-config in openshift-monitoring,
-# which is cluster-wide state that other teams may share, so it stays a
-# conscious cluster-admin step. The script checks the prerequisite and prints
-# the command rather than running it.
-#
-# Without all three, reconcileDurationP99, reconcileRate, reconcileErrors,
-# workqueue* and goGoroutines all index as empty, which silently removes the
-# OLS-3066 reconcile SLO from the run. Run this before agentic-run-density.
-#
-# The endpoint is unauthenticated HTTP: cmd/main.go binds
-# --metrics-bind-address to ":8080" and installs no authn/authz filter, so the
-# ServiceMonitor needs no bearer token or TLS config. If the operator ever
-# moves to the kubebuilder default of a secured :8443, this script and
-# agentic-metrics.yml both have to change.
+# Exposes agentic operator metrics through a Service and ServiceMonitor.
+# Requires existing user workload monitoring; prints setup guidance if absent.
+# Does not modify cluster-wide monitoring configuration.
+# Uses unauthenticated HTTP on :8080; update the manifests and metrics profile
+# if the operator switches to a secured endpoint.
+# Run before agentic-run-density to make controller-health metrics available.
 
 set -euo pipefail
 
@@ -86,14 +66,14 @@ die() { echo "[agentic-metrics] ERROR: $*" >&2; exit 1; }
 render() {
   sed -e "s|__NAMESPACE__|${NAMESPACE}|g" \
       -e "s|__INTERVAL__|${INTERVAL}|g" \
-      "$1"
+      "${ASSET_DIR}/manifests.yml"
 }
 
 command -v oc >/dev/null 2>&1 || die "oc is not on PATH"
 [[ -f "${ASSET_DIR}/manifests.yml" ]] || die "missing ${ASSET_DIR}/manifests.yml"
 
 if [[ "${DRY_RUN}" == "true" ]]; then
-  render "${ASSET_DIR}/manifests.yml"
+  render
   exit 0
 fi
 
@@ -122,8 +102,8 @@ oc get deployment lightspeed-agentic-operator -n "${NAMESPACE}" \
 oc get crd servicemonitors.monitoring.coreos.com >/dev/null 2>&1 \
   || die "servicemonitors.monitoring.coreos.com not found; the monitoring stack is not installed"
 
-if ! oc get statefulset prometheus-user-workload -n openshift-user-workload-monitoring >/dev/null 2>&1; then
-  die "user workload monitoring is not enabled, so nothing will scrape the ServiceMonitor.
+oc get statefulset prometheus-user-workload -n openshift-user-workload-monitoring >/dev/null 2>&1 \
+  || die "user workload monitoring is not enabled, so nothing will scrape the ServiceMonitor.
 Enable it first (cluster-wide change, see --help), then re-run:
 
   oc -n openshift-monitoring patch configmap cluster-monitoring-config \\
@@ -131,10 +111,9 @@ Enable it first (cluster-wide change, see --help), then re-run:
 
 If cluster-monitoring-config already holds other settings, edit it by hand and
 add enableUserWorkload: true rather than replacing config.yaml."
-fi
 
 log "applying the metrics Service and ServiceMonitor in ${NAMESPACE}"
-render "${ASSET_DIR}/manifests.yml" | oc apply -f -
+render | oc apply -f -
 
 # A Service with no endpoints is the failure this whole script exists to
 # prevent, and it is invisible until a metrics query comes back empty an hour

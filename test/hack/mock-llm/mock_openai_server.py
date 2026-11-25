@@ -205,9 +205,7 @@ def is_classifier_request(body_text, prompt_text):
     if explicit and explicit.group(1) == "inspection":
         return True
     # Classifier system text names injectionDetected; the user JSON has toolName.
-    if '"toolName"' in haystack and '"chunkIndex"' in haystack and "injectionDetected" in haystack:
-        return True
-    return False
+    return '"toolName"' in haystack and '"chunkIndex"' in haystack and "injectionDetected" in haystack
 
 
 def detect_step(body_text, prompt_text):
@@ -471,21 +469,12 @@ def build_message(turn, spec, step, namespace, request_tools):
         )
     tool_name, parameters = pick_tool(request_tools)
     if turn < spec["tool_calls"] and tool_name:
-        return (
-            {
-                "role": "assistant",
-                "content": None,
-                "tool_calls": [
-                    {
-                        "id": f"call_mock_{turn}",
-                        "type": "function",
-                        "function": {"name": tool_name, "arguments": tool_arguments(parameters)},
-                    }
-                ],
-            },
-            "tool_calls",
-            False,
-        )
+        tool_call = {
+            "id": f"call_mock_{turn}",
+            "type": "function",
+            "function": {"name": tool_name, "arguments": tool_arguments(parameters)},
+        }
+        return {"role": "assistant", "content": None, "tool_calls": [tool_call]}, "tool_calls", False
     content = terminal_content(step, spec, namespace)
     if spec is PROFILES.get("malformed") or spec.get("malformed"):
         content = content[: len(content) // 2]
@@ -626,14 +615,18 @@ class Handler(BaseHTTPRequestHandler):
         model = request.get("model") or MODEL_NAME
         chunk_count = max(1, int(os.environ.get("MOCK_CHUNKS", "8")))
 
-        def emit(delta, reason=None):
+        def emit(delta=None, reason=None, usage=None):
             payload = {
                 "id": f"chatcmpl-mock-{created}",
                 "object": "chat.completion.chunk",
                 "created": created,
                 "model": model,
-                "choices": [{"index": 0, "delta": delta, "finish_reason": reason}],
+                "choices": (
+                    [] if delta is None else [{"index": 0, "delta": delta, "finish_reason": reason}]
+                ),
             }
+            if usage is not None:
+                payload["usage"] = usage
             body = f"data: {json.dumps(payload)}\n\n".encode("utf-8")
             self.wfile.write(f"{len(body):X}\r\n".encode("ascii") + body + b"\r\n")
 
@@ -661,20 +654,11 @@ class Handler(BaseHTTPRequestHandler):
                 emit({"content": content[offset : offset + size]})
         emit({}, finish_reason)
 
-        usage = {
-            "id": f"chatcmpl-mock-{created}",
-            "object": "chat.completion.chunk",
-            "created": created,
-            "model": model,
-            "choices": [],
-            "usage": {
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "total_tokens": prompt_tokens + completion_tokens,
-            },
-        }
-        body = f"data: {json.dumps(usage)}\n\n".encode("utf-8")
-        self.wfile.write(f"{len(body):X}\r\n".encode("ascii") + body + b"\r\n")
+        emit(usage={
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        })
         done = b"data: [DONE]\n\n"
         self.wfile.write(f"{len(done):X}\r\n".encode("ascii") + done + b"\r\n")
         self.wfile.write(b"0\r\n\r\n")
