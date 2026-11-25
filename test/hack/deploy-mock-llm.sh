@@ -219,9 +219,7 @@ log "waiting for the mock to become ready"
 oc rollout status -n "${NAMESPACE}" deployment/mock-llm --timeout="${TIMEOUT}"
 
 log "applying LLMProvider, Agent and ApprovalPolicy"
-render "${ASSET_DIR}/agentic-config.yml" \
-  | oc create --dry-run=client --validate=false -f - -o json \
-  | python3 "${SCRIPT_DIR}/update-agentic-fixtures.py"
+render "${ASSET_DIR}/agentic-config.yml" | oc apply -f -
 
 log "smoke testing /v1/chat/completions"
 POD="$(oc get pods -n "${NAMESPACE}" -l app.kubernetes.io/name=mock-llm \
