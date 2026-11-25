@@ -23,6 +23,7 @@ Available Commands:
   cluster-health             Checks for ocp cluster health
   completion                 Generate the autocompletion script for the specified shell
   crd-scale                  Runs crd-scale workload
+  krkn-crd-scale             Runs the Krkn operator CRD scale workload
   cudn-density               Runs cudn-density workload with tiered cross-namespace communication
   dv-clone                   Runs dv-clone workload
   egressip                   Runs egressip workload
@@ -228,6 +229,31 @@ Lightest version of this workload family, each iteration the following objects i
 - 1 edge route pointing to the to first service.
 - 20 secrets containing a 2048-character random string.
 - 10 config maps containing a 2048-character random string.
+
+## Krkn operator CRD scale workload
+
+The `krkn-crd-scale` workload creates Krkn custom resources in the configured
+namespace. One workload iteration creates 28 objects: 5 categories, 6 password
+Secrets, 6 users, 8 user groups, and 3 provider configuration requests. Pass
+`--wait-for-convergence` to wait for provider configuration resources to reach
+`Completed`; this requires active providers to be installed.
+
+The workload uses `krkn-operator-metrics.yml` and the standard `metrics.yml` to
+collect Krkn controller reconciliation totals, success/error rates, p99
+reconciliation latency, worker utilization, Kubernetes API 5xx/429 rates and
+p99 latency, node/runtime metrics, and Krkn operator CPU, memory, goroutines,
+and container resource usage. Alerting uses the Krkn-specific alert profile
+when enabled.
+
+```console
+kube-burner-ocp krkn-crd-scale --iterations=10 --namespace=krkn-operator-system \
+  --operator-namespace=krkn-operator-system --local-indexing \
+  --wait-for-convergence --reconcile-p99-threshold=2s \
+  --churn-cycles=1 --churn-duration=5m --churn-mode=objects
+```
+
+Object churn is disabled by default. Namespace churn is intentionally not the
+default because the usual target namespace contains the Krkn operator itself.
 
 ## Etcd density workloads
 

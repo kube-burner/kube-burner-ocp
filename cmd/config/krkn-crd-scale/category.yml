@@ -1,0 +1,10 @@
+apiVersion: krkn.krkn-chaos.dev/v1alpha1
+kind: KrknCategory
+metadata:
+  name: krkn-{{.UUID}}-category-{{.Iteration}}-{{.Replica}}
+  labels:
+    kube-burner.io/test-name: krkn-crd-scale
+    kube-burner.io/uuid: "{{.UUID}}"
+    krkn-scale-test: "true"
+spec:
+  color: '#4C9AFF'

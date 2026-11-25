@@ -1,0 +1,10 @@
+apiVersion: krkn.krkn-chaos.dev/v1alpha1
+kind: KrknOperatorTargetProviderConfig
+metadata:
+  name: krkn-{{.UUID}}-provider-config-{{.Iteration}}-{{.Replica}}
+  labels:
+    kube-burner.io/test-name: krkn-crd-scale
+    kube-burner.io/uuid: "{{.UUID}}"
+    krkn-scale-test: "true"
+spec:
+  uuid: krkn-{{.UUID}}-provider-config-{{.Iteration}}-{{.Replica}}

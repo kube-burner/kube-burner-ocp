@@ -1,0 +1,64 @@
+# Prometheus queries for the Krkn operator CRD scale workload.
+
+# Krkn controller reconciliation totals and outcomes.
+- query: sum(controller_runtime_reconcile_total{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*",controller=~"krkn.*"}) by (controller, result)
+  metricName: krknControllerReconcileTotal
+
+- query: sum(rate(controller_runtime_reconcile_total{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*",controller=~"krkn.*",result="success"}[5m])) by (controller)
+  metricName: krknControllerReconcileSuccessRate
+
+- query: sum(rate(controller_runtime_reconcile_errors_total{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*",controller=~"krkn.*"}[5m])) by (controller)
+  metricName: krknControllerReconcileErrorRate
+
+- query: histogram_quantile(0.99, sum(rate(controller_runtime_reconcile_time_seconds_bucket{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*",controller=~"krkn.*"}[5m])) by (controller, le))
+  metricName: krknControllerReconcileP99Seconds
+
+- query: sum(controller_runtime_active_workers{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*",controller=~"krkn.*"}) by (controller)
+  metricName: krknControllerActiveWorkers
+  instant: true
+
+- query: sum(controller_runtime_max_concurrent_reconciles{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*",controller=~"krkn.*"}) by (controller)
+  metricName: krknControllerMaxConcurrentReconciles
+  instant: true
+
+# Kubernetes API server impact, both overall and for Krkn resources.
+- query: sum(rate(apiserver_request_total{code=~"5.."}[5m])) by (verb, resource, code)
+  metricName: kubernetesAPIServer5xxRate
+
+- query: sum(rate(apiserver_request_total{code="429"}[5m])) by (verb, resource, code)
+  metricName: kubernetesAPIServer429Rate
+
+- query: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket[5m])) by (verb, resource, le))
+  metricName: kubernetesAPIServerRequestP99Seconds
+
+- query: sum(rate(apiserver_request_total{group="krkn.krkn-chaos.dev",resource=~"krkn.*",code=~"5.."}[5m])) by (verb, resource, code) or on() vector(0)
+  metricName: krknCRDRequest5xxRate
+
+- query: sum(rate(apiserver_request_total{group="krkn.krkn-chaos.dev",resource=~"krkn.*",code="429"}[5m])) by (verb, resource, code) or on() vector(0)
+  metricName: krknCRDRequest429Rate
+
+- query: histogram_quantile(0.99, sum(rate(apiserver_request_duration_seconds_bucket{group="krkn.krkn-chaos.dev",resource=~"krkn.*"}[5m])) by (verb, resource, le))
+  metricName: krknCRDRequestP99Seconds
+
+# Operator process and container resource usage.
+- query: sum(rate(process_cpu_seconds_total{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*"}[5m])) by (job)
+  metricName: krknOperatorCPUSecondsRate
+
+- query: sum(process_resident_memory_bytes{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*"}) by (job)
+  metricName: krknOperatorResidentMemoryBytes
+  instant: true
+
+- query: sum(go_goroutines{namespace="{{.OPERATOR_NAMESPACE}}",job=~".*krkn.*operator.*"}) by (job)
+  metricName: krknOperatorGoroutines
+  instant: true
+
+- query: sum(rate(container_cpu_usage_seconds_total{namespace="{{.OPERATOR_NAMESPACE}}",pod=~"krkn-operator.*",container!="POD",image!=""}[5m])) by (pod, container)
+  metricName: krknOperatorContainerCPUSecondsRate
+
+- query: sum(container_memory_working_set_bytes{namespace="{{.OPERATOR_NAMESPACE}}",pod=~"krkn-operator.*",container!="POD",image!=""}) by (pod, container)
+  metricName: krknOperatorContainerMemoryWorkingSetBytes
+  instant: true
+
+- query: sum(node_memory_MemAvailable_bytes) by (instance)
+  metricName: kubernetesNodeMemoryAvailableBytes
+  instant: true

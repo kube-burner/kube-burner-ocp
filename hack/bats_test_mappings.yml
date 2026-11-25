@@ -47,6 +47,12 @@
   paths:
   - pkg/workloads/crd-scale.go
   - cmd/config/crd-scale/*
+- label: workload:krkn-crd-scale
+  paths:
+  - pkg/workloads/krkn-crd-scale.go
+  - cmd/config/krkn-crd-scale/*
+  - cmd/config/metrics-profiles/krkn-operator-metrics.yml
+  - cmd/config/alerts-profiles/krkn-operator-alerts.yml
 - label: workload:virt-density
   paths:
   - pkg/workloads/virt-density.go
