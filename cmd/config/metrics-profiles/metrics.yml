@@ -73,7 +73,7 @@
 - query: sum by (instance, device) ( irate(node_network_transmit_errs_total{device!~"lo|ovs-system"}[2m]) > 0 )
   metricName: nodeNetworkErrTXTotal
 
-- query: sum by (instance, device) (irate(node_network_transmit_drop{device!~"lo|ovs-system"}[2m]) > 0 )
+- query: sum by (instance, device) ( irate(node_network_transmit_drop_total{device!~"lo|ovs-system"}[2m]) > 0 )
   metricName: nodeNetworkDeviceDropTXTotal
 
 - query: sum by (instance, device) ( irate(node_network_receive_drop_total{device!~"lo|ovs-system"}[2m]) > 0 )
