@@ -95,6 +95,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	var useSnapshot bool
 	var metricsProfiles []string
 	var cleanup bool
+	var lightMigrationVerification bool
 	var rc int
 	cmd := &cobra.Command{
 		Use:          virtParallelTestName,
@@ -193,6 +194,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 			AdditionalVars["testNamespace"] = testNamespace
 			AdditionalVars["dataVolumeCounters"] = generateLoopCounterSlice(dataVolumeCount, 1)
 			AdditionalVars["skipMigrationJob"] = skipMigrationJob
+			AdditionalVars["lightMigrationVerification"] = lightMigrationVerification
 			AdditionalVars["rootVolumeSize"] = rootVolumeSize
 			AdditionalVars["dataVolumeSize"] = dataVolumeSize
 			AdditionalVars["volumeSizeIncrement"] = volumeSizeIncrement
@@ -274,6 +276,7 @@ func NewVirtParallel(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().StringVar(&selector, "selector", WorkerNodeSelector, "Node selector")
 	cmd.Flags().BoolVar(&useBaseImage, "use-base-image", false, "Create a base image and clone VMs from it instead of using container disk per VM")
 	cmd.Flags().BoolVar(&useSnapshot, "use-snapshot", true, "Clone from snapshot - only applies when --use-base-image=true")
+	cmd.Flags().BoolVar(&lightMigrationVerification, "light-migration-verification", false, "Use lighter migration validation like virt-capacity (skips strict migration verification)")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics-aggregated.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().BoolVar(&cleanup, "cleanup", false, "Cleanup resources created by previous runs")
 	return cmd

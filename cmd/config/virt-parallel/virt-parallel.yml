@@ -324,10 +324,12 @@ jobs:
   objectDelay: 1m
   waitWhenFinished: true
   hooks:
+  {{ if not .lightMigrationVerification }}
   - cmd: ["./check_migrations.sh", "prepare", "{{ $nsName }}", "{{ $jobCounterLabelKey }}={{ $jobCounterLabelValue }}", "{{ $vmCount }}", "virt-parallel-migration-{{ .counter }}.json"]
     when: beforeJobExecution
   - cmd: ["./check_migrations.sh", "verify", "{{ $nsName }}", "{{ $jobCounterLabelKey }}={{ $jobCounterLabelValue }}", "{{ $vmCount }}", "virt-parallel-migration-{{ .counter }}.json"]
     when: beforeCleanup
+  {{ end }}
   - cmd: ["./check.sh", "check_vm_running", "{{ $jobCounterLabelKey }}", "{{ $jobCounterLabelValue }}", "{{ $nsName }}", "{{ .privateKey }}", "fedora"]
     when: beforeCleanup
   objects:
