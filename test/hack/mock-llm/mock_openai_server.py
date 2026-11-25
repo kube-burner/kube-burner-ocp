@@ -113,11 +113,6 @@ if _profiles_path and os.path.exists(_profiles_path):
 
 class Metrics:
     """Prometheus text exposition, hand rolled to avoid a client dependency.
-
-    These counters are the point of instrumenting the mock at all: turn and
-    token KPIs become scrapeable by the same kube-burner metrics profile that
-    collects everything else, instead of needing a span reader to recover them
-    from OTLP.
     """
 
     BUCKETS = (0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120)
@@ -281,9 +276,6 @@ def rbac_block(namespace):
 
     Left out unless a namespace is known: `rbac` is optional in the analysis
     schema. The workload supplies the namespace through its [mock-ns:...] token.
-    Emitting it when we do know the namespace is what makes the
-    operator materialize a Role and RoleBinding at execution, which is a real
-    cost centre worth measuring rather than skipping.
     """
     if not namespace:
         return None
@@ -404,7 +396,6 @@ def classifier_payload():
     The sandbox accepts only this shape: a JSON boolean injectionDetected and a
     category. Safe content is false + "none"; anything else (extra keys, a
     stringly boolean, a tool_call envelope) is schema_mismatch and the run dies.
-    Density wants the happy path, so this is fixed to allow.
     """
     return {"injectionDetected": False, "category": "none"}
 

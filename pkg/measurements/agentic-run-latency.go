@@ -441,8 +441,6 @@ func (a *agenticRunLatency) handleSandboxPod(obj any) {
 	}
 
 	// Run level startup tracks the earliest created sandbox, normally analysis.
-	// Matching on pod UID keeps a later event for that same pod folding into it
-	// rather than being compared as a different pod.
 	switch {
 	case m.sandboxFirstUID == "" || timing.created.Before(m.sandboxFirst.created):
 		m.sandboxFirstUID, m.sandboxFirst = string(pod.UID), timing
@@ -450,8 +448,6 @@ func (a *agenticRunLatency) handleSandboxPod(obj any) {
 		m.sandboxFirst.merge(timing)
 	}
 
-	// Per-step startup, so a slow execution sandbox is distinguishable from a
-	// slow analysis one instead of both collapsing into a single series
 	switch sandboxStep(pod) {
 	case stepAnalysis:
 		m.sandboxAnalysis.merge(timing)
@@ -658,7 +654,6 @@ func (a *agenticRunLatency) IsCompatible() bool {
 
 // derivePhase mirrors the agentic-operator DerivePhase precedence:
 // EmergencyStopped > Escalated > Denied > Verified > Executed > Analyzed.
-// Phase is never stored on the CR, every consumer recomputes it (decision 0020).
 func derivePhase(m *agenticRunMetric) string {
 	switch {
 	case !m.emergencyStopped.IsZero():

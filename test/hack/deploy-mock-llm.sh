@@ -16,11 +16,6 @@
 # Stand up the mock LLM that agentic-run-density runs against, and wire the
 # agentic CRD chain to it.
 #
-# Running agentic-run-density against a real model measures the model, not the
-# operator: inference latency dominates and varies run to run, so nothing is
-# comparable. This script replaces the model with a deterministic, scriptable
-# one and leaves the whole operator and sandbox path intact.
-#
 # It creates, in order:
 #
 #   ConfigMap       the mock server source, so there is no image to build
