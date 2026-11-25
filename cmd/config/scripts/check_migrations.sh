@@ -13,17 +13,24 @@ if [[ ! "$expected" =~ ^[1-9][0-9]*$ ]]; then
     exit 1
 fi
 
-vms=$(kubectl get vm -n "$namespace" -l "$selector" -o json)
-vmis=$(kubectl get vmi -n "$namespace" -l "$selector" -o json)
+# A large VM/VMI list can exceed Linux's per-argument limit when passed to
+# jq through --argjson. Keep the API responses in private files instead.
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+vms_file="$tmp_dir/vms.json"
+vmis_file="$tmp_dir/vmis.json"
+kubectl get vm -n "$namespace" -l "$selector" -o json > "$vms_file"
+kubectl get vmi -n "$namespace" -l "$selector" -o json > "$vmis_file"
 
 # Check both resources: selecting N VMIs alone does not prove the migrate
 # operation's VirtualMachine selector matches the same N VMs.
-if ! jq -en --argjson vms "$vms" --argjson vmis "$vmis" --argjson expected "$expected" '
+if ! jq -es --argjson expected "$expected" '
+    .[0] as $vms | .[1] as $vmis |
     ($vms.items | map(.metadata.name) | sort) as $names |
     ($vmis.items | map(.metadata.name) | sort) as $instances |
     ($names | length) == $expected and $names == $instances and
     all($vmis.items[]; .status.phase == "Running" and (.status.nodeName // "") != "")
-' >/dev/null; then
+' "$vms_file" "$vmis_file" >/dev/null; then
     echo "Migration requires exactly $expected running test VMs matching $selector" >&2
     exit 1
 fi
@@ -32,7 +39,7 @@ case "$action" in
 prepare)
     jq '[.items[] | {name: .metadata.name, uid: .metadata.uid,
         node: .status.nodeName, migrationUID: (.status.migrationState.migrationUid // "")}]' \
-        <<< "$vmis" > "$baseline"
+        "$vmis_file" > "$baseline"
     echo "Migration expected=$expected; recorded all source VM identities"
     ;;
 verify)
@@ -53,7 +60,7 @@ verify)
                 (.status.migrationState.targetNode // "") != "" and
                 .status.migrationState.targetNode != $old.node and
                 .status.nodeName == .status.migrationState.targetNode))
-    ' <<< "$vmis" >/dev/null; then
+    ' "$vmis_file" >/dev/null; then
         echo "Migration incomplete: expected $expected distinct VMs to move successfully" >&2
         exit 1
     fi
