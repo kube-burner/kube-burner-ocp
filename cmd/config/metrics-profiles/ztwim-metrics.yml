@@ -1,0 +1,67 @@
+# ZTWIM / SPIRE metrics for ztwim-svid-issuance workloads.
+#
+# Validate on cluster before relying on SPIRE series in CI:
+#   oc exec -n openshift-monitoring prometheus-k8s-0 -c prometheus -- \
+#     wget -qO- 'http://localhost:9090/api/v1/label/__name__/values' | tr ',' '\n' | grep '^"spire_'
+#
+# SPIRE metrics require SPIRE server/agent endpoints to be scraped by cluster Prometheus
+# (ServiceMonitor or user-workload monitoring). If queries return empty, operand CPU below
+# still reflects ZTWIM namespace load.
+
+# Workload pods
+
+- query: sum(kube_pod_status_phase{namespace="ztwim-perf"}) by (phase) > 0
+  metricName: podStatusCount
+
+# Control plane (kueue-metrics pattern)
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-kube-apiserver"}[2m]))[{{.elapsed}}:])
+  metricName: cpu-kube-apiserver-avg
+  instant: true
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{name!="", namespace="openshift-etcd"}[2m]))[{{.elapsed}}:])
+  metricName: cpu-etcd-avg
+  instant: true
+
+- query: max(max_over_time(sum(container_memory_working_set_bytes{name!="", namespace="openshift-kube-apiserver"})[{{.elapsed}}:]))
+  metricName: max-memory-kube-apiserver-aggregated
+  instant: true
+
+- query: max(max_over_time(sum(container_memory_rss{name!="", namespace="openshift-etcd"})[{{.elapsed}}:]))
+  metricName: max-memory-etcd-aggregated
+  instant: true
+
+# ZTWIM operator namespace (all operands)
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{namespace="zero-trust-workload-identity-manager",container!=""}[2m]))[{{.elapsed}}:])
+  metricName: ztwimNamespaceCpu
+  instant: true
+
+- query: max(max_over_time(sum(container_memory_working_set_bytes{namespace="zero-trust-workload-identity-manager",container!=""})[{{.elapsed}}:]))
+  metricName: ztwimNamespaceMemory
+  instant: true
+
+# SPIRE operands (fallback when spire_* series are not in Prometheus)
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{namespace="zero-trust-workload-identity-manager",pod=~"spire-server.*",container!=""}[2m]))[{{.elapsed}}:])
+  metricName: spireServerPodCpu
+  instant: true
+
+- query: avg_over_time(sum(irate(container_cpu_usage_seconds_total{namespace="zero-trust-workload-identity-manager",pod=~"spire-agent.*",container!=""}[2m]))[{{.elapsed}}:])
+  metricName: spireAgentPodCpu
+  instant: true
+
+# SPIRE telemetry (SPIRE 1.8+ / ZTWIM bundled SPIRE — confirm names on cluster)
+
+- query: sum(rate(spire_server_server_ca_sign_x509_svid[2m]))
+  metricName: spireServerX509SvidSignRate
+
+- query: sum(increase(spire_server_server_ca_sign_x509_svid[{{.elapsed}}:]))
+  metricName: spireServerX509SvidSignTotal
+  instant: true
+
+- query: max(spire_agent_workload_api_connections)
+  metricName: spireAgentWorkloadAPIConnectionsMax
+
+- query: sum(rate(spire_agent_workload_api_connection[2m]))
+  metricName: spireAgentWorkloadAPIConnectionRate
