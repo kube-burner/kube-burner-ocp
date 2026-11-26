@@ -99,6 +99,8 @@ jobs:
       - objectTemplate: ds.yml
         replicas: 1
         runOnce: true
+        inputVars:
+          preloadImage: {{.PRELOAD_IMAGE}}
 
   - name: remove-ds
     jobType: delete
