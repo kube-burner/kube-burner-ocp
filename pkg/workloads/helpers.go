@@ -43,6 +43,7 @@ import (
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -370,9 +371,9 @@ func getStorageAndSnapshotClasses(storageClassNameParam string, useSnapshot, use
 	}
 
 	var volumeSnapshotClassName string
-	// If using Snapshot, get the VolumeSnapshotClass with the same provisioner as the StorageClass
+	// If using Snapshot, get the VolumeSnapshotClass to use with the StorageClass
 	if useSnapshot {
-		volumeSnapshotClassName, err = k8sstorage.GetVolumeSnapshotClassNameForStorageClass(k8sConnector, storageClassName)
+		volumeSnapshotClassName, err = getVolumeSnapshotClassName(k8sConnector, storageClassName)
 		if err != nil {
 			log.Fatalf("Failed to get VolumeSnapshotClass for StorageClass %s - %v", storageClassName, err)
 		}
@@ -383,6 +384,30 @@ func getStorageAndSnapshotClasses(storageClassNameParam string, useSnapshot, use
 	}
 
 	return storageClassName, volumeSnapshotClassName
+}
+
+// getVolumeSnapshotClassName returns the VolumeSnapshotClass that CDI selected for the StorageClass in the snapshotClass field
+// of its StorageProfile status. This honors the snapshotClass set in the StorageProfile spec and, when several
+// VolumeSnapshotClasses share the provisioner of the StorageClass, the one annotated as default.
+// When the StorageProfile does not exist or has no snapshotClass, fall back to the first VolumeSnapshotClass
+// with the same provisioner as the StorageClass
+func getVolumeSnapshotClassName(k8sConnector k8sconnector.K8SConnector, storageClassName string) (string, error) {
+	storageProfile, err := k8sstorage.GetStorageProfileForStorageClass(k8sConnector, storageClassName)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return "", fmt.Errorf("failed to get StorageProfile: %w", err)
+	}
+	if err == nil {
+		volumeSnapshotClassName, _, err := unstructured.NestedString(storageProfile.Object, "status", "snapshotClass")
+		if err != nil {
+			return "", fmt.Errorf("failed to read snapshotClass from StorageProfile: %w", err)
+		}
+		if volumeSnapshotClassName != "" {
+			log.Debugf("Using VolumeSnapshotClass [%s] from the StorageProfile of StorageClass [%s]", volumeSnapshotClassName, storageClassName)
+			return volumeSnapshotClassName, nil
+		}
+	}
+	log.Debugf("StorageProfile of StorageClass [%s] has no snapshotClass, looking for a VolumeSnapshotClass with the same provisioner", storageClassName)
+	return k8sstorage.GetVolumeSnapshotClassNameForStorageClass(k8sConnector, storageClassName)
 }
 
 func deletePVsForNamespaces(ctx context.Context, connector k8sconnector.K8SConnector, namespaceNamesMap map[string]struct{}) {

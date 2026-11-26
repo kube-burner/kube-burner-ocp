@@ -930,6 +930,7 @@ By default, the test will use the default `StorageClass`. To use a different one
 
 If `--use-snapshot` is explicitly set to `true` a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
 Otherwise, the test will check the `StorageProfile` for the `StorageClass` and act accordingly.
+The `VolumeSnapshotClass` is the one CDI reports in the `snapshotClass` field of the `StorageProfile` `status`. To choose a different one, set `snapshotClass` in the `StorageProfile` `spec`. If the `status` field is not set, the first `VolumeSnapshotClass` using the same provisioner is used.
 
 #### Test Namespace
 
@@ -995,6 +996,7 @@ To use a different one, use `--storage-class` to provide a different name.
 
 If `--use-snapshot` is set to `true` (default), a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
 If `--use-snapshot=false`, the test will clone directly from the PVC without creating snapshots.
+The `VolumeSnapshotClass` is the one CDI reports in the `snapshotClass` field of the `StorageProfile` `status`. To choose a different one, set `snapshotClass` in the `StorageProfile` `spec`. If the `status` field is not set, the first `VolumeSnapshotClass` using the same provisioner is used.
 
 #### Test Namespaces
 
@@ -1053,6 +1055,7 @@ By default, the test will use the default `StorageClass`. To use a different one
 
 If `--use-snapshot` is explicitly set to `true` a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
 Otherwise, the test will check the `StorageProfile` for the `StorageClass` and act accordingly.
+The `VolumeSnapshotClass` is the one CDI reports in the `snapshotClass` field of the `StorageProfile` `status`. To choose a different one, set `snapshotClass` in the `StorageProfile` `spec`. If the `status` field is not set, the first `VolumeSnapshotClass` using the same provisioner is used.
 
 #### Test Namespace
 
@@ -1157,6 +1160,7 @@ By default, the test will use the default `StorageClass`. To use a different one
 
 If `--use-snapshot` is explicitly set to `true` a corresponding `VolumeSnapshotClass` using the same provisioner must exist.
 Otherwise, the test will check the `StorageProfile` for the `StorageClass` and act accordingly.
+The `VolumeSnapshotClass` is the one CDI reports in the `snapshotClass` field of the `StorageProfile` `status`. To choose a different one, set `snapshotClass` in the `StorageProfile` `spec`. If the `status` field is not set, the first `VolumeSnapshotClass` using the same provisioner is used.
 
 #### Test Namespace
 
