@@ -19,8 +19,10 @@ spec:
   dataVolumeTemplates:
   - metadata:
       name: "{{ $name }}-{{ $counter }}-{{ $replica }}-root"
+      {{- if $root.addPopulatorAnnotation }}
       annotations:
-        cdi.kubevirt.io/storage.usePopulator: "{{ default false (get $root "usePopulator") }}"
+        cdi.kubevirt.io/storage.usePopulator: "{{ $root.usePopulator }}"
+      {{- end }}
       labels:
       {{range $key, $value := .rootVolumeLabels }}
         {{ $key }}: {{ $value }}
@@ -46,8 +48,10 @@ spec:
   {{ range $dataVolumeIndex := .dataVolumeCounters }}
   - metadata:
       name: "{{ $name }}-{{ $counter }}-{{ $replica }}-data-{{ $dataVolumeIndex }}"
+      {{- if $root.addPopulatorAnnotation }}
       annotations:
-        cdi.kubevirt.io/storage.usePopulator: "{{ default false (get $root "usePopulator") }}"
+        cdi.kubevirt.io/storage.usePopulator: "{{ $root.usePopulator }}"
+      {{- end }}
       labels:
       {{range $key, $value := $dataVolumeLabels }}
         {{ $key }}: {{ $value }}
