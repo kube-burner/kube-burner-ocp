@@ -19,23 +19,11 @@ global:
     - name: pprof
       pprofInterval: {{.PPROF_INTERVAL}}
       pprofDirectory: pprof-data
-      pprofTargets:
-      - name: ovnkube-controller-heap
-        namespace: "openshift-ovn-kubernetes"
-        labelSelector: {app: ovnkube-node}
-        url: http://localhost:29103/debug/pprof/heap
-      - name: ovnkube-controller-cpu
-        namespace: "openshift-ovn-kubernetes"
-        labelSelector: {app: ovnkube-node}
-        url: http://localhost:29103/debug/pprof/profile?seconds=60
-      - name: ovnk-control-plane-heap
-        namespace: "openshift-ovn-kubernetes"
-        labelSelector: {app: ovnkube-control-plane}
-        url: http://localhost:29108/debug/pprof/heap
-      - name: ovnk-control-plane-cpu
-        namespace: "openshift-ovn-kubernetes"
-        labelSelector: {app: ovnkube-control-plane}
-        url: http://localhost:29108/debug/pprof/profile?seconds=60
+{{ if .PPROF_NODE_TARGETS }}
+      nodeAffinity:
+        node-role.kubernetes.io/worker: ""
+{{ end }}
+      pprofTargets: {{.PPROF_TARGETS}}
 {{ end }}
 metricsEndpoints:
 {{ if .ES_SERVER }}

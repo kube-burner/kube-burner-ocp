@@ -59,11 +59,13 @@ teardown_file() {
 }
 
 # bats test_tags=workload:node-density
-@test "node-density: es-indexing=true" {
+@test "node-density: es-indexing=true; pprof-components=ovnkube-control-plane" {
   PODS_PER_NODE=$(calculate_pods_per_node)
   echo "Using calculated pods-per-node: ${PODS_PER_NODE}"
-  run_cmd ${KUBE_BURNER_OCP} node-density --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m ${INDEXING_FLAGS} --churn-duration=1m --churn-delay=5s
+  run_cmd ${KUBE_BURNER_OCP} node-density --pods-per-node=${PODS_PER_NODE} --pod-ready-threshold=1m ${INDEXING_FLAGS} --churn-duration=1m --churn-delay=5s --pprof-components=ovnkube-control-plane
   check_metric_value etcdVersion jobSummary podLatencyMeasurement podLatencyQuantilesMeasurement
+  ls pprof-data/node-density/ovnk-control-plane-heap/*-start.pprof pprof-data/node-density/ovnk-control-plane-heap/*-end.pprof
+  [ ! -d pprof-data/node-density/ovnkube-controller-heap ]
 }
 
 # bats test_tags=workload:node-density

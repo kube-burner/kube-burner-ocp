@@ -35,8 +35,9 @@ import (
 // NewClusterDensity holds cluster-density workload
 func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var iterations, churnPercent, churnCycles int
-	var svcLatency, pprof, pprofKubelet, pprofCrio bool
-	var churnDelay, churnDuration, pprofInterval time.Duration
+	var svcLatency, pprofKubelet, pprofCrio bool
+	var churnDelay, churnDuration time.Duration
+	var pprofOpts pprofOptions
 	var deletionStrategy, churnMode, selector string
 	var podReadyThreshold time.Duration
 	var metricsProfiles []string
@@ -104,10 +105,15 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 			}
 			AdditionalVars["JOB_ITERATIONS"] = iterations
 			AdditionalVars["NODE_SELECTOR"] = string(nodeSelectorJson)
-			AdditionalVars["PPROF"] = pprof
-			AdditionalVars["PPROF_INTERVAL"] = pprofInterval.String()
-			AdditionalVars["PPROF_KUBELET"] = pprofKubelet
-			AdditionalVars["PPROF_CRIO"] = pprofCrio
+			if pprofKubelet {
+				pprofOpts.components = append(pprofOpts.components, pprofComponentKubelet)
+			}
+			if pprofCrio {
+				pprofOpts.components = append(pprofOpts.components, pprofComponentCrio)
+			}
+			if err := setPprofVars(pprofOpts); err != nil {
+				log.Fatal(err.Error())
+			}
 			AdditionalVars["CHURN_CYCLES"] = churnCycles
 			AdditionalVars["CHURN_DURATION"] = churnDuration
 			AdditionalVars["CHURN_DELAY"] = churnDelay
@@ -126,10 +132,11 @@ func NewClusterDensity(wh *workloads.WorkloadHelper, variant string) *cobra.Comm
 	}
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&iterations, "iterations", 0, fmt.Sprintf("%v iterations", variant))
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
+	addPprofFlags(cmd, &pprofOpts)
 	cmd.Flags().BoolVar(&pprofKubelet, "pprof-kubelet", false, "Enable pprof collection for kubelet")
 	cmd.Flags().BoolVar(&pprofCrio, "pprof-crio", false, "Enable pprof collection for CRI-O")
+	cmd.Flags().MarkDeprecated("pprof-kubelet", "use --pprof-components=kubelet instead")
+	cmd.Flags().MarkDeprecated("pprof-crio", "use --pprof-components=crio instead")
 	cmd.Flags().IntVar(&churnCycles, "churn-cycles", 0, "Churn cycles to execute")
 	cmd.Flags().DurationVar(&churnDuration, "churn-duration", 0, "Churn duration")
 	cmd.Flags().DurationVar(&churnDelay, "churn-delay", 2*time.Minute, "Time to wait between each churn")

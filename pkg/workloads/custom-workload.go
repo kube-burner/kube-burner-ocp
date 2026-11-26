@@ -25,8 +25,9 @@ import (
 )
 
 func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
-	var namespacedIterations, svcLatency, pprof bool
-	var churnDelay, churnDuration, podReadyThreshold, pprofInterval time.Duration
+	var namespacedIterations, svcLatency bool
+	var churnDelay, churnDuration, podReadyThreshold time.Duration
+	var pprofOpts pprofOptions
 	var configFile, deletionStrategy, churnMode, selector string
 	var iterations, churnPercent, churnCycles, iterationsPerNamespace, podsPerNode int
 	var metricsProfiles []string
@@ -72,9 +73,15 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 				"namespaced-iterations":    namespacedIterations,
 				"pod-ready-threshold":      podReadyThreshold,
 				"selector":                 selector,
-				"pprof":                    pprof,
-				"pprof-interval":           pprofInterval.String(),
+				"pprof-interval":           pprofOpts.interval.String(),
 			})
+			components := pprofOpts.selectedComponents()
+			if err := setPprofTargetVars(components); err != nil {
+				log.Fatal(err.Error())
+			}
+			if cmd.Flags().Changed("pprof") || cmd.Flags().Changed("pprof-components") {
+				AdditionalVars["PPROF"] = len(components) > 0
+			}
 			if cmd.Flags().Changed("service-latency") {
 				AdditionalVars["SVC_LATENCY"] = svcLatency
 			}
@@ -100,8 +107,7 @@ func CustomWorkload(wh *workloads.WorkloadHelper) *cobra.Command {
 	cmd.Flags().IntVar(&podsPerNode, "pods-per-node", 0, "Pods per node. Mutually exclusive with '--iterations'")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().BoolVar(&svcLatency, "service-latency", false, "Enable service latency measurement")
-	cmd.Flags().BoolVar(&pprof, "pprof", false, "Enable pprof collection")
-	cmd.Flags().DurationVar(&pprofInterval, "pprof-interval", 0, "Interval between pprof collections")
+	addPprofFlags(cmd, &pprofOpts)
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	// pods-per-node calculates iterations, thus the two are mutually exclusive.
 	cmd.MarkFlagsMutuallyExclusive("iterations", "pods-per-node")
