@@ -16,6 +16,7 @@ package workloads
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -141,4 +142,66 @@ func TestVirtParallelMigrationHooks(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestVirtParallelMigrationHooksLargeResponse(t *testing.T) {
+	if _, err := exec.LookPath("jq"); err != nil {
+		t.Skip("migration hooks require jq")
+	}
+	script, err := filepath.Abs("../../cmd/config/scripts/check_migrations.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	mock := "#!/bin/bash\nif [[ $2 == vm ]]; then cat \"$MOCK_VMS\"; else cat \"$MOCK_VMIS\"; fi\n"
+	if err := os.WriteFile(filepath.Join(dir, "kubectl"), []byte(mock), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("MOCK_VMS", filepath.Join(dir, "vms.json"))
+	t.Setenv("MOCK_VMIS", filepath.Join(dir, "vmis.json"))
+	write := func(name string, items []map[string]any) {
+		t.Helper()
+		b, err := json.Marshal(map[string]any{"items": items})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(b) <= 128*1024 {
+			t.Fatalf("%s is too small to test the argument size limit: %d bytes", name, len(b))
+		}
+		if err := os.WriteFile(filepath.Join(dir, name), b, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	before := make([]map[string]any, 10)
+	after := make([]map[string]any, 10)
+	for i := range before {
+		name := fmt.Sprintf("vm-%d", i)
+		uid := fmt.Sprintf("uid-%d", i)
+		source := fmt.Sprintf("node-%d", i)
+		target := fmt.Sprintf("target-%d", i)
+		before[i] = migrationGuest(name, source, uid, nil)
+		after[i] = migrationGuest(name, target, uid, map[string]any{
+			"migrationUid": fmt.Sprintf("migration-%d", i),
+			"sourceNode":   source,
+			"targetNode":   target,
+			"completed":    true,
+		})
+		for _, guest := range []map[string]any{before[i], after[i]} {
+			guest["padding"] = strings.Repeat("x", 16*1024)
+		}
+	}
+	write("vms.json", before)
+	write("vmis.json", before)
+	baseline := filepath.Join(dir, "baseline.json")
+	run := func(action string) {
+		t.Helper()
+		cmd := exec.Command("bash", script, action, "test-ns", "test=iteration-0", "10", baseline)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("%s: %v: %s", action, err, output)
+		}
+	}
+	run("prepare")
+	write("vmis.json", after)
+	run("verify")
 }
