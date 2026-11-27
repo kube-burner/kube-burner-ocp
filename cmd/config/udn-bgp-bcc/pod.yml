@@ -17,3 +17,18 @@ spec:
        protocol: TCP
     securityContext:
        privileged: false
+{{ if eq .PING_PROTOCOL "udp" }}
+  # UDP echo for the T5 reachability probe. kube-burner sends a datagram to udpProbePort and waits for it back.
+  - name: udp-echo
+    image: registry.access.redhat.com/ubi9/python-312:latest
+    command: ["python3", "-u", "-c", "import socket,struct\ns=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)\ns.setsockopt(socket.IPPROTO_IP,socket.IP_PKTINFO,1)\ns.bind(('0.0.0.0',9999))\nwhile True:\n    d,cmsgs,_,a=s.recvmsg(2048,socket.CMSG_SPACE(12))\n    info=[x[2] for x in cmsgs if x[0]==socket.IPPROTO_IP and x[1]==socket.IP_PKTINFO]\n    if info:\n        ifindex,_,dst=struct.unpack('i4s4s',info[0][:12])\n        s.sendmsg([d],[(socket.IPPROTO_IP,socket.IP_PKTINFO,struct.pack('i4s4s',ifindex,dst,bytes(4)))],0,a)\n    else:\n        s.sendto(d,a)"]
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "10m"
+    ports:
+     - containerPort: 9999
+       protocol: UDP
+    securityContext:
+       privileged: false
+{{ end }}
