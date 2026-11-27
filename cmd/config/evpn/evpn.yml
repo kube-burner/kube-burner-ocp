@@ -31,79 +31,9 @@ metricsEndpoints:
       metricsDirectory: collected-metrics-{{.UUID}}
 {{ end }}
 jobs:
-  - name: evpn-create-namespaces
+  - name: {{ if eq .CUDN_MODE "baseline" }}cudn-baseline{{ else }}evpn{{ end }}-{{.SCENARIO}}
     namespace: evpn
     jobIterations: {{.JOB_ITERATIONS}}
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    namespacedIterations: true
-    waitWhenFinished: true
-    skipIndexing: true
-    jobPause: 1m
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
-    objects:
-      - objectTemplate: configmap.yml
-        replicas: 1
-
-  - name: evpn-create-cudn
-    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
-    jobIterations: {{$numCudn}}
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    namespacedIterations: false
-    waitWhenFinished: true
-    jobPause: 15m
-    skipIndexing: true
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
-{{ if .CREATE_EXT_FRR_VRF }}
-    hooks:
-      - cmd: ["bash", "cleanup_external_frr_vrf.sh", "{{$numCudn}}"]
-        when: beforeJobExecution
-      - cmd: ["bash", "setup_external_frr_vrf.sh", "{{$numCudn}}", "{{.EXTERNAL_WEBSERVER_IP}}", "{{.L3VNI_START}}"]
-        when: beforeJobExecution
-{{ end }}
-    objects:
-      - objectTemplate: cudn.yml
-        replicas: 1
-        inputVars:
-          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
-          total_namespaces: {{.JOB_ITERATIONS}}
-          scenario: "{{.SCENARIO}}"
-          l3vni_start: {{.L3VNI_START}}
-
-  - name: evpn-route-advertisements
-    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
-    jobIterations: {{$numCudn}}
-    qps: {{.QPS}}
-    burst: {{.BURST}}
-    namespacedIterations: false
-    waitWhenFinished: true
-    jobPause: 10m
-    skipIndexing: true
-    namespaceLabels:
-      security.openshift.io/scc.podSecurityLabelSync: false
-      pod-security.kubernetes.io/enforce: privileged
-      pod-security.kubernetes.io/audit: privileged
-      pod-security.kubernetes.io/warn: privileged
-      k8s.ovn.org/primary-user-defined-network: ""
-    objects:
-      - objectTemplate: ra.yml
-        replicas: 1
-
-  - name: evpn-{{.SCENARIO}}
-    {{- $numCudn := div .JOB_ITERATIONS .NAMESPACES_PER_CUDN }}
-    namespace: evpn
-    jobIterations: {{$numCudn}}
     qps: {{.QPS}}
     burst: {{.BURST}}
     namespacedIterations: true
@@ -116,27 +46,59 @@ jobs:
       pod-security.kubernetes.io/audit: privileged
       pod-security.kubernetes.io/warn: privileged
       k8s.ovn.org/primary-user-defined-network: ""
-{{ if .CREATE_EXT_FRR_VRF }}
+{{ if and .CREATE_EXT_FRR_VRF (eq .CUDN_MODE "evpn") }}
     hooks:
-      - cmd: ["bash", "cleanup_external_frr_vrf.sh", "{{$numCudn}}"]
+      - cmd: ["bash", "cleanup_external_frr_vrf.sh", "{{div .JOB_ITERATIONS .NAMESPACES_PER_CUDN}}"]
+        when: beforeJobExecution
+      - cmd: ["bash", "setup_external_frr_vrf.sh", "{{div .JOB_ITERATIONS .NAMESPACES_PER_CUDN}}", "{{.EXTERNAL_WEBSERVER_IP}}", "{{.L3VNI_START}}"]
+        when: beforeJobExecution
+      - cmd: ["bash", "cleanup_external_frr_vrf.sh", "{{div .JOB_ITERATIONS .NAMESPACES_PER_CUDN}}"]
         when: afterJobExecution
 {{ end }}
     objects:
+      - objectTemplate: cudn.yml
+        replicas: 1
+        repeatEveryNIterations: {{.NAMESPACES_PER_CUDN}}
+        group:
+          id: 0
+          pauseBeforeGC: {{.JOB_PAUSE}}
+        inputVars:
+          namespaces_per_cudn: {{.NAMESPACES_PER_CUDN}}
+          total_namespaces: {{.JOB_ITERATIONS}}
+          scenario: "{{.SCENARIO}}"
+          cudn_mode: "{{.CUDN_MODE}}"
+          l3vni_start: {{.L3VNI_START}}
+
+      - objectTemplate: ra.yml
+        replicas: 1
+        repeatEveryNIterations: {{.NAMESPACES_PER_CUDN}}
+        group:
+          id: 1
+          pauseBeforeGC: {{.JOB_PAUSE}}
+
 {{ if eq .SCENARIO "east-west" }}
       - objectTemplate: webserver-deployment.yml
         replicas: 1
+        group:
+          id: 2
 
       - objectTemplate: webserver-service.yml
         replicas: 1
+        group:
+          id: 2
 
       - objectTemplate: curl-deployment.yml
         replicas: 1
+        group:
+          id: 2
         inputVars:
           webserver_hostname: ""
           webserver_port: ""
 {{ else }}
       - objectTemplate: curl-deployment.yml
         replicas: 1
+        group:
+          id: 2
         inputVars:
           webserver_hostname: "{{.EXTERNAL_WEBSERVER_IP}}"
           webserver_port: "{{.EXTERNAL_WEBSERVER_PORT}}"
