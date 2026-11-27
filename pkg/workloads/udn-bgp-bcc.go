@@ -59,6 +59,11 @@ func NewUdnBgpBCC(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		metricsProfiles []string
 		cloudProvider   string
 
+		// How pods are probed for reachability (T5), and the spacing between probes of a pod that has not answered yet
+		pingProtocolFlag string
+		pingProtocol     measurements.PingProtocol
+		pingIntervalMs   int
+
 		// AWS-specific settings
 		awsRegion        string
 		awsRouteServerID string
@@ -83,6 +88,13 @@ func NewUdnBgpBCC(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			// Everything is validated before the cleanup, so a configuration error deletes nothing.
 			// Each case assigns routeProvider only on success: assigning a constructor's nil *Provider
 			// to the interface directly would make routeProvider non-nil.
+			if pingIntervalMs <= 0 {
+				return fmt.Errorf("--ping-interval must be a positive number of milliseconds, got %d", pingIntervalMs)
+			}
+			var err error
+			if pingProtocol, err = measurements.ParsePingProtocol(pingProtocolFlag); err != nil {
+				return fmt.Errorf("invalid --ping-protocol: %w", err)
+			}
 			switch cloudProvider {
 			case "aws":
 				if awsRouteServerID == "" || awsRegion == "" || awsVpcID == "" {
@@ -117,9 +129,11 @@ func NewUdnBgpBCC(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
+			// pod.yml only adds the udp-echo container when pods are probed over UDP
+			AdditionalVars["PING_PROTOCOL"] = string(pingProtocol)
 
 			wh.SetMeasurements(map[string]kubeburnermeasurements.NewMeasurementFactory{
-				"raLatencyBCC": measurements.NewRaLatencyBCCMeasurementFactory(routeProvider),
+				"raLatencyBCC": measurements.NewRaLatencyBCCMeasurementFactory(routeProvider, time.Duration(pingIntervalMs)*time.Millisecond, pingProtocol),
 			})
 			rc = RunWorkload(cmd, wh, cmd.Name()+".yml")
 		},
@@ -132,6 +146,8 @@ func NewUdnBgpBCC(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		},
 	}
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
+	cmd.Flags().StringVar(&pingProtocolFlag, "ping-protocol", string(measurements.PingICMP), "Protocol used to probe each pod's reachability (T5): icmp (ICMP echo) or udp (UDP echo to port 9999, adds a udp-echo container to the pods)")
+	cmd.Flags().IntVar(&pingIntervalMs, "ping-interval", 100, "Optional: milliseconds between probes of a pod that has not answered yet (T5). Probes run on a fixed schedule and a probe with no reply takes up to 1s, so spacing is never below ~1s")
 	cmd.Flags().StringSliceVar(&metricsProfiles, "metrics-profile", []string{"metrics.yml"}, "Comma separated list of metrics profiles to use")
 	cmd.Flags().StringVar(&cloudProvider, "cloud-provider", "aws", "Cloud provider: aws or azure")
 

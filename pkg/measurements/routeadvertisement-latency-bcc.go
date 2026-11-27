@@ -53,7 +53,8 @@ import (
 // T3: Route appears in the cloud route table (AWS VPC route tables / effective routes of the first Azure BGP peer NIC)
 // T3.5: Route appears in all route tables (AWS: route server installation status / Azure: every BGP peer NIC)
 // T4: Pod receives its CUDN IP address and enters Running state
-// T5: Pod becomes network-reachable (first successful ICMP ping)
+// T5: Pod becomes network-reachable (first probe answered: ICMP echo, or UDP echo from the pod's udp-echo
+// container, see PingProtocol)
 //
 // Measurements are keyed by BGPRouting name and hold, per timestamp, the latency of each of its subnets.
 // kube-burner aggregates them across BGPRoutings into one quantile per timestamp.
@@ -71,8 +72,34 @@ const (
 	// The baseline read is retried a few times, since one failed peer query would abort the run
 	baselineAttempts   = 3
 	baselineRetryDelay = 5 * time.Second
-	pingInterval       = 100 * time.Millisecond
+	// defaultPingInterval is the default spacing between probes of a pod that has not answered. Probes run on
+	// a fixed ticker, and a probe with no answer takes up to probeTimeout, so spacing never drops below that.
+	defaultPingInterval = 100 * time.Millisecond
+	// probeTimeout is how long one probe (ICMP or UDP) waits for its answer
+	probeTimeout = 1 * time.Second
+	// udpProbePort is the UDP echo port of the pod's udp-echo container (see cmd/config/udn-bgp-bcc/pod.yml)
+	udpProbePort = 9999
 )
+
+// PingProtocol selects how the reachability of a pod (T5) is probed.
+type PingProtocol string
+
+const (
+	// PingICMP sends ICMP echo requests. It needs nothing in the pod.
+	PingICMP PingProtocol = "icmp"
+	// PingUDP sends UDP datagrams to udpProbePort and expects them echoed back. It needs the udp-echo
+	// container in the pod, which pod.yml only adds when the workload runs with PingUDP.
+	PingUDP PingProtocol = "udp"
+)
+
+// ParsePingProtocol converts a flag value into a PingProtocol.
+func ParsePingProtocol(s string) (PingProtocol, error) {
+	switch p := PingProtocol(strings.ToLower(strings.TrimSpace(s))); p {
+	case PingICMP, PingUDP:
+		return p, nil
+	}
+	return "", fmt.Errorf("unsupported ping protocol %q (must be %s or %s)", s, PingICMP, PingUDP)
+}
 
 var (
 	supportedRaLatencyBCCJobTypes = []config.JobType{config.CreationJob, config.PatchJob}
@@ -131,6 +158,8 @@ type raLatencyBCC struct {
 
 	routeProvider utils.BCCRouteServerProvider // created and validated by the workload
 	maxTimeout    time.Duration
+	pingInterval  time.Duration // spacing between probes of a pod that did not answer
+	pingProtocol  PingProtocol  // how pods are probed
 
 	routeTimes         map[string]*detectedRoute // key: subnet
 	routeMu            sync.Mutex                // guards routeTimes and its entries, written by several goroutines
@@ -146,15 +175,26 @@ type raLatencyBCC struct {
 type raLatencyBCCMeasurementFactory struct {
 	measurements.BaseMeasurementFactory
 	routeProvider utils.BCCRouteServerProvider
+	pingInterval  time.Duration
+	pingProtocol  PingProtocol
 }
 
-// NewRaLatencyBCCMeasurementFactory returns a factory whose measurements observe routeProvider. The workload
+// NewRaLatencyBCCMeasurementFactory returns a factory whose measurements observe routeProvider and probe pods
+// with pingProtocol (empty uses PingICMP) every pingInterval (0 uses defaultPingInterval). The workload
 // creates and validates the provider before the run, so the Route Server peers are discovered only once.
-func NewRaLatencyBCCMeasurementFactory(routeProvider utils.BCCRouteServerProvider) measurements.NewMeasurementFactory {
+func NewRaLatencyBCCMeasurementFactory(routeProvider utils.BCCRouteServerProvider, pingInterval time.Duration, pingProtocol PingProtocol) measurements.NewMeasurementFactory {
+	if pingInterval <= 0 {
+		pingInterval = defaultPingInterval
+	}
+	if pingProtocol == "" {
+		pingProtocol = PingICMP
+	}
 	return func(configSpec config.Spec, measurement types.Measurement, metadata map[string]any, labelSelector string) (measurements.MeasurementFactory, error) {
 		return raLatencyBCCMeasurementFactory{
 			BaseMeasurementFactory: measurements.NewBaseMeasurementFactory(configSpec, measurement, metadata, labelSelector),
 			routeProvider:          routeProvider,
+			pingInterval:           pingInterval,
+			pingProtocol:           pingProtocol,
 		}, nil
 	}
 }
@@ -163,6 +203,8 @@ func (f raLatencyBCCMeasurementFactory) NewMeasurement(jobConfig *config.Job, cl
 	return &raLatencyBCC{
 		BaseMeasurement: f.NewBaseLatency(jobConfig, clientSet, restConfig, raLatencyBCCMeasurement, raLatencyBCCQuantilesMeasurement, embedCfg),
 		routeProvider:   f.routeProvider,
+		pingInterval:    f.pingInterval,
+		pingProtocol:    f.pingProtocol,
 	}
 }
 
@@ -614,20 +656,28 @@ func (r *raLatencyBCC) pingWorker() {
 	}
 }
 
-// pingUntilReachable pings the pod right away and then every pingInterval until it answers (T5),
-// maxTimeout passes, or the measurement stops.
+// probe sends one probe to the pod with the measurement's protocol and reports whether it was answered.
+func (r *raLatencyBCC) probe(podIP string) bool {
+	if r.pingProtocol == PingUDP {
+		return udpProbePod(podIP)
+	}
+	return icmpProbePod(podIP)
+}
+
+// pingUntilReachable sends probes to the pod right away and then every pingInterval until one is
+// answered (T5), maxTimeout passes, or the measurement stops.
 func (r *raLatencyBCC) pingUntilReachable(podIP, subnet string) {
 	defer r.wg.Done()
 	defer r.finishedPingCount.Add(1)
-	log.Debugf("Starting ping of POD %s in subnet %s", podIP, subnet)
+	log.Debugf("Starting %s probes of POD %s in subnet %s", r.pingProtocol, podIP, subnet)
 
-	ticker := time.NewTicker(pingInterval)
+	ticker := time.NewTicker(r.pingInterval)
 	defer ticker.Stop()
 	timeout := time.NewTimer(r.maxTimeout)
 	defer timeout.Stop()
 
 	for {
-		if pingPodIP(podIP) {
+		if r.probe(podIP) {
 			now := time.Now().UTC()
 			val, _ := r.podTimes.Load(subnet) // stored by recordT4 before the ping started
 			val.(*podMeasurement).t5_PingSuccess = now
@@ -646,8 +696,8 @@ func (r *raLatencyBCC) pingUntilReachable(podIP, subnet string) {
 	}
 }
 
-// pingPodIP checks if a pod IP is reachable via ICMP.
-func pingPodIP(ip string) bool {
+// icmpProbePod sends one ICMP echo request to the pod and reports whether it was answered within probeTimeout.
+func icmpProbePod(ip string) bool {
 	pinger, err := probing.NewPinger(ip)
 	if err != nil {
 		log.Debugf("Failed to create pinger for %s: %v", ip, err)
@@ -655,13 +705,47 @@ func pingPodIP(ip string) bool {
 	}
 
 	pinger.Count = 1
-	pinger.Timeout = 1 * time.Second
+	pinger.Timeout = probeTimeout
 	pinger.SetPrivileged(false)
 
 	if err := pinger.Run(); err != nil {
 		return false
 	}
 	return pinger.Statistics().PacketsRecv > 0
+}
+
+// udpProbePod sends one UDP datagram to the pod's echo port and reports whether the pod echoed it back
+// within probeTimeout.
+func udpProbePod(ip string) bool {
+	return udpProbe(ip, udpProbePort, probeTimeout)
+}
+
+// udpProbe sends one UDP datagram to ip:port and reports whether the same bytes came back within timeout.
+// The payload is unique per probe, so an echo of an earlier probe is not counted.
+func udpProbe(ip string, port int, timeout time.Duration) bool {
+	addr := net.ParseIP(ip)
+	if addr == nil {
+		log.Debugf("Invalid pod IP for UDP probe: %s", ip)
+		return false
+	}
+	conn, err := net.DialUDP("udp", nil, &net.UDPAddr{IP: addr, Port: port})
+	if err != nil {
+		log.Debugf("Failed to open UDP probe to %s: %v", ip, err)
+		return false
+	}
+	defer conn.Close()
+
+	payload := fmt.Sprintf("bcc-probe-%d", time.Now().UnixNano())
+	if _, err := conn.Write([]byte(payload)); err != nil {
+		log.Debugf("Failed to send UDP probe to %s: %v", ip, err)
+		return false
+	}
+	if err := conn.SetReadDeadline(time.Now().Add(timeout)); err != nil {
+		return false
+	}
+	buf := make([]byte, len(payload))
+	n, err := conn.Read(buf)
+	return err == nil && string(buf[:n]) == payload
 }
 
 // subnetContainsIP checks if a CIDR subnet contains an IP address.
