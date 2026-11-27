@@ -24,6 +24,13 @@ spec:
   {{- $l2vni := add 20000 $.Iteration }}
   {{- $l3vni := add $.l3vni_start $.Iteration }}
   network:
+{{ if eq .cudn_mode "baseline" }}
+    topology: Layer2
+    layer2:
+      role: Primary
+      subnets:
+        - {{$cudnCidr}}
+{{ else }}
 {{ if eq .scenario "north-south-l3" }}
     topology: Layer3
     transport: EVPN
@@ -61,4 +68,5 @@ spec:
       macVRF:
         vni: {{$l2vni}}
         routeTarget: "64512:{{$l2vni}}"
+{{ end }}
 {{ end }}

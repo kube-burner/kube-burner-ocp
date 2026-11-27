@@ -42,16 +42,27 @@ func NewEVPN(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	var metricsProfiles []string
 	var rc int
 	var scenario string
-	var podReadyThreshold time.Duration
+	var podReadyThreshold, jobPause time.Duration
 	var externalWebserverIP, externalWebserverPort string
 	var connectionTimeout time.Duration
 	var skipReachabilityCheck bool
 	var createExtFrrVrf bool
 	var l3vniStart int
+	var cudnMode string
 	cmd := &cobra.Command{
 		Use:   variant,
 		Short: fmt.Sprintf("Runs %v workload", variant),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if cudnMode != "evpn" && cudnMode != "baseline" {
+				return fmt.Errorf("unsupported --cudn-mode value: %s. Valid values are: evpn, baseline", cudnMode)
+			}
+			if cudnMode == "baseline" && scenario != "east-west" {
+				return fmt.Errorf("--cudn-mode=baseline only supports the east-west scenario")
+			}
+			if cudnMode == "baseline" && createExtFrrVrf {
+				return fmt.Errorf("--create-ext-frr-vrf requires --cudn-mode=evpn")
+			}
+
 			// Validate scenario
 			validScenarios := map[string]bool{
 				"east-west":      true,
@@ -85,9 +96,11 @@ func NewEVPN(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			setMetrics(cmd, metricsProfiles)
 			AdditionalVars["JOB_ITERATIONS"] = iterations
+			AdditionalVars["JOB_PAUSE"] = jobPause
 			AdditionalVars["NAMESPACES_PER_CUDN"] = namespacePerCudn
 			AdditionalVars["POD_READY_THRESHOLD"] = podReadyThreshold
 			AdditionalVars["SCENARIO"] = scenario
+			AdditionalVars["CUDN_MODE"] = cudnMode
 
 			// Set external webserver variables for north-south scenarios
 			if scenario == "north-south" || scenario == "north-south-l3" {
@@ -104,6 +117,7 @@ func NewEVPN(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 			os.Exit(rc)
 		},
 	}
+	cmd.Flags().DurationVar(&jobPause, "job-pause", 10*time.Minute, "Pause after CUDN creation to allow OVN-K network settling before workload deployment")
 	cmd.Flags().DurationVar(&podReadyThreshold, "pod-ready-threshold", 0, "Pod ready timeout threshold")
 	cmd.Flags().IntVar(&iterations, "iterations", 10, fmt.Sprintf("%v iterations", variant))
 	cmd.Flags().IntVar(&namespacePerCudn, "namespaces-per-cudn", 1, "Number of namespaces sharing the same cluster udn")
@@ -115,5 +129,6 @@ func NewEVPN(wh *workloads.WorkloadHelper, variant string) *cobra.Command {
 	cmd.Flags().BoolVar(&skipReachabilityCheck, "skip-reachability-check", true, "Skip the external webserver reachability check")
 	cmd.Flags().BoolVar(&createExtFrrVrf, "create-ext-frr-vrf", false, "Setup external FRR VRF before workload and cleanup after completion")
 	cmd.Flags().IntVar(&l3vniStart, "l3vni-start", 100, "Starting L3 VNI number for EVPN configuration")
+	cmd.Flags().StringVar(&cudnMode, "cudn-mode", "evpn", "CUDN mode: evpn or baseline (no EVPN transport)")
 	return cmd
 }
